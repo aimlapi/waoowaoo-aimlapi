@@ -1,0 +1,339 @@
+import {
+  findAppearanceForStoryboardReference,
+  findCharacterForStoryboardReference,
+  type StoryboardPanelCharacterReference,
+} from '@/lib/storyboard-character-bindings'
+import {
+  parsePanelCharacterReferences,
+  type NumberedReferenceImage,
+  type PanelCharacterReference,
+  resolveNovelData,
+} from './image-task-handler-shared'
+
+type ProjectData = Awaited<ReturnType<typeof resolveNovelData>>
+
+export interface PanelPromptPanel {
+  id: string
+  storyboardId: string
+  panelIndex: number
+  panelNumber: number | null
+  shotType: string | null
+  cameraMove: string | null
+  description: string | null
+  imagePrompt: string | null
+  videoPrompt: string | null
+  location: string | null
+  characters: string | null
+  props?: string | null
+  srtSegment: string | null
+  photographyRules: string | null
+  actingNotes: string | null
+}
+
+export interface StoryboardContinuityPanel {
+  id: string
+  panelIndex: number
+  panelNumber: number | null
+  shotType: string | null
+  cameraMove: string | null
+  description: string | null
+  imagePrompt: string | null
+  videoPrompt: string | null
+  location: string | null
+  characters: string | null
+  props: string | null
+  srtSegment: string | null
+}
+
+interface CharacterContinuityEntry {
+  name: string
+  characterId: string | null
+  appearanceId: string | null
+  appearance: string | null
+  slot: string | null
+  visibility: 'featured' | 'background_or_partial_presence_required'
+  sourcePanelNumbers: number[]
+}
+
+function parseJsonUnknown(raw: string | null | undefined): unknown | null {
+  if (!raw) return null
+  try {
+    return JSON.parse(raw)
+  } catch {
+    return null
+  }
+}
+
+function parseDescriptionList(raw: string | null | undefined): string[] {
+  if (!raw) return []
+  try {
+    const parsed = JSON.parse(raw)
+    if (!Array.isArray(parsed)) return []
+    return parsed.filter((item): item is string => typeof item === 'string' && item.trim().length > 0)
+  } catch {
+    return []
+  }
+}
+
+function pickAppearanceDescription(appearance: {
+  descriptions?: string | null
+  description?: string | null
+  selectedIndex?: number | null
+}): string {
+  const descriptions = parseDescriptionList(appearance.descriptions || null)
+  if (descriptions.length > 0) {
+    const selectedIndex = typeof appearance.selectedIndex === 'number' ? appearance.selectedIndex : 0
+    const selected = descriptions[selectedIndex] || descriptions[0]
+    if (selected && selected.trim()) return selected.trim()
+  }
+  if (typeof appearance.description === 'string' && appearance.description.trim()) {
+    return appearance.description.trim()
+  }
+  return '无描述'
+}
+
+function normalizeName(value: string | null | undefined) {
+  return (value || '').trim().toLowerCase()
+}
+
+function normalizeLocation(value: string | null | undefined) {
+  return (value || '').trim().toLowerCase()
+}
+
+function characterKey(reference: PanelCharacterReference) {
+  const id = reference.characterId?.trim()
+  if (id) return `id:${id}`
+  return `name:${normalizeName(reference.name)}`
+}
+
+function sourcePanelNumber(panel: Pick<StoryboardContinuityPanel, 'panelNumber' | 'panelIndex'>) {
+  return typeof panel.panelNumber === 'number' ? panel.panelNumber : panel.panelIndex + 1
+}
+
+function previousAndNextSameLocationPanels(params: {
+  currentPanel: PanelPromptPanel
+  sameLocationPanels: StoryboardContinuityPanel[]
+}) {
+  const previous = [...params.sameLocationPanels]
+    .filter((panel) => panel.panelIndex < params.currentPanel.panelIndex)
+    .sort((a, b) => b.panelIndex - a.panelIndex)[0] || null
+  const next = [...params.sameLocationPanels]
+    .filter((panel) => panel.panelIndex > params.currentPanel.panelIndex)
+    .sort((a, b) => a.panelIndex - b.panelIndex)[0] || null
+
+  const serialize = (panel: StoryboardContinuityPanel | null) => panel
+    ? {
+      panel_number: sourcePanelNumber(panel),
+      shot_type: panel.shotType || '',
+      description: panel.description || '',
+      characters: parsePanelCharacterReferences(panel.characters).map((item) => item.name),
+      props: panel.props || '',
+    }
+    : null
+
+  return {
+    previous_same_scene_panel: serialize(previous),
+    next_same_scene_panel: serialize(next),
+  }
+}
+
+function buildCharacterContinuity(params: {
+  currentPanel: PanelPromptPanel
+  sameLocationPanels: StoryboardContinuityPanel[]
+}) {
+  const featuredCharacters = parsePanelCharacterReferences(params.currentPanel.characters)
+  const featuredKeys = new Set(featuredCharacters.map(characterKey))
+  const byKey = new Map<string, CharacterContinuityEntry>()
+
+  const addReference = (reference: PanelCharacterReference, panelNumber: number) => {
+    const key = characterKey(reference)
+    if (!normalizeName(reference.name) && !reference.characterId) return
+    const existing = byKey.get(key)
+    const visibility = featuredKeys.has(key)
+      ? 'featured'
+      : 'background_or_partial_presence_required'
+    if (!existing) {
+      byKey.set(key, {
+        name: reference.name,
+        characterId: reference.characterId || null,
+        appearanceId: reference.appearanceId || null,
+        appearance: reference.appearance || null,
+        slot: reference.slot || null,
+        visibility,
+        sourcePanelNumbers: [panelNumber],
+      })
+      return
+    }
+
+    if (!existing.characterId && reference.characterId) existing.characterId = reference.characterId
+    if (!existing.appearanceId && reference.appearanceId) existing.appearanceId = reference.appearanceId
+    if (!existing.appearance && reference.appearance) existing.appearance = reference.appearance
+    if (!existing.slot && reference.slot) existing.slot = reference.slot
+    if (visibility === 'featured') existing.visibility = visibility
+    if (!existing.sourcePanelNumbers.includes(panelNumber)) {
+      existing.sourcePanelNumbers.push(panelNumber)
+    }
+  }
+
+  for (const reference of featuredCharacters) {
+    addReference(reference, params.currentPanel.panelNumber ?? params.currentPanel.panelIndex + 1)
+  }
+  for (const panel of params.sameLocationPanels) {
+    for (const reference of parsePanelCharacterReferences(panel.characters)) {
+      addReference(reference, sourcePanelNumber(panel))
+    }
+  }
+
+  return {
+    featuredCharacters,
+    presentCharacters: Array.from(byKey.values()).map((item) => ({
+      ...item,
+      sourcePanelNumbers: [...item.sourcePanelNumbers].sort((a, b) => a - b),
+    })),
+  }
+}
+
+function buildSceneContinuityState(params: {
+  panel: PanelPromptPanel
+  storyboardPanels: StoryboardContinuityPanel[]
+}) {
+  const panelLocation = normalizeLocation(params.panel.location)
+  const sameLocationPanels = panelLocation
+    ? params.storyboardPanels.filter((panel) => normalizeLocation(panel.location) === panelLocation)
+    : []
+  const { featuredCharacters, presentCharacters } = buildCharacterContinuity({
+    currentPanel: params.panel,
+    sameLocationPanels,
+  })
+  const featuredKeys = new Set(featuredCharacters.map(characterKey))
+  const nonFeaturedPresentCharacters = presentCharacters.filter((item) => {
+    const key = item.characterId ? `id:${item.characterId}` : `name:${normalizeName(item.name)}`
+    return !featuredKeys.has(key)
+  })
+  const hasNonFeaturedPresentCharacters = nonFeaturedPresentCharacters.length > 0
+  const hasNoFeaturedCharacters = featuredCharacters.length === 0
+
+  return {
+    scene_anchor_name: params.panel.location || null,
+    inference_source: 'same_storyboard_same_location',
+    featured_characters: featuredCharacters.map((item) => ({
+      name: item.name,
+      characterId: item.characterId || null,
+      appearanceId: item.appearanceId || null,
+      appearance: item.appearance || null,
+      slot: item.slot || null,
+    })),
+    present_characters: presentCharacters,
+    non_featured_presence_policy: {
+      required: hasNonFeaturedPresentCharacters || (hasNoFeaturedCharacters && presentCharacters.length > 0),
+      allowed_visibility: ['edge', 'partial_body', 'hands', 'shoulder', 'back', 'reflection', 'silhouette', 'distant_blur'],
+      offscreen_allowed: false,
+    },
+    environment_or_insert_policy: {
+      maintain_present_characters: presentCharacters.length > 0,
+      allow_subject_focus_without_character_removal: true,
+    },
+    scene_props: params.panel.props || '',
+    ...previousAndNextSameLocationPanels({
+      currentPanel: params.panel,
+      sameLocationPanels,
+    }),
+  }
+}
+
+export function buildPanelPromptContext(params: {
+  panel: PanelPromptPanel
+  projectData: ProjectData
+  referenceImageNotes?: string[]
+  referenceImagesMap: NumberedReferenceImage[]
+  storyboardPanels?: StoryboardContinuityPanel[]
+}) {
+  const panelCharacters = parsePanelCharacterReferences(params.panel.characters)
+  const characterContexts = panelCharacters.map((reference) => {
+    const character = findCharacterForStoryboardReference(
+      params.projectData.characters || [],
+      reference as StoryboardPanelCharacterReference,
+    )
+    if (!character) {
+      return {
+        name: reference.name,
+        appearance: reference.appearance || null,
+        description: '无角色外貌数据',
+      }
+    }
+
+    const appearances = character.appearances || []
+    const matchedAppearance = findAppearanceForStoryboardReference(
+      appearances,
+      reference as StoryboardPanelCharacterReference,
+    ) || null
+
+    return {
+      name: character.name,
+      characterId: character.id || reference.characterId || null,
+      appearanceId: matchedAppearance?.id || reference.appearanceId || null,
+      appearance: matchedAppearance?.changeReason || null,
+      description: matchedAppearance ? pickAppearanceDescription(matchedAppearance) : '无角色外貌数据',
+      slot: reference.slot || null,
+    }
+  })
+
+  const photographyRules = parseJsonUnknown(params.panel.photographyRules)
+  const photographyRuleRecord = photographyRules && typeof photographyRules === 'object' && !Array.isArray(photographyRules)
+    ? photographyRules as Record<string, unknown>
+    : {}
+  const consistencyMetadataRecord = photographyRuleRecord.consistencyMetadata
+    && typeof photographyRuleRecord.consistencyMetadata === 'object'
+    && !Array.isArray(photographyRuleRecord.consistencyMetadata)
+    ? photographyRuleRecord.consistencyMetadata as Record<string, unknown>
+    : {}
+  const cameraPlanSource = photographyRuleRecord.cameraPlan ?? consistencyMetadataRecord.cameraPlan
+  const cameraPlanRecord = cameraPlanSource && typeof cameraPlanSource === 'object' && !Array.isArray(cameraPlanSource)
+    ? cameraPlanSource as Record<string, unknown>
+    : {}
+  const shotBlocking = cameraPlanRecord.shotBlocking ?? photographyRuleRecord.shotBlocking ?? null
+
+  const locationContext = (() => {
+    if (!params.panel.location) return null
+    const matchedLocation = (params.projectData.locations || []).find(
+      (item) => item.name.toLowerCase() === params.panel.location!.toLowerCase(),
+    )
+    if (!matchedLocation) return null
+    const selectedImage = (matchedLocation.images || []).find((item) => item.isSelected) || matchedLocation.images?.[0]
+    return {
+      name: matchedLocation.name,
+      description: selectedImage?.description || null,
+      spatial_profile: selectedImage && 'spatialProfileJson' in selectedImage ? selectedImage.spatialProfileJson ?? null : null,
+    }
+  })()
+
+  return {
+    panel: {
+      panel_id: params.panel.id,
+      shot_type: params.panel.shotType || '',
+      camera_move: params.panel.cameraMove || '',
+      description: params.panel.description || '',
+      image_prompt: params.panel.imagePrompt || '',
+      video_prompt: params.panel.videoPrompt || '',
+      location: params.panel.location || '',
+      characters: panelCharacters,
+      source_text: params.panel.srtSegment || '',
+      photography_rules: photographyRules,
+      shot_blocking: shotBlocking,
+      acting_notes: parseJsonUnknown(params.panel.actingNotes),
+    },
+    context: {
+      character_appearances: characterContexts,
+      location_reference: locationContext,
+      scene_continuity_state: buildSceneContinuityState({
+        panel: params.panel,
+        storyboardPanels: params.storyboardPanels || [],
+      }),
+      reference_images: params.referenceImagesMap,
+      additional_reference_images: (params.referenceImageNotes || []).map((note, index) => ({
+        reference_image_order: index + 1,
+        note,
+      })),
+    },
+  }
+}

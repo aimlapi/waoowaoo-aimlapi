@@ -9,6 +9,7 @@ const prismaMock = vi.hoisted(() => ({
   },
   projectPanel: {
     findUnique: vi.fn(),
+    findMany: vi.fn(),
     update: vi.fn(async () => ({})),
   },
   projectStoryboardBlockingArtifact: {
@@ -167,6 +168,7 @@ describe('worker panel-image-task-handler behavior', () => {
       id: 'panel-1',
       storyboardId: 'storyboard-1',
       panelIndex: 0,
+      panelNumber: 1,
       shotType: 'close-up',
       cameraMove: 'static',
       description: 'hero close-up',
@@ -174,12 +176,29 @@ describe('worker panel-image-task-handler behavior', () => {
       videoPrompt: 'dramatic',
       location: 'Old Town',
       characters: JSON.stringify([{ name: 'Hero', appearance: 'default', slot: '街道左侧靠墙的留白位置' }]),
+      props: 'street lamp',
       srtSegment: '台词片段',
       photographyRules: null,
       actingNotes: null,
       sketchImageUrl: null,
       imageUrl: null,
     })
+    prismaMock.projectPanel.findMany.mockResolvedValue([
+      {
+        id: 'panel-1',
+        panelIndex: 0,
+        panelNumber: 1,
+        shotType: 'close-up',
+        cameraMove: 'static',
+        description: 'hero close-up',
+        imagePrompt: 'panel anchor prompt',
+        videoPrompt: 'dramatic',
+        location: 'Old Town',
+        characters: JSON.stringify([{ name: 'Hero', appearance: 'default', slot: '街道左侧靠墙的留白位置' }]),
+        props: 'street lamp',
+        srtSegment: '台词片段',
+      },
+    ])
     prismaMock.projectStoryboardBlockingArtifact.findMany.mockResolvedValue([])
     prismaMock.projectEditScript.findFirst.mockResolvedValue(null)
     prismaMock.projectEditScreenplay.findFirst.mockResolvedValue(null)
@@ -244,13 +263,23 @@ describe('worker panel-image-task-handler behavior', () => {
     } | undefined
     const contextJson = promptCall?.variables?.storyboard_text_json_input || '{}'
     const context = JSON.parse(contextJson) as {
-      context?: { reference_images?: Array<{ image_no: string; role: string; name: string }> }
+      context?: {
+        reference_images?: Array<{ image_no: string; role: string; name: string }>
+        scene_continuity_state?: {
+          present_characters?: Array<{ name: string; visibility: string }>
+          scene_props?: string
+        }
+      }
     }
     expect(context.context?.reference_images).toEqual([
       { image_no: '图 1', role: 'sketch', name: '分镜草图' },
       { image_no: '图 2', role: 'character', name: 'Hero', appearance: 'default', slot: '街道左侧靠墙的留白位置' },
       { image_no: '图 3', role: 'scene_anchor', name: 'Old Town' },
     ])
+    expect(context.context?.scene_continuity_state?.present_characters).toEqual([
+      expect.objectContaining({ name: 'Hero', visibility: 'featured' }),
+    ])
+    expect(context.context?.scene_continuity_state?.scene_props).toBe('street lamp')
     expect(prismaMock.projectPanel.update).toHaveBeenCalledWith({
       where: { id: 'panel-1' },
       data: {
@@ -291,6 +320,107 @@ describe('worker panel-image-task-handler behavior', () => {
         prompt: expect.not.stringContaining('声音正向风格：'),
       }),
     )
+  })
+
+  it('adds same-scene non-featured characters to scene continuity state', async () => {
+    prismaMock.projectPanel.findUnique.mockResolvedValueOnce({
+      id: 'panel-2',
+      storyboardId: 'storyboard-1',
+      panelIndex: 1,
+      panelNumber: 2,
+      shotType: 'medium',
+      cameraMove: 'pan',
+      description: 'Zhou profile by the rainy window',
+      imagePrompt: 'focus on Zhou, keep Lin across the table',
+      videoPrompt: 'pan from window to Zhou',
+      location: 'Old Town',
+      characters: JSON.stringify([{ name: 'Zhou', appearance: 'default', slot: '圆桌右侧座位' }]),
+      props: 'phone, cups, table lamp',
+      srtSegment: '周岚看向窗外',
+      photographyRules: null,
+      actingNotes: null,
+      sketchImageUrl: null,
+      imageUrl: null,
+    })
+    prismaMock.projectPanel.findMany.mockResolvedValueOnce([
+      {
+        id: 'panel-1',
+        panelIndex: 0,
+        panelNumber: 1,
+        shotType: 'wide',
+        cameraMove: 'static',
+        description: 'Lin and Zhou sit across one round table',
+        imagePrompt: null,
+        videoPrompt: null,
+        location: 'Old Town',
+        characters: JSON.stringify([
+          { name: 'Lin', appearance: 'default', slot: '圆桌左侧座位' },
+          { name: 'Zhou', appearance: 'default', slot: '圆桌右侧座位' },
+        ]),
+        props: 'phone, cups, table lamp',
+        srtSegment: null,
+      },
+      {
+        id: 'panel-2',
+        panelIndex: 1,
+        panelNumber: 2,
+        shotType: 'medium',
+        cameraMove: 'pan',
+        description: 'Zhou profile by the rainy window',
+        imagePrompt: 'focus on Zhou, keep Lin across the table',
+        videoPrompt: 'pan from window to Zhou',
+        location: 'Old Town',
+        characters: JSON.stringify([{ name: 'Zhou', appearance: 'default', slot: '圆桌右侧座位' }]),
+        props: 'phone, cups, table lamp',
+        srtSegment: '周岚看向窗外',
+      },
+      {
+        id: 'panel-3',
+        panelIndex: 2,
+        panelNumber: 3,
+        shotType: 'empty_shot',
+        cameraMove: 'static',
+        description: 'doorway and plant, table still in the distance',
+        imagePrompt: null,
+        videoPrompt: null,
+        location: 'Old Town',
+        characters: '[]',
+        props: 'doorway, plant, round table',
+        srtSegment: null,
+      },
+    ])
+
+    await handlePanelImageTask(buildJob({ candidateCount: 1 }, 'panel-2'))
+
+    const promptCalls = promptMock.buildPrompt.mock.calls as unknown as Array<[{
+      variables?: { storyboard_text_json_input?: string }
+    }]>
+    const contextJson = promptCalls[0]?.[0].variables?.storyboard_text_json_input || '{}'
+    const context = JSON.parse(contextJson) as {
+      context?: {
+        scene_continuity_state?: {
+          featured_characters?: Array<{ name: string }>
+          present_characters?: Array<{ name: string; visibility: string; slot: string | null }>
+          non_featured_presence_policy?: { required?: boolean; offscreen_allowed?: boolean }
+          previous_same_scene_panel?: { panel_number?: number } | null
+          next_same_scene_panel?: { panel_number?: number } | null
+        }
+      }
+    }
+
+    expect(context.context?.scene_continuity_state?.featured_characters).toEqual([
+      expect.objectContaining({ name: 'Zhou' }),
+    ])
+    expect(context.context?.scene_continuity_state?.present_characters).toEqual(expect.arrayContaining([
+      expect.objectContaining({ name: 'Zhou', visibility: 'featured', slot: '圆桌右侧座位' }),
+      expect.objectContaining({ name: 'Lin', visibility: 'background_or_partial_presence_required', slot: '圆桌左侧座位' }),
+    ]))
+    expect(context.context?.scene_continuity_state?.non_featured_presence_policy).toEqual(expect.objectContaining({
+      required: true,
+      offscreen_allowed: false,
+    }))
+    expect(context.context?.scene_continuity_state?.previous_same_scene_panel?.panel_number).toBe(1)
+    expect(context.context?.scene_continuity_state?.next_same_scene_panel?.panel_number).toBe(3)
   })
 
   it('includes selected previous panel images as generation references', async () => {
@@ -349,6 +479,7 @@ describe('worker panel-image-task-handler behavior', () => {
       id: 'panel-1',
       storyboardId: 'storyboard-1',
       panelIndex: 0,
+      panelNumber: 1,
       shotType: 'close-up',
       cameraMove: 'static',
       description: 'hero close-up',
@@ -356,6 +487,7 @@ describe('worker panel-image-task-handler behavior', () => {
       videoPrompt: 'dramatic',
       location: 'Old Town',
       characters: JSON.stringify([{ name: 'Hero', appearance: 'default', slot: '街道左侧靠墙的留白位置' }]),
+      props: 'street lamp',
       srtSegment: '台词片段',
       photographyRules: JSON.stringify({
         consistencyMode: 'spatial_text_blocking',
@@ -398,11 +530,13 @@ describe('worker panel-image-task-handler behavior', () => {
       context?: {
         location_reference?: { spatial_profile?: { anchors?: Array<{ label: string }> } }
         reference_images?: Array<{ image_no: string; role: string; name: string }>
+        scene_continuity_state?: { scene_anchor_name?: string | null }
       }
     }
     expect(context.panel?.shot_blocking?.cameraPlacement).toBe('从街道中线偏右拍向左侧墙面')
     expect(context.context?.location_reference?.spatial_profile?.anchors?.[0]?.label).toBe('左侧墙面')
     expect(context.context?.reference_images?.map((item) => item.role)).toEqual(['sketch', 'character', 'scene_anchor'])
+    expect(context.context?.scene_continuity_state?.scene_anchor_name).toBe('Old Town')
     expect(utilsMock.resolveImageSourceFromGeneration).toHaveBeenCalledWith(
       expect.anything(),
       expect.objectContaining({
@@ -453,6 +587,7 @@ describe('worker panel-image-task-handler behavior', () => {
       id: 'panel-1',
       storyboardId: 'storyboard-1',
       panelIndex: 0,
+      panelNumber: 1,
       shotType: 'close-up',
       cameraMove: 'static',
       description: 'hero close-up',
@@ -460,6 +595,7 @@ describe('worker panel-image-task-handler behavior', () => {
       videoPrompt: 'dramatic',
       location: 'Old Town',
       characters: '[]',
+      props: null,
       srtSegment: null,
       photographyRules: null,
       actingNotes: null,

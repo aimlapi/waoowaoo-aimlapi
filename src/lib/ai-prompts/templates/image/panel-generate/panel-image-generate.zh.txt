@@ -31,6 +31,10 @@
 - 不要把图号、资产名、编号或任何标签画进画面
 - 画面的背景必须根据镜头角度和景别重新绘制
 - 如果 context.reference_images 中存在 role=scene_anchor 的参考图，后续同场景镜头必须以它作为空间事实基准：保持同一咖啡馆/房间/街道等环境的布局、光线、背景锚点和人物相对方位；特写、正反打、空镜、细节镜头都只能改变取景范围和机位，不得重造一个不同的场景。
+- 如果分镜数据包含 context.scene_continuity_state，必须同时执行它：scene_anchor 锁空间，scene_continuity_state 锁人物和动作状态。panel.characters 只表示本镜头主体角色，不代表其他同场景角色已经离开。
+- context.scene_continuity_state.present_characters 中的角色必须仍在同一场景关系里；非主体角色可以是远景、虚化、边缘、背影、肩膀、手部、倒影或剪影，但除非 offscreen_allowed=true，禁止让他们消失。
+- 插入镜头、特写、空镜或环境镜头如果 scene_continuity_state.environment_or_insert_policy.maintain_present_characters=true，present_characters 必须可见或部分可见；可以通过远景、虚化、边缘、背影、肩膀、手部、倒影或剪影体现，不得把“镜头主体不是人”误解成“场景里没人”。
+- 道具、桌面、门窗、绿植等细节镜头必须沿用 scene_continuity_state.scene_props 与 scene_anchor 的相对位置，不能重造一套不同的桌面或入口。
 - 特写/细节镜头应使用虚化或局部背景
 - 参考图上方的文字标签标注了角色/场景名称，请与分镜要求对应
 - 参考图中的旧美术风格不得覆盖本次项目视觉风格，最终画风以【风格要求】为准
