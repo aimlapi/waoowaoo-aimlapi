@@ -72,7 +72,7 @@ export interface PanelCharacterReference {
   slot?: string
 }
 
-export type ReferenceImageRole = 'sketch' | 'source_panel' | 'character' | 'location' | 'prop' | 'extra'
+export type ReferenceImageRole = 'sketch' | 'source_panel' | 'character' | 'scene_anchor' | 'location' | 'prop' | 'extra'
 
 export interface ReferenceImageItem {
   url: string
@@ -276,6 +276,7 @@ export function formatReferenceImagesMapForPrompt(
     sketch: { zh: '分镜草图', en: 'storyboard sketch' },
     source_panel: { zh: '原始镜头', en: 'source panel' },
     character: { zh: '角色', en: 'character' },
+    scene_anchor: { zh: '场景锚定图', en: 'scene anchor' },
     location: { zh: '场景', en: 'location' },
     prop: { zh: '道具', en: 'prop' },
     extra: { zh: '额外参考', en: 'extra reference' },
@@ -463,7 +464,7 @@ export async function collectPanelReferenceImageItemsWithDiagnostics(
         pushReferenceImageItem(
           collection,
           { kind: 'location', inputIndex: null, name: location.name, sourceUrl: selected?.imageUrl || null },
-          { url: signed, role: 'location', name: location.name },
+          { url: signed, role: 'scene_anchor', name: location.name },
         )
       }
     }

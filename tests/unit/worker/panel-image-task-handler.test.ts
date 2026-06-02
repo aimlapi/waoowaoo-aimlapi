@@ -35,7 +35,7 @@ const sharedMock = vi.hoisted(() => ({
     items: [
       { url: 'https://signed.example/sketch.png', role: 'sketch', name: 'storyboard sketch' },
       { url: 'https://signed.example/hero.png', role: 'character', name: 'Hero', appearance: 'default', slot: '街道左侧靠墙的留白位置' },
-      { url: 'https://signed.example/location.png', role: 'location', name: 'Old Town' },
+      { url: 'https://signed.example/location.png', role: 'scene_anchor', name: 'Old Town' },
     ],
     diagnostics: [{
       kind: 'character',
@@ -55,7 +55,7 @@ const sharedMock = vi.hoisted(() => ({
     void options
     return {
       referenceImages: items.map((item, index) => {
-        const defaults = ['normalized-sketch', 'normalized-hero', 'normalized-location']
+        const defaults = ['normalized-sketch', 'normalized-hero', 'normalized-scene-anchor']
         return defaults[index] || `normalized:${item.url}`
       }),
       referenceImagesMap: items.map((item, index) => ({
@@ -215,7 +215,7 @@ describe('worker panel-image-task-handler behavior', () => {
         prompt: 'panel-image-prompt',
         allowTaskExternalIdResume: false,
         options: expect.objectContaining({
-          referenceImages: ['normalized-sketch', 'normalized-hero', 'normalized-location'],
+          referenceImages: ['normalized-sketch', 'normalized-hero', 'normalized-scene-anchor'],
           aspectRatio: '16:9',
         }),
       }),
@@ -224,7 +224,7 @@ describe('worker panel-image-task-handler behavior', () => {
       expect.arrayContaining([
         expect.objectContaining({ role: 'sketch', name: 'storyboard sketch' }),
         expect.objectContaining({ role: 'character', name: 'Hero' }),
-        expect.objectContaining({ role: 'location', name: 'Old Town' }),
+        expect.objectContaining({ role: 'scene_anchor', name: 'Old Town' }),
       ]),
       expect.objectContaining({ locale: 'zh' }),
     )
@@ -249,7 +249,7 @@ describe('worker panel-image-task-handler behavior', () => {
     expect(context.context?.reference_images).toEqual([
       { image_no: '图 1', role: 'sketch', name: '分镜草图' },
       { image_no: '图 2', role: 'character', name: 'Hero', appearance: 'default', slot: '街道左侧靠墙的留白位置' },
-      { image_no: '图 3', role: 'location', name: 'Old Town' },
+      { image_no: '图 3', role: 'scene_anchor', name: 'Old Town' },
     ])
     expect(prismaMock.projectPanel.update).toHaveBeenCalledWith({
       where: { id: 'panel-1' },
@@ -309,7 +309,7 @@ describe('worker panel-image-task-handler behavior', () => {
       expect.arrayContaining([
         expect.objectContaining({ url: 'https://signed.example/sketch.png', role: 'sketch' }),
         expect.objectContaining({ url: 'https://signed.example/hero.png', role: 'character' }),
-        expect.objectContaining({ url: 'https://signed.example/location.png', role: 'location' }),
+        expect.objectContaining({ url: 'https://signed.example/location.png', role: 'scene_anchor' }),
         expect.objectContaining({ url: 'images/previous-panel.png', role: 'source_panel' }),
         expect.objectContaining({ url: 'https://example.com/manual-ref.png', role: 'extra' }),
       ]),
@@ -325,7 +325,7 @@ describe('worker panel-image-task-handler behavior', () => {
           referenceImages: [
             'normalized-sketch',
             'normalized-hero',
-            'normalized-location',
+            'normalized-scene-anchor',
             'normalized:images/previous-panel.png',
             'normalized:https://example.com/manual-ref.png',
           ],
@@ -402,12 +402,12 @@ describe('worker panel-image-task-handler behavior', () => {
     }
     expect(context.panel?.shot_blocking?.cameraPlacement).toBe('从街道中线偏右拍向左侧墙面')
     expect(context.context?.location_reference?.spatial_profile?.anchors?.[0]?.label).toBe('左侧墙面')
-    expect(context.context?.reference_images?.map((item) => item.role)).toEqual(['sketch', 'character', 'location'])
+    expect(context.context?.reference_images?.map((item) => item.role)).toEqual(['sketch', 'character', 'scene_anchor'])
     expect(utilsMock.resolveImageSourceFromGeneration).toHaveBeenCalledWith(
       expect.anything(),
       expect.objectContaining({
         options: expect.objectContaining({
-          referenceImages: ['normalized-sketch', 'normalized-hero', 'normalized-location'],
+          referenceImages: ['normalized-sketch', 'normalized-hero', 'normalized-scene-anchor'],
         }),
       }),
     )
