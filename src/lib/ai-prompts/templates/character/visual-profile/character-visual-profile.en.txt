@@ -14,6 +14,7 @@ Rules:
 7. Do not include skin color, eye color, or lip color.
 8. Convert costume/styling, body profile, facial profile, skin condition, visible mental state, accessibility features, tattoos, and scars into concrete visible details.
 9. Describe disability, scars, skin state, and visible mental state neutrally and respectfully, without diagnosis or sensational language.
+10. For every candidate, include casting still requirements for neutral identity, crying, smiling, key prop, and typical background.
 
 Appearance strategy:
 - Initial appearance should be complete and self-contained.
@@ -55,7 +56,54 @@ Output format (JSON only):
                 "risks": ["visual or casting risk"],
                 "recommendation": "one sentence recommendation",
                 "fit_tags": ["distinctive", "camera-ready"]
-              }
+              },
+              "casting_stills": [
+                {
+                  "kind": "neutral",
+                  "title": "Neutral identity still",
+                  "prompt": "front, side, and back casting stills with neutral expression and consistent costume, body profile, and identifiers",
+                  "expression": "neutral",
+                  "prop": "",
+                  "background": "plain studio background",
+                  "purpose": "check identity, body, outfit, and marks"
+                },
+                {
+                  "kind": "crying",
+                  "title": "Crying expression still",
+                  "prompt": "same character with a crying facial expression, wet eyes and tightened facial muscles, unchanged costume logic",
+                  "expression": "crying",
+                  "prop": "",
+                  "background": "plain low-distraction background",
+                  "purpose": "test sad-scene expression fit"
+                },
+                {
+                  "kind": "smiling",
+                  "title": "Smiling expression still",
+                  "prompt": "same character with a natural smile, unchanged costume logic",
+                  "expression": "smiling",
+                  "prop": "",
+                  "background": "plain low-distraction background",
+                  "purpose": "test warmth and expression range"
+                },
+                {
+                  "kind": "prop",
+                  "title": "Key prop still",
+                  "prompt": "same character wearing or holding the most identity-relevant prop without blocking face or outfit",
+                  "expression": "neutral",
+                  "prop": "specific identity-relevant prop",
+                  "background": "plain studio background",
+                  "purpose": "test prop and identity fit"
+                },
+                {
+                  "kind": "background",
+                  "title": "Typical background still",
+                  "prompt": "same character in a story-relevant background, low-distraction, character remains the subject",
+                  "expression": "neutral",
+                  "prop": "",
+                  "background": "specific story-relevant background",
+                  "purpose": "test scene fit"
+                }
+              ]
             }
           ]
         }
@@ -69,5 +117,7 @@ Strict constraints:
 2. Keep names exactly aligned with input profiles.
 3. Each descriptions array must contain at least 3 valid English strings.
 4. candidates must be the same length and order as descriptions.
-5. casting_notes.score must be an integer from 0 to 100.
-6. ⚠️ JSON SAFETY: All quotation marks in text (""''「」 etc.) MUST be converted to corner brackets「」in JSON string values. NEVER use raw ASCII double quotes " inside string values.
+5. Every candidate must include casting_stills with neutral, crying, smiling, prop, and background entries.
+6. Prop and background stills must be specific to the character, not generic placeholders.
+7. casting_notes.score must be an integer from 0 to 100.
+8. ⚠️ JSON SAFETY: All quotation marks in text (""''「」 etc.) MUST be converted to corner brackets「」in JSON string values. NEVER use raw ASCII double quotes " inside string values.

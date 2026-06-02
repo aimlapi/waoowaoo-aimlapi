@@ -160,6 +160,7 @@ describe('worker character visual profile behavior', () => {
               recommendation: '',
               fitTags: [],
             },
+            castingStills: [],
           },
         ]),
       }),
@@ -211,6 +212,26 @@ describe('worker character visual profile behavior', () => {
                       recommendation: '适合作为主视觉候选。',
                       fit_tags: ['镜头友好'],
                     },
+                    casting_stills: [
+                      {
+                        kind: 'crying',
+                        title: '哭泣表情定妆',
+                        prompt: '同一角色哭泣状态，手杖仍在身侧',
+                        expression: '哭泣',
+                        prop: '手杖',
+                        background: '低干扰灰墙',
+                        purpose: '测试悲伤戏表情适配',
+                      },
+                      {
+                        kind: 'smiling',
+                        title: '微笑表情定妆',
+                        prompt: '同一角色自然微笑状态',
+                        expression: '微笑',
+                        prop: '',
+                        background: '低干扰灰墙',
+                        purpose: '测试亲和力',
+                      },
+                    ],
                   },
                 ],
               },
@@ -245,6 +266,15 @@ describe('worker character visual profile behavior', () => {
         recommendation: string
         fitTags: string[]
       }
+      castingStills: Array<{
+        kind: string
+        title: string
+        prompt: string
+        expression: string
+        prop: string
+        background: string
+        purpose: string
+      }>
     }>
     expect(metadata[0]?.description).toBe('轮廓分明，黑色风衣，黑色皮鞋')
     expect(metadata[0]?.visualTraits).toEqual(expect.objectContaining({
@@ -264,6 +294,26 @@ describe('worker character visual profile behavior', () => {
       recommendation: '适合作为主视觉候选。',
       fitTags: ['镜头友好'],
     })
+    expect(metadata[0]?.castingStills).toEqual([
+      {
+        kind: 'crying',
+        title: '哭泣表情定妆',
+        prompt: '同一角色哭泣状态，手杖仍在身侧',
+        expression: '哭泣',
+        prop: '手杖',
+        background: '低干扰灰墙',
+        purpose: '测试悲伤戏表情适配',
+      },
+      {
+        kind: 'smiling',
+        title: '微笑表情定妆',
+        prompt: '同一角色自然微笑状态',
+        expression: '微笑',
+        prop: '',
+        background: '低干扰灰墙',
+        purpose: '测试亲和力',
+      },
+    ])
   })
 
   it('newly created character visual profile failure -> deletes the created character before rethrowing', async () => {

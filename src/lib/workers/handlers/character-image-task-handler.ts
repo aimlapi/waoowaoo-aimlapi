@@ -23,6 +23,10 @@ import {
   parseJsonStringArray,
   pickFirstString,
 } from './image-task-handler-shared'
+import {
+  parseAppearanceCandidateMetadata,
+  type CharacterAppearanceCandidateMetadata,
+} from '@/types/character-casting'
 
 interface CharacterAppearanceRecord {
   id: string
@@ -30,10 +34,47 @@ interface CharacterAppearanceRecord {
   appearanceIndex: number
   descriptions: string | null
   description: string | null
+  descriptionMetadata?: string | null
   imageUrls: string | null
   selectedIndex: number | null
   imageUrl: string | null
   changeReason: string | null
+}
+
+function buildCastingStillPromptBlock(
+  metadata: CharacterAppearanceCandidateMetadata | null,
+  locale: string | null | undefined,
+): string {
+  const stills = metadata?.castingStills ?? []
+  if (stills.length === 0) return ''
+
+  const details = stills.map((still, index) => {
+    const parts = [
+      `${index + 1}. ${still.title}`,
+      still.prompt,
+      still.expression ? `expression: ${still.expression}` : '',
+      still.prop ? `prop: ${still.prop}` : '',
+      still.background ? `background: ${still.background}` : '',
+      still.purpose ? `purpose: ${still.purpose}` : '',
+    ].filter(Boolean)
+    return parts.join('；')
+  }).join('\n')
+
+  if (locale?.startsWith('en')) {
+    return [
+      '',
+      'Casting still requirements:',
+      'Generate this character as a casting contact sheet. Keep the same identity, facial structure, body profile, costume logic, marks, assistive devices, scars, and tattoos consistent across every panel. Include neutral identity views plus the following expression, prop, and background stills. These stills are casting material only; do not let props or backgrounds replace the core character design.',
+      details,
+    ].join('\n')
+  }
+
+  return [
+    '',
+    '【选角定妆素材要求】',
+    '请将该角色生成成一张选角定妆 contact sheet。每个小图必须保持同一角色身份、五官结构、体型、服化道逻辑、标记、辅助器具、疤痕和纹身一致。除中性身份照外，补充以下表情、道具和背景定妆照。它们只作为选角素材，不得让道具或背景覆盖核心人物设计。',
+    details,
+  ].join('\n')
 }
 
 interface CharacterAppearanceWithCharacter extends CharacterAppearanceRecord {
@@ -111,6 +152,7 @@ export async function handleCharacterImageTask(job: Job<TaskJobData>) {
   })
   const descriptions = parseJsonStringArray(appearance.descriptions)
   const baseDescriptions = descriptions.length > 0 ? descriptions : [appearance.description || '']
+  const candidateMetadata = parseAppearanceCandidateMetadata(appearance.descriptionMetadata)
 
   // 子形象（不是主形象）生成时，引用主形象图片保持一致性
   const primaryReferenceInputs: string[] = []
@@ -148,7 +190,9 @@ export async function handleCharacterImageTask(job: Job<TaskJobData>) {
   for (let i = 0; i < indexes.length; i++) {
     const index = indexes[i]
     const raw = baseDescriptions[index] || baseDescriptions[0]
-    const promptBase = artStyle ? `${addCharacterPromptSuffix(raw)}，${artStyle}` : addCharacterPromptSuffix(raw)
+    const metadata = candidateMetadata[index] ?? candidateMetadata[0] ?? null
+    const rawWithCastingStills = `${raw}${buildCastingStillPromptBlock(metadata, job.data.locale)}`
+    const promptBase = artStyle ? `${addCharacterPromptSuffix(rawWithCastingStills)}，${artStyle}` : addCharacterPromptSuffix(rawWithCastingStills)
     const prompt = appendStyleBiblePromptBlock({
       prompt: promptBase,
       styleBible,

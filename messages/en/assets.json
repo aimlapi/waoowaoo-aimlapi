@@ -136,6 +136,7 @@
     "casting": {
         "optionNotes": "Casting",
         "score": "{score}",
+        "stills": "Stills:",
         "risk": "Risk: {risk}"
     },
     "modal": {

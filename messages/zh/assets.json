@@ -136,6 +136,7 @@
     "casting": {
         "optionNotes": "选角",
         "score": "{score}分",
+        "stills": "定妆：",
         "risk": "风险：{risk}"
     },
     "modal": {

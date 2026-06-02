@@ -19,10 +19,23 @@ export interface CharacterCastingNotes {
   fitTags: string[]
 }
 
+export type CharacterCastingStillKind = 'neutral' | 'crying' | 'smiling' | 'prop' | 'background'
+
+export interface CharacterCastingStill {
+  kind: CharacterCastingStillKind
+  title: string
+  prompt: string
+  expression: string
+  prop: string
+  background: string
+  purpose: string
+}
+
 export interface CharacterAppearanceCandidateMetadata {
   description: string
   visualTraits: CharacterVisualTraits
   castingNotes: CharacterCastingNotes
+  castingStills: CharacterCastingStill[]
 }
 
 const EMPTY_TRAITS: CharacterVisualTraits = {
@@ -46,6 +59,14 @@ const EMPTY_CASTING_NOTES: CharacterCastingNotes = {
   fitTags: [],
 }
 
+const CASTING_STILL_KINDS: readonly CharacterCastingStillKind[] = [
+  'neutral',
+  'crying',
+  'smiling',
+  'prop',
+  'background',
+]
+
 function isRecord(value: unknown): value is Record<string, unknown> {
   return !!value && typeof value === 'object' && !Array.isArray(value)
 }
@@ -57,6 +78,11 @@ function readString(value: unknown): string {
 function readStringArray(value: unknown): string[] {
   if (!Array.isArray(value)) return []
   return value.map(readString).filter(Boolean)
+}
+
+function readCastingStillKind(value: unknown): CharacterCastingStillKind | null {
+  if (typeof value !== 'string') return null
+  return CASTING_STILL_KINDS.find((kind) => kind === value) ?? null
 }
 
 function readScore(value: unknown): number | null {
@@ -99,16 +125,41 @@ function normalizeCastingNotes(value: unknown): CharacterCastingNotes {
   }
 }
 
+function normalizeCastingStill(value: unknown): CharacterCastingStill | null {
+  if (!isRecord(value)) return null
+  const kind = readCastingStillKind(value.kind)
+  const prompt = readString(value.prompt ?? value.description)
+  if (!kind || !prompt) return null
+  return {
+    kind,
+    title: readString(value.title) || kind,
+    prompt,
+    expression: readString(value.expression),
+    prop: readString(value.prop),
+    background: readString(value.background),
+    purpose: readString(value.purpose),
+  }
+}
+
+function normalizeCastingStills(value: unknown): CharacterCastingStill[] {
+  if (!Array.isArray(value)) return []
+  return value
+    .map(normalizeCastingStill)
+    .filter((item): item is CharacterCastingStill => !!item)
+}
+
 function normalizeCandidateFromRecord(
   value: Record<string, unknown>,
   fallbackDescription: string,
 ): CharacterAppearanceCandidateMetadata {
   const traits = readNestedRecord(value, ['visual_traits', 'visualTraits', 'traits'])
   const castingNotes = readNestedRecord(value, ['casting_notes', 'castingNotes', 'casting'])
+  const castingStills = value.casting_stills ?? value.castingStills ?? value.stills
   return {
     description: readString(value.description ?? value.prompt) || fallbackDescription,
     visualTraits: normalizeTraits(traits),
     castingNotes: normalizeCastingNotes(castingNotes),
+    castingStills: normalizeCastingStills(castingStills),
   }
 }
 
@@ -126,6 +177,7 @@ export function normalizeAppearanceCandidateMetadata(
       description,
       visualTraits: { ...EMPTY_TRAITS },
       castingNotes: { ...EMPTY_CASTING_NOTES },
+      castingStills: [],
     }
   })
 }

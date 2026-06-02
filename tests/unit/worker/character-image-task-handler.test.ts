@@ -92,6 +92,7 @@ describe('worker character-image-task-handler behavior', () => {
       characterId: 'character-1',
       appearanceIndex: 1,
       descriptions: JSON.stringify(['角色描述A']),
+      descriptionMetadata: null,
       description: '角色描述A',
       imageUrls: JSON.stringify([]),
       selectedIndex: 0,
@@ -156,6 +157,7 @@ describe('worker character-image-task-handler behavior', () => {
       characterId: 'character-1',
       appearanceIndex: 0,
       descriptions: JSON.stringify(['主形象描述A']),
+      descriptionMetadata: null,
       description: '主形象描述A',
       imageUrls: JSON.stringify([]),
       selectedIndex: 0,
@@ -202,6 +204,85 @@ describe('worker character-image-task-handler behavior', () => {
     expect(generationInput.prompt).toContain('用途：资产图生成')
     expect(generationInput.prompt).toContain('画面滤镜：轻微柔焦，35mm镜头，克制高光。')
     expect(generationInput.prompt).toContain('负向约束：避免商业广告感，避免高反差大片感，避免炫技运镜。')
+  })
+
+  it('candidate casting stills -> appends expression prop and background requirements to image prompt', async () => {
+    prismaMock.characterAppearance.findUnique.mockResolvedValueOnce({
+      id: 'appearance-2',
+      characterId: 'character-1',
+      appearanceIndex: 0,
+      descriptions: JSON.stringify(['高挑女性调查员，黑色机能外套，黑色战术靴']),
+      descriptionMetadata: JSON.stringify([
+        {
+          description: '高挑女性调查员，黑色机能外套，黑色战术靴',
+          visualTraits: {
+            face: '眉尾短疤',
+            hair: '低发髻',
+            body: '高挑偏瘦',
+            costume: '黑色机能外套',
+            makeupAndAccessories: '',
+            skin: '眼下倦纹',
+            visibleState: '疲惫但清醒',
+            accessibility: '助听器',
+            tattoosAndMarks: '右前臂几何纹身',
+            scars: '左眉尾短疤',
+          },
+          castingNotes: {
+            score: 92,
+            strengths: ['身份清晰'],
+            risks: [],
+            recommendation: '适合选角。',
+            fitTags: ['镜头友好'],
+          },
+          castingStills: [
+            {
+              kind: 'crying',
+              title: '哭泣表情定妆',
+              prompt: '同一角色哭泣状态，眼眶湿润，助听器和短疤保持一致',
+              expression: '哭泣',
+              prop: '',
+              background: '低干扰灰墙',
+              purpose: '测试悲伤戏',
+            },
+            {
+              kind: 'prop',
+              title: '折叠手杖道具定妆',
+              prompt: '同一角色手持折叠手杖，道具不遮挡脸部',
+              expression: '中性',
+              prop: '折叠手杖',
+              background: '摄影棚背景',
+              purpose: '测试道具匹配',
+            },
+            {
+              kind: 'background',
+              title: '城市调查现场背景定妆',
+              prompt: '同一角色站在近未来城市调查现场背景前，人物仍为主体',
+              expression: '中性',
+              prop: '',
+              background: '近未来城市调查现场',
+              purpose: '测试场景融合度',
+            },
+          ],
+        },
+      ]),
+      description: '高挑女性调查员，黑色机能外套，黑色战术靴',
+      imageUrls: JSON.stringify([]),
+      selectedIndex: 0,
+      imageUrl: null,
+      changeReason: '初始形象',
+      character: { name: 'Hero' },
+    })
+
+    await handleCharacterImageTask(buildJob({ imageIndex: 0 }, 'appearance-2'))
+
+    const generationInput = sharedMock.generateCleanImageToStorage.mock.calls[0]?.[0] as {
+      prompt: string
+    }
+    expect(generationInput.prompt).toContain('【选角定妆素材要求】')
+    expect(generationInput.prompt).toContain('哭泣表情定妆')
+    expect(generationInput.prompt).toContain('折叠手杖道具定妆')
+    expect(generationInput.prompt).toContain('城市调查现场背景定妆')
+    expect(generationInput.prompt).toContain('近未来城市调查现场')
   })
 
   it('invalid payload artStyle -> explicit error', async () => {

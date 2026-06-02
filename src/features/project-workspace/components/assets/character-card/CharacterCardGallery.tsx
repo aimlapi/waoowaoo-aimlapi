@@ -59,6 +59,7 @@ export default function CharacterCardGallery(props: CharacterCardGalleryProps) {
             metadata?.visualTraits.tattoosAndMarks,
             metadata?.visualTraits.scars,
           ].filter((value): value is string => !!value).slice(0, 2)
+          const stillTitles = (metadata?.castingStills ?? []).map((still) => still.title).filter(Boolean).slice(0, 4)
           return (
             <div key={originalIndex} className="relative group/thumb">
               <div
@@ -124,6 +125,16 @@ export default function CharacterCardGallery(props: CharacterCardGalleryProps) {
                       {compactTraits.map((trait) => (
                         <span key={trait} className="max-w-full truncate rounded bg-[var(--glass-bg-muted)] px-1.5 py-0.5">
                           {trait}
+                        </span>
+                      ))}
+                    </div>
+                  )}
+                  {stillTitles.length > 0 && (
+                    <div className="mt-1 flex flex-wrap gap-1">
+                      <span className="text-[var(--glass-text-tertiary)]">{t('casting.stills')}</span>
+                      {stillTitles.map((title) => (
+                        <span key={title} className="max-w-full truncate rounded bg-[var(--glass-tone-info-bg)] px-1.5 py-0.5 text-[var(--glass-tone-info-fg)]">
+                          {title}
                         </span>
                       ))}
                     </div>
