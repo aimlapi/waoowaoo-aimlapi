@@ -19,7 +19,11 @@ import {
   buildDevAbVariantCharacterRequest,
   type DevAbVariantId,
 } from '@/lib/dev-ab-test/variant-request'
-import { VariantInput, VariantResult } from './components'
+import {
+  parseDevAbCastingEvaluationResult,
+  type DevAbCastingEvaluationResult,
+} from '@/lib/dev-ab-test/casting-evaluation'
+import { CastingEvaluationPanel, VariantInput, VariantResult } from './components'
 
 export default function DevAbTestPage() {
   const t = useTranslations('workspaceDetail.devAbTest')
@@ -27,6 +31,9 @@ export default function DevAbTestPage() {
   const [baseRequest, setBaseRequest] = useState('')
   const [variantA, setVariantA] = useState('')
   const [variantB, setVariantB] = useState('')
+  const [evaluation, setEvaluation] = useState<DevAbCastingEvaluationResult | null>(null)
+  const [evaluating, setEvaluating] = useState(false)
+  const [evaluationError, setEvaluationError] = useState<string | null>(null)
   const [variantStates, setVariantStates] = useState<Record<DevAbVariantId, DevAbVariantState>>({
     A: EMPTY_DEV_AB_VARIANT_STATE,
     B: EMPTY_DEV_AB_VARIANT_STATE,
@@ -35,6 +42,9 @@ export default function DevAbTestPage() {
 
   const canSubmit = baseRequest.trim().length > 0 && variantA.trim().length > 0 && variantB.trim().length > 0
   const anySubmitting = variantStates.A.submitting || variantStates.B.submitting
+  const imageUrlA = variantStates.A.task?.result?.imageUrl || ''
+  const imageUrlB = variantStates.B.task?.result?.imageUrl || ''
+  const canEvaluate = Boolean(imageUrlA && imageUrlB)
 
   const variantRequests = useMemo(() => ({
     A: buildDevAbVariantCharacterRequest({
@@ -133,6 +143,8 @@ export default function DevAbTestPage() {
     }
 
     setPageError(null)
+    setEvaluation(null)
+    setEvaluationError(null)
     updateVariantState(variantId, {
       taskId: null,
       task: null,
@@ -170,6 +182,38 @@ export default function DevAbTestPage() {
     await Promise.all([submitVariant('A'), submitVariant('B')])
   }, [canSubmit, submitVariant, t])
 
+  const evaluateCasting = useCallback(async () => {
+    if (!imageUrlA || !imageUrlB) {
+      setEvaluationError(t('judgeNeedImages'))
+      return
+    }
+    setEvaluationError(null)
+    setEvaluation(null)
+    setEvaluating(true)
+    try {
+      const response = await apiFetch('/api/dev-ab-test/evaluate-casting', {
+        method: 'POST',
+        headers: { 'content-type': 'application/json' },
+        body: JSON.stringify({
+          locale,
+          baseRequest,
+          requestA: variantRequests.A,
+          requestB: variantRequests.B,
+          imageUrlA,
+          imageUrlB,
+        }),
+      })
+      if (!response.ok) throw new Error(await readApiErrorMessage(response, t('judgeFailed')))
+      const parsed = parseDevAbCastingEvaluationResult(await response.json())
+      if (!parsed) throw new Error(t('judgeFailed'))
+      setEvaluation(parsed)
+    } catch (error) {
+      setEvaluationError(error instanceof Error ? error.message : t('judgeFailed'))
+    } finally {
+      setEvaluating(false)
+    }
+  }, [baseRequest, imageUrlA, imageUrlB, locale, t, variantRequests])
+
   return (
     <div className="min-h-screen bg-[var(--glass-bg-base)] text-[var(--glass-text-primary)]">
       <Navbar />
@@ -190,6 +234,15 @@ export default function DevAbTestPage() {
           >
             <AppIcon name="play" className="h-4 w-4" />
             {anySubmitting ? t('submitting') : t('runBoth')}
+          </button>
+          <button
+            type="button"
+            onClick={() => void evaluateCasting()}
+            disabled={!canEvaluate || evaluating || anySubmitting}
+            className="inline-flex items-center gap-2 rounded-lg border border-[var(--glass-stroke-base)] px-4 py-2 text-sm font-semibold text-[var(--glass-text-primary)] transition-colors hover:bg-[var(--glass-bg-surface-strong)] disabled:cursor-not-allowed disabled:opacity-50"
+          >
+            <AppIcon name="sparkles" className="h-4 w-4" />
+            {evaluating ? t('judging') : t('runJudge')}
           </button>
         </header>
 
@@ -215,6 +268,7 @@ export default function DevAbTestPage() {
             <VariantResult id="B" state={variantStates.B} request={variantRequests.B} />
           </div>
         </section>
+        <CastingEvaluationPanel evaluation={evaluation} error={evaluationError} evaluating={evaluating} />
       </main>
     </div>
   )

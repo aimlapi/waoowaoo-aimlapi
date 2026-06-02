@@ -90,7 +90,26 @@
     "submittedRequest": "本次提交输入",
     "promptTitle": "实际生成 Prompt",
     "promptHidden": "生成完成后显示完整 prompt。",
-    "imageAlt": "{id} 方案生成结果"
+    "imageAlt": "{id} 方案生成结果",
+    "runJudge": "自动评分",
+    "judging": "评分中...",
+    "judgeNeedImages": "请先生成 A/B 两张图片，再进行自动评分。",
+    "judgeFailed": "自动评分失败",
+    "judgeTitle": "自动选角评分",
+    "judgeVariantTitle": "{id} 方案评分",
+    "judgeWinner": "推荐选择",
+    "judgeStrengths": "可见优势",
+    "judgeRisks": "风险",
+    "criteria": {
+      "roleConsistency": "角色一致性",
+      "identityReadability": "脸部与身份辨识度",
+      "contactSheetCompleteness": "选角素材完整度",
+      "expressionRange": "表情跨度",
+      "costumeRange": "服装跨度",
+      "marksPropsFidelity": "标记与道具保真",
+      "backgroundFit": "背景适配",
+      "productionUsability": "后续资产可用性"
+    }
   },
   "modelSetup": {
     "title": "开始创作前，请先配置默认模型",

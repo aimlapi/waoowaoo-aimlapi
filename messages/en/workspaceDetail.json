@@ -90,7 +90,26 @@
     "submittedRequest": "Submitted request",
     "promptTitle": "Actual generation prompt",
     "promptHidden": "The full prompt appears after generation completes.",
-    "imageAlt": "Variant {id} generation result"
+    "imageAlt": "Variant {id} generation result",
+    "runJudge": "Auto score",
+    "judging": "Scoring...",
+    "judgeNeedImages": "Generate both A/B images before auto scoring.",
+    "judgeFailed": "Auto scoring failed",
+    "judgeTitle": "Automatic casting score",
+    "judgeVariantTitle": "Variant {id} score",
+    "judgeWinner": "Recommended",
+    "judgeStrengths": "Visible strengths",
+    "judgeRisks": "Risks",
+    "criteria": {
+      "roleConsistency": "Role consistency",
+      "identityReadability": "Face and identity readability",
+      "contactSheetCompleteness": "Casting material completeness",
+      "expressionRange": "Expression range",
+      "costumeRange": "Costume range",
+      "marksPropsFidelity": "Marks and prop fidelity",
+      "backgroundFit": "Background fit",
+      "productionUsability": "Production usability"
+    }
   },
   "modelSetup": {
     "title": "Set up default models before starting",
