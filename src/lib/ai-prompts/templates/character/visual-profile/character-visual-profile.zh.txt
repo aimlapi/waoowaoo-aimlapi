@@ -140,7 +140,7 @@ D级角色：
    ❌ 不确定描述（如"可能"、"或"）
    ❌ 将残疾、疤痕、肤色、精神状态写成贬损、猎奇或诊断式语言
 
-   例外：casting_stills 是选角定妆素材，可以包含哭、笑、手持道具、站在典型背景前等要求，但必须保持同一角色身份一致，且不得写成剧情动作或分镜叙事。
+   例外：casting_stills 是选角定妆素材，可以包含哭、笑、换装、手持道具、站在典型背景前等要求，但必须保持同一角色身份一致，且不得写成剧情动作或分镜叙事。
 
 3. 可以描写：
    ✅ 皮肤质感（光滑/粗糙）
@@ -246,6 +246,15 @@ D级角色：
                   "purpose": "测试亲和力和表情跨度"
                 },
                 {
+                  "kind": "costume",
+                  "title": "换装定妆",
+                  "prompt": "同一角色换上明显不同的服装层次、材质或穿搭方式，但角色身份保持一致",
+                  "expression": "中性",
+                  "prop": "",
+                  "background": "纯色或摄影棚背景",
+                  "purpose": "测试服装跨度和选角弹性"
+                },
+                {
                   "kind": "prop",
                   "title": "关键道具定妆",
                   "prompt": "同一角色穿戴或手持最符合身份的关键道具，道具不得遮挡脸部和主要服装",
@@ -280,11 +289,12 @@ D级角色：
 4. 三条描述可以自由发挥细节，但整体形象保持一致，不要有过大差异
 5. 每条描述必须包含鞋子
 6. candidates 数组必须与 descriptions 数组等长且顺序一一对应
-7. 每个 candidate 必须包含 casting_stills，至少包含 kind 为 neutral、crying、smiling、prop、background 的五条
-8. casting_stills 中的 prop/background 必须根据角色身份具体化，不能写"根据角色身份填写"
-9. casting_notes.score 必须是 0-100 的整数，不确定时按匹配程度谨慎给分
-10. 只返回JSON，不得有其他文字
-11. ⚠️ JSON安全：所有引号（""''等）在 JSON 字符串值中必须统一替换为「」，严禁出现未转义的英文双引号 "
+7. 每个 candidate 必须包含 casting_stills，至少包含 kind 为 neutral、crying、smiling、costume、prop、background 的六条
+8. casting_stills 中的 costume 必须清楚改变服装材质、层次或穿搭方式，但保持同一角色身份
+9. casting_stills 中的 prop/background 必须根据角色身份具体化，不能写"根据角色身份填写"
+10. casting_notes.score 必须是 0-100 的整数，不确定时按匹配程度谨慎给分
+11. 只返回JSON，不得有其他文字
+12. ⚠️ JSON安全：所有引号（""''等）在 JSON 字符串值中必须统一替换为「」，严禁出现未转义的英文双引号 "
 
 【输入数据】
 

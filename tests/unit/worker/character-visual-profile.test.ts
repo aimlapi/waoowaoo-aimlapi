@@ -231,6 +231,15 @@ describe('worker character visual profile behavior', () => {
                         background: '低干扰灰墙',
                         purpose: '测试亲和力',
                       },
+                      {
+                        kind: 'costume',
+                        title: '雨夜外勤换装定妆',
+                        prompt: '同一角色换上防水长外套和黑色战术靴',
+                        expression: '中性',
+                        prop: '',
+                        background: '低干扰灰墙',
+                        purpose: '测试服装跨度',
+                      },
                     ],
                   },
                 ],
@@ -312,6 +321,15 @@ describe('worker character visual profile behavior', () => {
         prop: '',
         background: '低干扰灰墙',
         purpose: '测试亲和力',
+      },
+      {
+        kind: 'costume',
+        title: '雨夜外勤换装定妆',
+        prompt: '同一角色换上防水长外套和黑色战术靴',
+        expression: '中性',
+        prop: '',
+        background: '低干扰灰墙',
+        purpose: '测试服装跨度',
       },
     ])
   })

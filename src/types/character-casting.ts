@@ -19,7 +19,7 @@ export interface CharacterCastingNotes {
   fitTags: string[]
 }
 
-export type CharacterCastingStillKind = 'neutral' | 'crying' | 'smiling' | 'prop' | 'background'
+export type CharacterCastingStillKind = 'neutral' | 'crying' | 'smiling' | 'costume' | 'prop' | 'background'
 
 export interface CharacterCastingStill {
   kind: CharacterCastingStillKind
@@ -63,6 +63,7 @@ const CASTING_STILL_KINDS: readonly CharacterCastingStillKind[] = [
   'neutral',
   'crying',
   'smiling',
+  'costume',
   'prop',
   'background',
 ]

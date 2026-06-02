@@ -64,7 +64,7 @@ function buildCastingStillPromptBlock(
     return [
       '',
       'Casting still requirements:',
-      'Generate this character as a casting contact sheet. Keep the same identity, facial structure, body profile, costume logic, marks, assistive devices, scars, and tattoos consistent across every panel. Include neutral identity views plus the following expression, prop, and background stills. These stills are casting material only; do not let props or backgrounds replace the core character design.',
+      'Generate this character as a casting contact sheet. Keep the same identity, facial structure, body profile, marks, assistive devices, scars, and tattoos consistent across every panel. Include neutral identity views plus the following expression, alternate costume, prop, and background stills. Costume stills must visibly change outfit materials, layers, or styling while preserving the same role identity. At least one background still must use a concrete non-white story setting, and no panel may be blank. These stills are casting material only; do not let props, costumes, or backgrounds replace the core character design.',
       details,
     ].join('\n')
   }
@@ -72,7 +72,7 @@ function buildCastingStillPromptBlock(
   return [
     '',
     '【选角定妆素材要求】',
-    '请将该角色生成成一张选角定妆 contact sheet。每个小图必须保持同一角色身份、五官结构、体型、服化道逻辑、标记、辅助器具、疤痕和纹身一致。除中性身份照外，补充以下表情、道具和背景定妆照。它们只作为选角素材，不得让道具或背景覆盖核心人物设计。',
+    '请将该角色生成成一张选角定妆 contact sheet。每个小图必须保持同一角色身份、五官结构、体型、标记、辅助器具、疤痕和纹身一致。除中性身份照外，补充以下表情、换装、道具和背景定妆照。换装定妆必须清楚呈现服装材质、层次或穿搭变化，但角色身份不能变。至少一个背景定妆必须使用具体的非白底故事场景，所有小图都不能留空。它们只作为选角素材，不得让道具、服装或背景覆盖核心人物设计。',
     details,
   ].join('\n')
 }

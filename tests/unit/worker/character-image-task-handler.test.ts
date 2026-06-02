@@ -245,6 +245,15 @@ describe('worker character-image-task-handler behavior', () => {
               purpose: '测试悲伤戏',
             },
             {
+              kind: 'costume',
+              title: '雨夜外勤换装定妆',
+              prompt: '同一角色换上防水长外套和深色战术靴，身份标记保持一致',
+              expression: '中性',
+              prop: '',
+              background: '摄影棚背景',
+              purpose: '测试服装跨度',
+            },
+            {
               kind: 'prop',
               title: '折叠手杖道具定妆',
               prompt: '同一角色手持折叠手杖，道具不遮挡脸部',
@@ -280,9 +289,12 @@ describe('worker character-image-task-handler behavior', () => {
     }
     expect(generationInput.prompt).toContain('【选角定妆素材要求】')
     expect(generationInput.prompt).toContain('哭泣表情定妆')
+    expect(generationInput.prompt).toContain('雨夜外勤换装定妆')
+    expect(generationInput.prompt).toContain('换装定妆必须清楚呈现服装材质、层次或穿搭变化')
     expect(generationInput.prompt).toContain('折叠手杖道具定妆')
     expect(generationInput.prompt).toContain('城市调查现场背景定妆')
     expect(generationInput.prompt).toContain('近未来城市调查现场')
+    expect(generationInput.prompt).toContain('具体的非白底故事场景')
   })
 
   it('invalid payload artStyle -> explicit error', async () => {
