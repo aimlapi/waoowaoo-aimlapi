@@ -8,9 +8,12 @@ Include all of the following:
 2. Hair style and hair color
 3. Face shape and facial features
 4. Body build and silhouette
-5. Clothing style and clothing details
-6. Accessories and signature details
-7. Overall style keywords
+5. Skin texture, visible skin condition, visible scars, tattoos, birthmarks, moles, and distinctive marks
+6. Visible mental/physical state, such as tired under-eye texture, unkempt grooming, or tense facial lines; only describe observable signs
+7. Disability, assistive device, or mobility feature when visible, such as wheelchair, cane, prosthetic limb, or hearing aid
+8. Clothing style and clothing details
+9. Accessories and signature details
+10. Overall style keywords
 
 ## Missing-part completion
 If the image only shows part of the body, infer the missing parts consistently.
@@ -25,6 +28,7 @@ Do not mention:
 - Facial expression
 - Pose or action
 - Background
+- Derogatory, sensational, or diagnostic language about disability, scars, skin condition, or mental state
 
 ## Output format
 Return one plain English paragraph only (about 120-220 words).

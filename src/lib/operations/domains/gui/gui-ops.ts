@@ -39,6 +39,10 @@ import { resolveBuiltinCapabilitiesByModelKey as _resolveCaps } from '@/lib/ai-r
 import type { ProjectAgentOperationRegistryDraft } from '@/lib/operations/types'
 import { defineOperation } from '@/lib/operations/define-operation'
 import { normalizeFinalVideoSummary } from './final-video-summary'
+import {
+  parseAppearanceCandidateMetadata,
+  stringifyAppearanceCandidateMetadata,
+} from '@/types/character-casting'
 
 const EFFECTS_QUERY = {
   writes: false,
@@ -240,6 +244,7 @@ export function createGuiOperations(): ProjectAgentOperationRegistryDraft {
             changeReason: '初始形象',
             description: descText,
             descriptions: JSON.stringify([descText]),
+            descriptionMetadata: stringifyAppearanceCandidateMetadata([]),
             imageUrls: encodeImageUrls([]),
             previousImageUrls: encodeImageUrls([]),
           },
@@ -393,6 +398,7 @@ export function createGuiOperations(): ProjectAgentOperationRegistryDraft {
             changeReason: input.changeReason.trim(),
             description: trimmed,
             descriptions: JSON.stringify([trimmed]),
+            descriptionMetadata: stringifyAppearanceCandidateMetadata([]),
             imageUrls: encodeImageUrls([]),
             previousImageUrls: encodeImageUrls([]),
           },
@@ -436,12 +442,20 @@ export function createGuiOperations(): ProjectAgentOperationRegistryDraft {
         } else {
           descriptions.push(trimmedDesc)
         }
+        const metadata = parseAppearanceCandidateMetadata(appearance.descriptionMetadata)
+        if (metadata[idx]) {
+          metadata[idx] = {
+            ...metadata[idx],
+            description: trimmedDesc,
+          }
+        }
 
         await prisma.characterAppearance.update({
           where: { id: input.appearanceId },
           data: {
             description: trimmedDesc,
             descriptions: JSON.stringify(descriptions),
+            descriptionMetadata: stringifyAppearanceCandidateMetadata(metadata),
           },
 	        })
 	        return { success: true }
@@ -591,6 +605,8 @@ export function createGuiOperations(): ProjectAgentOperationRegistryDraft {
           try { descriptions = JSON.parse(appearance.descriptions) } catch { descriptions = [] }
         }
         const selectedDescription = descriptions[selectedIndex] || appearance.description || ''
+        const metadata = parseAppearanceCandidateMetadata(appearance.descriptionMetadata)
+        const selectedMetadata = metadata[selectedIndex] ? [metadata[selectedIndex]] : []
 
         await prisma.characterAppearance.update({
           where: { id: appearance.id },
@@ -600,6 +616,7 @@ export function createGuiOperations(): ProjectAgentOperationRegistryDraft {
             selectedIndex: 0,
             description: selectedDescription,
             descriptions: JSON.stringify([selectedDescription]),
+            descriptionMetadata: stringifyAppearanceCandidateMetadata(selectedMetadata),
           },
         })
 

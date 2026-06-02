@@ -24,6 +24,15 @@ Field rules:
 - costume_tier: 1-5 based on social identity (not role_level)
 - expected_appearances: always include at least one initial appearance
 - introduction: include identity, relationship mapping, and common address mapping
+- costume_and_styling: outfit, makeup, hair styling, accessories, and signature carried items
+- body_profile: height impression, body type, posture, shoulder width, thin/heavy/muscular impression
+- facial_profile: face shape, facial features, brow/eye/nose/mouth details, facial identifiers
+- skin_profile: skin texture, skin condition, complexion setting, visible skin marks; use respectful language
+- visible_state: visible mental/physical state only, such as tired, composed, strained, unkempt; do not diagnose
+- accessibility_features: disability, assistive device, or mobility feature; write "not specified" if none
+- tattoos_and_marks: tattoos, birthmarks, moles, distinctive marks; write "not specified" if none
+- visible_scars: visible scars; write "not specified" if none
+- casting_requirements: casting filters such as recognizability, camera suitability, age match, pressure, approachability, era fit
 
 Output format (JSON only):
 {
@@ -44,6 +53,15 @@ Output format (JSON only):
       "suggested_colors": ["color1", "color2"],
       "primary_identifier": "signature visual marker",
       "visual_keywords": ["keyword1", "keyword2"],
+      "costume_and_styling": "outfit, makeup, hair styling, accessories, signature carried items",
+      "body_profile": "height impression, body type, posture, shoulder width, build",
+      "facial_profile": "face shape, features, brows, eyes, nose, mouth, identifiers",
+      "skin_profile": "skin texture, condition, complexion setting, visible marks",
+      "visible_state": "visible mental/physical state only",
+      "accessibility_features": "disability, assistive device, or mobility feature; not specified if none",
+      "tattoos_and_marks": "tattoos, birthmarks, moles, distinctive marks; not specified if none",
+      "visible_scars": "visible scars; not specified if none",
+      "casting_requirements": ["recognizability", "camera suitability"],
       "expected_appearances": [
         { "id": 1, "change_reason": "initial appearance" }
       ]
@@ -66,6 +84,15 @@ Output format (JSON only):
       "suggested_colors": ["color1", "color2"],
       "primary_identifier": "signature visual marker",
       "visual_keywords": ["keyword1", "keyword2"],
+      "costume_and_styling": "outfit, makeup, hair styling, accessories, signature carried items",
+      "body_profile": "height impression, body type, posture, shoulder width, build",
+      "facial_profile": "face shape, features, brows, eyes, nose, mouth, identifiers",
+      "skin_profile": "skin texture, condition, complexion setting, visible marks",
+      "visible_state": "visible mental/physical state only",
+      "accessibility_features": "disability, assistive device, or mobility feature; not specified if none",
+      "tattoos_and_marks": "tattoos, birthmarks, moles, distinctive marks; not specified if none",
+      "visible_scars": "visible scars; not specified if none",
+      "casting_requirements": ["recognizability", "camera suitability"],
       "expected_appearances": [
         { "id": 1, "change_reason": "initial appearance" }
       ]

@@ -7,6 +7,7 @@ import TaskStatusOverlay from '@/components/task/TaskStatusOverlay'
 import type { TaskPresentationState } from '@/lib/task/presentation'
 import { MediaImageWithLoading } from '@/components/media/MediaImageWithLoading'
 import { AppIcon } from '@/components/ui/icons'
+import type { CharacterAppearanceCandidateMetadata } from '@/types/character-casting'
 
 type CharacterCardGalleryProps =
   | {
@@ -15,6 +16,7 @@ type CharacterCardGalleryProps =
     appearanceId: string
     characterName: string
     imageUrlsWithIndex: Array<{ url: string; originalIndex: number }>
+    candidateMetadata: CharacterAppearanceCandidateMetadata[] | null
     selectedIndex: number | null
     isGroupTaskRunning: boolean
     isImageTaskRunning: (imageIndex: number) => boolean
@@ -46,6 +48,17 @@ export default function CharacterCardGallery(props: CharacterCardGalleryProps) {
         {props.imageUrlsWithIndex.map(({ url, originalIndex }) => {
           const isThisSelected = props.selectedIndex === originalIndex
           const isThisTaskRunning = props.isImageTaskRunning(originalIndex) || props.isGroupTaskRunning
+          const metadata = props.candidateMetadata?.[originalIndex] ?? null
+          const castingScore = metadata?.castingNotes.score
+          const compactTraits = [
+            metadata?.visualTraits.face,
+            metadata?.visualTraits.body,
+            metadata?.visualTraits.costume,
+            metadata?.visualTraits.skin,
+            metadata?.visualTraits.accessibility,
+            metadata?.visualTraits.tattoosAndMarks,
+            metadata?.visualTraits.scars,
+          ].filter((value): value is string => !!value).slice(0, 2)
           return (
             <div key={originalIndex} className="relative group/thumb">
               <div
@@ -93,6 +106,35 @@ export default function CharacterCardGallery(props: CharacterCardGalleryProps) {
                   <AppIcon name="check" className="w-4 h-4" />
                 </button>
               </div>
+              {metadata && (
+                <div className="mt-2 min-h-[72px] rounded-md border border-[var(--glass-stroke-base)] bg-[var(--glass-bg-surface-strong)] px-2 py-1.5 text-[10px] leading-4 text-[var(--glass-text-secondary)]">
+                  <div className="mb-1 flex items-center justify-between gap-2">
+                    <span className="font-semibold text-[var(--glass-text-primary)]">{t('casting.optionNotes')}</span>
+                    {castingScore !== null && castingScore !== undefined && (
+                      <span className="rounded bg-[var(--glass-tone-info-bg)] px-1.5 py-0.5 font-semibold text-[var(--glass-tone-info-fg)]">
+                        {t('casting.score', { score: castingScore })}
+                      </span>
+                    )}
+                  </div>
+                  {metadata.castingNotes.recommendation && (
+                    <p className="line-clamp-2">{metadata.castingNotes.recommendation}</p>
+                  )}
+                  {compactTraits.length > 0 && (
+                    <div className="mt-1 flex flex-wrap gap-1">
+                      {compactTraits.map((trait) => (
+                        <span key={trait} className="max-w-full truncate rounded bg-[var(--glass-bg-muted)] px-1.5 py-0.5">
+                          {trait}
+                        </span>
+                      ))}
+                    </div>
+                  )}
+                  {metadata.castingNotes.risks[0] && (
+                    <p className="mt-1 truncate text-[var(--glass-tone-warning-fg)]">
+                      {t('casting.risk', { risk: metadata.castingNotes.risks[0] })}
+                    </p>
+                  )}
+                </div>
+              )}
             </div>
           )
         })}

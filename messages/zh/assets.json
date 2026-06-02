@@ -133,6 +133,11 @@
         "editSuccess": "图片编辑成功",
         "regenerateFailed": "重新生成失败: {error}"
     },
+    "casting": {
+        "optionNotes": "选角",
+        "score": "{score}分",
+        "risk": "风险：{risk}"
+    },
     "modal": {
         "newCharacter": "新增角色",
         "addSubAppearance": "添加子形象",

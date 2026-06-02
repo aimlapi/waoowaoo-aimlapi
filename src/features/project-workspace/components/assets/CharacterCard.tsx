@@ -296,6 +296,7 @@ export default function CharacterCard({
           appearanceId={appearance.id}
           characterName={character.name}
           imageUrlsWithIndex={imageUrlsWithIndex}
+          candidateMetadata={appearance.descriptionMetadata ?? null}
           selectedIndex={selectedIndex}
           isGroupTaskRunning={isGroupTaskRunning}
           isImageTaskRunning={isImageTaskRunning}

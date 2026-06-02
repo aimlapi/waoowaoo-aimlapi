@@ -12,12 +12,17 @@ import {
 import { getAssetKindRegistration } from '@/lib/assets/kinds/registry'
 import type { MediaRef } from '@/types/project'
 import type { LocationSpatialProfileStatus } from '@/lib/location-spatial-profile/types'
+import {
+  parseAppearanceCandidateMetadata,
+  type CharacterAppearanceCandidateMetadata,
+} from '@/types/character-casting'
 
 type CharacterAppearanceRecord = {
   id: string
   appearanceIndex: number
   changeReason: string
   description: string | null
+  descriptionMetadata?: string | null
   imageUrl: string | null
   media?: MediaRef | null
   imageUrls: string[]
@@ -53,6 +58,7 @@ type GlobalCharacterRecord = {
     appearanceIndex: number
     changeReason: string
     description: string | null
+    descriptionMetadata?: string | null
     imageUrl: string | null
     media?: MediaRef | null
     imageUrls: string[]
@@ -151,6 +157,7 @@ function createVariant(params: {
   index: number
   label: string
   description: string | null
+  candidateMetadata: CharacterAppearanceCandidateMetadata[] | null
   selectedRenderIndex: number | null
   renders: AssetRenderSummary[]
   taskRefs: AssetTaskRef[]
@@ -160,6 +167,7 @@ function createVariant(params: {
     index: params.index,
     label: params.label,
     description: params.description,
+    candidateMetadata: params.candidateMetadata,
     renders: params.renders,
     selectionState: {
       selectedRenderIndex: params.selectedRenderIndex,
@@ -196,6 +204,7 @@ export function mapProjectCharacterToAsset(character: ProjectCharacterRecord): C
       index: appearance.appearanceIndex,
       label: appearance.changeReason,
       description: appearance.description,
+      candidateMetadata: parseAppearanceCandidateMetadata(appearance.descriptionMetadata),
       selectedRenderIndex: appearance.selectedIndex,
       renders,
       taskRefs: [
@@ -265,6 +274,7 @@ export function mapGlobalCharacterToAsset(character: GlobalCharacterRecord): Cha
       index: appearance.appearanceIndex,
       label: appearance.changeReason,
       description: appearance.description,
+      candidateMetadata: parseAppearanceCandidateMetadata(appearance.descriptionMetadata),
       selectedRenderIndex: appearance.selectedIndex,
       renders,
       taskRefs: [
@@ -319,6 +329,7 @@ function buildLocationVariants(
       index: image.imageIndex,
       label: `Image ${image.imageIndex + 1}`,
       description: image.description,
+      candidateMetadata: null,
       selectedRenderIndex: image.isSelected ? 0 : null,
       renders: [
         createRender({

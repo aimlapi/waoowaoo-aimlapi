@@ -34,6 +34,7 @@ model CharacterAppearance {
   changeReason         String
   description          String?                 @db.Text
   descriptions         String?                 @db.Text
+  descriptionMetadata  String?                 @db.Text
   imageUrl             String?                 @db.Text
   imageUrls            String?                 @db.Text
   selectedIndex        Int?
@@ -1250,6 +1251,7 @@ model GlobalCharacterAppearance {
   artStyle             String?
   description          String?      @db.Text
   descriptions         String?      @db.Text
+  descriptionMetadata  String?      @db.Text
   imageUrl             String?      @db.Text
   imageMediaId         String?
   imageMedia           MediaObject? @relation("GlobalCharacterAppearanceImageMedia", fields: [imageMediaId], references: [id], onDelete: SetNull)

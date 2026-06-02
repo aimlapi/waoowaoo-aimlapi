@@ -1,6 +1,7 @@
 import type { CapabilitySelections } from '@/lib/ai-registry/types'
 import type { LocationAvailableSlot } from '@/lib/location-available-slots'
 import type { LocationSpatialProfileStatus } from '@/lib/location-spatial-profile/types'
+import type { CharacterAppearanceCandidateMetadata } from '@/types/character-casting'
 
 export type ProjectVideoGenerationOptionValue = string | number | boolean
 export type ProjectVideoGenerationOptions = Record<string, ProjectVideoGenerationOptionValue>
@@ -41,6 +42,7 @@ export interface CharacterAppearance {
   changeReason: string              // "初始形象"、"落水湿身"
   description: string | null
   descriptions: string[] | null     // 3个描述变体
+  descriptionMetadata?: CharacterAppearanceCandidateMetadata[] | null
   imageUrl: string | null           // 选中的图片
   media?: MediaRef | null
   imageUrls: string[]               // 候选图片数组

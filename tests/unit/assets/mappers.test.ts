@@ -20,6 +20,30 @@ describe('asset mappers', () => {
           appearanceIndex: 0,
           changeReason: '初始形象',
           description: '短发，风衣',
+          descriptionMetadata: JSON.stringify([
+            {
+              description: '短发，风衣',
+              visualTraits: {
+                face: '鹅蛋脸',
+                hair: '短发',
+                body: '修长',
+                costume: '风衣',
+                makeupAndAccessories: '',
+                skin: '皮肤细腻',
+                visibleState: '清醒',
+                accessibility: '',
+                tattoosAndMarks: '',
+                scars: '',
+              },
+              castingNotes: {
+                score: 91,
+                strengths: ['辨识度强'],
+                risks: [],
+                recommendation: '适合主视觉。',
+                fitTags: ['镜头友好'],
+              },
+            },
+          ]),
           imageUrl: 'https://example.com/char.jpg',
           media: null,
           imageUrls: ['https://example.com/char.jpg'],
@@ -49,6 +73,13 @@ describe('asset mappers', () => {
       id: 'appearance-1',
       index: 0,
       label: '初始形象',
+      candidateMetadata: [
+        expect.objectContaining({
+          description: '短发，风衣',
+          visualTraits: expect.objectContaining({ face: '鹅蛋脸' }),
+          castingNotes: expect.objectContaining({ score: 91 }),
+        }),
+      ],
     }))
   })
 

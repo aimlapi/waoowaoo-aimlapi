@@ -272,6 +272,15 @@ export async function handleAnalyzeNovelTask(job: Job<TaskJobData>) {
       visual_keywords: toStringArray(item.visual_keywords),
       gender: item.gender,
       age_range: item.age_range,
+      costume_and_styling: readText(item.costume_and_styling),
+      body_profile: readText(item.body_profile),
+      facial_profile: readText(item.facial_profile),
+      skin_profile: readText(item.skin_profile),
+      visible_state: readText(item.visible_state),
+      accessibility_features: readText(item.accessibility_features),
+      tattoos_and_marks: readText(item.tattoos_and_marks),
+      visible_scars: readText(item.visible_scars),
+      casting_requirements: toStringArray(item.casting_requirements),
     }
 
     const created = await prisma.projectCharacter.create({

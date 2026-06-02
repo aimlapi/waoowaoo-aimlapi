@@ -92,6 +92,15 @@ async function persistAnalyzedCharacters(params: {
       visual_keywords: toStringArray(item.visual_keywords),
       gender: item.gender,
       age_range: item.age_range,
+      costume_and_styling: asString(item.costume_and_styling),
+      body_profile: asString(item.body_profile),
+      facial_profile: asString(item.facial_profile),
+      skin_profile: asString(item.skin_profile),
+      visible_state: asString(item.visible_state),
+      accessibility_features: asString(item.accessibility_features),
+      tattoos_and_marks: asString(item.tattoos_and_marks),
+      visible_scars: asString(item.visible_scars),
+      casting_requirements: toStringArray(item.casting_requirements),
     }
 
     const createdRow = await repository.createCharacter({

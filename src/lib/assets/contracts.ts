@@ -1,5 +1,6 @@
 import type { MediaRef } from '@/types/project'
 import type { LocationSpatialProfileStatus } from '@/lib/location-spatial-profile/types'
+import type { CharacterAppearanceCandidateMetadata } from '@/types/character-casting'
 
 export type AssetScope = 'global' | 'project'
 
@@ -55,6 +56,7 @@ export type AssetVariantSummary = {
   index: number
   label: string
   description: string | null
+  candidateMetadata?: CharacterAppearanceCandidateMetadata[] | null
   selectionState: {
     selectedRenderIndex: number | null
   }

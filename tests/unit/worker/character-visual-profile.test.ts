@@ -138,6 +138,30 @@ describe('worker character visual profile behavior', () => {
         appearanceIndex: 0,
         changeReason: '默认形象',
         description: '黑发，冷静，风衣',
+        descriptionMetadata: JSON.stringify([
+          {
+            description: '黑发，冷静，风衣',
+            visualTraits: {
+              face: '',
+              hair: '',
+              body: '',
+              costume: '',
+              makeupAndAccessories: '',
+              skin: '',
+              visibleState: '',
+              accessibility: '',
+              tattoosAndMarks: '',
+              scars: '',
+            },
+            castingNotes: {
+              score: null,
+              strengths: [],
+              risks: [],
+              recommendation: '',
+              fitTags: [],
+            },
+          },
+        ]),
       }),
     })
 
@@ -156,6 +180,90 @@ describe('worker character visual profile behavior', () => {
         profileConfirmed: true,
       }),
     }))
+  })
+
+  it('structured visual profile candidates -> persists casting metadata aligned with descriptions', async () => {
+    llmMock.getCompletionContent.mockReturnValue(
+      JSON.stringify({
+        characters: [
+          {
+            appearances: [
+              {
+                change_reason: '初始形象',
+                descriptions: ['轮廓分明，黑色风衣，黑色皮鞋'],
+                candidates: [
+                  {
+                    description: '轮廓分明，黑色风衣，黑色皮鞋',
+                    visual_traits: {
+                      face: '方脸，眉骨清晰',
+                      body: '高挑宽肩',
+                      costume: '黑色风衣与黑色皮鞋',
+                      skin: '皮肤纹理粗粝',
+                      visible_state: '眼下有轻微倦纹',
+                      accessibility: '手杖',
+                      tattoos_and_marks: '左颈小纹身',
+                      scars: '眉尾短疤',
+                    },
+                    casting_notes: {
+                      score: 87,
+                      strengths: ['辨识度强', '时代感明确'],
+                      risks: ['风衣细节可能被弱化'],
+                      recommendation: '适合作为主视觉候选。',
+                      fit_tags: ['镜头友好'],
+                    },
+                  },
+                ],
+              },
+            ],
+          },
+        ],
+      }),
+    )
+
+    await generateCharacterVisualProfile(buildJob(), { characterId: 'character-1' })
+
+    const createCall = prismaMock.characterAppearance.create.mock.calls.at(-1) as
+      | [{ data?: { descriptions?: string; descriptionMetadata?: string } }]
+      | undefined
+    expect(createCall?.[0].data?.descriptions).toBe(JSON.stringify(['轮廓分明，黑色风衣，黑色皮鞋']))
+    const metadata = JSON.parse(createCall?.[0].data?.descriptionMetadata ?? '[]') as Array<{
+      description: string
+      visualTraits: {
+        face: string
+        body: string
+        costume: string
+        skin: string
+        visibleState: string
+        accessibility: string
+        tattoosAndMarks: string
+        scars: string
+      }
+      castingNotes: {
+        score: number | null
+        strengths: string[]
+        risks: string[]
+        recommendation: string
+        fitTags: string[]
+      }
+    }>
+    expect(metadata[0]?.description).toBe('轮廓分明，黑色风衣，黑色皮鞋')
+    expect(metadata[0]?.visualTraits).toEqual(expect.objectContaining({
+      face: '方脸，眉骨清晰',
+      body: '高挑宽肩',
+      costume: '黑色风衣与黑色皮鞋',
+      skin: '皮肤纹理粗粝',
+      visibleState: '眼下有轻微倦纹',
+      accessibility: '手杖',
+      tattoosAndMarks: '左颈小纹身',
+      scars: '眉尾短疤',
+    }))
+    expect(metadata[0]?.castingNotes).toEqual({
+      score: 87,
+      strengths: ['辨识度强', '时代感明确'],
+      risks: ['风衣细节可能被弱化'],
+      recommendation: '适合作为主视觉候选。',
+      fitTags: ['镜头友好'],
+    })
   })
 
   it('newly created character visual profile failure -> deletes the created character before rethrowing', async () => {

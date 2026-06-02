@@ -81,6 +81,15 @@ export async function persistAnalyzeGlobalChunk(params: {
         visual_keywords: toStringArray(char.visual_keywords),
         gender: char.gender,
         age_range: char.age_range,
+        costume_and_styling: readText(char.costume_and_styling),
+        body_profile: readText(char.body_profile),
+        facial_profile: readText(char.facial_profile),
+        skin_profile: readText(char.skin_profile),
+        visible_state: readText(char.visible_state),
+        accessibility_features: readText(char.accessibility_features),
+        tattoos_and_marks: readText(char.tattoos_and_marks),
+        visible_scars: readText(char.visible_scars),
+        casting_requirements: toStringArray(char.casting_requirements),
       }
 
       const created = await prisma.projectCharacter.create({

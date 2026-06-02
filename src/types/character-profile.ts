@@ -43,6 +43,33 @@ export interface CharacterProfileData {
 
     /** 年龄段描述 */
     age_range: string
+
+    /** 服化道设定：服装、妆容、发型、配饰、标志性随身物 */
+    costume_and_styling?: string
+
+    /** 体型设定：身高感、体型、体态、肩宽、胖瘦、肌肉感 */
+    body_profile?: string
+
+    /** 面相设定：脸型、五官、眉眼鼻唇、面部辨识点 */
+    facial_profile?: string
+
+    /** 皮肤设定：质感、状态、可见标记；肤色只作为档案设定，不直接放大进出图描述 */
+    skin_profile?: string
+
+    /** 可见精神状态：疲惫、清醒、憔悴、紧绷等可见状态 */
+    visible_state?: string
+
+    /** 残疾或辅助器具等可见设定，需中性尊重地描述 */
+    accessibility_features?: string
+
+    /** 纹身、胎记、痣、明显标记 */
+    tattoos_and_marks?: string
+
+    /** 明显疤痕 */
+    visible_scars?: string
+
+    /** 选角筛选偏好：辨识度、亲和力、压迫感、镜头适配等 */
+    casting_requirements?: string[]
 }
 
 /**
@@ -71,6 +98,15 @@ export function validateProfileData(data: unknown): data is CharacterProfileData
         Array.isArray(candidate.suggested_colors) &&
         Array.isArray(candidate.visual_keywords) &&
         typeof candidate.gender === 'string' &&
-        typeof candidate.age_range === 'string'
+        typeof candidate.age_range === 'string' &&
+        (candidate.costume_and_styling === undefined || typeof candidate.costume_and_styling === 'string') &&
+        (candidate.body_profile === undefined || typeof candidate.body_profile === 'string') &&
+        (candidate.facial_profile === undefined || typeof candidate.facial_profile === 'string') &&
+        (candidate.skin_profile === undefined || typeof candidate.skin_profile === 'string') &&
+        (candidate.visible_state === undefined || typeof candidate.visible_state === 'string') &&
+        (candidate.accessibility_features === undefined || typeof candidate.accessibility_features === 'string') &&
+        (candidate.tattoos_and_marks === undefined || typeof candidate.tattoos_and_marks === 'string') &&
+        (candidate.visible_scars === undefined || typeof candidate.visible_scars === 'string') &&
+        (candidate.casting_requirements === undefined || Array.isArray(candidate.casting_requirements))
     )
 }

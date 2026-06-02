@@ -12,6 +12,8 @@ Rules:
 5. If primary_identifier exists, include it clearly in each main description.
 6. Do not include expression, action, background, or plot narration.
 7. Do not include skin color, eye color, or lip color.
+8. Convert costume/styling, body profile, facial profile, skin condition, visible mental state, accessibility features, tattoos, and scars into concrete visible details.
+9. Describe disability, scars, skin state, and visible mental state neutrally and respectfully, without diagnosis or sensational language.
 
 Appearance strategy:
 - Initial appearance should be complete and self-contained.
@@ -31,6 +33,30 @@ Output format (JSON only):
             "description variant 1",
             "description variant 2",
             "description variant 3"
+          ],
+          "candidates": [
+            {
+              "description": "must exactly match descriptions[0]",
+              "visual_traits": {
+                "face": "face shape, features, visual identifiers",
+                "hair": "hair color, length, texture, style",
+                "body": "height impression, build, posture",
+                "costume": "outfit, shoes, materials, colors",
+                "makeup_and_accessories": "makeup, accessories, signature carried items",
+                "skin": "skin texture, condition, restrained handling of complexion settings",
+                "visible_state": "visible mental/physical state",
+                "accessibility": "disability, assistive device, or mobility feature; empty string if none",
+                "tattoos_and_marks": "tattoos, birthmarks, moles, distinctive marks; empty string if none",
+                "scars": "visible scars; empty string if none"
+              },
+              "casting_notes": {
+                "score": 0,
+                "strengths": ["casting strength"],
+                "risks": ["visual or casting risk"],
+                "recommendation": "one sentence recommendation",
+                "fit_tags": ["distinctive", "camera-ready"]
+              }
+            }
           ]
         }
       ]
@@ -42,4 +68,6 @@ Strict constraints:
 1. JSON only.
 2. Keep names exactly aligned with input profiles.
 3. Each descriptions array must contain at least 3 valid English strings.
-4. ⚠️ JSON SAFETY: All quotation marks in text (""''「」 etc.) MUST be converted to corner brackets「」in JSON string values. NEVER use raw ASCII double quotes " inside string values.
+4. candidates must be the same length and order as descriptions.
+5. casting_notes.score must be an integer from 0 to 100.
+6. ⚠️ JSON SAFETY: All quotation marks in text (""''「」 etc.) MUST be converted to corner brackets「」in JSON string values. NEVER use raw ASCII double quotes " inside string values.

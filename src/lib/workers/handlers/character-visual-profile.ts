@@ -15,6 +15,10 @@ import {
 } from './character-visual-profile-helpers'
 import { createWorkerLLMStreamCallbacks, createWorkerLLMStreamContext } from './llm-stream'
 import { buildAiPrompt as buildPrompt, AI_PROMPT_IDS as PROMPT_IDS } from '@/lib/ai-prompts'
+import {
+  normalizeAppearanceCandidateMetadata,
+  stringifyAppearanceCandidateMetadata,
+} from '@/types/character-casting'
 
 type GenerateCharacterVisualProfileInput = {
   characterId: string
@@ -142,6 +146,7 @@ export async function generateCharacterVisualProfile(
     changeReason: string
     description: string
     descriptions: string
+    descriptionMetadata: string
     imageUrls: string
     previousImageUrls: string
   }> = []
@@ -149,14 +154,24 @@ export async function generateCharacterVisualProfile(
   for (let appIndex = 0; appIndex < appearances.length; appIndex += 1) {
     const app = appearances[appIndex]
     await assertTaskActive(job, 'character_visual_profile_create_appearance')
-    const descriptions = Array.isArray(app.descriptions) ? app.descriptions : []
-    const normalizedDescriptions = descriptions.map((item) => readText(item)).filter(Boolean)
+    const rawDescriptions = Array.isArray(app.descriptions) ? app.descriptions : []
+    const candidates = Array.isArray(app.candidates) ? app.candidates : rawDescriptions
+    const descriptionSource = rawDescriptions.length > 0 ? rawDescriptions : candidates
+    const normalizedDescriptions = descriptionSource.map((item) => {
+      if (typeof item === 'string') return item.trim()
+      if (item && typeof item === 'object' && !Array.isArray(item)) {
+        return readText((item as Record<string, unknown>).description).trim()
+      }
+      return ''
+    }).filter(Boolean)
+    const candidateMetadata = normalizeAppearanceCandidateMetadata(candidates, normalizedDescriptions)
     appearanceRows.push({
       characterId: character.id,
       appearanceIndex: appIndex,
       changeReason: readText(app.change_reason) || '初始形象',
       description: normalizedDescriptions[0] || '',
       descriptions: JSON.stringify(normalizedDescriptions),
+      descriptionMetadata: stringifyAppearanceCandidateMetadata(candidateMetadata),
       imageUrls: encodeImageUrls([]),
       previousImageUrls: encodeImageUrls([]),
     })

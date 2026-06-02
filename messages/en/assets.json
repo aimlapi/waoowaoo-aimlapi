@@ -133,6 +133,11 @@
         "editSuccess": "Image edit successful",
         "regenerateFailed": "Regenerate failed: {error}"
     },
+    "casting": {
+        "optionNotes": "Casting",
+        "score": "{score}",
+        "risk": "Risk: {risk}"
+    },
     "modal": {
         "newCharacter": "New Character",
         "addSubAppearance": "Add Sub-Appearance",

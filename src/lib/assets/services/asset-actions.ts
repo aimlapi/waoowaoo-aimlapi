@@ -31,6 +31,10 @@ import {
 } from '@/lib/assets/services/location-backed-assets'
 import { resolvePropVisualDescription } from '@/lib/assets/prop-description'
 import { confirmProjectLocationBackedSelection } from '@/lib/assets/services/project-location-backed-selection'
+import {
+  parseAppearanceCandidateMetadata,
+  stringifyAppearanceCandidateMetadata,
+} from '@/types/character-casting'
 
 type AssetWriteAccess = {
   scope: AssetScope
@@ -596,6 +600,8 @@ async function selectGlobalAssetRender(input: AssetSelectInput) {
         try { descriptions = JSON.parse(appearance.descriptions) as string[] } catch { descriptions = [] }
       }
       const selectedDescription = descriptions[appearance.selectedIndex] || appearance.description || ''
+      const metadata = parseAppearanceCandidateMetadata(appearance.descriptionMetadata)
+      const selectedMetadata = metadata[appearance.selectedIndex] ? [metadata[appearance.selectedIndex]] : []
       await prisma.globalCharacterAppearance.update({
         where: { id: appearance.id },
         data: {
@@ -604,6 +610,7 @@ async function selectGlobalAssetRender(input: AssetSelectInput) {
           selectedIndex: 0,
           description: selectedDescription,
           descriptions: JSON.stringify([selectedDescription]),
+          descriptionMetadata: stringifyAppearanceCandidateMetadata(selectedMetadata),
         },
       })
     } else {
