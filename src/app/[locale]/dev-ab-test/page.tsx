@@ -144,7 +144,10 @@ export default function DevAbTestPage() {
       const response = await apiFetch('/api/character-style-test', {
         method: 'POST',
         headers: { 'content-type': 'application/json' },
-        body: JSON.stringify({ characterRequest: variantRequests[variantId] }),
+        body: JSON.stringify({
+          characterRequest: variantRequests[variantId],
+          promptMode: 'casting_photo',
+        }),
       })
       if (!response.ok) throw new Error(await readApiErrorMessage(response, t('failed')))
       const parsed = parseDevAbSubmitResponse(await response.json())

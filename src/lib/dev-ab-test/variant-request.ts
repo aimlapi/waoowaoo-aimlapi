@@ -28,16 +28,16 @@ function labelsForLocale(locale: Locale): {
 } {
   if (locale === 'en') {
     return {
-      baseTitle: 'Dev A/B test shared base request',
+      baseTitle: 'Casting look-test shared role request',
       variantTitle: 'Variant',
-      comparisonRule: 'Keep the shared base request stable and only apply this variant instruction as the visual strategy under test.',
+      comparisonRule: 'Keep the shared role stable and only apply this variant instruction as the casting-photo look-test difference.',
     }
   }
 
   return {
-    baseTitle: '开发 A/B 测试共用基础需求',
+    baseTitle: '选角定妆 A/B 共用角色需求',
     variantTitle: '方案',
-    comparisonRule: '保持共用基础需求稳定，只把本方案说明作为正在测试的视觉策略差异。',
+    comparisonRule: '保持共用角色需求稳定，只把本方案说明作为正在测试的选角定妆照差异。',
   }
 }
 

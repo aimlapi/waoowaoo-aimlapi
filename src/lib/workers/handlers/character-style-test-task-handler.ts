@@ -6,6 +6,7 @@ import {
   buildCharacterStyleTestPrompt,
   buildCharacterStyleTestStyleSummary,
   CHARACTER_STYLE_TEST_ASPECT_RATIO,
+  normalizeCharacterStyleTestPromptMode,
 } from '@/lib/character-style-test/prompt'
 import { generateCleanImageToStorage } from './image-task-handler-shared'
 
@@ -34,21 +35,28 @@ export async function handleCharacterStyleTestTask(job: Job<TaskJobData>) {
   const characterRequest = readRequiredString(payload.characterRequest, 'characterRequest')
   const modelId = readRequiredString(payload.imageModel, 'imageModel')
   const generationOptions = readGenerationOptions(payload.generationOptions)
+  const promptMode = normalizeCharacterStyleTestPromptMode(payload.promptMode)
 
   const prompt = buildCharacterStyleTestPrompt({
     characterRequest,
     locale: job.data.locale,
+    promptMode,
   })
   const styleSummary = buildCharacterStyleTestStyleSummary({
     characterRequest,
     locale: job.data.locale,
+    promptMode,
   })
 
   await reportTaskProgress(job, 20, {
     stage: 'character_style_test_prepare',
-    stageLabel: job.data.locale === 'en'
-      ? 'Preparing input-derived character asset prompt'
-      : '准备基于输入归纳的角色资产提示词',
+    stageLabel: promptMode === 'casting_photo'
+      ? (job.data.locale === 'en'
+          ? 'Preparing casting and look-test photo prompt'
+          : '准备选角定妆照提示词')
+      : (job.data.locale === 'en'
+          ? 'Preparing input-derived character asset prompt'
+          : '准备基于输入归纳的角色资产提示词'),
     displayMode: 'detail',
   })
 
@@ -69,9 +77,13 @@ export async function handleCharacterStyleTestTask(job: Job<TaskJobData>) {
 
   await reportTaskProgress(job, 95, {
     stage: 'character_style_test_done',
-    stageLabel: job.data.locale === 'en'
-      ? 'Character style test image generated'
-      : '角色风格测试图已生成',
+    stageLabel: promptMode === 'casting_photo'
+      ? (job.data.locale === 'en'
+          ? 'Casting photo test image generated'
+          : '选角定妆测试图已生成')
+      : (job.data.locale === 'en'
+          ? 'Character style test image generated'
+          : '角色风格测试图已生成'),
     displayMode: 'detail',
   })
 

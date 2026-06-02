@@ -99,4 +99,21 @@ describe('worker character-style-test-task-handler', () => {
     }))).rejects.toThrow('imageModel is required')
     expect(handlerSharedMock.generateCleanImageToStorage).not.toHaveBeenCalled()
   })
+
+  it('casting photo mode -> generates an actor look-test contact sheet prompt', async () => {
+    const result = await handleCharacterStyleTestTask(buildJob({
+      characterRequest: '冷峻女黑客，黑色长风衣',
+      imageModel: 'character-model-1',
+      promptMode: 'casting_photo',
+    }))
+
+    expect(result.styleSummary).toBe('本次选角定妆照来源：冷峻女黑客，黑色长风衣')
+    const generationInput = handlerSharedMock.generateCleanImageToStorage.mock.calls[0]?.[0] as GenerationInput | undefined
+    expect(generationInput?.prompt).toContain('真人摄影 contact sheet')
+    expect(generationInput?.prompt).toContain('试镜/选角资料照')
+    expect(generationInput?.prompt).toContain('白墙、灰白墙、摄影棚或服装间墙面')
+    expect(generationInput?.prompt).toContain('绝对禁止：概念艺术、插画、CG')
+    expect(generationInput?.prompt).toContain('姓名、电话、邮箱')
+    expect(generationInput?.prompt).not.toContain('本次角色资产风格规范')
+  })
 })

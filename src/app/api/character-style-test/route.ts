@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { apiHandler, ApiError } from '@/lib/api-errors'
 import { isErrorResponse, requireUserAuth } from '@/lib/api-auth'
 import { submitCharacterStyleTestTask } from '@/lib/character-style-test/submit'
+import { normalizeCharacterStyleTestPromptMode } from '@/lib/character-style-test/prompt'
 
 function toObject(value: unknown): Record<string, unknown> {
   if (!value || typeof value !== 'object' || Array.isArray(value)) return {}
@@ -26,6 +27,7 @@ export const POST = apiHandler(async (request: NextRequest) => {
     request,
     userId: authResult.session.user.id,
     characterRequest,
+    promptMode: normalizeCharacterStyleTestPromptMode(body.promptMode),
   })
 
   return NextResponse.json(result)

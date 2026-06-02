@@ -3,6 +3,12 @@ import { CHARACTER_ASSET_IMAGE_RATIO } from '@/lib/constants'
 
 export const CHARACTER_STYLE_TEST_ASPECT_RATIO = CHARACTER_ASSET_IMAGE_RATIO
 
+export type CharacterStyleTestPromptMode = 'style_asset' | 'casting_photo'
+
+export function normalizeCharacterStyleTestPromptMode(value: unknown): CharacterStyleTestPromptMode {
+  return value === 'casting_photo' ? 'casting_photo' : 'style_asset'
+}
+
 function normalizeCharacterRequest(value: string): string {
   return value.trim().replace(/\s+/g, ' ')
 }
@@ -40,8 +46,14 @@ function buildEnglishStyleExpansion(characterRequest: string): string {
 export function buildCharacterStyleTestStyleSummary(input: {
   readonly characterRequest: string
   readonly locale: Locale
+  readonly promptMode?: CharacterStyleTestPromptMode
 }): string {
   const characterRequest = normalizeCharacterRequest(input.characterRequest)
+  if (input.promptMode === 'casting_photo') {
+    return input.locale === 'en'
+      ? `Casting and look-test photo source: ${characterRequest}`
+      : `本次选角定妆照来源：${characterRequest}`
+  }
   return input.locale === 'en'
     ? `Input-derived temporary asset style source: ${characterRequest}`
     : `本次临时资产风格来源：${characterRequest}`
@@ -75,11 +87,47 @@ function buildEnglishBasePrompt(characterRequest: string): string {
   ].join('\n')
 }
 
+function buildChineseCastingPhotoPrompt(characterRequest: string): string {
+  return [
+    '生成一张用于选角与人物定妆判断的真人摄影 contact sheet，不是概念设计图。',
+    `人物定妆需求（唯一来源）：${characterRequest}`,
+    '画面目标：像真实剧组试镜/选角资料照、演员定妆照、costume fitting photo sheet，用来判断这个人是否适合角色，而不是展示酷炫世界观。',
+    '版式必须是一张完整照片拼版：包含正面半身头像、正面全身站姿、左侧面、右侧面、背面或 3/4 背面；每个视角必须是同一个真实人物、同一套服装、同一发型与体型。',
+    '摄影质感：真实相机拍摄，轻微胶片颗粒，普通室内自然光或柔和棚灯，肤色真实，五官不修成偶像海报，不要过度磨皮，不要电影海报级打光。',
+    '场地与背景：简单试镜房、白墙、灰白墙、摄影棚或服装间墙面；背景要朴素、低信息量，允许轻微阴影和墙面纹理。',
+    '人物状态：中性表情，直接看镜头或按视角站立，姿态自然但可评估；服装像真实定妆服，不要夸张概念盔甲、不要游戏角色渲染感。',
+    '构图优先级：清楚看脸、发型、身高比例、体态、服装版型、鞋子和侧面轮廓；全身照必须完整露出脚。',
+    '绝对禁止：概念艺术、插画、CG、动漫、过强电影感背景、抽象城市光影、赛博海报、角色设定板风格背景、三维建模感、文字标签、姓名、电话、邮箱、身高腰围信息、水印、Logo。',
+    '如果需要纸质 casting sheet 的感觉，只模拟照片拼版与留白，不要生成任何可读个人信息。',
+  ].join('\n')
+}
+
+function buildEnglishCastingPhotoPrompt(characterRequest: string): string {
+  return [
+    'Generate one realistic casting and costume look-test photo contact sheet, not a concept design image.',
+    `Casting and look-test request, the only source: ${characterRequest}`,
+    'Goal: make it feel like real production casting photos, actor audition references, and costume fitting photos used to judge whether this person fits the role, not a cool worldbuilding showcase.',
+    'Layout must be one complete photo board: include a frontal half-body headshot, a frontal full-body standing view, left profile, right profile, and back or three-quarter back view. Every view must be the same real person with the same outfit, hairstyle, body type, and proportions.',
+    'Photo quality: real camera photography, subtle film grain, ordinary indoor natural light or soft studio light, believable skin tone, face not retouched into a fashion poster, no dramatic movie-poster lighting.',
+    'Setting and background: simple audition room, white wall, gray-white wall, photo studio, or fitting-room wall. Keep the background plain and low-information, with mild shadows and wall texture allowed.',
+    'Actor state: neutral expression, facing camera or standing by view angle, natural posture that can be evaluated. Wardrobe should feel like real costume fitting, not exaggerated concept armor or game render styling.',
+    'Composition priorities: clearly show face, hair, height proportion, body posture, costume fit, shoes, and side silhouette. Full-body views must show the complete feet.',
+    'Strict bans: concept art, illustration, CG, anime, overly cinematic background, abstract city lights, cyberpunk poster, character-sheet style fantasy background, 3D render look, text labels, names, phone numbers, emails, height/waist data, watermark, Logo.',
+    'If a paper casting-sheet feeling is needed, simulate only the photo collage and blank margins. Do not generate readable personal information.',
+  ].join('\n')
+}
+
 export function buildCharacterStyleTestPrompt(input: {
   readonly characterRequest: string
   readonly locale: Locale
+  readonly promptMode?: CharacterStyleTestPromptMode
 }): string {
   const characterRequest = normalizeCharacterRequest(input.characterRequest)
+  if (input.promptMode === 'casting_photo') {
+    return input.locale === 'en'
+      ? buildEnglishCastingPhotoPrompt(characterRequest)
+      : buildChineseCastingPhotoPrompt(characterRequest)
+  }
   return input.locale === 'en'
     ? buildEnglishBasePrompt(characterRequest)
     : buildChineseBasePrompt(characterRequest)

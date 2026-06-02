@@ -9,6 +9,7 @@ import { resolveRequiredTaskLocale } from '@/lib/task/resolve-locale'
 import { submitTask } from '@/lib/task/submitter'
 import { TASK_TYPE } from '@/lib/task/types'
 import { withTaskUiPayload } from '@/lib/task/ui-payload'
+import type { CharacterStyleTestPromptMode } from './prompt'
 
 export const CHARACTER_STYLE_TEST_SYSTEM_PROJECT_ID = 'system'
 export const CHARACTER_STYLE_TEST_TARGET_ID = 'character-style-test'
@@ -17,6 +18,7 @@ export async function submitCharacterStyleTestTask(input: {
   readonly request: NextRequest
   readonly userId: string
   readonly characterRequest: string
+  readonly promptMode?: CharacterStyleTestPromptMode
 }) {
   const characterRequest = input.characterRequest.trim()
   if (!characterRequest) {
@@ -39,6 +41,7 @@ export async function submitCharacterStyleTestTask(input: {
       imageModel,
       basePayload: {
         characterRequest,
+        promptMode: input.promptMode || 'style_asset',
         count: 1,
       },
     })
