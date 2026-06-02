@@ -270,8 +270,8 @@
         "episodeLabel": "第{number}集 · {name}"
     },
     "assetLibrary": {
-        "button": "资产库",
-        "title": "资产库",
+        "button": "项目资产库",
+        "title": "项目资产库",
         "copySuccessCharacter": "角色形象复制成功",
         "copySuccessLocation": "场景图片复制成功",
         "copySuccessProp": "道具图片复制成功",

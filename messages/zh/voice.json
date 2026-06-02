@@ -21,11 +21,11 @@
         "stats": "共 {total} 条台词 | 已设置音色 {withVoice} 条 | 已生成配音 {withAudio} 条",
         "noDownload": "没有可下载的配音",
         "downloadCount": "下载 {count} 条配音",
-        "uploadReferenceHint": "请先在资产库为所有角色上传参考音频"
+        "uploadReferenceHint": "请先在项目资产库为所有角色上传参考音频"
     },
     "speakerVoice": {
         "title": "发言人音色状态",
-        "hint": "请在资产库为角色上传参考音频",
+        "hint": "请在项目资产库为角色上传参考音频",
         "linesCount": "{count} 条台词",
         "noVoice": "无参考音色",
         "configured": "✓ 已设置",
@@ -40,7 +40,7 @@
         "microsoft": "微软",
         "maleVoices": "男声",
         "femaleVoices": "女声",
-        "openAssetLibrary": "资产库",
+        "openAssetLibrary": "项目资产库",
         "configuredStatus": "已设置音色",
         "pendingStatus": "待设置音色",
         "voiceSettings": "音色设置",
@@ -48,7 +48,7 @@
     },
     "inlineBinding": {
         "title": "为「{speaker}」设置音色",
-        "description": "该发言人不在资产库中，请选择一种方式为其设置参考音色",
+        "description": "该发言人不在项目资产库中，请选择一种方式为其设置参考音色",
         "selectFromLibrary": "从音色库选择",
         "selectFromLibraryDesc": "选择已有的全局音色",
         "uploadAudio": "上传参考音频",
@@ -80,7 +80,7 @@
         "reset": "重设",
         "resetDesign": "重新设计",
         "aiDesign": "AI设计",
-        "assetLibrary": "资产库"
+        "assetLibrary": "项目资产库"
     },
     "lineCard": {
         "generatingVoice": "生成中",
@@ -120,7 +120,7 @@
         "title": "暂无台词数据",
         "description": "从剧本中提取台词和发言人",
         "analyzeButton": "分析台词",
-        "hint": "请先在资产库为角色上传参考音频"
+        "hint": "请先在项目资产库为角色上传参考音频"
     },
     "confirm": {
         "deleteLine": "确定要删除这条台词吗？\n\n\"{content}\"\n\n此操作不可撤销。",

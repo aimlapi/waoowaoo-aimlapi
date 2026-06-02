@@ -9,7 +9,7 @@
     "editorComingSoon": "开发中，关注我们获取最新消息"
   },
   "buttons": {
-    "assetLibrary": "资产库",
+    "assetLibrary": "项目资产库",
     "settings": "项目配置",
     "refreshData": "刷新项目数据",
     "enterVideoGeneration": "进入视频生成 →"
@@ -96,7 +96,7 @@
     "wordCount": "字数：",
     "assetLibraryTip": {
       "title": "需要自定义角色和场景？",
-      "description": "点击右上角的「资产库」按钮，可以上传资产设定文档或手动添加角色/场景。AI 将优先使用资产库中的设定进行分析。"
+      "description": "点击右上角的「项目资产库」按钮，可以上传资产设定文档或手动添加角色/场景。AI 将优先使用项目资产库中的设定进行分析。"
     },
     "videoRatio": "画面比例",
     "videoRatioHint": "选择合适的画面比例，可以更好适配投放平台和素材形态",
@@ -127,7 +127,7 @@
     "visualStyle": "画面风格",
     "visualStyleHint": "选择画面风格，不同风格适合不同类型的作品",
     "currentConfigSummary": "当前配置：{ratio} · {style}，后续生成都会使用此组合",
-    "assetLibraryRatioNote": "资产库比例不受影响",
+    "assetLibraryRatioNote": "项目资产库比例不受影响",
     "moreConfig": "更多配置请点击右上角「 配置」按钮",
     "narration": {
       "title": "启用旁白配音",
@@ -587,7 +587,7 @@
           "deletePanel": "删除镜头",
           "addSelectedCharacter": "添加选中角色",
           "useSelectedLocation": "使用选中场景",
-          "openAssetLibrary": "打开资产库",
+          "openAssetLibrary": "打开项目资产库",
           "confirmCandidate": "确认候选图",
           "cancelCandidate": "取消候选",
           "regenerateImage": "重新生成图片",

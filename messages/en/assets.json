@@ -270,8 +270,8 @@
         "episodeLabel": "Ep.{number} · {name}"
     },
     "assetLibrary": {
-        "button": "Asset Library",
-        "title": "Asset Library",
+        "button": "Project Asset Library",
+        "title": "Project Asset Library",
         "copySuccessCharacter": "Character appearance copied successfully",
         "copySuccessLocation": "Location image copied successfully",
         "copySuccessProp": "Prop image copied successfully",

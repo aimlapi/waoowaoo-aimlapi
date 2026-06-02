@@ -59,7 +59,7 @@
     "lipSync": "口型同步",
     "voiceLine": "配音生成",
     "voiceDesign": "声音设计",
-    "assetHubVoiceDesign": "资产库声音设计",
+    "assetHubVoiceDesign": "资产中心声音设计",
     "regenerateStoryboardText": "重生成分镜文本",
     "insertPanel": "插入分镜",
     "panelVariant": "分镜变体",
@@ -85,12 +85,12 @@
     "aiCreateLocation": "项目场景设计",
     "referenceToCharacter": "参考图转角色",
     "episodeSplitLlm": "智能分集",
-    "assetHubAiDesignCharacter": "资产库角色设计",
-    "assetHubAiDesignLocation": "资产库场景设计",
-    "assetHubAiModifyCharacter": "资产库角色修改",
-    "assetHubAiModifyLocation": "资产库场景修改",
-    "assetHubAiModifyProp": "资产库道具修改",
-    "assetHubReferenceToCharacter": "资产库参考图转角色"
+    "assetHubAiDesignCharacter": "资产中心角色设计",
+    "assetHubAiDesignLocation": "资产中心场景设计",
+    "assetHubAiModifyCharacter": "资产中心角色修改",
+    "assetHubAiModifyLocation": "资产中心场景修改",
+    "assetHubAiModifyProp": "资产中心道具修改",
+    "assetHubReferenceToCharacter": "资产中心参考图转角色"
   },
   "stage": {
     "received": "任务已接收",

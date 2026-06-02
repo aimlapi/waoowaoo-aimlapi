@@ -9,7 +9,7 @@
     "editorComingSoon": "Coming soon, follow us for updates"
   },
   "buttons": {
-    "assetLibrary": "Asset Library",
+    "assetLibrary": "Project Asset Library",
     "settings": "Project Config",
     "refreshData": "Refresh Data",
     "enterVideoGeneration": "Enter Video Generation →"
@@ -96,7 +96,7 @@
     "wordCount": "Word count:",
     "assetLibraryTip": {
       "title": "Need custom characters and locations?",
-      "description": "Click the 「Asset Library」 button in the top right to upload asset setting documents or manually add characters/locations. AI will prioritize using settings from the asset library for analysis."
+      "description": "Click the 「Project Asset Library」 button in the top right to upload asset setting documents or manually add characters/locations. AI will prioritize using settings from the project asset library for analysis."
     },
     "videoRatio": "Video Ratio",
     "videoRatioHint": "Pick a ratio that matches your target platform and content format",
@@ -127,7 +127,7 @@
     "visualStyle": "Art Style",
     "visualStyleHint": "Choose an art style that fits your project — e.g. Realistic for live-action, Anime for 2D content",
     "currentConfigSummary": "Current config: {ratio} · {style}. All subsequent generations will use this combo.",
-    "assetLibraryRatioNote": "Asset library ratios are not affected",
+    "assetLibraryRatioNote": "Project asset library ratios are not affected",
     "moreConfig": "For more configuration options, click the 「 Settings」 button in the top right",
     "narration": {
       "title": "Enable Narration Voiceover",
@@ -587,7 +587,7 @@
           "deletePanel": "Delete Shot",
           "addSelectedCharacter": "Add Selected Character",
           "useSelectedLocation": "Use Selected Location",
-          "openAssetLibrary": "Open Asset Library",
+          "openAssetLibrary": "Open Project Asset Library",
           "confirmCandidate": "Confirm Candidate",
           "cancelCandidate": "Cancel Candidate",
           "regenerateImage": "Regenerate Image",
