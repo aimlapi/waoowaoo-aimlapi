@@ -5,7 +5,7 @@
 </p>
 
 <p align="center">
-  <img src="public/banner.png" alt="waoowaoo" width="600">
+  <img src="images/character-casting-ab-test-showcase.jpg" alt="角色选角定妆 A/B 测试效果" width="900">
 </p>
 
 <h1 align="center">waoowaoo AI 影视 Studio</h1>
