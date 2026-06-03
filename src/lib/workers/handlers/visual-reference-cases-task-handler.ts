@@ -25,40 +25,40 @@ interface VisualReferenceCaseForGeneration {
 
 const STYLE_PRESETS: readonly VisualReferenceStylePreset[] = [
   {
-    key: 'neon-urban-fracture',
+    key: 'pastel-fable-tableau',
     title: {
-      zh: '霓虹都市迷离',
-      en: 'Neon Urban Fracture',
+      zh: '粉彩寓言图景',
+      en: 'Pastel Fable Tableau',
     },
     description: {
-      zh: '高饱和霓虹、雨夜反光、红绿撞色和碎片化构图，强调欲望、记忆与偏执。',
-      en: 'Saturated neon, wet-night reflections, red-green color clash, and fragmented framing for desire, memory, and paranoia.',
+      zh: '粉彩天空、童话式对称构图、清爽日光和精心摆放的道具，让惊悚故事呈现反差感。',
+      en: 'Pastel skies, fable-like symmetry, crisp daylight, and carefully staged props, turning suspense into a deceptively innocent world.',
     },
-    visualDirection: 'neon urban psychological noir, saturated red and green practical lights, rain-slick reflections, cramped city night, fragmented mirrors and glass, romantic paranoia, expressive motion blur, dense color contrast',
+    visualDirection: 'pastel storybook tableau, centered symmetrical composition, flat frontal camera, clean sky blue and coral palette, sunlit miniature-like world, carefully color-coordinated wardrobe and props, deadpan character staging, innocent surface hiding psychological dread, crisp 16mm still-frame texture',
   },
   {
-    key: 'humid-slow-cinema',
+    key: 'amber-urban-memory',
     title: {
-      zh: '潮湿慢电影',
-      en: 'Humid Slow Cinema',
+      zh: '暖金都市旧梦',
+      en: 'Amber Urban Memory',
     },
     description: {
-      zh: '长镜头式静观、自然暮色、潮湿空气和大块留白，像现实与幽灵之间的停顿。',
-      en: 'Long-take stillness, natural dusk, humid air, and wide negative space, like a pause between reality and haunting.',
+      zh: '浓烈暖金、旧墙纹理、窄巷压迫和高饱和服装，把记忆、欲望与罪责压进同一帧。',
+      en: 'Dense amber light, aged wall texture, narrow urban pressure, and saturated wardrobe, compressing memory, desire, and guilt into one frame.',
     },
-    visualDirection: 'humid meditative slow cinema, long static composition, natural dusk and green shadow, sparse blocking, off-screen tension, wide negative space, ghostly ambiguity, quiet observational realism, minimal camera drama',
+    visualDirection: 'saturated amber urban memory, tungsten practical light, textured old plaster walls, cramped corridor or alley staging, characters separated by negative space, floral or patterned costume accent, smoky grain, deep warm shadows, overheated color density, romantic guilt and suspended time',
   },
   {
-    key: 'kinetic-stage-color',
+    key: 'snowbound-analog-realism',
     title: {
-      zh: '高能舞台色块',
-      en: 'Kinetic Stage Color',
+      zh: '冰雪粗粝现实',
+      en: 'Snowbound Analog Realism',
     },
     description: {
-      zh: '舞台灯光、强节奏构图、鲜明色块和戏剧化人物调度，把悬疑拍成压迫感表演。',
-      en: 'Stage lighting, rhythmic composition, bold color blocks, and theatrical blocking, turning suspense into pressure performance.',
+      zh: '冷白雪地、粗颗粒胶片、荒凉自然光和手工质感，让心理悬疑变得寒冷、原始、笨重。',
+      en: 'Cold white snow, rough analog grain, barren natural light, and handmade texture, making the thriller feel cold, primitive, and heavy.',
     },
-    visualDirection: 'kinetic theatrical color design, bold primary color blocking, hard spotlights, rhythmic diagonal composition, stage-like depth, crisp silhouettes, energetic visual tempo, polished musical-drama intensity',
+    visualDirection: 'snowbound analog realism, overexposed winter whites, muted brown and rust accents, rough 1970s film grain, handheld documentary distance, barren trees and crude practical objects, wind-bitten faces, awkward human posture, raw natural light, heavy rural austerity and existential dread',
   },
   {
     key: 'clinical-institutional-dread',
@@ -70,7 +70,7 @@ const STYLE_PRESETS: readonly VisualReferenceStylePreset[] = [
       zh: '荧光灯、低饱和、对称走廊和监控式距离，突出诊断、档案与精神崩塌。',
       en: 'Fluorescent light, low saturation, symmetrical corridors, and surveillance distance for diagnosis, records, and mental collapse.',
     },
-    visualDirection: 'clinical institutional dread, cold fluorescent whites and sickly green, low saturation, symmetrical corridor geometry, CCTV-like distance, documentary stillness, hard tiled surfaces, psychiatric ward unease',
+    visualDirection: 'clinical institutional dread, cold fluorescent whites and sickly green, low saturation, symmetrical corridor geometry, CCTV-like distance, documentary stillness, hard tiled surfaces, psychiatric ward unease, strictly modern institutional world',
   },
   {
     key: 'expressionist-shadow-double',
@@ -82,7 +82,7 @@ const STYLE_PRESETS: readonly VisualReferenceStylePreset[] = [
       zh: '极端明暗、扭曲空间、巨大影子和双重自我，把心理裂缝直接图像化。',
       en: 'Extreme chiaroscuro, distorted space, oversized shadows, and doubled selves, turning the psychic fracture into graphic form.',
     },
-    visualDirection: 'expressionist psychological thriller, extreme chiaroscuro, distorted perspective, oversized shadows, doubled figure motif, hard black shapes, tilted architecture, surreal guilt visualization, graphic nightmare atmosphere',
+    visualDirection: 'expressionist psychological thriller, extreme chiaroscuro, distorted perspective, oversized shadows, doubled figure motif, hard black shapes, tilted architecture, surreal guilt visualization, graphic nightmare atmosphere, theatrical unreality',
   },
 ] as const
 
@@ -141,6 +141,7 @@ function buildReferencePrompt(input: {
       'This is only a mood/style reference for the user. It must not look like a storyboard panel, asset sheet, UI mockup, poster with text, or production diagram.',
       `Visual direction: ${input.preset.visualDirection}.`,
       'Commit strongly to this option; it should look unmistakably different from the other visual references even at thumbnail size.',
+      'Build a complete visual world: color palette, composition grammar, texture, wardrobe or props, light source, camera distance, and emotional temperature. Do not merely reuse the same realistic scene with a different color grade.',
       input.aspectRatio ? `Aspect ratio: ${input.aspectRatio}.` : '',
       input.artStyle ? `Current project art style hint: ${input.artStyle}.` : '',
       userPromptPreview ? `Original request: ${userPromptPreview}` : '',
@@ -153,6 +154,7 @@ function buildReferencePrompt(input: {
     '这只是交给用户看的画面气质参考，不是正式分镜、不是角色资产设定图、不是海报、不是 UI，也不是生产流程图。',
     `视觉方向：${input.preset.visualDirection}。`,
     '请强烈执行这个方向，让它在缩略图尺寸下也能和其他视觉参考明显不同。',
+    '请建立完整的视觉世界：色彩体系、构图规则、材质颗粒、服装或道具、光源逻辑、镜头距离和情绪温度都要改变，不要只是同一个写实场景换调色。',
     input.aspectRatio ? `画幅比例：${input.aspectRatio}。` : '',
     input.artStyle ? `当前项目风格提示：${input.artStyle}。` : '',
     userPromptPreview ? `用户原始需求：${userPromptPreview}` : '',

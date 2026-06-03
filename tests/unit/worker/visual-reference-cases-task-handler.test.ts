@@ -94,9 +94,9 @@ describe('visual reference cases task handler', () => {
         projectId: 'project-1',
         episodeId: 'episode-1',
         screenplayId: 'screenplay-1',
-        title: '霓虹都市迷离',
-        description: expect.stringContaining('高饱和霓虹'),
-        prompt: expect.stringContaining('neon urban psychological noir'),
+        title: '粉彩寓言图景',
+        description: expect.stringContaining('粉彩天空'),
+        prompt: expect.stringContaining('pastel storybook tableau'),
         status: 'processing',
         taskId: 'task-visual-reference-1',
         sortIndex: 0,
@@ -109,9 +109,9 @@ describe('visual reference cases task handler', () => {
     })
     expect(prismaMock.projectVisualReferenceCase.create).toHaveBeenNthCalledWith(2, {
       data: expect.objectContaining({
-        title: '潮湿慢电影',
-        description: expect.stringContaining('长镜头式静观'),
-        prompt: expect.stringContaining('humid meditative slow cinema'),
+        title: '暖金都市旧梦',
+        description: expect.stringContaining('浓烈暖金'),
+        prompt: expect.stringContaining('saturated amber urban memory'),
         sortIndex: 1,
       }),
       select: {
@@ -120,6 +120,7 @@ describe('visual reference cases task handler', () => {
         imageUrl: true,
       },
     })
+    expect(utilsMock.resolveImageSourceFromGeneration.mock.calls[0]?.[1].prompt).toContain('色彩体系、构图规则、材质颗粒')
     expect(utilsMock.resolveImageSourceFromGeneration).toHaveBeenCalledWith(
       expect.anything(),
       expect.objectContaining({
