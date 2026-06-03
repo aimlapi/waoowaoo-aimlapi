@@ -105,6 +105,46 @@ const visualReferenceCaseInclude = {
   imageMedia: true,
 } as const
 
+function visualReferenceCaseGroupKey(row: VisualReferenceCaseRow): string {
+  return `${row.taskId || row.id}:${row.sortIndex}`
+}
+
+function visualReferenceCaseRank(row: VisualReferenceCaseRow): number {
+  const status = normalizeStatus(row.status)
+  if (status === 'completed' && (row.imageMedia || row.imageUrl)) return 4
+  if (status === 'processing') return 3
+  if (status === 'completed') return 2
+  return 1
+}
+
+function compareVisualReferenceCases(left: VisualReferenceCaseRow, right: VisualReferenceCaseRow): number {
+  if (left.isSelected !== right.isSelected) return left.isSelected ? -1 : 1
+  const createdDelta = right.createdAt.getTime() - left.createdAt.getTime()
+  if (createdDelta !== 0) return createdDelta
+  return left.sortIndex - right.sortIndex
+}
+
+function collapseDuplicateVisualReferenceCases(rows: readonly VisualReferenceCaseRow[]): VisualReferenceCaseRow[] {
+  const byGroup = new Map<string, VisualReferenceCaseRow>()
+  rows.forEach((row) => {
+    const key = visualReferenceCaseGroupKey(row)
+    const current = byGroup.get(key)
+    if (!current) {
+      byGroup.set(key, row)
+      return
+    }
+    const rowRank = visualReferenceCaseRank(row)
+    const currentRank = visualReferenceCaseRank(current)
+    if (
+      rowRank > currentRank ||
+      (rowRank === currentRank && row.updatedAt.getTime() > current.updatedAt.getTime())
+    ) {
+      byGroup.set(key, row)
+    }
+  })
+  return Array.from(byGroup.values()).sort(compareVisualReferenceCases)
+}
+
 export async function readProjectVisualReferenceCases(input: {
   readonly projectId: string
   readonly episodeId: string
@@ -121,7 +161,8 @@ export async function readProjectVisualReferenceCases(input: {
       { sortIndex: 'asc' },
     ],
   })
-  return cases.map((item) => mapVisualReferenceCase(item))
+  return collapseDuplicateVisualReferenceCases(cases)
+    .map((item) => mapVisualReferenceCase(item))
 }
 
 function normalizeCount(value: number | undefined): number {

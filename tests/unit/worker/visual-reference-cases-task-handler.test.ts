@@ -4,6 +4,7 @@ import { TASK_TYPE, type TaskJobData } from '@/lib/task/types'
 
 const prismaMock = vi.hoisted(() => ({
   projectVisualReferenceCase: {
+    findFirst: vi.fn(),
     create: vi.fn(),
     update: vi.fn(),
   },
@@ -49,9 +50,10 @@ function buildJob(payload: Record<string, unknown>): Job<TaskJobData> {
 describe('visual reference cases task handler', () => {
   beforeEach(() => {
     vi.clearAllMocks()
+    prismaMock.projectVisualReferenceCase.findFirst.mockResolvedValue(null)
     prismaMock.projectVisualReferenceCase.create
-      .mockResolvedValueOnce({ id: 'visual-case-1' })
-      .mockResolvedValueOnce({ id: 'visual-case-2' })
+      .mockResolvedValueOnce({ id: 'visual-case-1', status: 'processing', imageUrl: null })
+      .mockResolvedValueOnce({ id: 'visual-case-2', status: 'processing', imageUrl: null })
     prismaMock.projectVisualReferenceCase.update.mockResolvedValue({})
     utilsMock.resolveImageSourceFromGeneration
       .mockResolvedValueOnce('generated-image-source-1')
@@ -96,7 +98,11 @@ describe('visual reference cases task handler', () => {
         taskId: 'task-visual-reference-1',
         sortIndex: 0,
       }),
-      select: { id: true },
+      select: {
+        id: true,
+        status: true,
+        imageUrl: true,
+      },
     })
     expect(utilsMock.resolveImageSourceFromGeneration).toHaveBeenCalledWith(
       expect.anything(),
@@ -131,5 +137,63 @@ describe('visual reference cases task handler', () => {
 
     expect(prismaMock.projectVisualReferenceCase.create).not.toHaveBeenCalled()
     expect(utilsMock.resolveImageSourceFromGeneration).not.toHaveBeenCalled()
+  })
+
+  it('reuses completed cases on retry so one failed image does not duplicate the whole style set', async () => {
+    prismaMock.projectVisualReferenceCase.findFirst
+      .mockResolvedValueOnce({
+        id: 'visual-case-1',
+        status: 'completed',
+        imageUrl: '/m/existing-media-1',
+      })
+      .mockResolvedValueOnce({
+        id: 'visual-case-2',
+        status: 'failed',
+        imageUrl: null,
+      })
+    prismaMock.projectVisualReferenceCase.update
+      .mockResolvedValueOnce({ id: 'visual-case-2', status: 'processing', imageUrl: null })
+      .mockResolvedValueOnce({})
+    utilsMock.resolveImageSourceFromGeneration.mockReset()
+    utilsMock.resolveImageSourceFromGeneration.mockResolvedValueOnce('generated-image-source-2')
+    utilsMock.uploadImageSourceToCos.mockReset()
+    utilsMock.uploadImageSourceToCos.mockResolvedValueOnce('visual-reference/visual-case-2.png')
+    mediaServiceMock.ensureMediaObjectFromStorageKey.mockReset()
+    mediaServiceMock.ensureMediaObjectFromStorageKey.mockResolvedValueOnce({ id: 'media-2', url: '/m/media-2' })
+
+    const result = await handleVisualReferenceCasesTask(buildJob({
+      episodeId: 'episode-1',
+      screenplayId: 'screenplay-1',
+      screenplayText: '第一场，雨夜。主角站在街边，看见远处的灯光。',
+      imageModel: 'image-model-1',
+      count: 2,
+      aspectRatio: '16:9',
+    }))
+
+    expect(result).toEqual({
+      episodeId: 'episode-1',
+      screenplayId: 'screenplay-1',
+      count: 2,
+      cases: [
+        { caseId: 'visual-case-1', imageUrl: '/m/existing-media-1' },
+        { caseId: 'visual-case-2', imageUrl: '/m/media-2' },
+      ],
+    })
+    expect(prismaMock.projectVisualReferenceCase.create).not.toHaveBeenCalled()
+    expect(utilsMock.resolveImageSourceFromGeneration).toHaveBeenCalledTimes(1)
+    expect(prismaMock.projectVisualReferenceCase.update).toHaveBeenCalledWith({
+      where: { id: 'visual-case-2' },
+      data: expect.objectContaining({
+        status: 'processing',
+        errorMessage: null,
+        imageUrl: null,
+        imageMediaId: null,
+      }),
+      select: {
+        id: true,
+        status: true,
+        imageUrl: true,
+      },
+    })
   })
 })

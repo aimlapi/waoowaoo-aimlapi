@@ -17,6 +17,12 @@ interface VisualReferenceStylePreset {
   readonly visualDirection: string
 }
 
+interface VisualReferenceCaseForGeneration {
+  readonly id: string
+  readonly status: string
+  readonly imageUrl: string | null
+}
+
 const STYLE_PRESETS: readonly VisualReferenceStylePreset[] = [
   {
     key: 'cinematic-naturalism',
@@ -153,6 +159,71 @@ function buildReferencePrompt(input: {
   ].filter(Boolean).join('\n')
 }
 
+async function resolveVisualReferenceCaseForGeneration(input: {
+  readonly job: Job<TaskJobData>
+  readonly episodeId: string
+  readonly screenplayId: string
+  readonly preset: VisualReferenceStylePreset
+  readonly prompt: string
+  readonly sortIndex: number
+}): Promise<VisualReferenceCaseForGeneration> {
+  const existing = await prisma.projectVisualReferenceCase.findFirst({
+    where: {
+      taskId: input.job.data.taskId,
+      sortIndex: input.sortIndex,
+    },
+    orderBy: [
+      { status: 'asc' },
+      { updatedAt: 'desc' },
+    ],
+    select: {
+      id: true,
+      status: true,
+      imageUrl: true,
+    },
+  })
+
+  if (existing?.status === 'completed' && existing.imageUrl) {
+    return existing
+  }
+
+  const data = {
+    projectId: input.job.data.projectId,
+    episodeId: input.episodeId,
+    screenplayId: input.screenplayId,
+    title: input.preset.title[input.job.data.locale],
+    description: input.preset.description[input.job.data.locale],
+    prompt: input.prompt,
+    status: 'processing',
+    taskId: input.job.data.taskId,
+    sortIndex: input.sortIndex,
+    errorMessage: null,
+    imageUrl: null,
+    imageMediaId: null,
+  }
+
+  if (existing) {
+    return await prisma.projectVisualReferenceCase.update({
+      where: { id: existing.id },
+      data,
+      select: {
+        id: true,
+        status: true,
+        imageUrl: true,
+      },
+    })
+  }
+
+  return await prisma.projectVisualReferenceCase.create({
+    data,
+    select: {
+      id: true,
+      status: true,
+      imageUrl: true,
+    },
+  })
+}
+
 export async function handleVisualReferenceCasesTask(job: Job<TaskJobData>) {
   const payload = job.data.payload || {}
   const episodeId = readRequiredString(payload.episodeId ?? job.data.episodeId, 'episodeId')
@@ -183,20 +254,18 @@ export async function handleVisualReferenceCasesTask(job: Job<TaskJobData>) {
       artStyle,
       preset,
     })
-    const visualCase = await prisma.projectVisualReferenceCase.create({
-      data: {
-        projectId: job.data.projectId,
-        episodeId,
-        screenplayId,
-        title: preset.title[job.data.locale],
-        description: preset.description[job.data.locale],
-        prompt,
-        status: 'processing',
-        taskId: job.data.taskId,
-        sortIndex: index,
-      },
-      select: { id: true },
+    const visualCase = await resolveVisualReferenceCaseForGeneration({
+      job,
+      episodeId,
+      screenplayId,
+      preset,
+      prompt,
+      sortIndex: index,
     })
+    if (visualCase.status === 'completed' && visualCase.imageUrl) {
+      results.push({ caseId: visualCase.id, imageUrl: visualCase.imageUrl })
+      continue
+    }
 
     try {
       await reportTaskProgress(job, 18 + Math.floor((index / Math.max(presets.length, 1)) * 68), {
