@@ -25,64 +25,64 @@ interface VisualReferenceCaseForGeneration {
 
 const STYLE_PRESETS: readonly VisualReferenceStylePreset[] = [
   {
-    key: 'cinematic-naturalism',
+    key: 'neon-urban-fracture',
     title: {
-      zh: '克制电影现实感',
-      en: 'Restrained Cinematic Realism',
+      zh: '霓虹都市迷离',
+      en: 'Neon Urban Fracture',
     },
     description: {
-      zh: '低饱和色彩、真实光线、细腻环境质感，像一帧严肃剧情片剧照。',
-      en: 'Low-saturation color, grounded light, and tactile environments, like a still from a serious drama.',
+      zh: '高饱和霓虹、雨夜反光、红绿撞色和碎片化构图，强调欲望、记忆与偏执。',
+      en: 'Saturated neon, wet-night reflections, red-green color clash, and fragmented framing for desire, memory, and paranoia.',
     },
-    visualDirection: 'restrained cinematic realism, low saturation, natural motivated lighting, tactile production design, quiet emotional tension',
+    visualDirection: 'neon urban psychological noir, saturated red and green practical lights, rain-slick reflections, cramped city night, fragmented mirrors and glass, romantic paranoia, expressive motion blur, dense color contrast',
   },
   {
-    key: 'luminous-dream',
+    key: 'humid-slow-cinema',
     title: {
-      zh: '柔光梦境感',
-      en: 'Luminous Dream Mood',
+      zh: '潮湿慢电影',
+      en: 'Humid Slow Cinema',
     },
     description: {
-      zh: '柔和高光、轻微超现实氛围、通透色彩，强调诗意和情绪想象。',
-      en: 'Soft highlights, lightly surreal atmosphere, and translucent color, emphasizing poetic emotion.',
+      zh: '长镜头式静观、自然暮色、潮湿空气和大块留白，像现实与幽灵之间的停顿。',
+      en: 'Long-take stillness, natural dusk, humid air, and wide negative space, like a pause between reality and haunting.',
     },
-    visualDirection: 'luminous dreamlike cinema, soft bloom, translucent color, gentle surreal atmosphere, poetic emotional composition',
+    visualDirection: 'humid meditative slow cinema, long static composition, natural dusk and green shadow, sparse blocking, off-screen tension, wide negative space, ghostly ambiguity, quiet observational realism, minimal camera drama',
   },
   {
-    key: 'graphic-contrast',
+    key: 'kinetic-stage-color',
     title: {
-      zh: '高对比图像感',
-      en: 'Graphic High Contrast',
+      zh: '高能舞台色块',
+      en: 'Kinetic Stage Color',
     },
     description: {
-      zh: '强烈明暗关系、明确轮廓、鲜明色块，适合更有视觉冲击的故事。',
-      en: 'Strong light-shadow structure, clear silhouettes, and bold color blocking for a more graphic visual impact.',
+      zh: '舞台灯光、强节奏构图、鲜明色块和戏剧化人物调度，把悬疑拍成压迫感表演。',
+      en: 'Stage lighting, rhythmic composition, bold color blocks, and theatrical blocking, turning suspense into pressure performance.',
     },
-    visualDirection: 'graphic high contrast visual design, bold silhouettes, expressive shadows, crisp color blocking, strong poster-like composition',
+    visualDirection: 'kinetic theatrical color design, bold primary color blocking, hard spotlights, rhythmic diagonal composition, stage-like depth, crisp silhouettes, energetic visual tempo, polished musical-drama intensity',
   },
   {
-    key: 'warm-film',
+    key: 'clinical-institutional-dread',
     title: {
-      zh: '温暖胶片质感',
-      en: 'Warm Film Texture',
+      zh: '冷白机构恐惧',
+      en: 'Clinical Institutional Dread',
     },
     description: {
-      zh: '温润颗粒、柔和肤色、偏暖环境光，营造怀旧但不做旧的电影感。',
-      en: 'Warm grain, gentle skin tones, and ambient warmth for a nostalgic but clean film look.',
+      zh: '荧光灯、低饱和、对称走廊和监控式距离，突出诊断、档案与精神崩塌。',
+      en: 'Fluorescent light, low saturation, symmetrical corridors, and surveillance distance for diagnosis, records, and mental collapse.',
     },
-    visualDirection: 'warm film texture, subtle grain, soft skin tones, amber practical light, nostalgic but clean cinematic palette',
+    visualDirection: 'clinical institutional dread, cold fluorescent whites and sickly green, low saturation, symmetrical corridor geometry, CCTV-like distance, documentary stillness, hard tiled surfaces, psychiatric ward unease',
   },
   {
-    key: 'cold-future',
+    key: 'expressionist-shadow-double',
     title: {
-      zh: '冷调未来感',
-      en: 'Cool Future Tone',
+      zh: '表现主义暗影分身',
+      en: 'Expressionist Shadow Double',
     },
     description: {
-      zh: '冷色光源、硬质材料、精确构图，适合科技、悬疑或疏离情绪。',
-      en: 'Cool light, hard materials, and precise composition for tech, suspense, or emotional distance.',
+      zh: '极端明暗、扭曲空间、巨大影子和双重自我，把心理裂缝直接图像化。',
+      en: 'Extreme chiaroscuro, distorted space, oversized shadows, and doubled selves, turning the psychic fracture into graphic form.',
     },
-    visualDirection: 'cool future tone, precise composition, cold practical light, hard reflective materials, restrained speculative atmosphere',
+    visualDirection: 'expressionist psychological thriller, extreme chiaroscuro, distorted perspective, oversized shadows, doubled figure motif, hard black shapes, tilted architecture, surreal guilt visualization, graphic nightmare atmosphere',
   },
 ] as const
 
@@ -140,6 +140,7 @@ function buildReferencePrompt(input: {
       'Create one standalone visual reference image for a confirmed screenplay.',
       'This is only a mood/style reference for the user. It must not look like a storyboard panel, asset sheet, UI mockup, poster with text, or production diagram.',
       `Visual direction: ${input.preset.visualDirection}.`,
+      'Commit strongly to this option; it should look unmistakably different from the other visual references even at thumbnail size.',
       input.aspectRatio ? `Aspect ratio: ${input.aspectRatio}.` : '',
       input.artStyle ? `Current project art style hint: ${input.artStyle}.` : '',
       userPromptPreview ? `Original request: ${userPromptPreview}` : '',
@@ -151,6 +152,7 @@ function buildReferencePrompt(input: {
     '为一份已经确认的剧本生成一张独立的画面风格参考图。',
     '这只是交给用户看的画面气质参考，不是正式分镜、不是角色资产设定图、不是海报、不是 UI，也不是生产流程图。',
     `视觉方向：${input.preset.visualDirection}。`,
+    '请强烈执行这个方向，让它在缩略图尺寸下也能和其他视觉参考明显不同。',
     input.aspectRatio ? `画幅比例：${input.aspectRatio}。` : '',
     input.artStyle ? `当前项目风格提示：${input.artStyle}。` : '',
     userPromptPreview ? `用户原始需求：${userPromptPreview}` : '',

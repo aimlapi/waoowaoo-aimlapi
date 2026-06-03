@@ -109,6 +109,10 @@ function visualReferenceCaseGroupKey(row: VisualReferenceCaseRow): string {
   return `${row.taskId || row.id}:${row.sortIndex}`
 }
 
+function visualReferenceCaseBatchKey(row: VisualReferenceCaseRow): string {
+  return row.taskId || row.id
+}
+
 function visualReferenceCaseRank(row: VisualReferenceCaseRow): number {
   const status = normalizeStatus(row.status)
   if (status === 'completed' && (row.imageMedia || row.imageUrl)) return 4
@@ -119,9 +123,34 @@ function visualReferenceCaseRank(row: VisualReferenceCaseRow): number {
 
 function compareVisualReferenceCases(left: VisualReferenceCaseRow, right: VisualReferenceCaseRow): number {
   if (left.isSelected !== right.isSelected) return left.isSelected ? -1 : 1
+  if ((left.taskId || left.id) === (right.taskId || right.id)) {
+    const sameTaskSortIndexDelta = left.sortIndex - right.sortIndex
+    if (sameTaskSortIndexDelta !== 0) return sameTaskSortIndexDelta
+  }
   const createdDelta = right.createdAt.getTime() - left.createdAt.getTime()
   if (createdDelta !== 0) return createdDelta
-  return left.sortIndex - right.sortIndex
+  const sortIndexDelta = left.sortIndex - right.sortIndex
+  if (sortIndexDelta !== 0) return sortIndexDelta
+  return (right.taskId || '').localeCompare(left.taskId || '')
+}
+
+function findLatestVisualReferenceCaseBatchKey(rows: readonly VisualReferenceCaseRow[]): string | null {
+  let latestKey: string | null = null
+  let latestTime = Number.NEGATIVE_INFINITY
+  rows.forEach((row) => {
+    const rowTime = row.createdAt.getTime()
+    if (rowTime > latestTime) {
+      latestTime = rowTime
+      latestKey = visualReferenceCaseBatchKey(row)
+    }
+  })
+  return latestKey
+}
+
+function filterVisibleVisualReferenceCases(rows: readonly VisualReferenceCaseRow[]): VisualReferenceCaseRow[] {
+  const latestBatchKey = findLatestVisualReferenceCaseBatchKey(rows)
+  if (!latestBatchKey) return []
+  return rows.filter((row) => row.isSelected || visualReferenceCaseBatchKey(row) === latestBatchKey)
 }
 
 function collapseDuplicateVisualReferenceCases(rows: readonly VisualReferenceCaseRow[]): VisualReferenceCaseRow[] {
@@ -142,7 +171,7 @@ function collapseDuplicateVisualReferenceCases(rows: readonly VisualReferenceCas
       byGroup.set(key, row)
     }
   })
-  return Array.from(byGroup.values()).sort(compareVisualReferenceCases)
+  return filterVisibleVisualReferenceCases(Array.from(byGroup.values())).sort(compareVisualReferenceCases)
 }
 
 export async function readProjectVisualReferenceCases(input: {

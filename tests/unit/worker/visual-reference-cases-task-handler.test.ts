@@ -89,14 +89,30 @@ describe('visual reference cases task handler', () => {
       ],
     })
     expect(prismaMock.projectVisualReferenceCase.create).toHaveBeenCalledTimes(2)
-    expect(prismaMock.projectVisualReferenceCase.create).toHaveBeenCalledWith({
+    expect(prismaMock.projectVisualReferenceCase.create).toHaveBeenNthCalledWith(1, {
       data: expect.objectContaining({
         projectId: 'project-1',
         episodeId: 'episode-1',
         screenplayId: 'screenplay-1',
+        title: '霓虹都市迷离',
+        description: expect.stringContaining('高饱和霓虹'),
+        prompt: expect.stringContaining('neon urban psychological noir'),
         status: 'processing',
         taskId: 'task-visual-reference-1',
         sortIndex: 0,
+      }),
+      select: {
+        id: true,
+        status: true,
+        imageUrl: true,
+      },
+    })
+    expect(prismaMock.projectVisualReferenceCase.create).toHaveBeenNthCalledWith(2, {
+      data: expect.objectContaining({
+        title: '潮湿慢电影',
+        description: expect.stringContaining('长镜头式静观'),
+        prompt: expect.stringContaining('humid meditative slow cinema'),
+        sortIndex: 1,
       }),
       select: {
         id: true,
