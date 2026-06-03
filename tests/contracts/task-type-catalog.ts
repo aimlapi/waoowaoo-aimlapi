@@ -15,6 +15,7 @@ const TASK_TYPE_OWNER_MAP = {
   [TASK_TYPE.CHARACTER_STYLE_TEST]: 'tests/unit/worker/character-style-test-task-handler.test.ts',
   [TASK_TYPE.SCENE_REFERENCE_TEST]: 'tests/unit/worker/scene-reference-test-task-handler.test.ts',
   [TASK_TYPE.SCENE_REFERENCE_COMPARISON_TEST]: 'tests/unit/worker/scene-reference-test-task-handler.test.ts',
+  [TASK_TYPE.VISUAL_REFERENCE_CASES]: 'tests/unit/worker/visual-reference-cases-task-handler.test.ts',
   [TASK_TYPE.IMAGE_CHARACTER]: 'tests/unit/worker/character-image-task-handler.test.ts',
   [TASK_TYPE.IMAGE_LOCATION]: 'tests/unit/worker/location-image-task-handler.test.ts',
   [TASK_TYPE.MUSIC_GENERATE]: 'tests/unit/worker/music-worker.test.ts',

@@ -25,8 +25,10 @@ import {
   useGenerateProjectEditScriptAssets,
   useGenerateProjectEditScriptStoryboard,
   useGenerateProjectEditScriptStoryboardSpatialBlocking,
+  useGenerateProjectVisualReferenceCases,
   useArrangeProjectEditScriptVideoBlocks,
   useRegenerateProjectStoryboardText,
+  useSelectProjectVisualReferenceCase,
   useUpdateProjectEditScriptAssetRequirementDescription,
   useUpdateProjectEditScriptVideoBlockPrompt,
 } from '@/lib/query/hooks'
@@ -125,6 +127,8 @@ export function useProjectWorkspaceController({
   const generateEditAssets = useGenerateProjectEditScriptAssets(projectId)
   const generateEditStoryboard = useGenerateProjectEditScriptStoryboard(projectId)
   const generateEditStoryboardSpatialBlocking = useGenerateProjectEditScriptStoryboardSpatialBlocking(projectId)
+  const generateVisualReferenceCases = useGenerateProjectVisualReferenceCases(projectId)
+  const selectVisualReferenceCase = useSelectProjectVisualReferenceCase(projectId)
   const characterAssetActions = useAssetActions({ scope: 'project', projectId, kind: 'character' })
   const locationAssetActions = useAssetActions({ scope: 'project', projectId, kind: 'location' })
   const updateVideoPlanPrompt = useUpdateProjectEditScriptVideoBlockPrompt(projectId)
@@ -142,6 +146,18 @@ export function useProjectWorkspaceController({
       ...(screenplayId ? { screenplayId } : {}),
     })
     await onRefresh({ mode: 'full' })
+  }
+  const handleGenerateVisualReferenceCases = async (count?: number) => {
+    if (!episodeId) throw new Error('Episode ID is required')
+    await generateVisualReferenceCases.mutateAsync({
+      episodeId,
+      ...(count ? { count } : {}),
+    })
+    await onRefresh({ mode: 'full' })
+  }
+  const handleSelectVisualReferenceCase = async (caseId: string) => {
+    if (!episodeId) throw new Error('Episode ID is required')
+    await selectVisualReferenceCase.mutateAsync({ episodeId, caseId })
   }
   const handleRegenerateStoryboardText = async (storyboardId: string) => {
     await regenerateStoryboardText.mutateAsync({ storyboardId })
@@ -189,7 +205,7 @@ export function useProjectWorkspaceController({
     isSubmittingTTS: execution.isSubmittingTTS,
     isTransitioning: execution.isTransitioning,
     isConfirmingAssets: execution.isConfirmingAssets,
-    isStartingPlan: createEditScreenplay.isPending || createEditScript.isPending,
+    isStartingPlan: createEditScreenplay.isPending || createEditScript.isPending || generateVisualReferenceCases.isPending,
     videoRatio: projectSnapshot.videoRatio,
     artStyle: projectSnapshot.artStyle,
     visualStylePresetSource: projectSnapshot.visualStylePresetSource,
@@ -204,6 +220,8 @@ export function useProjectWorkspaceController({
     onRequestAssistantPlan: execution.requestAssistantPlan,
     handleGenerateEditScreenplay,
     handleGenerateEditScript,
+    handleGenerateVisualReferenceCases,
+    handleSelectVisualReferenceCase,
     handleRegenerateStoryboardText,
     handleUpdateClip: videoActions.handleUpdateClip,
     openAssetLibrary: assetLibrary.openAssetLibrary,

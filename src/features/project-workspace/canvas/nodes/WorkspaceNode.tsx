@@ -1211,12 +1211,88 @@ function EditScreenplayContent({
 }) {
   const details = data.editScreenplayDetails
   if (!details) return <p className={`${SELECTABLE_TEXT_CLASS} text-sm leading-6 text-[var(--glass-text-secondary)]`}>{data.body}</p>
+  const visualReferenceCases = details.visualReferenceCases
 
   return (
     <div className="space-y-2">
       {renderSection(labels('screenplay'), expanded
         ? renderTextBlock(details.screenplayText)
         : renderSummaryText(details.screenplayText, 8))}
+      {visualReferenceCases.length > 0 ? renderSection(labels('visualReferenceCases'), (
+        <div className={nodeContentInteractionClass(data, 'space-y-2')}>
+          <p className={`${SELECTABLE_TEXT_CLASS} text-xs leading-5 text-[var(--glass-text-tertiary)]`}>
+            {labels('visualReferenceOnly')}
+          </p>
+          {visualReferenceCases.map((visualReferenceCase, index) => {
+            const displayImageUrl = toDisplayImageUrl(visualReferenceCase.imageUrl) ?? visualReferenceCase.imageUrl
+            const canSelect = visualReferenceCase.status === 'completed'
+              && Boolean(displayImageUrl)
+              && !visualReferenceCase.isSelected
+              && data.readOnly !== true
+              && Boolean(data.onAction)
+            return (
+              <div
+                key={visualReferenceCase.id}
+                className={`overflow-hidden rounded-[14px] border bg-white ${visualReferenceCase.isSelected ? 'border-emerald-300 ring-2 ring-emerald-100' : 'border-slate-200'}`}
+              >
+                <div className="relative flex h-28 items-center justify-center bg-slate-100">
+                  {displayImageUrl ? (
+                    // eslint-disable-next-line @next/next/no-img-element
+                    <img
+                      src={displayImageUrl}
+                      alt={labels('visualReferenceCaseAlt', { index: index + 1 })}
+                      className="h-full w-full object-cover"
+                    />
+                  ) : visualReferenceCase.status === 'failed' ? (
+                    <p className={`${SELECTABLE_TEXT_CLASS} px-3 text-center text-xs text-red-600`}>
+                      {visualReferenceCase.errorMessage || labels('visualReferenceFailed')}
+                    </p>
+                  ) : (
+                    <MediaSkeleton height={112} />
+                  )}
+                  {visualReferenceCase.isSelected ? (
+                    <span className={`${SELECTABLE_TEXT_CLASS} absolute right-2 top-2 rounded-full bg-emerald-600 px-2 py-1 text-[10px] font-semibold text-white shadow-sm`}>
+                      {labels('selectedReference')}
+                    </span>
+                  ) : null}
+                </div>
+                <div className="space-y-2 px-3 py-2.5">
+                  <div className="flex items-start justify-between gap-2">
+                    <div className="min-w-0">
+                      <p className={`${SELECTABLE_TEXT_CLASS} truncate text-xs font-semibold text-[var(--glass-text-primary)]`}>
+                        {visualReferenceCase.title}
+                      </p>
+                      <p className={`${SELECTABLE_TEXT_CLASS} mt-1 line-clamp-2 text-[11px] leading-4 text-[var(--glass-text-secondary)]`}>
+                        {visualReferenceCase.description}
+                      </p>
+                    </div>
+                    <span className={`${SELECTABLE_TEXT_CLASS} shrink-0 rounded-full bg-slate-100 px-2 py-1 text-[10px] font-semibold text-[var(--glass-text-tertiary)]`}>
+                      {labels(`visualReferenceStatus.${visualReferenceCase.status}`)}
+                    </span>
+                  </div>
+                  {canSelect ? (
+                    <button
+                      type="button"
+                      className="w-full rounded-[12px] bg-slate-950 px-3 py-2 text-xs font-semibold text-white transition hover:bg-slate-800"
+                      onClick={(event) => {
+                        event.stopPropagation()
+                        void dispatchNodeAction(data, {
+                          type: 'select_visual_reference_case',
+                          caseId: visualReferenceCase.id,
+                        })
+                      }}
+                    >
+                      {labels('setVisualReference')}
+                    </button>
+                  ) : null}
+                </div>
+              </div>
+            )
+          })}
+        </div>
+      )) : details.visualReferenceRunning ? renderSection(labels('visualReferenceCases'), (
+        <MediaSkeleton height={112} />
+      )) : null}
       {expanded ? renderSection(labels('originalRequest'), renderTextBlock(details.userPrompt)) : null}
     </div>
   )
@@ -1659,7 +1735,9 @@ export default function WorkspaceNode({ data }: NodeProps<WorkspaceCanvasFlowNod
   const secondaryAction = data.secondaryAction
   const secondaryActionIcon: AppIconName = secondaryAction?.type === 'open_video_block_arrangement'
     ? 'link'
-    : 'externalLink'
+    : secondaryAction?.type === 'generate_visual_reference_cases'
+      ? 'image'
+      : 'externalLink'
   const nodeId = data.nodeId
   const onMeasureNodeSize = data.onMeasureNodeSize
   const showDetailsToggle = canToggleDetails && Boolean(data.onToggleExpanded)

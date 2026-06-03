@@ -77,6 +77,9 @@ export const TASK_RUNTIME_TARGETS = {
   projectEpisodeEditScriptGeneration(episodeId: string | null | undefined) {
     return target('ProjectEpisode', episodeId, [TASK_TYPE.EDIT_SCRIPT_GENERATE])
   },
+  projectEpisodeVisualReferenceCases(episodeId: string | null | undefined) {
+    return target('ProjectEpisode', episodeId, [TASK_TYPE.VISUAL_REFERENCE_CASES])
+  },
   projectEpisodeFinalRender(episodeId: string | null | undefined) {
     return target('ProjectEpisode', episodeId, [TASK_TYPE.FINAL_VIDEO_RENDER])
   },

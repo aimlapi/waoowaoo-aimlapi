@@ -136,6 +136,7 @@ const ROUTE_FILES = [
   'src/app/api/projects/[projectId]/upload-asset-image/route.ts',
   'src/app/api/projects/[projectId]/video-proxy/route.ts',
   'src/app/api/projects/[projectId]/video-urls/route.ts',
+  'src/app/api/projects/[projectId]/visual-reference-cases/route.ts',
   'src/app/api/projects/[projectId]/voice-analyze/route.ts',
   'src/app/api/projects/[projectId]/voice-design/route.ts',
   'src/app/api/projects/[projectId]/voice-generate/route.ts',
@@ -214,6 +215,7 @@ function resolveContractGroup(routeFile: string): RouteContractGroup {
   }
   if (
     routeFile.endsWith('/generate-image/route.ts')
+    || routeFile.endsWith('/visual-reference-cases/route.ts')
     || routeFile.includes('/scene-reference-test/')
     || routeFile.endsWith('/character-style-test/route.ts')
     || routeFile.endsWith('/generate-bgm/route.ts')

@@ -13,6 +13,7 @@ import type {
   ProjectEditScreenplay,
   ProjectEditScript,
   ProjectFinalVideo,
+  ProjectVisualReferenceCase,
   Location,
   ProjectPanel,
   ProjectShot,
@@ -82,6 +83,8 @@ const EDIT_SCREENPLAY_NODE_FOOTER_HEIGHT = 66
 const EDIT_SCREENPLAY_SECTION_BASE_HEIGHT = 42
 const EDIT_SCREENPLAY_SECTION_GAP = 8
 const EDIT_SCREENPLAY_TEXT_LINE_HEIGHT = 20
+const EDIT_SCREENPLAY_VISUAL_REFERENCE_CARD_HEIGHT = 178
+const EDIT_SCREENPLAY_VISUAL_REFERENCE_GRID_GAP_Y = 10
 const EDIT_ASSET_NODE_HEIGHT = WORKSPACE_CANVAS_EDIT_ASSET_NODE_SIZE.height
 const STORY_COLUMN_X = 260
 const COLUMN_GAP = 940
@@ -122,7 +125,6 @@ interface TranslateValues {
 type Translate = (key: string, values?: TranslateValues) => string
 type EditPipelineStepKey = 'timeline' | 'visualAction' | 'camera' | 'audio' | 'primaryTable' | 'assetExtract'
 type EditPipelineStepState = 'pending' | 'processing' | 'ready' | 'failed'
-type SpaceConsistencyDetails = NonNullable<WorkspaceCanvasNodeData['spaceConsistencyDetails']>
 
 export interface BuildWorkspaceNodeCanvasProjectionInput {
   readonly projectId?: string
@@ -134,6 +136,7 @@ export interface BuildWorkspaceNodeCanvasProjectionInput {
   readonly storyboards: readonly ProjectStoryboard[]
   readonly shots?: readonly ProjectShot[]
   readonly editScreenplay?: ProjectEditScreenplay | null
+  readonly visualReferenceCases?: readonly ProjectVisualReferenceCase[]
   readonly editScript?: ProjectEditScript | null
   readonly editScriptPending?: boolean
   readonly finalVideo?: ProjectFinalVideo | null
@@ -590,7 +593,10 @@ function estimateEditScriptNodeHeight(editScript: ProjectEditScript): number {
   return Math.max(EDIT_SCRIPT_NODE_MIN_HEIGHT, EDIT_SCRIPT_NODE_BASE_HEIGHT + summaryHeight + screenplayHeight + rowHeightTotal)
 }
 
-function estimateEditScreenplayNodeHeight(editScreenplay: ProjectEditScreenplay): number {
+function estimateEditScreenplayNodeHeight(
+  editScreenplay: ProjectEditScreenplay,
+  visualReferenceCases: readonly ProjectVisualReferenceCase[],
+): number {
   const screenplayLines = estimateWrappedLineCount(editScreenplay.screenplayText, 34)
   const screenplaySectionHeight = EDIT_SCREENPLAY_SECTION_BASE_HEIGHT
     + screenplayLines * EDIT_SCREENPLAY_TEXT_LINE_HEIGHT
@@ -599,6 +605,12 @@ function estimateEditScreenplayNodeHeight(editScreenplay: ProjectEditScreenplay)
       + EDIT_SCREENPLAY_SECTION_BASE_HEIGHT
       + estimateWrappedLineCount(editScreenplay.userPrompt, 34) * EDIT_SCREENPLAY_TEXT_LINE_HEIGHT
     : 0
+  const visualReferenceSectionHeight = visualReferenceCases.length > 0
+    ? EDIT_SCREENPLAY_SECTION_GAP
+      + EDIT_SCREENPLAY_SECTION_BASE_HEIGHT
+      + visualReferenceCases.length * EDIT_SCREENPLAY_VISUAL_REFERENCE_CARD_HEIGHT
+      + Math.max(0, visualReferenceCases.length - 1) * EDIT_SCREENPLAY_VISUAL_REFERENCE_GRID_GAP_Y
+    : 0
 
   return Math.max(
     EDIT_SCREENPLAY_NODE_HEIGHT,
@@ -606,6 +618,7 @@ function estimateEditScreenplayNodeHeight(editScreenplay: ProjectEditScreenplay)
       + EDIT_SCREENPLAY_NODE_BODY_VERTICAL_PADDING
       + screenplaySectionHeight
       + userPromptSectionHeight
+      + visualReferenceSectionHeight
       + EDIT_SCREENPLAY_NODE_FOOTER_HEIGHT,
   )
 }
@@ -1097,6 +1110,7 @@ export function buildWorkspaceNodeCanvasProjection({
   storyboards,
   shots = [],
   editScreenplay,
+  visualReferenceCases = [],
   editScript,
   editScriptPending = false,
   finalVideo,
@@ -1147,10 +1161,17 @@ export function buildWorkspaceNodeCanvasProjection({
   const editScreenplayNodeId = editScreenplay ? `edit-screenplay:${editScreenplay.id}` : null
   const editScreenplayFallbackY = hasStory ? 430 : 180
   const editScreenplayHeight = editScreenplay
-    ? estimateEditScreenplayNodeHeight(editScreenplay)
+    ? estimateEditScreenplayNodeHeight(editScreenplay, visualReferenceCases)
     : EDIT_SCREENPLAY_NODE_HEIGHT
   if (editScreenplay) {
     const screenplayTitle = extractEditScreenplayTitle(editScreenplay.screenplayText)
+    const visualReferenceRunning = visualReferenceCases.some((visualReferenceCase) => visualReferenceCase.status === 'processing')
+    const visualReferenceAction: WorkspaceCanvasNodeAction | undefined = editScreenplay.status === 'ready' && !visualReferenceRunning
+      ? { type: 'generate_visual_reference_cases', count: 3 }
+      : undefined
+    const editScriptAction: WorkspaceCanvasNodeAction | undefined = editScreenplay.status === 'ready' && !editScript && !editScriptPending
+      ? { type: 'generate_edit_script', screenplayId: editScreenplay.id }
+      : undefined
     nodes.push(createNode({
       id: `edit-screenplay:${editScreenplay.id}`,
       fallbackX: STORY_COLUMN_X,
@@ -1169,20 +1190,29 @@ export function buildWorkspaceNodeCanvasProjection({
         meta: translate('nodes.editScreenplay.meta'),
         statusLabel: editScreenplay.status === 'ready' ? translate('status.ready') : translate('status.processing'),
         isRunning: editScreenplay.status !== 'ready',
-        runtimeTargets: runtimeTargets(TASK_RUNTIME_TARGETS.projectEpisodeEditScriptGeneration(episodeId)),
+        runtimeTargets: runtimeTargets(
+          TASK_RUNTIME_TARGETS.projectEpisodeEditScriptGeneration(episodeId),
+          TASK_RUNTIME_TARGETS.projectEpisodeVisualReferenceCases(episodeId),
+        ),
         width: EDIT_SCREENPLAY_NODE_WIDTH,
         height: editScreenplayHeight,
         indexLabel: 'S',
         editScreenplayDetails: {
           screenplayText: editScreenplay.screenplayText,
           userPrompt: editScreenplay.userPrompt,
+          visualReferenceCases,
+          visualReferenceRunning,
         },
-        actionLabel: editScreenplay.status === 'ready' && !editScript && !editScriptPending
+        actionLabel: editScriptAction
           ? translate('actions.generateEditScript')
+          : visualReferenceAction
+            ? visualReferenceCases.length > 0 ? translate('actions.regenerateVisualReferences') : translate('actions.generateVisualReferences')
+            : undefined,
+        action: editScriptAction ?? visualReferenceAction,
+        secondaryActionLabel: editScriptAction && visualReferenceAction
+          ? visualReferenceCases.length > 0 ? translate('actions.regenerateVisualReferences') : translate('actions.generateVisualReferences')
           : undefined,
-        action: editScreenplay.status === 'ready' && !editScript && !editScriptPending
-          ? { type: 'generate_edit_script', screenplayId: editScreenplay.id }
-          : undefined,
+        secondaryAction: editScriptAction ? visualReferenceAction : undefined,
         onAction,
       },
     }))
@@ -2142,6 +2172,7 @@ export function useWorkspaceNodeCanvasProjection({
   storyboards,
   shots,
   editScreenplay,
+  visualReferenceCases,
   editScript,
   editScriptPending,
   finalVideo,
@@ -2162,6 +2193,7 @@ export function useWorkspaceNodeCanvasProjection({
       storyboards,
       shots,
       editScreenplay,
+      visualReferenceCases,
       editScript,
       editScriptPending,
       finalVideo,
@@ -2184,6 +2216,7 @@ export function useWorkspaceNodeCanvasProjection({
       savedLayouts,
       shots,
       editScreenplay,
+      visualReferenceCases,
       editScript,
       editScriptPending,
       storyText,

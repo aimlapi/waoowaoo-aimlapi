@@ -144,6 +144,7 @@ model ProjectEpisode {
   editScript              ProjectEditScript?
   editAssetRequirements   ProjectEditAssetRequirement[]
   videoGroups             ProjectVideoGroup[]
+  visualReferenceCases    ProjectVisualReferenceCase[]
 
   @@unique([projectId, episodeNumber])
   @@index([projectId])
@@ -163,10 +164,41 @@ model ProjectEditScreenplay {
   updatedAt      DateTime       @default(now()) @updatedAt
   project        Project        @relation(fields: [projectId], references: [id], onDelete: Cascade)
   episode        ProjectEpisode @relation(fields: [episodeId], references: [id], onDelete: Cascade)
+  visualReferenceCases ProjectVisualReferenceCase[]
 
   @@index([projectId])
   @@index([episodeId])
   @@map("project_edit_screenplays")
+}
+
+model ProjectVisualReferenceCase {
+  id             String                @id @default(uuid())
+  projectId      String
+  episodeId      String
+  screenplayId   String
+  title          String
+  description    String
+  prompt         String
+  status         String                @default("processing")
+  taskId         String?
+  errorMessage   String?
+  imageUrl       String?
+  imageMediaId   String?
+  imageMedia     MediaObject?          @relation("ProjectVisualReferenceCaseImageMedia", fields: [imageMediaId], references: [id], onDelete: SetNull)
+  isSelected     Boolean               @default(false)
+  sortIndex      Int                   @default(0)
+  createdAt      DateTime              @default(now())
+  updatedAt      DateTime              @default(now()) @updatedAt
+  project        Project               @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  episode        ProjectEpisode        @relation(fields: [episodeId], references: [id], onDelete: Cascade)
+  screenplay     ProjectEditScreenplay @relation(fields: [screenplayId], references: [id], onDelete: Cascade)
+
+  @@index([projectId])
+  @@index([episodeId])
+  @@index([screenplayId])
+  @@index([imageMediaId])
+  @@index([taskId])
+  @@map("project_visual_reference_cases")
 }
 
 model ProjectEditScript {
@@ -486,6 +518,7 @@ model Project {
   editScreenplays    ProjectEditScreenplay[]
   editScripts        ProjectEditScript[]
   editAssetRequirements ProjectEditAssetRequirement[]
+  visualReferenceCases ProjectVisualReferenceCase[]
   videoGroups        ProjectVideoGroup[]
 
   @@index([userId])
@@ -967,6 +1000,7 @@ model MediaObject {
   projectVideoGroupReferenceImages ProjectVideoGroup[] @relation("ProjectVideoGroupReferenceImageMedia")
   projectVideoGroupVideos          ProjectVideoGroup[] @relation("ProjectVideoGroupVideoMedia")
   projectStoryboardBlockingArtifactImages ProjectStoryboardBlockingArtifact[] @relation("ProjectStoryboardBlockingArtifactImageMedia")
+  projectVisualReferenceCaseImages ProjectVisualReferenceCase[] @relation("ProjectVisualReferenceCaseImageMedia")
   projectShotImages              ProjectShot[]        @relation("ProjectShotImageMedia")
   supplementaryPanelImages              SupplementaryPanel[]        @relation("SupplementaryPanelImageMedia")
   projectVoiceLineAudios         ProjectVoiceLine[]   @relation("ProjectVoiceLineAudioMedia")

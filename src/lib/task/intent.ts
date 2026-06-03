@@ -28,6 +28,7 @@ const TASK_INTENT_BY_TYPE: Record<TaskType, TaskIntent> = {
   [TASK_TYPE.CHARACTER_STYLE_TEST]: 'generate',
   [TASK_TYPE.SCENE_REFERENCE_TEST]: 'generate',
   [TASK_TYPE.SCENE_REFERENCE_COMPARISON_TEST]: 'generate',
+  [TASK_TYPE.VISUAL_REFERENCE_CASES]: 'generate',
   [TASK_TYPE.IMAGE_CHARACTER]: 'generate',
   [TASK_TYPE.IMAGE_LOCATION]: 'generate',
   [TASK_TYPE.MUSIC_GENERATE]: 'generate',

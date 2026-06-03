@@ -209,6 +209,25 @@ export interface ProjectPanel {
   imageErrorMessage?: string | null  // 图片生成错误消息
 }
 
+export interface ProjectVisualReferenceCase {
+  id: string
+  projectId: string
+  episodeId: string
+  screenplayId: string
+  title: string
+  description: string
+  prompt: string
+  status: 'processing' | 'completed' | 'failed'
+  taskId: string | null
+  errorMessage: string | null
+  imageUrl: string | null
+  imageMedia: MediaRef | null
+  isSelected: boolean
+  sortIndex: number
+  createdAt: string
+  updatedAt: string
+}
+
 export interface ProjectStoryboard {
   id: string
   episodeId: string

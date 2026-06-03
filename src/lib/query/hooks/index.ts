@@ -236,6 +236,12 @@ export {
 } from './useProjectEditScript'
 
 export {
+    useProjectVisualReferenceCases,
+    useGenerateProjectVisualReferenceCases,
+    useSelectProjectVisualReferenceCase,
+} from './useProjectVisualReferenceCases'
+
+export {
     useProjectCommands,
     useProjectContext,
     useApproveProjectPlan,

@@ -40,6 +40,8 @@ export interface WorkspaceRuntimeValue {
   onRequestAssistantPlan: () => Promise<void>
   onGenerateEditScreenplay: (prompt: string) => Promise<void>
   onGenerateEditScript: (screenplayId?: string) => Promise<void>
+  onGenerateVisualReferenceCases: (count?: number) => Promise<void>
+  onSelectVisualReferenceCase: (caseId: string) => Promise<void>
   onRegenerateStoryboardText: (storyboardId: string) => Promise<void>
   onClipUpdate: (clipId: string, data: unknown) => Promise<void>
   onOpenAssetLibrary: () => void

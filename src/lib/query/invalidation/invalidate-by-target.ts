@@ -21,6 +21,7 @@ function invalidateEpisodeScoped(params: {
   params.queryClient.invalidateQueries({ queryKey: queryKeys.voiceLines.matched(params.projectId, params.episodeId) })
   params.queryClient.invalidateQueries({ queryKey: queryKeys.project.editScreenplay(params.projectId, params.episodeId) })
   params.queryClient.invalidateQueries({ queryKey: queryKeys.project.editScript(params.projectId, params.episodeId) })
+  params.queryClient.invalidateQueries({ queryKey: queryKeys.project.visualReferenceCases(params.projectId, params.episodeId) })
   params.queryClient.invalidateQueries({ queryKey: queryKeys.project.context(params.projectId, params.episodeId) })
 }
 

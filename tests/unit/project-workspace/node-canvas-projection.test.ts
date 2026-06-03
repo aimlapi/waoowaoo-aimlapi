@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import type { ProjectClip, ProjectEditScreenplay, ProjectEditScript, ProjectPanel, ProjectShot, ProjectStoryboard } from '@/types/project'
+import type { ProjectClip, ProjectEditScreenplay, ProjectEditScript, ProjectPanel, ProjectShot, ProjectStoryboard, ProjectVisualReferenceCase } from '@/types/project'
 import {
   buildWorkspaceNodeCanvasProjection,
 } from '@/features/project-workspace/canvas/hooks/useWorkspaceNodeCanvasProjection'
@@ -337,8 +337,13 @@ describe('workspace node canvas projection', () => {
     expect(screenplayNode?.data.editScreenplayDetails).toEqual({
       screenplayText: editScreenplay.screenplayText,
       userPrompt: editScreenplay.userPrompt,
+      visualReferenceCases: [],
+      visualReferenceRunning: false,
     })
-    expect(screenplayNode?.data.action).toBeUndefined()
+    expect(screenplayNode?.data.action).toEqual({
+      type: 'generate_visual_reference_cases',
+      count: 3,
+    })
 
     const editScriptNode = projection.nodes.find((node) => node.id === 'edit-script:edit-video')
     expect(editScriptNode?.position.y).toBeGreaterThan(screenplayNode?.position.y ?? 0)
@@ -373,6 +378,53 @@ describe('workspace node canvas projection', () => {
       type: 'generate_edit_script',
       screenplayId: 'screenplay-1',
     })
+  })
+
+  it('keeps visual reference cases on the screenplay node as an independent selectable side path', () => {
+    const editScreenplay = createEditScreenplay()
+    const visualReferenceCases: ProjectVisualReferenceCase[] = [
+      {
+        id: 'visual-case-1',
+        projectId: 'project-1',
+        episodeId: 'episode-1',
+        screenplayId: 'screenplay-1',
+        title: '克制电影现实感',
+        description: '低饱和色彩、真实光线',
+        prompt: 'style reference prompt',
+        status: 'completed',
+        taskId: 'task-1',
+        errorMessage: null,
+        imageUrl: '/m/media-1',
+        imageMedia: null,
+        isSelected: true,
+        sortIndex: 0,
+        createdAt: '2026-06-03T00:00:00.000Z',
+        updatedAt: '2026-06-03T00:00:00.000Z',
+      },
+    ]
+
+    const projection = buildWorkspaceNodeCanvasProjection({
+      episodeId: 'episode-1',
+      storyText: '',
+      clips: [],
+      storyboards: [],
+      editScreenplay,
+      visualReferenceCases,
+      editScript: null,
+      savedLayouts: [],
+      translate: t,
+    })
+
+    const screenplayNode = projection.nodes.find((node) => node.id === 'edit-screenplay:screenplay-1')
+    const visualReferenceTarget = TASK_RUNTIME_TARGETS.projectEpisodeVisualReferenceCases('episode-1')
+    expect(screenplayNode?.data.editScreenplayDetails?.visualReferenceCases).toEqual(visualReferenceCases)
+    expect(screenplayNode?.data.editScreenplayDetails?.visualReferenceRunning).toBe(false)
+    expect(screenplayNode?.data.secondaryAction).toEqual({
+      type: 'generate_visual_reference_cases',
+      count: 3,
+    })
+    expect(screenplayNode?.data.secondaryActionLabel).toBe('actions.regenerateVisualReferences')
+    expect(screenplayNode?.data.runtimeTargets).toContainEqual(visualReferenceTarget)
   })
 
   it('projects the style bible as the style source between screenplay and edit generation', () => {

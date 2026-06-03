@@ -33,6 +33,8 @@ interface UseWorkspaceRuntimeParams {
   onRequestAssistantPlan: () => Promise<void>
   handleGenerateEditScreenplay: (prompt: string) => Promise<void>
   handleGenerateEditScript: (screenplayId?: string) => Promise<void>
+  handleGenerateVisualReferenceCases: (count?: number) => Promise<void>
+  handleSelectVisualReferenceCase: (caseId: string) => Promise<void>
   handleRegenerateStoryboardText: (storyboardId: string) => Promise<void>
   handleUpdateClip: (clipId: string, updates: Record<string, unknown>) => Promise<void>
   openAssetLibrary: (characterId?: string | null, refreshAssets?: boolean) => void
@@ -91,6 +93,8 @@ export function useWorkspaceRuntime({
   onRequestAssistantPlan,
   handleGenerateEditScreenplay,
   handleGenerateEditScript,
+  handleGenerateVisualReferenceCases,
+  handleSelectVisualReferenceCase,
   handleRegenerateStoryboardText,
   handleUpdateClip,
   openAssetLibrary,
@@ -138,6 +142,8 @@ export function useWorkspaceRuntime({
     onRequestAssistantPlan,
     onGenerateEditScreenplay: handleGenerateEditScreenplay,
     onGenerateEditScript: handleGenerateEditScript,
+    onGenerateVisualReferenceCases: handleGenerateVisualReferenceCases,
+    onSelectVisualReferenceCase: handleSelectVisualReferenceCase,
     onRegenerateStoryboardText: handleRegenerateStoryboardText,
     onClipUpdate: (clipId, data) => {
       if (!data || typeof data !== 'object' || Array.isArray(data)) {
@@ -184,6 +190,8 @@ export function useWorkspaceRuntime({
     handleUpdateEpisode,
     handleGenerateEditScreenplay,
     handleGenerateEditScript,
+    handleGenerateVisualReferenceCases,
+    handleSelectVisualReferenceCase,
     handleRegenerateStoryboardText,
     handleArrangeVideoBlocks,
     handleUpdatePanelVideoModel,

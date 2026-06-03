@@ -244,6 +244,8 @@
       "actions": {
         "generateScript": "Generate Screenplay",
         "generateEditScript": "Generate Edit Table",
+        "generateVisualReferences": "Generate Visual References",
+        "regenerateVisualReferences": "Regenerate Visual References",
         "generateStoryboard": "Generate Storyboard",
         "generateImage": "Generate Image",
         "regenerateImage": "Regenerate",
@@ -342,6 +344,17 @@
         "moreItems": "{count} more",
         "screenplay": "Screenplay",
         "originalRequest": "Original Request",
+        "visualReferenceCases": "Visual Reference Cases",
+        "visualReferenceOnly": "For visual style review only. This selection is not written into storyboard or video generation.",
+        "visualReferenceCaseAlt": "Visual Reference Case {index}",
+        "setVisualReference": "Set As Reference",
+        "selectedReference": "Selected",
+        "visualReferenceFailed": "Generation failed",
+        "visualReferenceStatus": {
+          "processing": "Generating",
+          "completed": "Completed",
+          "failed": "Failed"
+        },
         "styleSummary": "Style Summary",
         "rawUserStyle": "User Style",
         "visualPolicy": "Visual Policy",

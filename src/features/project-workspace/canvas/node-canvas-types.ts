@@ -26,6 +26,8 @@ export type WorkspaceCanvasNodeAction =
   | { readonly type: 'update_story'; readonly value: string }
   | { readonly type: 'generate_edit_screenplay'; readonly prompt: string }
   | { readonly type: 'generate_edit_script'; readonly screenplayId?: string }
+  | { readonly type: 'generate_visual_reference_cases'; readonly count?: number }
+  | { readonly type: 'select_visual_reference_case'; readonly caseId: string }
   | { readonly type: 'regenerate_storyboard_text'; readonly storyboardId: string }
   | { readonly type: 'update_clip'; readonly clipId: string; readonly data: Record<string, unknown> }
   | { readonly type: 'open_asset_library'; readonly characterId?: string | null }
@@ -293,6 +295,16 @@ export interface WorkspaceCanvasEditPipelineStepDetails {
 export interface WorkspaceCanvasEditScreenplayDetails {
   readonly screenplayText: string
   readonly userPrompt: string
+  readonly visualReferenceCases: readonly {
+    readonly id: string
+    readonly title: string
+    readonly description: string
+    readonly status: 'processing' | 'completed' | 'failed'
+    readonly errorMessage: string | null
+    readonly imageUrl: string | null
+    readonly isSelected: boolean
+  }[]
+  readonly visualReferenceRunning: boolean
 }
 
 export interface WorkspaceCanvasStyleBibleVisualPolicy {

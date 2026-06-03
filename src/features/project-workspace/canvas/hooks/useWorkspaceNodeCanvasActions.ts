@@ -33,6 +33,16 @@ export function useWorkspaceNodeCanvasActions() {
       return
     }
 
+    if (action.type === 'generate_visual_reference_cases') {
+      await runtime.onGenerateVisualReferenceCases(action.count)
+      return
+    }
+
+    if (action.type === 'select_visual_reference_case') {
+      await runtime.onSelectVisualReferenceCase(action.caseId)
+      return
+    }
+
     if (action.type === 'regenerate_storyboard_text') {
       await runtime.onRegenerateStoryboardText(action.storyboardId)
       return

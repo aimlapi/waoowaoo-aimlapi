@@ -10,3 +10,4 @@ export {
   handleSceneReferenceComparisonTask,
   handleSceneReferenceTask,
 } from './scene-reference-test-task-handler'
+export { handleVisualReferenceCasesTask } from './visual-reference-cases-task-handler'

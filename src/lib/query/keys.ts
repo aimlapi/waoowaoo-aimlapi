@@ -109,6 +109,8 @@ export const queryKeys = {
             ['project', projectId, 'edit-screenplay', episodeId] as const,
         editScript: (projectId: string, episodeId: string) =>
             ['project', projectId, 'edit-script', episodeId] as const,
+        visualReferenceCases: (projectId: string, episodeId: string) =>
+            ['project', projectId, 'visual-reference-cases', episodeId] as const,
     },
 
     // ============ 顶层便捷函数 ============

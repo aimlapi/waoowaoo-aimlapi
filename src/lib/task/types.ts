@@ -50,6 +50,7 @@ export const TASK_TYPE = {
   CHARACTER_STYLE_TEST: 'character_style_test',
   SCENE_REFERENCE_TEST: 'scene_reference_test',
   SCENE_REFERENCE_COMPARISON_TEST: 'scene_reference_comparison_test',
+  VISUAL_REFERENCE_CASES: 'visual_reference_cases',
   IMAGE_CHARACTER: 'image_character',
   IMAGE_LOCATION: 'image_location',
   MUSIC_GENERATE: 'music_generate',
