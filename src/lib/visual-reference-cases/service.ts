@@ -153,7 +153,10 @@ function filterVisibleVisualReferenceCases(rows: readonly VisualReferenceCaseRow
   return rows.filter((row) => row.isSelected || visualReferenceCaseBatchKey(row) === latestBatchKey)
 }
 
-function collapseDuplicateVisualReferenceCases(rows: readonly VisualReferenceCaseRow[]): VisualReferenceCaseRow[] {
+function collapseDuplicateVisualReferenceCases(
+  rows: readonly VisualReferenceCaseRow[],
+  latestBatchKey?: string | null,
+): VisualReferenceCaseRow[] {
   const byGroup = new Map<string, VisualReferenceCaseRow>()
   rows.forEach((row) => {
     const key = visualReferenceCaseGroupKey(row)
@@ -171,17 +174,38 @@ function collapseDuplicateVisualReferenceCases(rows: readonly VisualReferenceCas
       byGroup.set(key, row)
     }
   })
-  return filterVisibleVisualReferenceCases(Array.from(byGroup.values())).sort(compareVisualReferenceCases)
+  const collapsed = Array.from(byGroup.values())
+  const visible = latestBatchKey
+    ? collapsed.filter((row) => row.isSelected || visualReferenceCaseBatchKey(row) === latestBatchKey)
+    : filterVisibleVisualReferenceCases(collapsed)
+  return visible.sort(compareVisualReferenceCases)
 }
 
 export async function readProjectVisualReferenceCases(input: {
   readonly projectId: string
   readonly episodeId: string
 }): Promise<ProjectVisualReferenceCasePayload[]> {
+  const latestTask = await prisma.task.findFirst({
+    where: {
+      projectId: input.projectId,
+      episodeId: input.episodeId,
+      type: TASK_TYPE.VISUAL_REFERENCE_CASES,
+    },
+    orderBy: { createdAt: 'desc' },
+    select: { id: true },
+  })
   const cases = await prisma.projectVisualReferenceCase.findMany({
     where: {
       projectId: input.projectId,
       episodeId: input.episodeId,
+      ...(latestTask
+        ? {
+            OR: [
+              { taskId: latestTask.id },
+              { isSelected: true },
+            ],
+          }
+        : {}),
     },
     include: visualReferenceCaseInclude,
     orderBy: [
@@ -190,7 +214,7 @@ export async function readProjectVisualReferenceCases(input: {
       { sortIndex: 'asc' },
     ],
   })
-  return collapseDuplicateVisualReferenceCases(cases)
+  return collapseDuplicateVisualReferenceCases(cases, latestTask?.id ?? null)
     .map((item) => mapVisualReferenceCase(item))
 }
 

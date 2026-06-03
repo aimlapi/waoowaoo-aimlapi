@@ -1,6 +1,9 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 
 const prismaMock = vi.hoisted(() => ({
+  task: {
+    findFirst: vi.fn(),
+  },
   projectVisualReferenceCase: {
     findMany: vi.fn(),
   },
@@ -55,24 +58,11 @@ function buildCaseRow(overrides: Partial<VisualReferenceCaseTestRow>): VisualRef
 describe('readProjectVisualReferenceCases', () => {
   beforeEach(() => {
     vi.clearAllMocks()
+    prismaMock.task.findFirst.mockResolvedValue({ id: 'task-new' })
   })
 
-  it('shows the latest generated batch instead of mixing old visual reference attempts', async () => {
+  it('shows the latest task batch instead of mixing old visual reference attempts', async () => {
     prismaMock.projectVisualReferenceCase.findMany.mockResolvedValue([
-      buildCaseRow({
-        id: 'old-case-1',
-        taskId: 'task-old',
-        imageUrl: '/m/old-1',
-        sortIndex: 0,
-        createdAt: new Date('2026-01-01T00:00:00.000Z'),
-      }),
-      buildCaseRow({
-        id: 'old-case-2',
-        taskId: 'task-old',
-        imageUrl: '/m/old-2',
-        sortIndex: 1,
-        createdAt: new Date('2026-01-01T00:00:01.000Z'),
-      }),
       buildCaseRow({
         id: 'new-case-2',
         taskId: 'task-new',
@@ -99,8 +89,21 @@ describe('readProjectVisualReferenceCases', () => {
       where: {
         projectId: 'project-1',
         episodeId: 'episode-1',
+        OR: [
+          { taskId: 'task-new' },
+          { isSelected: true },
+        ],
       },
     }))
+    expect(prismaMock.task.findFirst).toHaveBeenCalledWith({
+      where: {
+        projectId: 'project-1',
+        episodeId: 'episode-1',
+        type: 'visual_reference_cases',
+      },
+      orderBy: { createdAt: 'desc' },
+      select: { id: true },
+    })
   })
 
   it('keeps a selected older case visible alongside the latest batch', async () => {
@@ -136,5 +139,31 @@ describe('readProjectVisualReferenceCases', () => {
 
     expect(cases.map((item) => item.id)).toEqual(['selected-old-case', 'latest-case'])
     expect(cases.find((item) => item.id === 'selected-old-case')?.isSelected).toBe(true)
+  })
+
+  it('uses the latest task rather than a late-created row from an older task', async () => {
+    prismaMock.projectVisualReferenceCase.findMany.mockResolvedValue([
+      buildCaseRow({
+        id: 'old-task-late-case',
+        taskId: 'task-old',
+        imageUrl: '/m/old-late',
+        sortIndex: 2,
+        createdAt: new Date('2026-01-01T00:10:00.000Z'),
+      }),
+      buildCaseRow({
+        id: 'latest-task-case',
+        taskId: 'task-new',
+        imageUrl: '/m/latest',
+        sortIndex: 0,
+        createdAt: new Date('2026-01-01T00:05:00.000Z'),
+      }),
+    ])
+
+    const cases = await readProjectVisualReferenceCases({
+      projectId: 'project-1',
+      episodeId: 'episode-1',
+    })
+
+    expect(cases.map((item) => item.id)).toEqual(['latest-task-case'])
   })
 })
