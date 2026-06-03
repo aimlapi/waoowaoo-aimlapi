@@ -121,6 +121,8 @@ describe('visual reference cases task handler', () => {
       },
     })
     expect(utilsMock.resolveImageSourceFromGeneration.mock.calls[0]?.[1].prompt).toContain('色彩体系、构图规则、材质颗粒')
+    expect(utilsMock.resolveImageSourceFromGeneration.mock.calls[0]?.[1].prompt).toContain('中远景、远景或全景式建立镜头')
+    expect(utilsMock.resolveImageSourceFromGeneration.mock.calls[0]?.[1].prompt).toContain('避免脸部特写、半身特写')
     expect(utilsMock.resolveImageSourceFromGeneration).toHaveBeenCalledWith(
       expect.anything(),
       expect.objectContaining({
