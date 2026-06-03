@@ -91,6 +91,17 @@ type PromptStepId =
   | typeof AI_PROMPT_IDS.EDIT_SCRIPT_ASSET_EXTRACT
   | typeof AI_PROMPT_IDS.EDIT_SCRIPT_VIDEO_PROMPT_BLOCK
 
+type DeadlineStepId = PromptStepId | 'edit_script_asset_design'
+
+const STEP_TIMEOUT_MS: Record<DeadlineStepId, number> = {
+  [AI_PROMPT_IDS.EDIT_SCRIPT_STYLE_BIBLE]: 90_000,
+  [AI_PROMPT_IDS.EDIT_SCRIPT_SCREENPLAY]: 180_000,
+  [AI_PROMPT_IDS.EDIT_SCRIPT_PRIMARY]: 180_000,
+  [AI_PROMPT_IDS.EDIT_SCRIPT_ASSET_EXTRACT]: 90_000,
+  [AI_PROMPT_IDS.EDIT_SCRIPT_VIDEO_PROMPT_BLOCK]: 90_000,
+  edit_script_asset_design: 90_000,
+}
+
 type EditScriptGenerationStage =
   | 'edit_script_prepare'
   | 'edit_script_style_bible'
@@ -120,6 +131,31 @@ interface PersistedEditScriptRequirement {
   readonly status: string
   readonly targetId: string | null
   readonly errorMessage: string | null
+}
+
+function deadlineError(stepId: DeadlineStepId, timeoutMs: number): Error {
+  return new Error(`EDIT_SCRIPT_STEP_TIMEOUT:${stepId}:${Math.round(timeoutMs / 1000)}s`)
+}
+
+async function withEditScriptStepDeadline<T>(
+  stepId: DeadlineStepId,
+  action: () => Promise<T>,
+): Promise<T> {
+  const timeoutMs = STEP_TIMEOUT_MS[stepId]
+  let timer: ReturnType<typeof setTimeout> | null = null
+  try {
+    return await Promise.race([
+      action(),
+      new Promise<never>((_, reject) => {
+        timer = setTimeout(() => reject(deadlineError(stepId, timeoutMs)), timeoutMs)
+        if (typeof timer === 'object' && 'unref' in timer) {
+          timer.unref()
+        }
+      }),
+    ])
+  } finally {
+    if (timer) clearTimeout(timer)
+  }
 }
 
 interface PersistedEditScript {
@@ -358,12 +394,15 @@ async function runPromptStep(input: {
     },
   })
 
-  const completion = await withTextBilling(
-    input.userId,
-    input.model,
-    maxInputTokens,
-    { projectId: input.projectId, action, metadata: { promptId: input.promptId } },
-    runCompletion,
+  const completion = await withEditScriptStepDeadline(
+    input.promptId,
+    async () => await withTextBilling(
+      input.userId,
+      input.model,
+      maxInputTokens,
+      { projectId: input.projectId, action, metadata: { promptId: input.promptId } },
+      runCompletion,
+    ),
   )
   if (!completion.text.trim()) {
     throw new Error(`EDIT_SCRIPT_PROMPT_EMPTY:${input.promptId}`)
@@ -404,12 +443,15 @@ async function runPromptTextStep(input: {
     },
   })
 
-  const completion = await withTextBilling(
-    input.userId,
-    input.model,
-    maxInputTokens,
-    { projectId: input.projectId, action, metadata: { promptId: input.promptId } },
-    runCompletion,
+  const completion = await withEditScriptStepDeadline(
+    input.promptId,
+    async () => await withTextBilling(
+      input.userId,
+      input.model,
+      maxInputTokens,
+      { projectId: input.projectId, action, metadata: { promptId: input.promptId } },
+      runCompletion,
+    ),
   )
   const text = completion.text.trim()
   if (!text) {
@@ -732,10 +774,7 @@ async function markEditScriptGenerating(input: {
       title: 'Generating edit table',
       logline: null,
       durationSec: input.durationSeconds,
-      shotCount: 0,
       status: 'generating',
-      shotsJson: [] as unknown as Prisma.InputJsonValue,
-      videoBlocksJson: [] as unknown as Prisma.InputJsonValue,
     },
   })
 }
@@ -1097,16 +1136,19 @@ export async function generateProjectEditScript(input: GenerateEditScriptInput):
       stepIndex: 2,
       stepTotal: 3,
     })
-    const requirements = await designEditAssetRequirements({
-      userId: input.userId,
-      projectId: input.projectId,
-      locale,
-      analysisModel: model,
-      userPrompt,
-      styleBible,
-      shots: structure.shots,
-      requirements: normalizeEditAssetRequirements(assetRaw, structure.shots),
-    })
+    const requirements = await withEditScriptStepDeadline(
+      'edit_script_asset_design',
+      async () => await designEditAssetRequirements({
+        userId: input.userId,
+        projectId: input.projectId,
+        locale,
+        analysisModel: model,
+        userPrompt,
+        styleBible,
+        shots: structure.shots,
+        requirements: normalizeEditAssetRequirements(assetRaw, structure.shots),
+      }),
+    )
 
     await notifyGenerationStep(input.onGenerationStepPersisted, {
       stage: 'edit_script_asset_extract',

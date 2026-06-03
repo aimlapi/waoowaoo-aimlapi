@@ -1,5 +1,5 @@
 import type { NextRequest } from 'next/server'
-import { beforeEach, describe, expect, it, vi } from 'vitest'
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 
 const txMock = vi.hoisted(() => ({
   projectEditScript: {
@@ -62,15 +62,17 @@ const billingMock = vi.hoisted(() => ({
   ) => await runCompletion()),
 }))
 
+const assetDesignMock = vi.hoisted(() => ({
+  designEditAssetRequirements: vi.fn(async (input: { requirements: unknown }) => input.requirements),
+}))
+
 vi.mock('@/lib/prisma', () => ({ prisma: prismaMock }))
 vi.mock('@/lib/config-service', () => ({
   getProjectModelConfig: vi.fn(async () => ({ analysisModel: 'analysis-model-1' })),
 }))
 vi.mock('@/lib/ai-exec/engine', () => aiExecMock)
 vi.mock('@/lib/billing', () => billingMock)
-vi.mock('@/lib/edit-script/asset-design', () => ({
-  designEditAssetRequirements: vi.fn(async (input: { requirements: unknown }) => input.requirements),
-}))
+vi.mock('@/lib/edit-script/asset-design', () => assetDesignMock)
 vi.mock('@/lib/assets/services/asset-actions', () => ({ submitAssetGenerateTask: vi.fn() }))
 
 import {
@@ -172,6 +174,9 @@ function mockSuccessfulAiSteps() {
 describe('edit script generation status persistence', () => {
   beforeEach(() => {
     vi.clearAllMocks()
+    vi.useRealTimers()
+    assetDesignMock.designEditAssetRequirements.mockReset()
+    assetDesignMock.designEditAssetRequirements.mockImplementation(async (input: { requirements: unknown }) => input.requirements)
     prismaMock.projectEpisode.findFirst.mockResolvedValue({ id: 'episode-1' })
     prismaMock.project.findFirst.mockResolvedValue({
       id: 'project-1',
@@ -242,6 +247,10 @@ describe('edit script generation status persistence', () => {
       ],
       requirements: [],
     })
+  })
+
+  afterEach(() => {
+    vi.useRealTimers()
   })
 
   it('generates screenplay independently before edit script generation', async () => {
@@ -480,11 +489,12 @@ describe('edit script generation status persistence', () => {
         userPrompt: '做一个科幻短片',
         styleBibleJson: mockStyleBible,
         screenplayText: expect.stringContaining('标题：《科幻短片》'),
-        shotCount: 0,
-        shotsJson: [],
-        videoBlocksJson: [],
       }),
     }))
+    const generatingCall = prismaMock.projectEditScript.upsert.mock.calls[0]?.[0]
+    expect(generatingCall?.update).not.toHaveProperty('shotCount')
+    expect(generatingCall?.update).not.toHaveProperty('shotsJson')
+    expect(generatingCall?.update).not.toHaveProperty('videoBlocksJson')
     expect(prismaMock.projectEditScript.upsert.mock.invocationCallOrder[0]).toBeLessThan(
       aiExecMock.executeAiTextStep.mock.invocationCallOrder[0],
     )
@@ -578,6 +588,112 @@ describe('edit script generation status persistence', () => {
         status: 'failed',
         styleBibleJson: mockStyleBible,
         logline: 'LLM_DOWN',
+      }),
+    }))
+  })
+
+  it('fails a slow edit script step at the stage deadline', async () => {
+    vi.useFakeTimers()
+    aiExecMock.executeAiTextStep.mockImplementationOnce(() => new Promise(() => {}))
+
+    const resultPromise = generateProjectEditScript({
+      request: createRequest(),
+      projectId: 'project-1',
+      episodeId: 'episode-1',
+      userId: 'user-1',
+      locale: 'zh',
+    }).then(
+      () => null,
+      (error: unknown) => error,
+    )
+
+    await vi.advanceTimersByTimeAsync(180_001)
+    const error = await resultPromise
+
+    expect(error).toBeInstanceOf(Error)
+    expect((error as Error).message).toBe(`EDIT_SCRIPT_STEP_TIMEOUT:${AI_PROMPT_IDS.EDIT_SCRIPT_PRIMARY}:180s`)
+    expect(prismaMock.projectEditScript.upsert).toHaveBeenLastCalledWith(expect.objectContaining({
+      update: expect.objectContaining({
+        status: 'failed',
+        styleBibleJson: mockStyleBible,
+        logline: `EDIT_SCRIPT_STEP_TIMEOUT:${AI_PROMPT_IDS.EDIT_SCRIPT_PRIMARY}:180s`,
+      }),
+    }))
+  })
+
+  it('fails a slow edit script asset design stage at the stage deadline', async () => {
+    vi.useFakeTimers()
+    aiExecMock.executeAiTextStep
+      .mockResolvedValueOnce({
+        text: JSON.stringify({
+          title: 'Sci-Fi Short',
+          logline: 'A quiet signal wakes a station.',
+          durationSec: 4,
+          shots: [
+            {
+              shotNumber: 1,
+              durationSec: 4,
+              visualAction: 'A station corridor flickers awake.',
+              charactersAndScene: 'Station corridor',
+              camera: 'slow push in',
+              sound: 'low electrical hum',
+            },
+          ],
+          videoBlocks: [
+            {
+              type: 'single',
+              shotNumbers: [1],
+              reason: 'Single establishing shot.',
+            },
+          ],
+        }),
+      })
+      .mockResolvedValueOnce({
+        text: JSON.stringify({
+          assets: [
+            {
+              kind: 'location',
+              name: 'Station Corridor',
+              description: 'A cold sci-fi corridor.',
+              shotNumbers: [1],
+            },
+          ],
+        }),
+      })
+    assetDesignMock.designEditAssetRequirements.mockImplementationOnce(() => new Promise(() => {}))
+
+    const resultPromise = generateProjectEditScript({
+      request: createRequest(),
+      projectId: 'project-1',
+      episodeId: 'episode-1',
+      userId: 'user-1',
+      locale: 'zh',
+    }).then(
+      () => null,
+      (error: unknown) => error,
+    )
+
+    await vi.advanceTimersByTimeAsync(90_001)
+    const error = await resultPromise
+
+    expect(error).toBeInstanceOf(Error)
+    expect((error as Error).message).toBe('EDIT_SCRIPT_STEP_TIMEOUT:edit_script_asset_design:90s')
+    expect(prismaMock.projectEditScript.upsert).toHaveBeenCalledWith(expect.objectContaining({
+      update: expect.objectContaining({
+        status: 'generating',
+        shotCount: 1,
+        shotsJson: [
+          expect.objectContaining({
+            shotNumber: 1,
+            visualAction: 'A station corridor flickers awake.',
+          }),
+        ],
+      }),
+    }))
+    expect(prismaMock.projectEditScript.upsert).toHaveBeenLastCalledWith(expect.objectContaining({
+      update: expect.objectContaining({
+        status: 'failed',
+        logline: 'EDIT_SCRIPT_STEP_TIMEOUT:edit_script_asset_design:90s',
       }),
     }))
   })
