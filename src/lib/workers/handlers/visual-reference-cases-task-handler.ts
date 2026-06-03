@@ -1,6 +1,8 @@
 import type { Job } from 'bullmq'
 import { prisma } from '@/lib/prisma'
 import { ensureMediaObjectFromStorageKey } from '@/lib/media/service'
+import { executeAiTextStep } from '@/lib/ai-exec/engine'
+import { safeParseJsonArray } from '@/lib/json-repair'
 import type { Locale } from '@/i18n/routing'
 import type { TaskJobData } from '@/lib/task/types'
 import { reportTaskProgress } from '@/lib/workers/shared'
@@ -12,8 +14,8 @@ import {
 
 interface VisualReferenceStylePreset {
   readonly key: string
-  readonly title: Record<Locale, string>
-  readonly description: Record<Locale, string>
+  readonly title: string
+  readonly description: string
   readonly visualDirection: string
 }
 
@@ -22,69 +24,6 @@ interface VisualReferenceCaseForGeneration {
   readonly status: string
   readonly imageUrl: string | null
 }
-
-const STYLE_PRESETS: readonly VisualReferenceStylePreset[] = [
-  {
-    key: 'pastel-fable-tableau',
-    title: {
-      zh: '粉彩寓言图景',
-      en: 'Pastel Fable Tableau',
-    },
-    description: {
-      zh: '粉彩天空、童话式对称构图、清爽日光和精心摆放的道具，让惊悚故事呈现反差感。',
-      en: 'Pastel skies, fable-like symmetry, crisp daylight, and carefully staged props, turning suspense into a deceptively innocent world.',
-    },
-    visualDirection: 'pastel storybook tableau, centered symmetrical composition, flat frontal camera, clean sky blue and coral palette, sunlit miniature-like world, carefully color-coordinated wardrobe and props, deadpan character staging, innocent surface hiding psychological dread, crisp 16mm still-frame texture',
-  },
-  {
-    key: 'amber-urban-memory',
-    title: {
-      zh: '暖金都市旧梦',
-      en: 'Amber Urban Memory',
-    },
-    description: {
-      zh: '浓烈暖金、旧墙纹理、窄巷压迫和高饱和服装，把记忆、欲望与罪责压进同一帧。',
-      en: 'Dense amber light, aged wall texture, narrow urban pressure, and saturated wardrobe, compressing memory, desire, and guilt into one frame.',
-    },
-    visualDirection: 'saturated amber urban memory, tungsten practical light, textured old plaster walls, cramped corridor or alley staging, characters separated by negative space, floral or patterned costume accent, smoky grain, deep warm shadows, overheated color density, romantic guilt and suspended time',
-  },
-  {
-    key: 'snowbound-analog-realism',
-    title: {
-      zh: '冰雪粗粝现实',
-      en: 'Snowbound Analog Realism',
-    },
-    description: {
-      zh: '冷白雪地、粗颗粒胶片、荒凉自然光和手工质感，让心理悬疑变得寒冷、原始、笨重。',
-      en: 'Cold white snow, rough analog grain, barren natural light, and handmade texture, making the thriller feel cold, primitive, and heavy.',
-    },
-    visualDirection: 'snowbound analog realism, overexposed winter whites, muted brown and rust accents, rough 1970s film grain, handheld documentary distance, barren trees and crude practical objects, wind-bitten faces, awkward human posture, raw natural light, heavy rural austerity and existential dread',
-  },
-  {
-    key: 'clinical-institutional-dread',
-    title: {
-      zh: '冷白机构恐惧',
-      en: 'Clinical Institutional Dread',
-    },
-    description: {
-      zh: '荧光灯、低饱和、对称走廊和监控式距离，突出诊断、档案与精神崩塌。',
-      en: 'Fluorescent light, low saturation, symmetrical corridors, and surveillance distance for diagnosis, records, and mental collapse.',
-    },
-    visualDirection: 'clinical institutional dread, cold fluorescent whites and sickly green, low saturation, symmetrical corridor geometry, CCTV-like distance, documentary stillness, hard tiled surfaces, psychiatric ward unease, strictly modern institutional world',
-  },
-  {
-    key: 'expressionist-shadow-double',
-    title: {
-      zh: '表现主义暗影分身',
-      en: 'Expressionist Shadow Double',
-    },
-    description: {
-      zh: '极端明暗、扭曲空间、巨大影子和双重自我，把心理裂缝直接图像化。',
-      en: 'Extreme chiaroscuro, distorted space, oversized shadows, and doubled selves, turning the psychic fracture into graphic form.',
-    },
-    visualDirection: 'expressionist psychological thriller, extreme chiaroscuro, distorted perspective, oversized shadows, doubled figure motif, hard black shapes, tilted architecture, surreal guilt visualization, graphic nightmare atmosphere, theatrical unreality',
-  },
-] as const
 
 function readRequiredString(value: unknown, field: string): string {
   if (typeof value !== 'string' || !value.trim()) throw new Error(`${field} is required`)
@@ -123,6 +62,92 @@ function compactText(value: string, limit: number): string {
   const normalized = value.replace(/\s+/g, ' ').trim()
   if (normalized.length <= limit) return normalized
   return `${normalized.slice(0, limit).trim()}...`
+}
+
+function buildStylePlanPrompt(input: {
+  readonly locale: Locale
+  readonly screenplayText: string
+  readonly userPrompt: string | null
+  readonly count: number
+}): string {
+  const screenplayPreview = compactText(input.screenplayText, 2600)
+  const userPromptPreview = input.userPrompt ? compactText(input.userPrompt, 500) : ''
+  if (input.locale === 'en') {
+    return [
+      `Read the confirmed screenplay and design exactly ${input.count} visual reference style options for this specific story.`,
+      'The options must be inferred from this screenplay: genre, location, era, emotional rhythm, themes, character relationships, production scale, and key situations. Do not reuse a fixed preset set.',
+      'Each option must be unmistakably different from the others as a complete visual world: palette, composition grammar, production design, texture, wardrobe/props, lighting logic, camera distance, and emotional temperature.',
+      'All options must prefer medium-long shots, long shots, or wide establishing compositions, showing characters inside an environment. Avoid close-ups, face close-ups, tight bust shots, cropped portraits, and macro details.',
+      'Return strict JSON only. No markdown. No extra prose.',
+      'Schema: [{"key":"kebab-case-id","title":"short user-facing title","description":"one concise sentence","visualDirection":"detailed image-generation direction"}]',
+      'Keep title short. Keep description concrete. visualDirection should be directly usable in an image prompt and must include wide/medium-long framing guidance.',
+      userPromptPreview ? `User request: ${userPromptPreview}` : '',
+      `Screenplay: ${screenplayPreview}`,
+    ].filter(Boolean).join('\n')
+  }
+  return [
+    `请阅读这份已经确认的剧本，并为这个剧本专门设计 ${input.count} 个视觉参考风格方案。`,
+    '这些方案必须从本剧本里推导出来：类型、地点、时代、情绪节奏、主题、人物关系、制作规模和关键场面。不要复用固定预设组合。',
+    '每个方案都必须像一个完整的视觉世界，并且彼此明显不同：色彩体系、构图规则、美术设计、材质颗粒、服装/道具、光源逻辑、镜头距离和情绪温度都要拉开。',
+    '所有方案都必须优先中远景、远景或全景式建立镜头，把人物放在环境里展示整体风格。避免脸部特写、半身特写、裁切头像和微距细节。',
+    '只返回严格 JSON，不要 markdown，不要解释。',
+    '格式：[{"key":"英文短横线id","title":"给用户看的短标题","description":"一句具体说明","visualDirection":"可直接用于图像生成的详细视觉方向"}]',
+    'title 要短，description 要具体，visualDirection 必须能直接进入生图提示词，并且包含中远景/整体环境构图要求。',
+    userPromptPreview ? `用户需求：${userPromptPreview}` : '',
+    `剧本：${screenplayPreview}`,
+  ].filter(Boolean).join('\n')
+}
+
+function normalizeStylePlanItem(item: Record<string, unknown>, index: number): VisualReferenceStylePreset {
+  const key = typeof item.key === 'string' && item.key.trim()
+    ? item.key.trim()
+    : `script-derived-style-${index + 1}`
+  const title = readRequiredString(item.title, `styles[${index}].title`)
+  const description = readRequiredString(item.description, `styles[${index}].description`)
+  const visualDirection = readRequiredString(item.visualDirection, `styles[${index}].visualDirection`)
+  return {
+    key,
+    title,
+    description,
+    visualDirection,
+  }
+}
+
+async function generateVisualReferenceStylePlans(input: {
+  readonly userId: string
+  readonly projectId: string
+  readonly locale: Locale
+  readonly analysisModel: string
+  readonly screenplayText: string
+  readonly userPrompt: string | null
+  readonly count: number
+}): Promise<VisualReferenceStylePreset[]> {
+  const prompt = buildStylePlanPrompt({
+    locale: input.locale,
+    screenplayText: input.screenplayText,
+    userPrompt: input.userPrompt,
+    count: input.count,
+  })
+  const completion = await executeAiTextStep({
+    userId: input.userId,
+    model: input.analysisModel,
+    projectId: input.projectId,
+    messages: [{ role: 'user', content: prompt }],
+    temperature: 0.7,
+    action: 'visual_reference_style_plan',
+    meta: {
+      stepId: 'visual_reference_style_plan',
+      stepTitle: 'Visual reference style plan',
+      stepIndex: 1,
+      stepTotal: 1,
+    },
+  })
+  const rows = safeParseJsonArray(completion.text)
+  const plans = rows.slice(0, input.count).map((item, index) => normalizeStylePlanItem(item, index))
+  if (plans.length !== input.count) {
+    throw new Error(`VISUAL_REFERENCE_STYLE_PLAN_COUNT_MISMATCH: expected ${input.count}, got ${plans.length}`)
+  }
+  return plans
 }
 
 function buildReferencePrompt(input: {
@@ -197,8 +222,8 @@ async function resolveVisualReferenceCaseForGeneration(input: {
     projectId: input.job.data.projectId,
     episodeId: input.episodeId,
     screenplayId: input.screenplayId,
-    title: input.preset.title[input.job.data.locale],
-    description: input.preset.description[input.job.data.locale],
+    title: input.preset.title,
+    description: input.preset.description,
     prompt: input.prompt,
     status: 'processing',
     taskId: input.job.data.taskId,
@@ -236,12 +261,12 @@ export async function handleVisualReferenceCasesTask(job: Job<TaskJobData>) {
   const screenplayId = readRequiredString(payload.screenplayId, 'screenplayId')
   const screenplayText = readRequiredString(payload.screenplayText, 'screenplayText')
   const modelId = readRequiredString(payload.imageModel, 'imageModel')
+  const analysisModel = readRequiredString(payload.analysisModel, 'analysisModel')
   const count = readCount(payload.count)
   const aspectRatio = readOptionalString(payload.aspectRatio)
   const artStyle = readOptionalString(payload.artStyle)
   const userPrompt = readOptionalString(payload.userPrompt)
   const imageOptions = readImageOptions(payload.generationOptions)
-  const presets = STYLE_PRESETS.slice(0, count)
 
   await reportTaskProgress(job, 12, {
     stage: 'visual_reference_prepare',
@@ -249,6 +274,17 @@ export async function handleVisualReferenceCasesTask(job: Job<TaskJobData>) {
     displayMode: 'detail',
   })
   await assertTaskActive(job, 'visual_reference_prepare')
+
+  const presets = await generateVisualReferenceStylePlans({
+    userId: job.data.userId,
+    projectId: job.data.projectId,
+    locale: job.data.locale,
+    analysisModel,
+    screenplayText,
+    userPrompt,
+    count,
+  })
+  await assertTaskActive(job, 'visual_reference_style_plan')
 
   const results: Array<{ readonly caseId: string; readonly imageUrl: string }> = []
   for (const [index, preset] of presets.entries()) {

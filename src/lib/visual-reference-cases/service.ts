@@ -229,6 +229,7 @@ export async function submitProjectVisualReferenceCases(input: SubmitVisualRefer
       where: { id: input.projectId, userId: input.userId },
       select: {
         id: true,
+        analysisModel: true,
         storyboardModel: true,
         videoRatio: true,
         artStyle: true,
@@ -265,6 +266,10 @@ export async function submitProjectVisualReferenceCases(input: SubmitVisualRefer
     code: 'STORYBOARD_IMAGE_MODEL_REQUIRED',
     message: 'Storyboard image model is required before generating visual reference cases.',
   })
+  if (!project.analysisModel?.trim()) throw new ApiError('INVALID_PARAMS', {
+    code: 'ANALYSIS_MODEL_REQUIRED',
+    message: 'Analysis model is required before generating visual reference style options.',
+  })
 
   const count = normalizeCount(input.count)
   const basePayload = {
@@ -273,6 +278,7 @@ export async function submitProjectVisualReferenceCases(input: SubmitVisualRefer
     screenplayText: screenplay.screenplayText,
     userPrompt: screenplay.userPrompt,
     count,
+    analysisModel: project.analysisModel,
     aspectRatio: project.videoRatio,
     artStyle: project.artStyle,
   }

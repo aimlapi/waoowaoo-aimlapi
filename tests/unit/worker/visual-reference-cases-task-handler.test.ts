@@ -14,6 +14,10 @@ const mediaServiceMock = vi.hoisted(() => ({
   ensureMediaObjectFromStorageKey: vi.fn(),
 }))
 
+const aiExecMock = vi.hoisted(() => ({
+  executeAiTextStep: vi.fn(),
+}))
+
 const utilsMock = vi.hoisted(() => ({
   assertTaskActive: vi.fn(async () => undefined),
   resolveImageSourceFromGeneration: vi.fn(),
@@ -26,6 +30,7 @@ const sharedMock = vi.hoisted(() => ({
 
 vi.mock('@/lib/prisma', () => ({ prisma: prismaMock }))
 vi.mock('@/lib/media/service', () => mediaServiceMock)
+vi.mock('@/lib/ai-exec/engine', () => aiExecMock)
 vi.mock('@/lib/workers/utils', () => utilsMock)
 vi.mock('@/lib/workers/shared', () => sharedMock)
 
@@ -55,6 +60,25 @@ describe('visual reference cases task handler', () => {
       .mockResolvedValueOnce({ id: 'visual-case-1', status: 'processing', imageUrl: null })
       .mockResolvedValueOnce({ id: 'visual-case-2', status: 'processing', imageUrl: null })
     prismaMock.projectVisualReferenceCase.update.mockResolvedValue({})
+    aiExecMock.executeAiTextStep.mockResolvedValue({
+      text: JSON.stringify([
+        {
+          key: 'sunny-paris-walk',
+          title: '晴日巴黎散步',
+          description: '清亮自然光和开阔公园空间，让爱情像天气一样轻盈。',
+          visualDirection: 'sunny Paris park romance, medium-long shot, wide environment, natural daylight, relaxed walking composition',
+        },
+        {
+          key: 'river-bookstall-evening',
+          title: '河岸旧书黄昏',
+          description: '塞纳河旧书摊、晚霞和行人层次，突出偶遇的温柔距离。',
+          visualDirection: 'Seine riverside bookstall at dusk, long shot, visible spatial layout, warm evening light, layered pedestrians',
+        },
+      ]),
+      reasoning: '',
+      usage: null,
+      completion: null,
+    })
     utilsMock.resolveImageSourceFromGeneration
       .mockResolvedValueOnce('generated-image-source-1')
       .mockResolvedValueOnce('generated-image-source-2')
@@ -73,6 +97,7 @@ describe('visual reference cases task handler', () => {
       screenplayText: '第一场，雨夜。主角站在街边，看见远处的灯光。',
       userPrompt: '克制、现实、都市情绪',
       imageModel: 'image-model-1',
+      analysisModel: 'analysis-model-1',
       count: 2,
       aspectRatio: '16:9',
       artStyle: 'cinematic',
@@ -94,9 +119,9 @@ describe('visual reference cases task handler', () => {
         projectId: 'project-1',
         episodeId: 'episode-1',
         screenplayId: 'screenplay-1',
-        title: '粉彩寓言图景',
-        description: expect.stringContaining('粉彩天空'),
-        prompt: expect.stringContaining('pastel storybook tableau'),
+        title: '晴日巴黎散步',
+        description: expect.stringContaining('清亮自然光'),
+        prompt: expect.stringContaining('sunny Paris park romance'),
         status: 'processing',
         taskId: 'task-visual-reference-1',
         sortIndex: 0,
@@ -109,9 +134,9 @@ describe('visual reference cases task handler', () => {
     })
     expect(prismaMock.projectVisualReferenceCase.create).toHaveBeenNthCalledWith(2, {
       data: expect.objectContaining({
-        title: '暖金都市旧梦',
-        description: expect.stringContaining('浓烈暖金'),
-        prompt: expect.stringContaining('saturated amber urban memory'),
+        title: '河岸旧书黄昏',
+        description: expect.stringContaining('塞纳河旧书摊'),
+        prompt: expect.stringContaining('Seine riverside bookstall at dusk'),
         sortIndex: 1,
       }),
       select: {
@@ -120,6 +145,13 @@ describe('visual reference cases task handler', () => {
         imageUrl: true,
       },
     })
+    expect(aiExecMock.executeAiTextStep).toHaveBeenCalledWith(expect.objectContaining({
+      userId: 'user-1',
+      model: 'analysis-model-1',
+      projectId: 'project-1',
+      action: 'visual_reference_style_plan',
+    }))
+    expect(aiExecMock.executeAiTextStep.mock.calls[0]?.[0].messages[0]?.content).toContain('不要复用固定预设组合')
     expect(utilsMock.resolveImageSourceFromGeneration.mock.calls[0]?.[1].prompt).toContain('色彩体系、构图规则、材质颗粒')
     expect(utilsMock.resolveImageSourceFromGeneration.mock.calls[0]?.[1].prompt).toContain('中远景、远景或全景式建立镜头')
     expect(utilsMock.resolveImageSourceFromGeneration.mock.calls[0]?.[1].prompt).toContain('避免脸部特写、半身特写')
@@ -152,8 +184,23 @@ describe('visual reference cases task handler', () => {
       screenplayId: 'screenplay-1',
       screenplayText: '确认后的剧本',
       imageModel: '',
+      analysisModel: 'analysis-model-1',
     }))).rejects.toThrow('imageModel is required')
 
+    expect(prismaMock.projectVisualReferenceCase.create).not.toHaveBeenCalled()
+    expect(utilsMock.resolveImageSourceFromGeneration).not.toHaveBeenCalled()
+  })
+
+  it('fails explicitly when the analysis model is missing', async () => {
+    await expect(handleVisualReferenceCasesTask(buildJob({
+      episodeId: 'episode-1',
+      screenplayId: 'screenplay-1',
+      screenplayText: '确认后的剧本',
+      imageModel: 'image-model-1',
+      analysisModel: '',
+    }))).rejects.toThrow('analysisModel is required')
+
+    expect(aiExecMock.executeAiTextStep).not.toHaveBeenCalled()
     expect(prismaMock.projectVisualReferenceCase.create).not.toHaveBeenCalled()
     expect(utilsMock.resolveImageSourceFromGeneration).not.toHaveBeenCalled()
   })
@@ -185,6 +232,7 @@ describe('visual reference cases task handler', () => {
       screenplayId: 'screenplay-1',
       screenplayText: '第一场，雨夜。主角站在街边，看见远处的灯光。',
       imageModel: 'image-model-1',
+      analysisModel: 'analysis-model-1',
       count: 2,
       aspectRatio: '16:9',
     }))
