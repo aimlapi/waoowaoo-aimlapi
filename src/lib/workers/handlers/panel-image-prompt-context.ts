@@ -337,3 +337,58 @@ export function buildPanelPromptContext(params: {
     },
   }
 }
+
+export type PanelPromptContext = ReturnType<typeof buildPanelPromptContext>
+
+function stringifyForPrompt(value: unknown): string {
+  return JSON.stringify(value, null, 2)
+}
+
+function hasPromptValue(value: unknown): boolean {
+  return value !== null && value !== undefined && value !== ''
+}
+
+export function buildPanelVisualDirectorPrompt(params: {
+  promptContext: PanelPromptContext
+  aspectRatio: string
+  sourceText: string
+  styleText: string
+}): string {
+  const panel = params.promptContext.panel
+  const parts = [
+    `把这个镜头画成一张 ${params.aspectRatio} 单张电影分镜图。优先执行本段的导演摄影描述，再参考后续连续性信息。`,
+    panel.image_prompt ? `导演摄影指令：${panel.image_prompt}` : '',
+    panel.description ? `镜头定格：${panel.description}` : '',
+    panel.video_prompt ? `动态意图转为单帧定格：${panel.video_prompt}` : '',
+    panel.shot_type || panel.camera_move
+      ? `镜头语言：景别/镜头类型为 ${panel.shot_type || '未指定'}，运镜语义为 ${panel.camera_move || '未指定'}；单张图只表现运镜完成后的一个决定性瞬间。`
+      : '',
+    params.sourceText ? `原文剧情依据：${params.sourceText}` : '',
+    hasPromptValue(panel.shot_blocking) ? `画面调度依据：${stringifyForPrompt(panel.shot_blocking)}` : '',
+    hasPromptValue(panel.photography_rules) ? `摄影规则依据：${stringifyForPrompt(panel.photography_rules)}` : '',
+    `画面风格：${params.styleText}`,
+  ].filter((part) => part.trim().length > 0)
+
+  return parts.join('\n')
+}
+
+export function buildPanelCompactReferenceContext(promptContext: PanelPromptContext): string {
+  return stringifyForPrompt({
+    panel_constraints: {
+      shot_type: promptContext.panel.shot_type,
+      camera_move: promptContext.panel.camera_move,
+      location: promptContext.panel.location,
+      characters: promptContext.panel.characters,
+      source_text: promptContext.panel.source_text,
+      shot_blocking: promptContext.panel.shot_blocking,
+      acting_notes: promptContext.panel.acting_notes,
+    },
+    reference_usage_policy: [
+      '角色参考只用于身份、脸型、发型、服装、体型和主要外观一致。',
+      'scene_anchor 只锁定空间布局、背景锚点、入口出口、家具/物体相对位置、光线方向和色调氛围。',
+      '场景必须按当前镜头重新取景，不照搬参考图构图。',
+      'scene_continuity_state 用于保持同场景人物关系、道具关系和前后镜头连续性。',
+    ],
+    reference_and_continuity: promptContext.context,
+  })
+}

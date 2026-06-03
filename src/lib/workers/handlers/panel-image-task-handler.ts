@@ -26,7 +26,11 @@ import {
   appendStyleBiblePromptBlock,
   resolveEditScriptStyleBibleForStoryboardTask,
 } from '@/lib/edit-script/style-bible-prompt'
-import { buildPanelPromptContext } from './panel-image-prompt-context'
+import {
+  buildPanelCompactReferenceContext,
+  buildPanelPromptContext,
+  buildPanelVisualDirectorPrompt,
+} from './panel-image-prompt-context'
 
 const EMPTY_PANEL_REFERENCE_COLLECTION = {
   items: [],
@@ -39,16 +43,16 @@ function buildPanelPrompt(params: {
   locale: TaskJobData['locale']
   aspectRatio: string
   styleText: string
-  sourceText: string
-  contextJson: string
+  visualDirectorPrompt: string
+  compactReferenceContext: string
 }) {
   return buildPrompt({
     promptId: PROMPT_IDS.PANEL_IMAGE_GENERATE,
     locale: params.locale,
     variables: {
+      visual_director_prompt: params.visualDirectorPrompt,
+      compact_reference_context: params.compactReferenceContext,
       aspect_ratio: params.aspectRatio,
-      storyboard_text_json_input: params.contextJson,
-      source_text: params.sourceText || '无',
       style: params.styleText,
     },
   })
@@ -200,13 +204,19 @@ export async function handlePanelImageTask(job: Job<TaskJobData>) {
     referenceImagesMap,
     storyboardPanels,
   })
-  const contextJson = JSON.stringify(promptContext, null, 2)
+  const visualDirectorPrompt = buildPanelVisualDirectorPrompt({
+    promptContext,
+    aspectRatio,
+    styleText: artStyle || '与参考图风格一致',
+    sourceText: panel.srtSegment || panel.description || '',
+  })
+  const compactReferenceContext = buildPanelCompactReferenceContext(promptContext)
   const promptBase = buildPanelPrompt({
     locale: job.data.locale,
     aspectRatio,
     styleText: artStyle || '与参考图风格一致',
-    sourceText: panel.srtSegment || panel.description || '',
-    contextJson,
+    visualDirectorPrompt,
+    compactReferenceContext,
   })
   const styleBible = await resolveEditScriptStyleBibleForStoryboardTask({
     projectId: job.data.projectId,

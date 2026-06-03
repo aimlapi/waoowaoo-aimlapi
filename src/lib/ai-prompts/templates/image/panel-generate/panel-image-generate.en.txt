@@ -1,49 +1,17 @@
-You are a professional storyboard image artist.
-Generate exactly one high-quality image for one panel.
+You are a professional storyboard artist. Generate one high-quality shot image from the three-part instruction below.
 
-Absolute constraints:
-1. No text in the image.
-2. No subtitles, labels, numbers, watermarks, or symbols.
-3. Do not create collage or multi-frame output.
-4. Output exactly one frame.
+SECTION 1 - FINAL VISUAL DIRECTION
+{visual_director_prompt}
 
-Aspect ratio (must be exact):
-{aspect_ratio}
+SECTION 2 - REFERENCES AND CONTINUITY
+Use the following only to preserve character identity, scene anchors, spatial relationships, reference-image usage, and same-scene continuity. Reframe the shot for the current panel. Do not draw field names, image numbers, notes, or JSON text into the image.
 
-Storyboard panel data:
-{storyboard_text_json_input}
+{compact_reference_context}
 
-Reference image usage:
-If `context.reference_images` contains a reference with `role="scene_anchor"`, treat it as the master spatial reference for the current scene. Preserve its spatial layout, background anchors, entrances/exits, furniture/object relative positions, lighting direction, color atmosphere, and main character relative positions. Do not copy its wide/establishing composition. Reframe the current panel according to `shot_type`, `camera_move`, `description`, and `shot_blocking`.
-If `context.scene_continuity_state` is present, apply it together with the scene anchor. The scene anchor locks spatial facts; `scene_continuity_state` locks character and action facts. `panel.characters` means featured characters for this shot, not that other same-scene characters have left.
-Characters listed in `context.scene_continuity_state.present_characters` must remain in the same scene relationship. Non-featured characters may appear as distant, blurred, edge-framed, partial body, back, shoulder, hand, reflection, or silhouette presence, but must not disappear unless `offscreen_allowed=true`.
-For insert shots, close-ups, empty shots, or environment shots, when `scene_continuity_state.environment_or_insert_policy.maintain_present_characters=true`, `present_characters` must remain visible or partially visible. Show them through distant, blurred, edge-framed, back, shoulder, hand, reflection, or silhouette presence. Do not interpret "the subject is not a person" as "the scene is empty".
-Detail shots of props, table surfaces, doors, windows, plants, or other anchors must preserve `scene_continuity_state.scene_props` and their relative positions from the scene anchor. Do not invent a different table, doorway, or environment layout.
-If `context.additional_reference_images` is present in the storyboard data, treat each entry as paired image-plus-text guidance. Previous storyboard images are for continuity, staging, character placement, and spatial relationships. Asset-library character images are for identity and appearance. Asset-library location/prop images are for layout, anchors, and object form. Custom images should be used only for the user-described purpose. The text guidance defines how each reference image should affect the output; do not copy composition, old style, or unrelated content by default.
-If `panel.shot_blocking` is present, it is the primary placement instruction. Follow its character absolute positions, relative positions, facing, eyelines, screen positions, camera placement, and composition.
-If `context.location_reference.spatial_profile` is present, treat it as the factual scene-space basis. Use its anchors, depthLayout, and lightingDirection to preserve spatial relationships.
-
-Source text:
-{source_text}
-
-Style requirement:
-{style}
-
-Execution rules:
-1. Respect panel composition, character placement, and action logic.
-2. Use `spatial_profile` anchors and `shot_blocking` as the placement basis.
-3. When `photography_rules.cameraPlan.shotBlocking` exists, follow its character placement, relative positions, screen positions, camera placement, and composition.
-4. When the panel description, source text, action flow, or scene nature implies movement, entry/exit, path traversal, transition space, temporary space, empty space, or abstract/non-literal space, use the spatial anchors and shot blocking to place characters naturally.
-5. Use character reference images for identity, face shape, hairstyle, outfit, body type, and primary appearance consistency. Do not replace the main appearance of asset-library characters.
-6. Use scene anchor references as the factual basis for same-scene continuity. Close-ups, shot/reverse-shot, empty shots, and detail shots may change framing and camera position, but must not invent a different location layout, lighting setup, background anchor arrangement, or character-side relationship.
-7. Use `context.scene_continuity_state` as the factual basis for who is still present, which characters are featured, which non-featured characters must remain visible or partially visible, and which props/actions continue from nearby same-scene panels.
-8. Use location reference images for spatial layout, key anchors, entrances/exits, and relative object positions.
-9. `context.reference_images` is the ordered map for the actual uploaded reference images. Use it to identify which image number belongs to each character, scene anchor, location, source panel, sketch, or extra reference.
-10. Match names in the user-editable prompt, storyboard description, and source text to reference images through `context.reference_images`.
-11. The order of names in user text does not define reference image order. Only `context.reference_images` defines the image order.
-12. Do not read text, black borders, labels, or watermarks inside the image to identify assets.
-13. Do not draw image numbers, asset names, labels, or any text into the output.
-14. Repaint the background according to shot type and angle.
-15. If storyboard conflicts with source text, keep narrative logic from source text.
-16. The final visual style must follow the project style requirement above. Do not let old styles from reference images override the current project visual style.
-17. Unless the panel or source text explicitly calls for a selfie, interview, surveillance view, subjective gaze toward the audience, or looking into the camera, characters must not stare directly at the camera. Prefer gaze toward scene partners, props, off-screen targets, travel direction, profile, or three-quarter profile.
+SECTION 3 - HARD BANS
+- Absolutely no text, subtitles, numbers, panel IDs, shot labels, annotations, symbols, watermarks, or logos may appear in the image.
+- No collage, split screen, multi-shot layout, comic panels, or sequential frames. Generate exactly one still frame for the current shot.
+- The aspect ratio must be exactly {aspect_ratio}.
+- Character references only preserve identity and major appearance traits. Scene references only preserve layout and spatial anchors. The final look must follow the project visual style: {style}.
+- Unless the source explicitly asks for selfie, interview, surveillance view, direct POV, or a character staring at the viewer, characters must not look directly into camera. Prefer eyelines toward scene partners, props, offscreen targets, movement direction, or side/three-quarter profile.
+- If storyboard information conflicts with the source text, use the source for spatial relationship, character interaction, and action order; use the storyboard for shot scale, composition, and camera angle.

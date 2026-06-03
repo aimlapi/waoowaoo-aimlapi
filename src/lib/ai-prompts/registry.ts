@@ -145,7 +145,12 @@ export const AI_PROMPT_CATALOG: Record<AiPromptId, AiPromptCatalogEntry> = {
   },
   [AI_PROMPT_IDS.PANEL_IMAGE_GENERATE]: {
     pathStem: 'image/panel-generate',
-    variableKeys: ['storyboard_text_json_input', 'source_text', 'aspect_ratio', 'style'],
+    variableKeys: [
+      'visual_director_prompt',
+      'compact_reference_context',
+      'aspect_ratio',
+      'style',
+    ],
   },
   [AI_PROMPT_IDS.IMAGE_UPDATE_SHOT_PROMPT]: {
     pathStem: 'image/update-shot-prompt',

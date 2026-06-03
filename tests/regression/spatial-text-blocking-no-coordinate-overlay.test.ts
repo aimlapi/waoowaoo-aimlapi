@@ -39,9 +39,9 @@ function buildRenderedPanelPrompt(locale: 'en' | 'zh'): string {
     promptId: AI_PROMPT_IDS.PANEL_IMAGE_GENERATE,
     locale,
     variables: {
+      visual_director_prompt: '单张电影分镜图。人物从门口走到柜台前停下，门廊阴影作为前景，木质柜台位于中景。',
+      compact_reference_context: storyboardTextJsonInput,
       aspect_ratio: '16:9',
-      storyboard_text_json_input: storyboardTextJsonInput,
-      source_text: '人物从门口走到柜台前停下。',
       style: 'cinematic realistic',
     },
   })
@@ -53,6 +53,9 @@ describe('spatial text blocking regression', () => {
       buildRenderedPanelPrompt('en'),
       buildRenderedPanelPrompt('zh'),
     ]
+
+    expect(renderedPrompts[0]).toContain('FINAL VISUAL DIRECTION')
+    expect(renderedPrompts[1]).toContain('最终画面指令')
 
     for (const renderedPrompt of renderedPrompts) {
       expect(renderedPrompt).toContain('shot_blocking')

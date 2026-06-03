@@ -249,21 +249,28 @@ describe('worker panel-image-task-handler behavior', () => {
     )
     expect(promptMock.buildPrompt).toHaveBeenCalledWith(expect.objectContaining({
       variables: expect.objectContaining({
-        storyboard_text_json_input: expect.stringContaining('"slot": "街道左侧靠墙的留白位置"'),
+        visual_director_prompt: expect.stringContaining('导演摄影指令：panel anchor prompt'),
+        compact_reference_context: expect.stringContaining('"slot": "街道左侧靠墙的留白位置"'),
       }),
     }))
     expect(promptMock.buildPrompt).toHaveBeenCalledWith(expect.objectContaining({
       variables: expect.objectContaining({
-        storyboard_text_json_input: expect.not.stringContaining('"available_slots"'),
+        compact_reference_context: expect.not.stringContaining('"available_slots"'),
       }),
     }))
     const promptCalls = promptMock.buildPrompt.mock.calls as unknown as Array<[unknown]>
     const promptCall = promptCalls[0]?.[0] as {
-      variables?: { storyboard_text_json_input?: string }
+      variables?: {
+        visual_director_prompt?: string
+        compact_reference_context?: string
+      }
     } | undefined
-    const contextJson = promptCall?.variables?.storyboard_text_json_input || '{}'
+    expect(promptCall?.variables?.visual_director_prompt).toContain('镜头定格：hero close-up')
+    expect(promptCall?.variables?.visual_director_prompt).toContain('动态意图转为单帧定格：dramatic')
+    expect(promptCall?.variables?.compact_reference_context).toContain('"scene_continuity_state"')
+    const contextJson = promptCall?.variables?.compact_reference_context || '{}'
     const context = JSON.parse(contextJson) as {
-      context?: {
+      reference_and_continuity?: {
         reference_images?: Array<{ image_no: string; role: string; name: string }>
         scene_continuity_state?: {
           present_characters?: Array<{ name: string; visibility: string }>
@@ -271,15 +278,15 @@ describe('worker panel-image-task-handler behavior', () => {
         }
       }
     }
-    expect(context.context?.reference_images).toEqual([
+    expect(context.reference_and_continuity?.reference_images).toEqual([
       { image_no: '图 1', role: 'sketch', name: '分镜草图' },
       { image_no: '图 2', role: 'character', name: 'Hero', appearance: 'default', slot: '街道左侧靠墙的留白位置' },
       { image_no: '图 3', role: 'scene_anchor', name: 'Old Town' },
     ])
-    expect(context.context?.scene_continuity_state?.present_characters).toEqual([
+    expect(context.reference_and_continuity?.scene_continuity_state?.present_characters).toEqual([
       expect.objectContaining({ name: 'Hero', visibility: 'featured' }),
     ])
-    expect(context.context?.scene_continuity_state?.scene_props).toBe('street lamp')
+    expect(context.reference_and_continuity?.scene_continuity_state?.scene_props).toBe('street lamp')
     expect(prismaMock.projectPanel.update).toHaveBeenCalledWith({
       where: { id: 'panel-1' },
       data: {
@@ -393,11 +400,11 @@ describe('worker panel-image-task-handler behavior', () => {
     await handlePanelImageTask(buildJob({ candidateCount: 1 }, 'panel-2'))
 
     const promptCalls = promptMock.buildPrompt.mock.calls as unknown as Array<[{
-      variables?: { storyboard_text_json_input?: string }
+      variables?: { compact_reference_context?: string }
     }]>
-    const contextJson = promptCalls[0]?.[0].variables?.storyboard_text_json_input || '{}'
+    const contextJson = promptCalls[0]?.[0].variables?.compact_reference_context || '{}'
     const context = JSON.parse(contextJson) as {
-      context?: {
+      reference_and_continuity?: {
         scene_continuity_state?: {
           featured_characters?: Array<{ name: string }>
           present_characters?: Array<{ name: string; visibility: string; slot: string | null }>
@@ -408,19 +415,19 @@ describe('worker panel-image-task-handler behavior', () => {
       }
     }
 
-    expect(context.context?.scene_continuity_state?.featured_characters).toEqual([
+    expect(context.reference_and_continuity?.scene_continuity_state?.featured_characters).toEqual([
       expect.objectContaining({ name: 'Zhou' }),
     ])
-    expect(context.context?.scene_continuity_state?.present_characters).toEqual(expect.arrayContaining([
+    expect(context.reference_and_continuity?.scene_continuity_state?.present_characters).toEqual(expect.arrayContaining([
       expect.objectContaining({ name: 'Zhou', visibility: 'featured', slot: '圆桌右侧座位' }),
       expect.objectContaining({ name: 'Lin', visibility: 'background_or_partial_presence_required', slot: '圆桌左侧座位' }),
     ]))
-    expect(context.context?.scene_continuity_state?.non_featured_presence_policy).toEqual(expect.objectContaining({
+    expect(context.reference_and_continuity?.scene_continuity_state?.non_featured_presence_policy).toEqual(expect.objectContaining({
       required: true,
       offscreen_allowed: false,
     }))
-    expect(context.context?.scene_continuity_state?.previous_same_scene_panel?.panel_number).toBe(1)
-    expect(context.context?.scene_continuity_state?.next_same_scene_panel?.panel_number).toBe(3)
+    expect(context.reference_and_continuity?.scene_continuity_state?.previous_same_scene_panel?.panel_number).toBe(1)
+    expect(context.reference_and_continuity?.scene_continuity_state?.next_same_scene_panel?.panel_number).toBe(3)
   })
 
   it('includes selected previous panel images as generation references', async () => {
@@ -464,12 +471,12 @@ describe('worker panel-image-task-handler behavior', () => {
     )
     expect(promptMock.buildPrompt).toHaveBeenCalledWith(expect.objectContaining({
       variables: expect.objectContaining({
-        storyboard_text_json_input: expect.stringContaining('"additional_reference_images"'),
+        compact_reference_context: expect.stringContaining('"additional_reference_images"'),
       }),
     }))
     expect(promptMock.buildPrompt).toHaveBeenCalledWith(expect.objectContaining({
       variables: expect.objectContaining({
-        storyboard_text_json_input: expect.stringContaining('Use for continuity and staging'),
+        compact_reference_context: expect.stringContaining('Use for continuity and staging'),
       }),
     }))
   })
@@ -522,21 +529,21 @@ describe('worker panel-image-task-handler behavior', () => {
 
     expect(prismaMock.projectStoryboardBlockingArtifact.findMany).not.toHaveBeenCalled()
     const promptCalls = promptMock.buildPrompt.mock.calls as unknown as Array<[{
-      variables?: { storyboard_text_json_input?: string }
+      variables?: { compact_reference_context?: string }
     }]>
-    const contextJson = promptCalls[0]?.[0].variables?.storyboard_text_json_input || '{}'
+    const contextJson = promptCalls[0]?.[0].variables?.compact_reference_context || '{}'
     const context = JSON.parse(contextJson) as {
-      panel?: { shot_blocking?: { cameraPlacement?: string } }
-      context?: {
+      panel_constraints?: { shot_blocking?: { cameraPlacement?: string } }
+      reference_and_continuity?: {
         location_reference?: { spatial_profile?: { anchors?: Array<{ label: string }> } }
         reference_images?: Array<{ image_no: string; role: string; name: string }>
         scene_continuity_state?: { scene_anchor_name?: string | null }
       }
     }
-    expect(context.panel?.shot_blocking?.cameraPlacement).toBe('从街道中线偏右拍向左侧墙面')
-    expect(context.context?.location_reference?.spatial_profile?.anchors?.[0]?.label).toBe('左侧墙面')
-    expect(context.context?.reference_images?.map((item) => item.role)).toEqual(['sketch', 'character', 'scene_anchor'])
-    expect(context.context?.scene_continuity_state?.scene_anchor_name).toBe('Old Town')
+    expect(context.panel_constraints?.shot_blocking?.cameraPlacement).toBe('从街道中线偏右拍向左侧墙面')
+    expect(context.reference_and_continuity?.location_reference?.spatial_profile?.anchors?.[0]?.label).toBe('左侧墙面')
+    expect(context.reference_and_continuity?.reference_images?.map((item) => item.role)).toEqual(['sketch', 'character', 'scene_anchor'])
+    expect(context.reference_and_continuity?.scene_continuity_state?.scene_anchor_name).toBe('Old Town')
     expect(utilsMock.resolveImageSourceFromGeneration).toHaveBeenCalledWith(
       expect.anything(),
       expect.objectContaining({
