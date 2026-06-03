@@ -52,6 +52,7 @@ describe('project agent operation registry', () => {
     expect(registry.generate_edit_script?.channels).toEqual({ tool: true, api: true })
     expect(registry.generate_edit_script_assets?.channels).toEqual({ tool: true, api: true })
     expect(registry.generate_edit_script_storyboard?.channels).toEqual({ tool: true, api: true })
+    expect(registry.generate_character_casting_test?.channels).toEqual({ tool: true, api: true })
 
     expect(registry.delete_storyboard_panel?.groupPath).toEqual(['storyboard', 'edit'])
     expect(registry.update_storyboard_panel_prompt?.groupPath).toEqual(['storyboard', 'edit'])
@@ -60,6 +61,7 @@ describe('project agent operation registry', () => {
     expect(registry.generate_edit_script?.groupPath).toEqual(['edit-script'])
     expect(registry.generate_edit_script_assets?.groupPath).toEqual(['edit-script'])
     expect(registry.generate_edit_script_storyboard?.groupPath).toEqual(['edit-script'])
+    expect(registry.generate_character_casting_test?.groupPath).toEqual(['extra'])
 
     for (const operation of Object.values(registry)) {
       if (!operation.channels.tool) continue

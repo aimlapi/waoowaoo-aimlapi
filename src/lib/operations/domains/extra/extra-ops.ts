@@ -15,6 +15,8 @@ import { submitOperationTask } from '@/lib/operations/submit-operation-task'
 import { resolveRequiredTaskLocale } from '@/lib/task/resolve-locale'
 import { resolveProjectImageStyleSignatureForTask } from '@/lib/image-generation/style'
 import { analyzeAndPersistProjectLocationImageSpatialProfile } from '@/lib/location-spatial-profile/service'
+import { submitCharacterStyleTestTask } from '@/lib/character-style-test/submit'
+import { normalizeCharacterStyleTestPromptMode } from '@/lib/character-style-test/prompt'
 
 function parseReferenceImages(body: Record<string, unknown>): string[] {
   const list = Array.isArray(body.referenceImageUrls)
@@ -47,6 +49,47 @@ const EFFECTS_BILLABLE_LONG_RUNNING = {
 
 export function createExtraOperations(): ProjectAgentOperationRegistryDraft {
   return {
+    generate_character_casting_test: defineOperation({
+      id: 'generate_character_casting_test',
+      summary: 'Submit a project-scoped character casting/contact-sheet test before final character asset generation.',
+      intent: 'act',
+      effects: EFFECTS_BILLABLE_LONG_RUNNING,
+      confirmation: {
+        required: true,
+        summary: '将为当前项目提交人物选角/定妆 contact sheet 测试任务（可能计费）。确认继续后请重新调用并传入 confirmed=true。',
+      },
+      inputSchema: z.object({
+        confirmed: z.boolean().optional(),
+        episodeId: z.string().trim().min(1).optional(),
+        characterRequest: z.string().trim().min(1),
+        characterName: z.string().trim().min(1).optional(),
+        promptMode: z.enum(['style_asset', 'casting_photo']).optional(),
+      }).passthrough(),
+      outputSchema: z.unknown(),
+      execute: async (ctx, input) => {
+        const characterRequest = input.characterRequest.trim()
+        const characterName = input.characterName?.trim() || 'character'
+        const episodeId = input.episodeId?.trim() || (typeof ctx.context.episodeId === 'string' ? ctx.context.episodeId.trim() : '')
+        const dedupeDigest = createHash('sha1')
+          .update(`${ctx.projectId}:${episodeId}:${characterName}:${characterRequest}:${input.promptMode || 'casting_photo'}`)
+          .digest('hex')
+          .slice(0, 16)
+
+        return await submitCharacterStyleTestTask({
+          request: ctx.request,
+          userId: ctx.userId,
+          projectId: ctx.projectId,
+          episodeId: episodeId || null,
+          characterRequest,
+          promptMode: normalizeCharacterStyleTestPromptMode(input.promptMode || 'casting_photo'),
+          targetId: `character-casting-test:${dedupeDigest}`,
+          operationId: 'generate_character_casting_test',
+          operationSource: ctx.source,
+          operationConfirmed: input.confirmed === true,
+          dedupeKey: `project_character_casting_test:${dedupeDigest}`,
+        })
+      },
+    }),
     ai_create_character: defineOperation({
       id: 'ai_create_character',
       summary: 'Submit AI create character design task.',

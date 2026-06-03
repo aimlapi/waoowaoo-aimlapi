@@ -359,7 +359,7 @@ describe('workspace node canvas projection', () => {
     ])
   })
 
-  it('adds a direct edit table action when a ready screenplay has no edit script yet', () => {
+  it('keeps visual reference generation as the direct action when a ready screenplay has no edit script yet', () => {
     const editScreenplay = createEditScreenplay()
     const projection = buildWorkspaceNodeCanvasProjection({
       episodeId: 'episode-1',
@@ -373,10 +373,10 @@ describe('workspace node canvas projection', () => {
     })
 
     const screenplayNode = projection.nodes.find((node) => node.id === 'edit-screenplay:screenplay-1')
-    expect(screenplayNode?.data.actionLabel).toBe('actions.generateEditScript')
+    expect(screenplayNode?.data.actionLabel).toBe('actions.generateVisualReferences')
     expect(screenplayNode?.data.action).toEqual({
-      type: 'generate_edit_script',
-      screenplayId: 'screenplay-1',
+      type: 'generate_visual_reference_cases',
+      count: 3,
     })
   })
 
@@ -419,11 +419,13 @@ describe('workspace node canvas projection', () => {
     const visualReferenceTarget = TASK_RUNTIME_TARGETS.projectEpisodeVisualReferenceCases('episode-1')
     expect(screenplayNode?.data.editScreenplayDetails?.visualReferenceCases).toEqual(visualReferenceCases)
     expect(screenplayNode?.data.editScreenplayDetails?.visualReferenceRunning).toBe(false)
-    expect(screenplayNode?.data.secondaryAction).toEqual({
+    expect(screenplayNode?.data.action).toEqual({
       type: 'generate_visual_reference_cases',
       count: 3,
     })
-    expect(screenplayNode?.data.secondaryActionLabel).toBe('actions.regenerateVisualReferences')
+    expect(screenplayNode?.data.actionLabel).toBe('actions.regenerateVisualReferences')
+    expect(screenplayNode?.data.secondaryAction).toBeUndefined()
+    expect(screenplayNode?.data.secondaryActionLabel).toBeUndefined()
     expect(screenplayNode?.data.runtimeTargets).toContainEqual(visualReferenceTarget)
   })
 

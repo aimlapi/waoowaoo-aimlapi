@@ -126,6 +126,32 @@ describe('routeProjectAgentRequest', () => {
     expect(route.requestedGroups).toEqual([['skill']])
   })
 
+  it('[production routing prompt] -> points assets and storyboard away from default edit table generation', async () => {
+    aiMock.generateObject.mockResolvedValueOnce({
+      object: {
+        intent: 'act',
+        domains: ['asset', 'storyboard'],
+        requestedGroups: [['extra'], ['asset'], ['storyboard', 'edit']],
+        needsClarification: false,
+        clarifyingQuestion: null,
+        reasoning: ['production request should create assets and storyboard directly'],
+      },
+    })
+
+    const route = await routeProjectAgentRequest({
+      messages: [buildUserMessage('根据剧本生成角色资产、空间分析和分镜。')],
+      phase: buildPhaseSnapshot(),
+      context: { currentStage: 'screenplay-ready', locale: 'zh' },
+      model: {} as never,
+      allowedRequestedGroups: [['edit-script'], ['extra'], ['asset'], ['storyboard', 'edit']],
+    })
+
+    const systemPrompt = aiMock.generateObject.mock.calls[0]?.[0]?.system
+    expect(systemPrompt).toContain('只有生成剧本或用户明确要求剪辑表时，才请求 ["edit-script"]')
+    expect(systemPrompt).toContain('["extra"]、["project","data"]、["asset"]、["storyboard","edit"]')
+    expect(route.requestedGroups).toEqual([['extra'], ['asset'], ['storyboard', 'edit']])
+  })
+
   it('[empty user text] -> returns direct clarification without model call', async () => {
     const route = await routeProjectAgentRequest({
       messages: [{

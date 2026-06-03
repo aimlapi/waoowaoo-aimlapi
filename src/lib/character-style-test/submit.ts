@@ -19,6 +19,13 @@ export async function submitCharacterStyleTestTask(input: {
   readonly userId: string
   readonly characterRequest: string
   readonly promptMode?: CharacterStyleTestPromptMode
+  readonly projectId?: string
+  readonly episodeId?: string | null
+  readonly targetId?: string
+  readonly operationId?: string
+  readonly operationSource?: string
+  readonly operationConfirmed?: boolean
+  readonly dedupeKey?: string
 }) {
   const characterRequest = input.characterRequest.trim()
   if (!characterRequest) {
@@ -60,14 +67,16 @@ export async function submitCharacterStyleTestTask(input: {
     requestId: input.request.headers.get('x-request-id'),
     userId: input.userId,
     locale,
-    projectId: CHARACTER_STYLE_TEST_SYSTEM_PROJECT_ID,
+    projectId: input.projectId?.trim() || CHARACTER_STYLE_TEST_SYSTEM_PROJECT_ID,
+    episodeId: input.episodeId ?? undefined,
     type: TASK_TYPE.CHARACTER_STYLE_TEST,
     targetType: 'CharacterStyleTest',
-    targetId: CHARACTER_STYLE_TEST_TARGET_ID,
-    operationId: 'character_style_test',
-    operationSource: 'standalone-ui',
-    operationConfirmed: true,
+    targetId: input.targetId?.trim() || CHARACTER_STYLE_TEST_TARGET_ID,
+    operationId: input.operationId?.trim() || 'character_style_test',
+    operationSource: input.operationSource?.trim() || 'standalone-ui',
+    operationConfirmed: input.operationConfirmed ?? true,
     payload,
+    dedupeKey: input.dedupeKey,
     billingInfo: buildDefaultTaskBillingInfo(TASK_TYPE.CHARACTER_STYLE_TEST, payload),
   })
 }

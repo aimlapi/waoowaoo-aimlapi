@@ -1169,9 +1169,6 @@ export function buildWorkspaceNodeCanvasProjection({
     const visualReferenceAction: WorkspaceCanvasNodeAction | undefined = editScreenplay.status === 'ready' && !visualReferenceRunning
       ? { type: 'generate_visual_reference_cases', count: 3 }
       : undefined
-    const editScriptAction: WorkspaceCanvasNodeAction | undefined = editScreenplay.status === 'ready' && !editScript && !editScriptPending
-      ? { type: 'generate_edit_script', screenplayId: editScreenplay.id }
-      : undefined
     nodes.push(createNode({
       id: `edit-screenplay:${editScreenplay.id}`,
       fallbackX: STORY_COLUMN_X,
@@ -1203,16 +1200,12 @@ export function buildWorkspaceNodeCanvasProjection({
           visualReferenceCases,
           visualReferenceRunning,
         },
-        actionLabel: editScriptAction
-          ? translate('actions.generateEditScript')
-          : visualReferenceAction
-            ? visualReferenceCases.length > 0 ? translate('actions.regenerateVisualReferences') : translate('actions.generateVisualReferences')
-            : undefined,
-        action: editScriptAction ?? visualReferenceAction,
-        secondaryActionLabel: editScriptAction && visualReferenceAction
+        actionLabel: visualReferenceAction
           ? visualReferenceCases.length > 0 ? translate('actions.regenerateVisualReferences') : translate('actions.generateVisualReferences')
           : undefined,
-        secondaryAction: editScriptAction ? visualReferenceAction : undefined,
+        action: visualReferenceAction,
+        secondaryActionLabel: undefined,
+        secondaryAction: undefined,
         onAction,
       },
     }))
