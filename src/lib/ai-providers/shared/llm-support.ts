@@ -5,6 +5,7 @@ export interface ProviderChatCompletionOptions {
   temperature?: number
   reasoning?: boolean
   reasoningEffort?: 'minimal' | 'low' | 'medium' | 'high'
+  maxTokens?: number
   maxRetries?: number
   projectId?: string
   action?: string

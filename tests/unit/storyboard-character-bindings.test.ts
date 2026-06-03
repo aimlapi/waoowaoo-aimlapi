@@ -44,6 +44,20 @@ describe('storyboard character bindings', () => {
     expect(appearance?.changeReason).toBe('夜行衣')
   })
 
+  it('resolves model references by exact character name and appearance label', () => {
+    const refs = canonicalizePanelCharacterReferences(characters, [
+      { name: '顾娘子/顾盼之', appearance: '夜行衣' },
+    ])
+
+    expect(refs).toEqual([{
+      characterId: 'char-1',
+      name: '顾娘子/顾盼之',
+      appearanceId: 'app-2',
+      appearanceIndex: 1,
+      appearance: '夜行衣',
+    }])
+  })
+
   it('throws instead of silently accepting unbound characters', () => {
     expect(() => canonicalizePanelCharacterReferences(characters, [
       { name: '系统没这个角色', appearance: '夜行衣' },

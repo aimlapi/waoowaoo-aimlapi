@@ -78,8 +78,10 @@ export function findCharacterForStoryboardReference<T extends StoryboardCharacte
   characters: T[],
   reference: StoryboardPanelCharacterReference,
 ): T | undefined {
-  if (!reference.characterId) return undefined
-  return characters.find((character) => character.id === reference.characterId)
+  if (reference.characterId) {
+    return characters.find((character) => character.id === reference.characterId)
+  }
+  return characters.find((character) => character.name === reference.name)
 }
 
 export function findAppearanceForStoryboardReference<T extends StoryboardCharacterAppearanceLike>(
@@ -91,6 +93,9 @@ export function findAppearanceForStoryboardReference<T extends StoryboardCharact
   }
   if (typeof reference.appearanceIndex === 'number') {
     return appearances.find((appearance) => appearance.appearanceIndex === reference.appearanceIndex)
+  }
+  if (reference.appearance) {
+    return appearances.find((appearance) => appearance.changeReason === reference.appearance)
   }
   return undefined
 }

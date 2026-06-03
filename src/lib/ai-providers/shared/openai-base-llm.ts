@@ -41,6 +41,7 @@ export async function runOpenAIBaseUrlLlmCompletion(input: {
   temperature: number
   reasoning: boolean
   reasoningEffort: 'minimal' | 'low' | 'medium' | 'high'
+  maxTokens?: number
   maxRetries: number
   isOpenRouter?: boolean
 }): Promise<AiProviderLlmResult> {
@@ -102,6 +103,7 @@ export async function runOpenAIBaseUrlLlmCompletion(input: {
     model: input.modelId,
     messages: input.messages as OpenAI.Chat.Completions.ChatCompletionMessageParam[],
     temperature: input.temperature,
+    ...(input.maxTokens ? { max_tokens: input.maxTokens } : {}),
     ...extraParams,
   })
   const normalizedCompletion = completion as OpenAI.Chat.Completions.ChatCompletion
@@ -219,6 +221,7 @@ export async function runOpenAIBaseUrlLlmStream(input: AiProviderLlmStreamContex
     model: input.selection.modelId,
     messages: input.messages as OpenAI.Chat.Completions.ChatCompletionMessageParam[],
     ...((input.options.reasoning ?? true) ? {} : { temperature: input.options.temperature ?? 0.7 }),
+    ...(input.options.maxTokens ? { max_tokens: input.options.maxTokens } : {}),
     stream: true,
     ...extraParams,
   } as unknown as OpenAI.Chat.Completions.ChatCompletionCreateParamsStreaming)

@@ -25,6 +25,8 @@ import type { AiLlmExecutionInput, AiLlmExecutionResult } from '@/lib/ai-registr
 
 ensureAiCatalogsRegistered()
 
+const DEFAULT_OPENROUTER_MAX_TOKENS = 32768
+
 interface CompletionJsonObject {
   [key: string]: unknown
 }
@@ -38,6 +40,13 @@ function errorMessage(error: unknown): string {
   const record = toRecord(error)
   if (record && typeof record.message === 'string') return record.message
   return 'unknown error'
+}
+
+function resolveMaxTokens(options: ChatCompletionOptions, providerKey: string): number | undefined {
+  if (typeof options.maxTokens === 'number' && Number.isInteger(options.maxTokens) && options.maxTokens > 0) {
+    return options.maxTokens
+  }
+  return providerKey === 'openrouter' ? DEFAULT_OPENROUTER_MAX_TOKENS : undefined
 }
 
 async function executeLlmCompletionViaAdapter(
@@ -84,6 +93,8 @@ export async function chatCompletionStream(
   const temperature = options.temperature ?? 0.7
   const reasoning = options.reasoning ?? true
   const reasoningEffort = options.reasoningEffort || 'high'
+  const maxTokens = resolveMaxTokens(options, providerKey)
+  const runtimeOptions = maxTokens ? { ...options, maxTokens } : options
   const projectId =
     typeof options.projectId === 'string' && options.projectId.trim().length > 0
       ? options.projectId.trim()
@@ -115,7 +126,7 @@ export async function chatCompletionStream(
       selection,
       providerConfig,
       messages,
-      options,
+      options: runtimeOptions,
       callbacks,
     })
     logLlmRawOutput({
@@ -197,6 +208,7 @@ export async function runChatCompletion(
     temperature = 0.7,
     reasoning = true,
     reasoningEffort = 'high',
+    maxTokens = resolveMaxTokens(options, providerKey),
     maxRetries = 2,
   } = options
   const projectId =
@@ -231,6 +243,7 @@ export async function runChatCompletion(
         temperature,
         reasoning,
         reasoningEffort,
+        maxTokens,
         maxRetries,
       })
       logLlmRawOutput({

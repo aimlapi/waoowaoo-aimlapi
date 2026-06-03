@@ -18,4 +18,18 @@ describe('llm option schema', () => {
       context: 'llm:test',
     })).toThrow('AI_OPTION_INVALID:llm:test:reasoningEffort:unsupported_value=extreme')
   })
+
+  it('validates maxTokens range', () => {
+    expect(() => validateAiOptions({
+      schema: buildLlmOptionSchema(),
+      options: { maxTokens: 32768 },
+      context: 'llm:test',
+    })).not.toThrow()
+
+    expect(() => validateAiOptions({
+      schema: buildLlmOptionSchema(),
+      options: { maxTokens: 65537 },
+      context: 'llm:test',
+    })).toThrow('AI_OPTION_INVALID:llm:test:maxTokens:max=65536')
+  })
 })
