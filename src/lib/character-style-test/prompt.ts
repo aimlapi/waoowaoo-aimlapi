@@ -87,46 +87,75 @@ function buildEnglishBasePrompt(characterRequest: string): string {
   ].join('\n')
 }
 
-function buildChineseCastingPhotoPrompt(characterRequest: string): string {
+function buildChineseCastingCandidateBrief(candidateIndex: number | undefined): string {
+  if (candidateIndex === undefined) return ''
+  const briefs = [
+    '候选组方向：生活真实度优先，演员气质克制、可信、接近真实职场或现实人物；服装变化要自然，不要过度造型。',
+    '候选组方向：情绪辨识度优先，脸部状态、眼神和表情跨度更强，能看出角色内在伤口、欲望或压抑感。',
+    '候选组方向：造型记忆点优先，在不破坏真实感的前提下强化发型、服装层次、配饰或关键身体标记，让角色一眼可记住。',
+  ] as const
+  return briefs[candidateIndex] ?? ''
+}
+
+function buildEnglishCastingCandidateBrief(candidateIndex: number | undefined): string {
+  if (candidateIndex === undefined) return ''
+  const briefs = [
+    'Candidate direction: grounded realism first, restrained and believable performer presence, close to a real workplace or everyday person; wardrobe variation should feel natural, not over-styled.',
+    'Candidate direction: emotional readability first, stronger face state, gaze, and expression range that reveals inner wounds, desire, or repression.',
+    'Candidate direction: memorable styling first, strengthening hair, wardrobe layers, accessories, or key body marks while staying realistic and castable.',
+  ] as const
+  return briefs[candidateIndex] ?? ''
+}
+
+function buildChineseCastingPhotoPrompt(characterRequest: string, candidateIndex?: number): string {
+  const candidateBrief = buildChineseCastingCandidateBrief(candidateIndex)
   return [
     '生成一张用于选角与人物定妆判断的真人摄影 contact sheet，不是概念设计图。',
     `人物定妆需求（唯一来源）：${characterRequest}`,
-    '画面目标：像真实剧组试镜/选角资料照、演员定妆照、costume fitting photo sheet，用来判断这个人是否适合角色，而不是展示酷炫世界观。',
-    '版式必须是一张完整照片拼版：包含正面半身头像、正面全身站姿、左侧面、右侧面、背面或 3/4 背面；每个视角必须是同一个真实人物、同一套服装、同一发型与体型。',
+    candidateBrief,
+    '画面目标：像真实剧组选角资料照、演员定妆照、服装试装 contact sheet，用来判断这个演员与这套妆造是否适合角色。',
+    '这是一组完整候选形象包：整张图必须是一张照片拼版，包含同一真实人物的多张定妆照片；不是单纯白底三视图，也不是多名演员拼在一起。',
+    '必须包含的基础资料：正面半身身份照、正面全身站姿、左侧面、右侧面、背面或 3/4 背面；基础资料可以使用白墙、灰墙、试镜房或服装间背景，必须能清楚评估脸、发型、身高比例、体态、服装版型、鞋子和侧面轮廓。',
+    '必须包含的拓展定妆照：至少两种不同表情（例如中性、脆弱/哭过、浅笑/防备笑）、至少两套不同服装或穿搭层次、至少两个故事相关背景或工作/生活场景、至少一个手部/耳后/疤痕/纹身/配饰/关键道具细节特写。',
+    '同一候选包内必须保持同一演员身份：脸型、五官距离、鼻梁、颧骨、眼神、体型、身高比例、发量和主要身体标记必须稳定；允许服装、情绪、背景和局部妆造变化，但不能换人。',
     '摄影质感：真实相机拍摄，轻微胶片颗粒，普通室内自然光或柔和棚灯，肤色真实，五官不修成偶像海报，不要过度磨皮，不要电影海报级打光。',
-    '场地与背景：简单试镜房、白墙、灰白墙、摄影棚或服装间墙面；背景要朴素、低信息量，允许轻微阴影和墙面纹理。',
-    '人物状态：中性表情，直接看镜头或按视角站立，姿态自然但可评估；服装像真实定妆服，不要夸张概念盔甲、不要游戏角色渲染感。',
-    '构图优先级：清楚看脸、发型、身高比例、体态、服装版型、鞋子和侧面轮廓；全身照必须完整露出脚。',
-    '绝对禁止：概念艺术、插画、CG、动漫、过强电影感背景、抽象城市光影、赛博海报、角色设定板风格背景、三维建模感、文字标签、姓名、电话、邮箱、身高腰围信息、水印、Logo。',
+    '场景背景：可以有朴素白墙基础照，也必须有角色故事相关的实景定妆照；背景服务于判断角色适配度，不要变成海报、剧照大片或世界观概念图。',
+    '构图优先级：清楚看脸、发型、表情变化、身高比例、体态、服装变化、鞋子、侧背轮廓、关键细节；全身照必须完整露出脚。',
+    '绝对禁止：概念艺术、插画、CG、动漫、过强电影感海报、赛博海报、角色设定板风格背景、三维建模感、不同人物混入、文字标签、姓名、电话、邮箱、身高腰围信息、水印、Logo。',
     '如果需要纸质 casting sheet 的感觉，只模拟照片拼版与留白，不要生成任何可读个人信息。',
-  ].join('\n')
+  ].filter(Boolean).join('\n')
 }
 
-function buildEnglishCastingPhotoPrompt(characterRequest: string): string {
+function buildEnglishCastingPhotoPrompt(characterRequest: string, candidateIndex?: number): string {
+  const candidateBrief = buildEnglishCastingCandidateBrief(candidateIndex)
   return [
     'Generate one realistic casting and costume look-test photo contact sheet, not a concept design image.',
     `Casting and look-test request, the only source: ${characterRequest}`,
-    'Goal: make it feel like real production casting photos, actor audition references, and costume fitting photos used to judge whether this person fits the role, not a cool worldbuilding showcase.',
-    'Layout must be one complete photo board: include a frontal half-body headshot, a frontal full-body standing view, left profile, right profile, and back or three-quarter back view. Every view must be the same real person with the same outfit, hairstyle, body type, and proportions.',
+    candidateBrief,
+    'Goal: make it feel like real production casting photos, actor audition references, and costume fitting photos used to judge whether this actor and look fit the role.',
+    'This is one complete candidate look package: the image must be one photo collage containing multiple look-test photos of the same real person. It is not a plain white-background turnaround only, and it must not mix multiple actors.',
+    'Required identity material: frontal half-body headshot, frontal full-body standing view, left profile, right profile, and back or three-quarter back view. These baseline views may use a white wall, gray wall, audition room, or fitting-room wall, and must clearly show face, hair, height proportion, posture, costume fit, shoes, and side silhouette.',
+    'Required extended look-test material: at least two different expressions such as neutral, vulnerable/after crying, slight smile/guarded smile; at least two different outfits or styling layers; at least two story-related backgrounds or work/life settings; at least one close-up of hand, behind-ear detail, scar, tattoo, accessory, or key prop.',
+    'Within this candidate package, preserve one actor identity: face shape, feature spacing, nose bridge, cheekbones, gaze, body type, height proportion, hair volume, and key body marks must stay stable. Wardrobe, emotion, background, and small makeup changes may vary, but the person must not change.',
     'Photo quality: real camera photography, subtle film grain, ordinary indoor natural light or soft studio light, believable skin tone, face not retouched into a fashion poster, no dramatic movie-poster lighting.',
-    'Setting and background: simple audition room, white wall, gray-white wall, photo studio, or fitting-room wall. Keep the background plain and low-information, with mild shadows and wall texture allowed.',
-    'Actor state: neutral expression, facing camera or standing by view angle, natural posture that can be evaluated. Wardrobe should feel like real costume fitting, not exaggerated concept armor or game render styling.',
-    'Composition priorities: clearly show face, hair, height proportion, body posture, costume fit, shoes, and side silhouette. Full-body views must show the complete feet.',
-    'Strict bans: concept art, illustration, CG, anime, overly cinematic background, abstract city lights, cyberpunk poster, character-sheet style fantasy background, 3D render look, text labels, names, phone numbers, emails, height/waist data, watermark, Logo.',
+    'Backgrounds: include plain baseline studio views, but also include story-relevant real-world look-test stills. Backgrounds must help judge role fit and must not become posters, finished film stills, or worldbuilding concept art.',
+    'Composition priorities: clearly show face, hair, expression variation, height proportion, body posture, costume variation, shoes, side/back silhouette, and key details. Full-body views must show complete feet.',
+    'Strict bans: concept art, illustration, CG, anime, overly cinematic poster lighting, cyberpunk poster, character-sheet fantasy background, 3D render look, mixed actor identities, text labels, names, phone numbers, emails, height/waist data, watermark, Logo.',
     'If a paper casting-sheet feeling is needed, simulate only the photo collage and blank margins. Do not generate readable personal information.',
-  ].join('\n')
+  ].filter(Boolean).join('\n')
 }
 
 export function buildCharacterStyleTestPrompt(input: {
   readonly characterRequest: string
   readonly locale: Locale
   readonly promptMode?: CharacterStyleTestPromptMode
+  readonly candidateIndex?: number
 }): string {
   const characterRequest = normalizeCharacterRequest(input.characterRequest)
   if (input.promptMode === 'casting_photo') {
     return input.locale === 'en'
-      ? buildEnglishCastingPhotoPrompt(characterRequest)
-      : buildChineseCastingPhotoPrompt(characterRequest)
+      ? buildEnglishCastingPhotoPrompt(characterRequest, input.candidateIndex)
+      : buildChineseCastingPhotoPrompt(characterRequest, input.candidateIndex)
   }
   return input.locale === 'en'
     ? buildEnglishBasePrompt(characterRequest)

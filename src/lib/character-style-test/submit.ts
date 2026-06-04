@@ -19,6 +19,10 @@ export async function submitCharacterStyleTestTask(input: {
   readonly userId: string
   readonly characterRequest: string
   readonly promptMode?: CharacterStyleTestPromptMode
+  readonly castingCandidateCount?: 3
+  readonly characterId?: string
+  readonly appearanceId?: string
+  readonly characterName?: string
   readonly projectId?: string
   readonly episodeId?: string | null
   readonly targetId?: string
@@ -40,16 +44,36 @@ export async function submitCharacterStyleTestTask(input: {
       message: 'User character image model is required before character style testing',
     })
   }
+  const castingCandidateCount = input.castingCandidateCount
+  if (castingCandidateCount !== undefined && input.promptMode !== 'casting_photo') {
+    throw new ApiError('INVALID_PARAMS', {
+      code: 'CASTING_CANDIDATES_REQUIRE_CASTING_PHOTO',
+      message: 'castingCandidateCount requires promptMode=casting_photo',
+    })
+  }
+  const analysisModel = userModelConfig.analysisModel
+  if (castingCandidateCount === 3 && !analysisModel) {
+    throw new ApiError('INVALID_PARAMS', {
+      code: 'USER_ANALYSIS_MODEL_REQUIRED',
+      message: 'User analysis model is required before scoring character casting candidates',
+    })
+  }
 
   let billingPayload: Record<string, unknown>
   try {
+    const imageCount = castingCandidateCount || 1
     billingPayload = buildImageBillingPayloadFromUserConfig({
       userModelConfig,
       imageModel,
       basePayload: {
         characterRequest,
         promptMode: input.promptMode || 'style_asset',
-        count: 1,
+        count: imageCount,
+        ...(analysisModel ? { analysisModel } : {}),
+        ...(castingCandidateCount ? { castingCandidateCount } : {}),
+        ...(input.characterId?.trim() ? { characterId: input.characterId.trim() } : {}),
+        ...(input.appearanceId?.trim() ? { appearanceId: input.appearanceId.trim() } : {}),
+        ...(input.characterName?.trim() ? { characterName: input.characterName.trim() } : {}),
       },
     })
   } catch (error) {

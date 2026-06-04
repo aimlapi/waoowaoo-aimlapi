@@ -40,6 +40,8 @@ describe('extra operations', () => {
     const result = await operations.generate_character_casting_test?.execute(buildContext(), {
       confirmed: true,
       characterName: '林澈',
+      characterId: 'character-1',
+      appearanceId: 'appearance-1',
       characterRequest: '二十七岁程序员，黑色T恤，灰色连帽衫，长期熬夜但温柔',
     })
 
@@ -55,8 +57,13 @@ describe('extra operations', () => {
       userId: 'user-1',
       projectId: 'project-1',
       episodeId: 'episode-1',
+      characterName: '林澈',
+      characterId: 'character-1',
+      appearanceId: 'appearance-1',
       characterRequest: '二十七岁程序员，黑色T恤，灰色连帽衫，长期熬夜但温柔',
       promptMode: 'casting_photo',
+      castingCandidateCount: 3,
+      targetId: 'appearance-1',
       operationId: 'generate_character_casting_test',
       operationSource: 'assistant-panel',
       operationConfirmed: true,

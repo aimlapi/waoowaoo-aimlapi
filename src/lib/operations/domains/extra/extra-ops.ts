@@ -61,6 +61,8 @@ export function createExtraOperations(): ProjectAgentOperationRegistryDraft {
       inputSchema: z.object({
         confirmed: z.boolean().optional(),
         episodeId: z.string().trim().min(1).optional(),
+        characterId: z.string().trim().min(1).optional(),
+        appearanceId: z.string().trim().min(1).optional(),
         characterRequest: z.string().trim().min(1),
         characterName: z.string().trim().min(1).optional(),
         promptMode: z.enum(['style_asset', 'casting_photo']).optional(),
@@ -69,9 +71,11 @@ export function createExtraOperations(): ProjectAgentOperationRegistryDraft {
       execute: async (ctx, input) => {
         const characterRequest = input.characterRequest.trim()
         const characterName = input.characterName?.trim() || 'character'
+        const characterId = input.characterId?.trim()
+        const appearanceId = input.appearanceId?.trim()
         const episodeId = input.episodeId?.trim() || (typeof ctx.context.episodeId === 'string' ? ctx.context.episodeId.trim() : '')
         const dedupeDigest = createHash('sha1')
-          .update(`${ctx.projectId}:${episodeId}:${characterName}:${characterRequest}:${input.promptMode || 'casting_photo'}`)
+          .update(`${ctx.projectId}:${episodeId}:${characterName}:${characterId || ''}:${appearanceId || ''}:${characterRequest}:casting_photo:3`)
           .digest('hex')
           .slice(0, 16)
 
@@ -81,8 +85,12 @@ export function createExtraOperations(): ProjectAgentOperationRegistryDraft {
           projectId: ctx.projectId,
           episodeId: episodeId || null,
           characterRequest,
+          characterName,
+          ...(characterId ? { characterId } : {}),
+          ...(appearanceId ? { appearanceId } : {}),
           promptMode: normalizeCharacterStyleTestPromptMode(input.promptMode || 'casting_photo'),
-          targetId: `character-casting-test:${dedupeDigest}`,
+          castingCandidateCount: 3,
+          targetId: appearanceId || `character-casting-test:${dedupeDigest}`,
           operationId: 'generate_character_casting_test',
           operationSource: ctx.source,
           operationConfirmed: input.confirmed === true,

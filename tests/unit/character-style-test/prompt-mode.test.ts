@@ -27,10 +27,24 @@ describe('character style test prompt modes', () => {
     })
 
     expect(prompt).toContain('真人摄影 contact sheet')
-    expect(prompt).toContain('试镜/选角资料照')
-    expect(prompt).toContain('白墙、灰白墙、摄影棚或服装间墙面')
+    expect(prompt).toContain('完整候选形象包')
+    expect(prompt).toContain('至少两种不同表情')
+    expect(prompt).toContain('至少两套不同服装或穿搭层次')
+    expect(prompt).toContain('至少两个故事相关背景或工作/生活场景')
     expect(prompt).toContain('姓名、电话、邮箱')
     expect(prompt).not.toContain('强风格化的电影概念设定')
+  })
+
+  it('adds distinct candidate direction when generating casting candidates', () => {
+    const prompt = buildCharacterStyleTestPrompt({
+      characterRequest: '公司新来的实习生，温柔但有距离感',
+      locale: 'zh',
+      promptMode: 'casting_photo',
+      candidateIndex: 2,
+    })
+
+    expect(prompt).toContain('候选组方向：造型记忆点优先')
+    expect(prompt).toContain('同一候选包内必须保持同一演员身份')
   })
 
   it('summarizes casting mode without reusing style asset wording', () => {
