@@ -7,6 +7,9 @@ const prismaMock = vi.hoisted(() => ({
   project: {
     findUnique: vi.fn(),
   },
+  projectVisualReferenceCase: {
+    findFirst: vi.fn(),
+  },
   projectPanel: {
     findUnique: vi.fn(),
     findMany: vi.fn(),
@@ -163,6 +166,7 @@ describe('worker panel-image-task-handler behavior', () => {
       visualStylePresetId: 'realistic',
       artStyle: 'realistic',
     })
+    prismaMock.projectVisualReferenceCase.findFirst.mockResolvedValue(null)
 
     prismaMock.projectPanel.findUnique.mockResolvedValue({
       id: 'panel-1',
@@ -294,6 +298,41 @@ describe('worker panel-image-task-handler behavior', () => {
         candidateImages: JSON.stringify(['cos/panel-candidate-1.png', 'cos/panel-candidate-2.png']),
       },
     })
+  })
+
+  it('selected visual reference style becomes first storyboard reference and overrides project style text', async () => {
+    prismaMock.projectVisualReferenceCase.findFirst.mockResolvedValueOnce({
+      id: 'style-case-1',
+      title: '冷白写实',
+      description: '冷白光、低饱和、真实摄影质感。',
+      prompt: 'photorealistic cool white office drama, muted palette',
+      imageUrl: '/m/style-case-1',
+      imageMedia: null,
+    })
+    await handlePanelImageTask(buildJob({ candidateCount: 1 }))
+
+    expect(sharedMock.normalizeReferenceImageItemsForGeneration).toHaveBeenCalledWith(
+      [
+        { url: '/m/style-case-1', role: 'style_reference', name: '冷白写实' },
+        { url: 'https://signed.example/sketch.png', role: 'sketch', name: 'storyboard sketch' },
+        { url: 'https://signed.example/hero.png', role: 'character', name: 'Hero', appearance: 'default', slot: '街道左侧靠墙的留白位置' },
+        { url: 'https://signed.example/location.png', role: 'scene_anchor', name: 'Old Town' },
+      ],
+      expect.objectContaining({
+        context: { taskType: TASK_TYPE.IMAGE_PANEL, scope: 'panel-image.refs' },
+      }),
+    )
+    const promptCalls = promptMock.buildPrompt.mock.calls as unknown[][]
+    const promptVariables = promptCalls[0]?.[0] as {
+      variables?: { style?: string }
+    } | undefined
+    expect(promptVariables?.variables?.style).toContain('选中的视觉风格案例（最高优先级）：')
+    expect(promptVariables?.variables?.style).toContain('冷白写实')
+    const generationInput = utilsMock.resolveImageSourceFromGeneration.mock.calls[0]?.[1] as {
+      options?: { referenceImages?: string[] }
+      prompt?: string
+    } | undefined
+    expect(generationInput?.options?.referenceImages?.[0]).toBe('normalized-sketch')
   })
 
   it('appends Style Bible block to final storyboard image prompt', async () => {

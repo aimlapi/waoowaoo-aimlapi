@@ -1,6 +1,11 @@
 import { type Job } from 'bullmq'
 import { prisma } from '@/lib/prisma'
 import { resolveProjectVisualStylePreset } from '@/lib/style-preset'
+import {
+  appendSelectedVisualReferenceStylePromptBlock,
+  renderSelectedVisualReferenceStylePromptBlock,
+  resolveSelectedVisualReferenceStyle,
+} from '@/lib/visual-reference-cases/selected-style'
 import { logInfo as _ulogInfo } from '@/lib/logging/core'
 import { type TaskJobData } from '@/lib/task/types'
 import {
@@ -262,6 +267,10 @@ export async function handlePanelVariantTask(job: Job<TaskJobData>) {
   if (!storyboardModel) throw new Error('Storyboard model not configured')
 
   const sourcePanelImageUrl = toSignedUrlIfCos(sourcePanel.imageUrl, 3600)
+  const selectedVisualReferenceStyle = await resolveSelectedVisualReferenceStyle({
+    projectId: job.data.projectId,
+    episodeId: job.data.episodeId,
+  })
   const referenceImageItems = buildVariantReferenceImageItems({
     includeCharacterAssets,
     includeLocationAsset,
@@ -269,23 +278,38 @@ export async function handlePanelVariantTask(job: Job<TaskJobData>) {
     sourcePanelImageUrl,
     projectData,
   })
+  if (selectedVisualReferenceStyle?.imageUrl) {
+    referenceImageItems.unshift({
+      url: selectedVisualReferenceStyle.imageUrl,
+      role: 'style_reference',
+      name: selectedVisualReferenceStyle.title,
+    })
+  }
   const { referenceImages, referenceImagesMap } = await normalizeReferenceImageItemsForGeneration(referenceImageItems, {
     locale: job.data.locale,
     context: { taskType: String(job.data.type), scope: 'panel-variant.refs' },
   })
 
-  const artStyle = (await resolveProjectVisualStylePreset({
-    projectId: job.data.projectId,
-    userId: job.data.userId,
-    locale: job.data.locale,
-  })).prompt
+  const projectArtStyle = selectedVisualReferenceStyle
+    ? null
+    : await resolveProjectVisualStylePreset({
+      projectId: job.data.projectId,
+      userId: job.data.userId,
+      locale: job.data.locale,
+    })
+  const artStyle = selectedVisualReferenceStyle
+    ? renderSelectedVisualReferenceStylePromptBlock({
+      style: selectedVisualReferenceStyle,
+      locale: job.data.locale,
+    })
+    : projectArtStyle?.prompt ?? ''
   const charactersInfo = buildCharactersInfo(newPanel, projectData)
   const characterAssetsDesc = includeCharacterAssets
     ? buildCharacterAssetsDescription(newPanel, projectData)
     : (job.data.locale === 'en' ? 'Character reference images disabled' : '未使用角色参考图')
   const locationName = newPanel.location || sourcePanel.location || ''
 
-  const prompt = buildVariantPrompt({
+  const promptBase = buildVariantPrompt({
     locale: job.data.locale,
     originalDescription: sourcePanel.description || '',
     originalShotType: sourcePanel.shotType || '',
@@ -307,6 +331,11 @@ export async function handlePanelVariantTask(job: Job<TaskJobData>) {
     referenceImages: formatReferenceImagesMapForPrompt(referenceImagesMap, job.data.locale),
     aspectRatio,
     style: artStyle,
+  })
+  const prompt = appendSelectedVisualReferenceStylePromptBlock({
+    prompt: promptBase,
+    style: selectedVisualReferenceStyle,
+    locale: job.data.locale,
   })
 
   _ulogInfo('[panel-variant] resolved variant prompt', prompt)

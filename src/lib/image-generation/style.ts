@@ -1,5 +1,6 @@
 import { getArtStylePrompt, isArtStyleValue, type ArtStyleValue } from '@/lib/constants'
 import { resolveProjectVisualStylePreset, resolveVisualStylePreset } from '@/lib/style-preset'
+import { resolveSelectedVisualReferenceStyle } from '@/lib/visual-reference-cases/selected-style'
 
 export interface ResolvedImageStyleForTask {
   prompt: string
@@ -35,6 +36,7 @@ export async function resolveProjectImageStyleForTask(params: {
   projectId: string
   userId: string
   locale: 'zh' | 'en'
+  episodeId?: string | null
   artStyleOverride?: unknown
   invalidOverrideMessage: string
 }): Promise<ResolvedImageStyleForTask> {
@@ -52,6 +54,20 @@ export async function resolveProjectImageStyleForTask(params: {
       source: 'override',
       presetSource: 'system',
       presetId: override,
+    }
+  }
+
+  const selectedStyle = await resolveSelectedVisualReferenceStyle({
+    projectId: params.projectId,
+    episodeId: params.episodeId,
+  })
+  if (selectedStyle) {
+    return {
+      prompt: selectedStyle.prompt,
+      signature: `project:selected-visual-reference:${selectedStyle.id}`,
+      source: 'project',
+      presetSource: 'user',
+      presetId: selectedStyle.id,
     }
   }
 
@@ -73,6 +89,7 @@ export async function resolveProjectImageStyleSignatureForTask(params: {
   projectId: string
   userId: string
   locale: 'zh' | 'en'
+  episodeId?: string | null
   artStyleOverride?: unknown
   invalidOverrideMessage: string
 }): Promise<string> {

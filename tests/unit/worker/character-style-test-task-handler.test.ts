@@ -40,6 +40,9 @@ const evaluatorMock = vi.hoisted(() => ({
 }))
 
 const prismaMock = vi.hoisted(() => ({
+  projectVisualReferenceCase: {
+    findFirst: vi.fn(),
+  },
   characterAppearance: {
     findUnique: vi.fn(async () => ({
       id: 'appearance-1',
@@ -51,8 +54,13 @@ const prismaMock = vi.hoisted(() => ({
   },
 }))
 
+const outboundMock = vi.hoisted(() => ({
+  normalizeOptionalReferenceImagesForGeneration: vi.fn(async () => [] as string[]),
+}))
+
 vi.mock('@/lib/workers/shared', () => sharedMock)
 vi.mock('@/lib/storage', () => storageMock)
+vi.mock('@/lib/media/outbound-image', () => outboundMock)
 vi.mock('@/lib/workers/handlers/image-task-handler-shared', () => handlerSharedMock)
 vi.mock('@/lib/character-casting/evaluator', () => evaluatorMock)
 vi.mock('@/lib/prisma', () => ({ prisma: prismaMock }))
@@ -70,6 +78,7 @@ type GenerationInput = {
     aspectRatio: string
     resolution?: string
     quality?: string
+    referenceImages?: string[]
   }
 }
 
@@ -92,6 +101,8 @@ describe('worker character-style-test-task-handler', () => {
   beforeEach(() => {
     vi.clearAllMocks()
     handlerSharedMock.generateCleanImageToStorage.mockImplementation(async () => 'cos/character-style-test.jpg')
+    prismaMock.projectVisualReferenceCase.findFirst.mockResolvedValue(null)
+    outboundMock.normalizeOptionalReferenceImagesForGeneration.mockResolvedValue([])
   })
 
   it('success path -> generates a stylized multi-view asset prompt from user input only', async () => {
@@ -210,5 +221,34 @@ describe('worker character-style-test-task-handler', () => {
       appearanceId: 'appearance-1',
       evaluation: expect.objectContaining({ winnerIndex: 1 }),
     }))
+  })
+
+  it('casting candidate mode -> uses selected visual reference style for all candidates', async () => {
+    prismaMock.projectVisualReferenceCase.findFirst.mockResolvedValueOnce({
+      id: 'style-case-1',
+      title: '冷白写实',
+      description: '真实摄影质感，冷白光和低饱和色彩。',
+      prompt: 'photorealistic cool white light, muted palette',
+      imageUrl: '/m/style-case-1',
+      imageMedia: null,
+    })
+    outboundMock.normalizeOptionalReferenceImagesForGeneration.mockResolvedValueOnce(['normalized-style-ref'])
+
+    await handleCharacterStyleTestTask(buildJob({
+      characterRequest: '二十三岁公司实习生，温柔但有距离感',
+      imageModel: 'character-model-1',
+      analysisModel: 'analysis-model-1',
+      promptMode: 'casting_photo',
+      castingCandidateCount: 3,
+    }, 'project-1'))
+
+    expect(handlerSharedMock.generateCleanImageToStorage).toHaveBeenCalledTimes(3)
+    for (const call of handlerSharedMock.generateCleanImageToStorage.mock.calls) {
+      const input = call[0] as GenerationInput
+      expect(input.prompt).toContain('选中的视觉风格案例（最高优先级）：')
+      expect(input.prompt).toContain('冷白写实')
+      expect(input.prompt).toContain('禁止把写实风格转换成动漫、漫画或插画风')
+      expect(input.options.referenceImages).toEqual(['normalized-style-ref'])
+    }
   })
 })

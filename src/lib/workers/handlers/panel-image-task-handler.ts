@@ -27,6 +27,11 @@ import {
   resolveEditScriptStyleBibleForStoryboardTask,
 } from '@/lib/edit-script/style-bible-prompt'
 import {
+  appendSelectedVisualReferenceStylePromptBlock,
+  renderSelectedVisualReferenceStylePromptBlock,
+  resolveSelectedVisualReferenceStyle,
+} from '@/lib/visual-reference-cases/selected-style'
+import {
   buildPanelCompactReferenceContext,
   buildPanelPromptContext,
   buildPanelVisualDirectorPrompt,
@@ -79,7 +84,19 @@ export async function handlePanelImageTask(job: Job<TaskJobData>) {
   const refCollection = referenceMode === 'storyboard'
     ? EMPTY_PANEL_REFERENCE_COLLECTION
     : await collectPanelReferenceImageItemsWithDiagnostics(projectData, panel, { strict: true })
-  const referenceImageItems: ReferenceImageItem[] = [...refCollection.items]
+  const selectedVisualReferenceStyle = await resolveSelectedVisualReferenceStyle({
+    projectId: job.data.projectId,
+    episodeId: job.data.episodeId,
+  })
+  const referenceImageItems: ReferenceImageItem[] = []
+  if (selectedVisualReferenceStyle?.imageUrl) {
+    referenceImageItems.push({
+      url: selectedVisualReferenceStyle.imageUrl,
+      role: 'style_reference',
+      name: selectedVisualReferenceStyle.title,
+    })
+  }
+  referenceImageItems.push(...refCollection.items)
   if (Array.isArray(payload.referencePanelImageUrls)) {
     for (const [index, url] of payload.referencePanelImageUrls.entries()) {
       const signed = toSignedUrlIfCos(typeof url === 'string' ? url : null, 3600)
@@ -156,11 +173,19 @@ export async function handlePanelImageTask(job: Job<TaskJobData>) {
     },
   })
 
-  const artStyle = (await resolveProjectVisualStylePreset({
-    projectId: job.data.projectId,
-    userId: job.data.userId,
-    locale: job.data.locale,
-  })).prompt
+  const projectArtStyle = selectedVisualReferenceStyle
+    ? null
+    : await resolveProjectVisualStylePreset({
+      projectId: job.data.projectId,
+      userId: job.data.userId,
+      locale: job.data.locale,
+    })
+  const artStyle = selectedVisualReferenceStyle
+    ? renderSelectedVisualReferenceStylePromptBlock({
+      style: selectedVisualReferenceStyle,
+      locale: job.data.locale,
+    })
+    : projectArtStyle?.prompt ?? ''
   if (!projectData.videoRatio) throw new Error('Project videoRatio not configured')
   const aspectRatio = projectData.videoRatio
   const storyboardPanels = await prisma.projectPanel.findMany({
@@ -223,10 +248,15 @@ export async function handlePanelImageTask(job: Job<TaskJobData>) {
     episodeId: job.data.episodeId,
     storyboardId: panel.storyboardId,
   })
-  const prompt = appendStyleBiblePromptBlock({
+  const promptWithStyleBible = appendStyleBiblePromptBlock({
     prompt: promptBase,
     styleBible,
     usage: 'storyboardImage',
+    locale: job.data.locale,
+  })
+  const prompt = appendSelectedVisualReferenceStylePromptBlock({
+    prompt: promptWithStyleBible,
+    style: selectedVisualReferenceStyle,
     locale: job.data.locale,
   })
   logger.info({

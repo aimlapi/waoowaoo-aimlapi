@@ -20,6 +20,12 @@ import {
   appendStyleBiblePromptBlock,
   resolveEditScriptStyleBibleForTask,
 } from '@/lib/edit-script/style-bible-prompt'
+import {
+  appendSelectedVisualReferenceStylePromptBlock,
+  renderSelectedVisualReferenceStylePromptBlock,
+  resolveSelectedVisualReferenceStyle,
+} from '@/lib/visual-reference-cases/selected-style'
+import { normalizeOptionalReferenceImagesForGeneration } from '@/lib/media/outbound-image'
 import { analyzeAndPersistProjectLocationImageSpatialProfile } from '@/lib/location-spatial-profile/service'
 
 interface LocationImageRecord {
@@ -65,13 +71,31 @@ export async function handleLocationImageTask(job: Job<TaskJobData>) {
   if (assetType === 'location' && !spatialProfileModel) throw new Error('LOCATION_SPATIAL_PROFILE_MODEL_REQUIRED')
   const requestedCount = resolveRequestedLocationCount(payload)
 
-  const artStyle = (await resolveProjectImageStyleForTask({
+  const selectedVisualReferenceStyle = await resolveSelectedVisualReferenceStyle({
     projectId,
-    userId,
-    locale: job.data.locale,
-    artStyleOverride: payload.artStyle,
-    invalidOverrideMessage: 'Invalid artStyle in IMAGE_LOCATION payload',
-  })).prompt
+    episodeId: job.data.episodeId,
+  })
+  const projectArtStyle = selectedVisualReferenceStyle
+    ? null
+    : await resolveProjectImageStyleForTask({
+      projectId,
+      userId,
+      locale: job.data.locale,
+      artStyleOverride: payload.artStyle,
+      invalidOverrideMessage: 'Invalid artStyle in IMAGE_LOCATION payload',
+    })
+  const artStyle = selectedVisualReferenceStyle
+    ? renderSelectedVisualReferenceStylePromptBlock({
+      style: selectedVisualReferenceStyle,
+      locale: job.data.locale,
+    })
+    : projectArtStyle?.prompt ?? ''
+  const styleReferenceImages = await normalizeOptionalReferenceImagesForGeneration(
+    selectedVisualReferenceStyle?.imageUrl ? [selectedVisualReferenceStyle.imageUrl] : [],
+    {
+      context: { taskType: String(job.data.type), scope: 'location.visualStyleReference' },
+    },
+  )
   const styleBible = await resolveEditScriptStyleBibleForTask({
     projectId,
     episodeId: job.data.episodeId,
@@ -137,10 +161,15 @@ export async function handleLocationImageTask(job: Job<TaskJobData>) {
       ? addPropPromptSuffix(promptCore)
       : addLocationPromptSuffix(promptCore)
     const promptBase = artStyle ? `${promptWithSuffix}，${artStyle}` : promptWithSuffix
-    const prompt = appendStyleBiblePromptBlock({
+    const promptWithStyleBible = appendStyleBiblePromptBlock({
       prompt: promptBase,
       styleBible,
       usage: 'assetImage',
+      locale: job.data.locale,
+    })
+    const prompt = appendSelectedVisualReferenceStylePromptBlock({
+      prompt: promptWithStyleBible,
+      style: selectedVisualReferenceStyle,
       locale: job.data.locale,
     })
     const aspectRatio = assetType === 'prop' ? PROP_IMAGE_RATIO : LOCATION_IMAGE_RATIO
@@ -158,6 +187,7 @@ export async function handleLocationImageTask(job: Job<TaskJobData>) {
       keyPrefix: 'location',
       options: {
         aspectRatio,
+        ...(styleReferenceImages.length > 0 ? { referenceImages: styleReferenceImages } : {}),
       },
     })
 

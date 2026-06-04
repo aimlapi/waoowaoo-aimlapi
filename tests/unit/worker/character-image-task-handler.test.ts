@@ -18,6 +18,9 @@ const prismaMock = vi.hoisted(() => ({
   project: {
     findUnique: vi.fn(),
   },
+  projectVisualReferenceCase: {
+    findFirst: vi.fn(),
+  },
   characterAppearance: {
     findUnique: vi.fn(),
     findFirst: vi.fn(),
@@ -86,6 +89,7 @@ describe('worker character-image-task-handler behavior', () => {
       visualStylePresetId: 'realistic',
       artStyle: 'realistic',
     })
+    prismaMock.projectVisualReferenceCase.findFirst.mockResolvedValue(null)
 
     prismaMock.characterAppearance.findUnique.mockResolvedValue({
       id: 'appearance-2',
@@ -187,6 +191,30 @@ describe('worker character-image-task-handler behavior', () => {
     }
     expect(generationInput.prompt).toContain(getArtStylePrompt('japanese-anime', 'zh'))
     expect(generationInput.prompt).not.toContain(getArtStylePrompt('realistic', 'zh'))
+  })
+
+  it('selected visual reference style overrides project artStyle and becomes a reference image', async () => {
+    prismaMock.projectVisualReferenceCase.findFirst.mockResolvedValueOnce({
+      id: 'style-case-1',
+      title: '冷白写实',
+      description: '低饱和写实职场室内，冷白光和自然皮肤质感。',
+      prompt: 'photorealistic restrained office drama, cool white light, muted palette',
+      imageUrl: '/m/style-case-1',
+      imageMedia: null,
+    })
+    outboundMock.normalizeOptionalReferenceImagesForGeneration.mockResolvedValueOnce(['normalized-style-ref'])
+
+    await handleCharacterImageTask(buildJob({ imageIndex: 0 }, 'appearance-1', 'episode-1'))
+
+    const generationInput = sharedMock.generateCleanImageToStorage.mock.calls[0]?.[0] as {
+      prompt: string
+      options?: { referenceImages?: string[]; aspectRatio?: string }
+    }
+    expect(generationInput.prompt).toContain('选中的视觉风格案例（最高优先级）：')
+    expect(generationInput.prompt).toContain('冷白写实')
+    expect(generationInput.prompt).toContain('禁止把写实风格转换成动漫、漫画或插画风')
+    expect(generationInput.prompt).not.toContain(getArtStylePrompt('realistic', 'zh'))
+    expect(generationInput.options?.referenceImages).toEqual(['normalized-style-ref'])
   })
 
   it('appends Style Bible block to final character asset image prompt', async () => {

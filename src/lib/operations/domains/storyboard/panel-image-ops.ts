@@ -223,6 +223,19 @@ export function createStoryboardPanelImageOperations(): ProjectAgentOperationReg
         if (!panelId) {
           throw new Error('PROJECT_AGENT_PANEL_NOT_FOUND')
         }
+        const targetPanel = await prisma.projectPanel.findUnique({
+          where: { id: panelId },
+          select: {
+            storyboard: {
+              select: {
+                episodeId: true,
+              },
+            },
+          },
+        })
+        if (!targetPanel?.storyboard.episodeId) {
+          throw new Error('PROJECT_AGENT_PANEL_NOT_FOUND')
+        }
 
         const candidateCount = resolveCandidateCount(input.count)
         const referencePanelIds = normalizeStringArray((input as { referencePanelIds?: unknown }).referencePanelIds).slice(0, 8)
@@ -324,6 +337,7 @@ export function createStoryboardPanelImageOperations(): ProjectAgentOperationReg
           projectId: ctx.projectId,
           userId: ctx.userId,
           locale: taskLocale,
+          episodeId: targetPanel.storyboard.episodeId,
           invalidOverrideMessage: 'Invalid artStyle in image_panel payload',
         })
 
@@ -338,6 +352,7 @@ export function createStoryboardPanelImageOperations(): ProjectAgentOperationReg
           operationId: 'regenerate_panel_image',
           source: ctx.source,
           confirmed: input.confirmed === true,
+          episodeId: targetPanel.storyboard.episodeId,
           payload: withTaskUiPayload(billingPayload, {
             intent: 'regenerate',
             hasOutputAtStart,

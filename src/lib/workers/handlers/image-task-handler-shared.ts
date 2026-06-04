@@ -72,7 +72,7 @@ export interface PanelCharacterReference {
   slot?: string
 }
 
-export type ReferenceImageRole = 'sketch' | 'source_panel' | 'character' | 'scene_anchor' | 'location' | 'prop' | 'extra'
+export type ReferenceImageRole = 'sketch' | 'source_panel' | 'style_reference' | 'character' | 'scene_anchor' | 'location' | 'prop' | 'extra'
 
 export interface ReferenceImageItem {
   url: string
@@ -261,6 +261,7 @@ function imageNo(index: number, locale: TaskJobData['locale'] | undefined): stri
 function displayReferenceName(item: ReferenceImageItem, locale: TaskJobData['locale'] | undefined): string {
   if (item.role === 'sketch') return locale === 'en' ? 'storyboard sketch' : '分镜草图'
   if (item.role === 'source_panel') return locale === 'en' ? 'source panel' : '原始镜头'
+  if (item.role === 'style_reference') return locale === 'en' ? 'selected visual style reference' : '选中的视觉风格参考图'
   return item.name
 }
 
@@ -275,6 +276,7 @@ export function formatReferenceImagesMapForPrompt(
   const roleLabel: Record<ReferenceImageRole, { zh: string; en: string }> = {
     sketch: { zh: '分镜草图', en: 'storyboard sketch' },
     source_panel: { zh: '原始镜头', en: 'source panel' },
+    style_reference: { zh: '视觉风格参考图', en: 'visual style reference' },
     character: { zh: '角色', en: 'character' },
     scene_anchor: { zh: '场景锚定图', en: 'scene anchor' },
     location: { zh: '场景', en: 'location' },

@@ -7,6 +7,11 @@ import { reportTaskProgress } from '@/lib/workers/shared'
 import { stringifyAppearanceCandidateMetadata } from '@/types/character-casting'
 import { evaluateCharacterCastingCandidates } from '@/lib/character-casting/evaluator'
 import type { CharacterCastingEvaluationResult } from '@/lib/character-casting/evaluation'
+import { normalizeOptionalReferenceImagesForGeneration } from '@/lib/media/outbound-image'
+import {
+  appendSelectedVisualReferenceStylePromptBlock,
+  resolveSelectedVisualReferenceStyle,
+} from '@/lib/visual-reference-cases/selected-style'
 import {
   buildCharacterStyleTestPrompt,
   buildCharacterStyleTestStyleSummary,
@@ -133,6 +138,16 @@ export async function handleCharacterStyleTestTask(job: Job<TaskJobData>) {
   const analysisModel = castingCandidateCount === 3
     ? readRequiredString(payload.analysisModel, 'analysisModel')
     : null
+  const selectedVisualReferenceStyle = await resolveSelectedVisualReferenceStyle({
+    projectId: job.data.projectId,
+    episodeId: job.data.episodeId,
+  })
+  const styleReferenceImages = await normalizeOptionalReferenceImagesForGeneration(
+    selectedVisualReferenceStyle?.imageUrl ? [selectedVisualReferenceStyle.imageUrl] : [],
+    {
+      context: { taskType: String(job.data.type), scope: 'characterStyleTest.visualStyleReference' },
+    },
+  )
 
   const styleSummary = buildCharacterStyleTestStyleSummary({
     characterRequest,
@@ -160,11 +175,16 @@ export async function handleCharacterStyleTestTask(job: Job<TaskJobData>) {
   const imageKeys: string[] = []
   const prompts: string[] = []
   for (let candidateIndex = 0; candidateIndex < castingCandidateCount; candidateIndex += 1) {
-    const prompt = buildCharacterStyleTestPrompt({
+    const basePrompt = buildCharacterStyleTestPrompt({
       characterRequest,
       locale: job.data.locale,
       promptMode,
       ...(castingCandidateCount === 3 ? { candidateIndex } : {}),
+    })
+    const prompt = appendSelectedVisualReferenceStylePromptBlock({
+      prompt: basePrompt,
+      style: selectedVisualReferenceStyle,
+      locale: job.data.locale,
     })
     prompts.push(prompt)
 
@@ -177,7 +197,10 @@ export async function handleCharacterStyleTestTask(job: Job<TaskJobData>) {
         ? `${job.data.taskId}-candidate-${candidateIndex}`
         : job.data.taskId,
       keyPrefix: 'character-style-test',
-      options: imageOptions,
+      options: {
+        ...imageOptions,
+        ...(styleReferenceImages.length > 0 ? { referenceImages: styleReferenceImages } : {}),
+      },
     })
     imageKeys.push(imageKey)
 

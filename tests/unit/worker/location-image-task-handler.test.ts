@@ -13,6 +13,9 @@ const prismaMock = vi.hoisted(() => ({
   project: {
     findUnique: vi.fn(),
   },
+  projectVisualReferenceCase: {
+    findFirst: vi.fn(),
+  },
   locationImage: {
     findUnique: vi.fn(),
     update: vi.fn(async () => ({})),
@@ -30,6 +33,10 @@ const prismaMock = vi.hoisted(() => ({
 
 const sharedMock = vi.hoisted(() => ({
   generateCleanImageToStorage: vi.fn(async () => 'cos/location-generated-1.png'),
+}))
+
+const outboundMock = vi.hoisted(() => ({
+  normalizeOptionalReferenceImagesForGeneration: vi.fn(async () => [] as string[]),
 }))
 
 const spatialProfileServiceMock = vi.hoisted(() => ({
@@ -54,6 +61,7 @@ const spatialProfileServiceMock = vi.hoisted(() => ({
 
 vi.mock('@/lib/workers/utils', () => utilsMock)
 vi.mock('@/lib/prisma', () => ({ prisma: prismaMock }))
+vi.mock('@/lib/media/outbound-image', () => outboundMock)
 vi.mock('@/lib/workers/shared', () => ({ reportTaskProgress: vi.fn(async () => undefined) }))
 vi.mock('@/lib/workers/handlers/image-task-handler-shared', async () => {
   const actual = await vi.importActual<typeof import('@/lib/workers/handlers/image-task-handler-shared')>(
@@ -97,6 +105,8 @@ describe('worker location-image-task-handler behavior', () => {
       visualStylePresetId: 'japanese-anime',
       artStyle: 'japanese-anime',
     })
+    prismaMock.projectVisualReferenceCase.findFirst.mockResolvedValue(null)
+    outboundMock.normalizeOptionalReferenceImagesForGeneration.mockResolvedValue([])
 
     prismaMock.locationImage.findUnique.mockResolvedValue({
       id: 'location-image-1',
@@ -201,6 +211,34 @@ describe('worker location-image-task-handler behavior', () => {
         prompt: expect.stringContaining(getArtStylePrompt('realistic', 'zh')),
       }),
     )
+  })
+
+  it('selected visual reference style overrides project anime style for location assets', async () => {
+    prismaMock.projectVisualReferenceCase.findFirst.mockResolvedValueOnce({
+      id: 'style-case-1',
+      title: '雨夜写实',
+      description: '真实摄影质感的雨夜街区，低饱和冷光。',
+      prompt: 'photorealistic rainy night street, muted blue-gray palette, practical lighting',
+      imageUrl: '/m/style-case-1',
+      imageMedia: null,
+    })
+    outboundMock.normalizeOptionalReferenceImagesForGeneration.mockResolvedValueOnce(['normalized-style-ref'])
+
+    await handleLocationImageTask(buildJob({ imageIndex: 0 }, 'location-image-1', 'episode-1'))
+
+    const generationCalls = sharedMock.generateCleanImageToStorage.mock.calls as unknown[][]
+    const generationInput = generationCalls[0]?.[0] as {
+      prompt: string
+      options?: { referenceImages?: string[]; aspectRatio?: string }
+    }
+    expect(generationInput.prompt).toContain('选中的视觉风格案例（最高优先级）：')
+    expect(generationInput.prompt).toContain('雨夜写实')
+    expect(generationInput.prompt).toContain('禁止把写实风格转换成动漫、漫画或插画风')
+    expect(generationInput.prompt).not.toContain(getArtStylePrompt('japanese-anime', 'zh'))
+    expect(generationInput.options).toEqual({
+      aspectRatio: LOCATION_IMAGE_RATIO,
+      referenceImages: ['normalized-style-ref'],
+    })
   })
 
   it('appends Style Bible block to final location asset image prompt', async () => {

@@ -17,6 +17,11 @@ import {
   resolveEditScriptStyleBibleForTask,
 } from '@/lib/edit-script/style-bible-prompt'
 import {
+  appendSelectedVisualReferenceStylePromptBlock,
+  renderSelectedVisualReferenceStylePromptBlock,
+  resolveSelectedVisualReferenceStyle,
+} from '@/lib/visual-reference-cases/selected-style'
+import {
   AnyObj,
   generateCleanImageToStorage,
   parseImageUrls,
@@ -139,13 +144,25 @@ export async function handleCharacterImageTask(job: Job<TaskJobData>) {
 
   if (!appearance) throw new Error('Character appearance not found')
 
-  const artStyle = (await resolveProjectImageStyleForTask({
+  const selectedVisualReferenceStyle = await resolveSelectedVisualReferenceStyle({
     projectId,
-    userId,
-    locale: job.data.locale,
-    artStyleOverride: payload.artStyle,
-    invalidOverrideMessage: 'Invalid artStyle in IMAGE_CHARACTER payload',
-  })).prompt
+    episodeId: job.data.episodeId,
+  })
+  const projectArtStyle = selectedVisualReferenceStyle
+    ? null
+    : await resolveProjectImageStyleForTask({
+      projectId,
+      userId,
+      locale: job.data.locale,
+      artStyleOverride: payload.artStyle,
+      invalidOverrideMessage: 'Invalid artStyle in IMAGE_CHARACTER payload',
+    })
+  const artStyle = selectedVisualReferenceStyle
+    ? renderSelectedVisualReferenceStylePromptBlock({
+      style: selectedVisualReferenceStyle,
+      locale: job.data.locale,
+    })
+    : projectArtStyle?.prompt ?? ''
   const styleBible = await resolveEditScriptStyleBibleForTask({
     projectId,
     episodeId: job.data.episodeId,
@@ -174,7 +191,13 @@ export async function handleCharacterImageTask(job: Job<TaskJobData>) {
       if (primaryMainUrl) primaryReferenceInputs.push(primaryMainUrl)
     }
   }
-  const primaryReferenceImages = await normalizeOptionalReferenceImagesForGeneration(primaryReferenceInputs, {
+  const visualStyleReferenceInputs = selectedVisualReferenceStyle?.imageUrl
+    ? [selectedVisualReferenceStyle.imageUrl]
+    : []
+  const primaryReferenceImages = await normalizeOptionalReferenceImagesForGeneration([
+    ...visualStyleReferenceInputs,
+    ...primaryReferenceInputs,
+  ], {
     context: { taskType: String(job.data.type), scope: 'character.primaryAppearance' },
   })
 
@@ -193,10 +216,15 @@ export async function handleCharacterImageTask(job: Job<TaskJobData>) {
     const metadata = candidateMetadata[index] ?? candidateMetadata[0] ?? null
     const rawWithCastingStills = `${raw}${buildCastingStillPromptBlock(metadata, job.data.locale)}`
     const promptBase = artStyle ? `${addCharacterPromptSuffix(rawWithCastingStills)}，${artStyle}` : addCharacterPromptSuffix(rawWithCastingStills)
-    const prompt = appendStyleBiblePromptBlock({
+    const promptWithStyleBible = appendStyleBiblePromptBlock({
       prompt: promptBase,
       styleBible,
       usage: 'assetImage',
+      locale: job.data.locale,
+    })
+    const prompt = appendSelectedVisualReferenceStylePromptBlock({
+      prompt: promptWithStyleBible,
+      style: selectedVisualReferenceStyle,
       locale: job.data.locale,
     })
 
