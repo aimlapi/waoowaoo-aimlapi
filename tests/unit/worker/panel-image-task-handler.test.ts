@@ -469,6 +469,115 @@ describe('worker panel-image-task-handler behavior', () => {
     expect(context.reference_and_continuity?.scene_continuity_state?.next_same_scene_panel?.panel_number).toBe(3)
   })
 
+  it('inherits adjacent same-scene screen position locks to prevent male/female side swaps', async () => {
+    prismaMock.projectPanel.findUnique.mockResolvedValueOnce({
+      id: 'panel-4',
+      storyboardId: 'storyboard-1',
+      panelIndex: 3,
+      panelNumber: 4,
+      shotType: 'medium',
+      cameraMove: 'static',
+      description: 'Lin and Zhou keep looking at the wall painting in the gallery',
+      imagePrompt: 'keep the same gallery staging',
+      videoPrompt: 'two people remain side by side facing the painting',
+      location: '美术馆展厅',
+      characters: JSON.stringify([
+        { name: '林晏', appearance: 'default' },
+        { name: '周岑', appearance: 'default' },
+      ]),
+      props: 'wall painting',
+      srtSegment: null,
+      photographyRules: null,
+      actingNotes: null,
+      sketchImageUrl: null,
+      imageUrl: null,
+    })
+    prismaMock.projectPanel.findMany.mockResolvedValueOnce([
+      {
+        id: 'panel-3',
+        panelIndex: 2,
+        panelNumber: 3,
+        shotType: 'medium',
+        cameraMove: 'static',
+        description: 'Lin stands screen-left of Zhou, both facing the painting',
+        imagePrompt: null,
+        videoPrompt: null,
+        location: '美术馆展厅',
+        characters: JSON.stringify([
+          { name: '林晏', appearance: 'default', slot: '美术馆展厅画作前画面左侧，面向画作站定' },
+          { name: '周岑', appearance: 'default', slot: '美术馆展厅画作前画面右侧，面向画作站定' },
+        ]),
+        props: 'wall painting',
+        srtSegment: null,
+        photographyRules: null,
+      },
+      {
+        id: 'panel-4',
+        panelIndex: 3,
+        panelNumber: 4,
+        shotType: 'medium',
+        cameraMove: 'static',
+        description: 'Lin and Zhou keep looking at the wall painting in the gallery',
+        imagePrompt: 'keep the same gallery staging',
+        videoPrompt: 'two people remain side by side facing the painting',
+        location: '美术馆展厅',
+        characters: JSON.stringify([
+          { name: '林晏', appearance: 'default' },
+          { name: '周岑', appearance: 'default' },
+        ]),
+        props: 'wall painting',
+        srtSegment: null,
+        photographyRules: null,
+      },
+    ])
+
+    await handlePanelImageTask(buildJob({ candidateCount: 1 }, 'panel-4'))
+
+    const promptCalls = promptMock.buildPrompt.mock.calls as unknown as Array<[{
+      variables?: {
+        visual_director_prompt?: string
+        compact_reference_context?: string
+      }
+    }]>
+    const promptVariables = promptCalls[0]?.[0].variables
+    const contextJson = promptVariables?.compact_reference_context || '{}'
+    const context = JSON.parse(contextJson) as {
+      reference_and_continuity?: {
+        scene_continuity_state?: {
+          screen_position_locks?: Array<{
+            name: string
+            position: 'left' | 'right' | 'center'
+            positionLabel: string
+            forbiddenPositionLabel: string | null
+            sourcePanelNumbers: number[]
+          }>
+        }
+      }
+    }
+
+    expect(context.reference_and_continuity?.scene_continuity_state?.screen_position_locks).toEqual([
+      expect.objectContaining({
+        name: '林晏',
+        position: 'left',
+        positionLabel: '画面左侧',
+        forbiddenPositionLabel: '画面右侧',
+        sourcePanelNumbers: [3],
+      }),
+      expect.objectContaining({
+        name: '周岑',
+        position: 'right',
+        positionLabel: '画面右侧',
+        forbiddenPositionLabel: '画面左侧',
+        sourcePanelNumbers: [3],
+      }),
+    ])
+    expect(promptVariables?.visual_director_prompt).toContain('跨镜头银幕位置锁定：')
+    expect(promptVariables?.visual_director_prompt).toContain('林晏：必须保持在画面左侧')
+    expect(promptVariables?.visual_director_prompt).toContain('禁止把 林晏 画到画面右侧')
+    expect(promptVariables?.visual_director_prompt).toContain('周岑：必须保持在画面右侧')
+    expect(promptVariables?.visual_director_prompt).toContain('不能导致人物 screen-left / screen-right 突然互换')
+  })
+
   it('includes selected previous panel images as generation references', async () => {
     const job = buildJob({
       candidateCount: 1,

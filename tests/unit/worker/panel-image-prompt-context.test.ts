@@ -59,6 +59,7 @@ function basePromptContext(overrides: Partial<PanelPromptContext['panel']>): Pan
           maintain_present_characters: true,
           allow_subject_focus_without_character_removal: true,
         },
+        screen_position_locks: [],
         scene_props: '',
         previous_same_scene_panel: {
           panel_number: 2,

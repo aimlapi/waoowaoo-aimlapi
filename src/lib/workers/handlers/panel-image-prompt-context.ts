@@ -10,6 +10,12 @@ import {
   resolveNovelData,
 } from './image-task-handler-shared'
 import { buildFinalFrameExecutionPrompt } from './panel-image-final-frame-execution'
+import {
+  oppositeScreenPositionLabel,
+  type ScreenPosition,
+  screenPositionFromText,
+  screenPositionLabel,
+} from './panel-screen-position'
 
 type ProjectData = Awaited<ReturnType<typeof resolveNovelData>>
 
@@ -44,6 +50,7 @@ export interface StoryboardContinuityPanel {
   characters: string | null
   props: string | null
   srtSegment: string | null
+  photographyRules?: string | null
 }
 
 interface CharacterContinuityEntry {
@@ -56,6 +63,18 @@ interface CharacterContinuityEntry {
   sourcePanelNumbers: number[]
 }
 
+interface CharacterScreenPositionLock {
+  name: string
+  characterId: string | null
+  appearanceId: string | null
+  appearance: string | null
+  position: ScreenPosition
+  positionLabel: string
+  forbiddenPositionLabel: string | null
+  slot: string | null
+  sourcePanelNumbers: number[]
+}
+
 function parseJsonUnknown(raw: string | null | undefined): unknown | null {
   if (!raw) return null
   try {
@@ -63,6 +82,12 @@ function parseJsonUnknown(raw: string | null | undefined): unknown | null {
   } catch {
     return null
   }
+}
+
+function toRecord(value: unknown): Record<string, unknown> | null {
+  return value && typeof value === 'object' && !Array.isArray(value)
+    ? value as Record<string, unknown>
+    : null
 }
 
 function parseDescriptionList(raw: string | null | undefined): string[] {
@@ -109,6 +134,30 @@ function characterKey(reference: PanelCharacterReference) {
 
 function sourcePanelNumber(panel: Pick<StoryboardContinuityPanel, 'panelNumber' | 'panelIndex'>) {
   return typeof panel.panelNumber === 'number' ? panel.panelNumber : panel.panelIndex + 1
+}
+
+function extractShotBlockingFromRules(raw: string | null | undefined): unknown | null {
+  const rules = toRecord(parseJsonUnknown(raw))
+  if (!rules) return null
+  const metadata = toRecord(rules.consistencyMetadata)
+  const cameraPlan = toRecord(rules.cameraPlan) ?? toRecord(metadata?.cameraPlan)
+  return cameraPlan?.shotBlocking ?? rules.shotBlocking ?? null
+}
+
+function collectShotBlockingCharacterPlacements(shotBlocking: unknown): Array<{
+  characterName: string
+  screenPosition: string
+}> {
+  const record = toRecord(shotBlocking)
+  const placements = record?.characterPlacements
+  if (!Array.isArray(placements)) return []
+  return placements.flatMap((placement) => {
+    const placementRecord = toRecord(placement)
+    const characterName = typeof placementRecord?.characterName === 'string' ? placementRecord.characterName.trim() : ''
+    const screenPosition = typeof placementRecord?.screenPosition === 'string' ? placementRecord.screenPosition.trim() : ''
+    if (!characterName || !screenPosition) return []
+    return [{ characterName, screenPosition }]
+  })
 }
 
 function previousAndNextSameLocationPanels(params: {
@@ -194,6 +243,76 @@ function buildCharacterContinuity(params: {
   }
 }
 
+function buildScreenPositionLocks(params: {
+  currentPanel: PanelPromptPanel
+  sameLocationPanels: StoryboardContinuityPanel[]
+}): CharacterScreenPositionLock[] {
+  const currentPanelNumber = params.currentPanel.panelNumber ?? params.currentPanel.panelIndex + 1
+  const currentCharacters = parsePanelCharacterReferences(params.currentPanel.characters)
+  const candidatePanels = [
+    {
+      panel: params.currentPanel,
+      panelNumber: currentPanelNumber,
+      distance: 0,
+      shotBlocking: extractShotBlockingFromRules(params.currentPanel.photographyRules),
+    },
+    ...params.sameLocationPanels
+      .filter((panel) => panel.id !== params.currentPanel.id)
+      .map((panel) => ({
+        panel,
+        panelNumber: sourcePanelNumber(panel),
+        distance: Math.abs(panel.panelIndex - params.currentPanel.panelIndex),
+        shotBlocking: extractShotBlockingFromRules(panel.photographyRules),
+      })),
+  ].sort((left, right) => left.distance - right.distance || left.panelNumber - right.panelNumber)
+
+  const locks = new Map<string, CharacterScreenPositionLock>()
+  const addLock = (reference: PanelCharacterReference, position: ScreenPosition, slot: string | null, panelNumber: number) => {
+    const key = characterKey(reference)
+    if (!normalizeName(reference.name) && !reference.characterId) return
+    const existing = locks.get(key)
+    if (existing) {
+      if (!existing.sourcePanelNumbers.includes(panelNumber)) {
+        existing.sourcePanelNumbers.push(panelNumber)
+        existing.sourcePanelNumbers.sort((left, right) => left - right)
+      }
+      return
+    }
+    locks.set(key, {
+      name: reference.name,
+      characterId: reference.characterId || null,
+      appearanceId: reference.appearanceId || null,
+      appearance: reference.appearance || null,
+      position,
+      positionLabel: screenPositionLabel(position),
+      forbiddenPositionLabel: oppositeScreenPositionLabel(position),
+      slot,
+      sourcePanelNumbers: [panelNumber],
+    })
+  }
+
+  for (const item of candidatePanels) {
+    const characters = parsePanelCharacterReferences(item.panel.characters)
+    for (const reference of characters) {
+      const position = screenPositionFromText(reference.slot)
+      if (position) addLock(reference, position, reference.slot || null, item.panelNumber)
+    }
+
+    for (const placement of collectShotBlockingCharacterPlacements(item.shotBlocking)) {
+      const reference = characters.find((character) => normalizeName(character.name) === normalizeName(placement.characterName))
+      if (!reference) continue
+      const position = screenPositionFromText(placement.screenPosition)
+      if (position) addLock(reference, position, placement.screenPosition, item.panelNumber)
+    }
+  }
+
+  return Array.from(locks.values())
+    .filter((lock) => currentCharacters.some((character) => {
+      if (lock.characterId && character.characterId === lock.characterId) return true
+      return normalizeName(lock.name) === normalizeName(character.name)
+    }))
+}
+
 function buildSceneContinuityState(params: {
   panel: PanelPromptPanel
   storyboardPanels: StoryboardContinuityPanel[]
@@ -213,6 +332,10 @@ function buildSceneContinuityState(params: {
   })
   const hasNonFeaturedPresentCharacters = nonFeaturedPresentCharacters.length > 0
   const hasNoFeaturedCharacters = featuredCharacters.length === 0
+  const screenPositionLocks = buildScreenPositionLocks({
+    currentPanel: params.panel,
+    sameLocationPanels,
+  })
 
   return {
     scene_anchor_name: params.panel.location || null,
@@ -225,6 +348,7 @@ function buildSceneContinuityState(params: {
       slot: item.slot || null,
     })),
     present_characters: presentCharacters,
+    screen_position_locks: screenPositionLocks,
     non_featured_presence_policy: {
       required: hasNonFeaturedPresentCharacters || (hasNoFeaturedCharacters && presentCharacters.length > 0),
       allowed_visibility: ['edge', 'partial_body', 'hands', 'shoulder', 'back', 'reflection', 'silhouette', 'distant_blur'],

@@ -204,6 +204,7 @@ export async function handlePanelImageTask(job: Job<TaskJobData>) {
       characters: true,
       props: true,
       srtSegment: true,
+      photographyRules: true,
     },
   })
   const promptContext = buildPanelPromptContext({

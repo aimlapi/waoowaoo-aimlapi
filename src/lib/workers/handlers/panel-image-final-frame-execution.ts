@@ -1,4 +1,20 @@
 import type { PanelCharacterReference } from './image-task-handler-shared'
+import {
+  oppositeScreenPositionLabel,
+  type ScreenPosition,
+  screenPositionFromText,
+  screenPositionLabel,
+} from './panel-screen-position'
+
+interface PanelExecutionScreenPositionLock {
+  name: string
+  characterId: string | null
+  appearanceId: string | null
+  appearance: string | null
+  position: ScreenPosition
+  slot: string | null
+  sourcePanelNumbers: number[]
+}
 
 interface PanelExecutionContinuity {
   previous_same_scene_panel: {
@@ -10,6 +26,7 @@ interface PanelExecutionContinuity {
   non_featured_presence_policy: {
     required: boolean
   }
+  screen_position_locks?: PanelExecutionScreenPositionLock[]
 }
 
 export interface PanelFinalFrameExecutionContext {
@@ -82,33 +99,13 @@ function isCharacterTarget(target: string | null, names: ReadonlyArray<string>):
   return names.some((name) => name.length > 0 && target.includes(name))
 }
 
-function screenPositionFromSlot(slot: string | null | undefined): 'left' | 'right' | 'center' | null {
-  if (!slot) return null
-  if (/画面左|屏幕左|银幕左|screen-left|左侧|偏左|左边/.test(slot)) return 'left'
-  if (/画面右|屏幕右|银幕右|screen-right|右侧|偏右|右边/.test(slot)) return 'right'
-  if (/画面中央|画面中间|屏幕中央|银幕中央|center|中央|中间/.test(slot)) return 'center'
-  return null
-}
-
-function screenPositionLabel(position: 'left' | 'right' | 'center'): string {
-  if (position === 'left') return '画面左侧'
-  if (position === 'right') return '画面右侧'
-  return '画面中央'
-}
-
-function oppositeScreenPositionLabel(position: 'left' | 'right' | 'center'): string | null {
-  if (position === 'left') return '画面右侧'
-  if (position === 'right') return '画面左侧'
-  return null
-}
-
 function buildCharacterScreenLines(characters: ReadonlyArray<PanelCharacterReference>): string[] {
   if (characters.length === 0) {
     return ['当前镜头没有主体角色时，优先表现环境、道具或视线目标；同场景人物如需保持连续性，只能以远景、边缘、虚化、背影、肩膀或倒影出现。']
   }
   const lines = characters.map((character) => {
     const slot = compactPromptText(character.slot, 120)
-    const screenPosition = screenPositionFromSlot(character.slot)
+    const screenPosition = screenPositionFromText(character.slot)
     if (slot && screenPosition) {
       const forbiddenPosition = oppositeScreenPositionLabel(screenPosition)
       return `${character.name}：必须画在${screenPositionLabel(screenPosition)}，按最终画面坐标执行 slot「${slot}」${forbiddenPosition ? `；禁止把 ${character.name} 画到${forbiddenPosition}` : ''}。`
@@ -119,6 +116,23 @@ function buildCharacterScreenLines(characters: ReadonlyArray<PanelCharacterRefer
   lines.push('slot 中的“左/右/中央/边缘”一律理解为观众最终看到的画面左侧/画面右侧/画面中央/画面边缘，不是角色自身左右，也不是行走方向。')
   if (characters.length >= 2) {
     lines.push('多人物镜头必须保持上述画面左右顺序和半步距离；不要把人物左右互换，不要把并排关系改成面对面对峙。')
+  }
+  return lines
+}
+
+function buildScreenPositionLockLines(locks: readonly PanelExecutionScreenPositionLock[] | undefined): string[] {
+  if (!locks || locks.length === 0) return []
+  const lines = ['跨镜头银幕位置锁定：']
+  for (const lock of locks) {
+    const forbiddenPosition = oppositeScreenPositionLabel(lock.position)
+    const sources = lock.sourcePanelNumbers.length > 0
+      ? `；依据同场景 panel ${lock.sourcePanelNumbers.join('、')}`
+      : ''
+    const slot = lock.slot ? `；位置文本「${compactPromptText(lock.slot, 120)}」` : ''
+    lines.push(`${lock.name}：必须保持在${screenPositionLabel(lock.position)}${slot}${sources}${forbiddenPosition ? `；禁止把 ${lock.name} 画到${forbiddenPosition}` : ''}。`)
+  }
+  if (locks.length >= 2) {
+    lines.push('这些锁定是当前镜头的硬约束；取景、推近、横移或近景裁切只能改变画面范围，不能导致人物 screen-left / screen-right 突然互换。')
   }
   return lines
 }
@@ -137,6 +151,7 @@ function buildContinuityExecutionLines(context: PanelFinalFrameExecutionContext)
   if (continuity.non_featured_presence_policy.required) {
     lines.push('同场景但非主体角色不得凭空消失；可以放在边缘、局部身体、肩膀、背影、倒影、剪影或远处虚化里。')
   }
+  lines.push(...buildScreenPositionLockLines(continuity.screen_position_locks))
   return lines
 }
 
@@ -186,7 +201,9 @@ function buildMustNotShowLines(input: {
     '禁止让动态动作词覆盖最终定格构图；走动、让开、推近、横移、环绕都只能转译为单帧姿态。',
     '禁止角色直视镜头，除非原文明确要求主观视角、采访、自拍或监控视角。',
   ]
-  if (input.panel.characters.length >= 2) {
+  const hasLockedPair = input.panel.characters.length >= 2
+    || (input.panel.characters.length > 0 && input.panel.characters.some((character) => screenPositionFromText(character.slot)))
+  if (hasLockedPair) {
     lines.push('禁止互换角色 screen-left / screen-right 关系，禁止把并排站位误画成面对面隔空对话。')
   }
   if (input.hasObjectTarget) {
