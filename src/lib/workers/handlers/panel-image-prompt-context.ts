@@ -9,6 +9,7 @@ import {
   type PanelCharacterReference,
   resolveNovelData,
 } from './image-task-handler-shared'
+import { buildFinalFrameExecutionPrompt } from './panel-image-final-frame-execution'
 
 type ProjectData = Awaited<ReturnType<typeof resolveNovelData>>
 
@@ -356,7 +357,8 @@ export function buildPanelVisualDirectorPrompt(params: {
 }): string {
   const panel = params.promptContext.panel
   const parts = [
-    `把这个镜头画成一张 ${params.aspectRatio} 单张电影分镜图。优先执行本段的导演摄影描述，再参考后续连续性信息。`,
+    `把这个镜头画成一张 ${params.aspectRatio} 单张电影分镜图。优先执行“当前镜头执行层”的最终单帧调度；导演描述、动作描述、参考与连续性信息都只能服务于这个最终画面。`,
+    buildFinalFrameExecutionPrompt(params.promptContext),
     panel.image_prompt ? `导演摄影指令：${panel.image_prompt}` : '',
     panel.description ? `镜头定格：${panel.description}` : '',
     panel.video_prompt ? `动态意图转为单帧定格：${panel.video_prompt}` : '',
