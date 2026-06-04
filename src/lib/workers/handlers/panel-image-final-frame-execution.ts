@@ -82,18 +82,43 @@ function isCharacterTarget(target: string | null, names: ReadonlyArray<string>):
   return names.some((name) => name.length > 0 && target.includes(name))
 }
 
+function screenPositionFromSlot(slot: string | null | undefined): 'left' | 'right' | 'center' | null {
+  if (!slot) return null
+  if (/画面左|屏幕左|银幕左|screen-left|左侧|偏左|左边/.test(slot)) return 'left'
+  if (/画面右|屏幕右|银幕右|screen-right|右侧|偏右|右边/.test(slot)) return 'right'
+  if (/画面中央|画面中间|屏幕中央|银幕中央|center|中央|中间/.test(slot)) return 'center'
+  return null
+}
+
+function screenPositionLabel(position: 'left' | 'right' | 'center'): string {
+  if (position === 'left') return '画面左侧'
+  if (position === 'right') return '画面右侧'
+  return '画面中央'
+}
+
+function oppositeScreenPositionLabel(position: 'left' | 'right' | 'center'): string | null {
+  if (position === 'left') return '画面右侧'
+  if (position === 'right') return '画面左侧'
+  return null
+}
+
 function buildCharacterScreenLines(characters: ReadonlyArray<PanelCharacterReference>): string[] {
   if (characters.length === 0) {
     return ['当前镜头没有主体角色时，优先表现环境、道具或视线目标；同场景人物如需保持连续性，只能以远景、边缘、虚化、背影、肩膀或倒影出现。']
   }
   const lines = characters.map((character) => {
     const slot = compactPromptText(character.slot, 120)
-    if (slot) return `${character.name}：按银幕坐标执行 slot「${slot}」。`
+    const screenPosition = screenPositionFromSlot(character.slot)
+    if (slot && screenPosition) {
+      const forbiddenPosition = oppositeScreenPositionLabel(screenPosition)
+      return `${character.name}：必须画在${screenPositionLabel(screenPosition)}，按最终画面坐标执行 slot「${slot}」${forbiddenPosition ? `；禁止把 ${character.name} 画到${forbiddenPosition}` : ''}。`
+    }
+    if (slot) return `${character.name}：按最终画面坐标执行 slot「${slot}」。`
     return `${character.name}：按当前镜头描述和同场景连续性确定位置，保持前后镜头的银幕左右关系。`
   })
-  lines.push('slot 中的“左/右/中央/边缘”一律理解为最终画面的 screen-left / screen-right / center / edge，不是角色自身左右。')
+  lines.push('slot 中的“左/右/中央/边缘”一律理解为观众最终看到的画面左侧/画面右侧/画面中央/画面边缘，不是角色自身左右，也不是行走方向。')
   if (characters.length >= 2) {
-    lines.push('多人物镜头必须保持角色相对银幕顺序和半步距离，不要把人物左右互换，不要把并排关系改成面对面对峙。')
+    lines.push('多人物镜头必须保持上述画面左右顺序和半步距离；不要把人物左右互换，不要把并排关系改成面对面对峙。')
   }
   return lines
 }

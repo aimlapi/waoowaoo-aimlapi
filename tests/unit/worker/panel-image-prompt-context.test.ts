@@ -89,9 +89,9 @@ describe('panel image prompt context final-frame execution layer', () => {
     const prompt = renderPrompt(basePromptContext({}))
 
     expect(prompt).toContain('【当前镜头执行层 - 最高优先级】')
-    expect(prompt).toContain('slot 中的“左/右/中央/边缘”一律理解为最终画面的 screen-left / screen-right / center / edge')
-    expect(prompt).toContain('林晏：按银幕坐标执行 slot「美术馆展厅画作前偏左位置，面向画作站定」')
-    expect(prompt).toContain('周岑：按银幕坐标执行 slot「美术馆展厅画作前偏右位置，面向画作站定」')
+    expect(prompt).toContain('slot 中的“左/右/中央/边缘”一律理解为观众最终看到的画面左侧/画面右侧/画面中央/画面边缘')
+    expect(prompt).toContain('林晏：必须画在画面左侧，按最终画面坐标执行 slot「美术馆展厅画作前偏左位置，面向画作站定」；禁止把 林晏 画到画面右侧')
+    expect(prompt).toContain('周岑：必须画在画面右侧，按最终画面坐标执行 slot「美术馆展厅画作前偏右位置，面向画作站定」；禁止把 周岑 画到画面左侧')
     expect(prompt).toContain('禁止互换角色 screen-left / screen-right 关系')
     expect(prompt).toContain('不要把人物左右互换，不要把并排关系改成面对面对峙')
     expect(prompt).not.toContain('禁止让人物正面肖像抢走画面中心')
