@@ -9,7 +9,10 @@ import {
   type PanelCharacterReference,
   resolveNovelData,
 } from './image-task-handler-shared'
-import { buildFinalFrameExecutionPrompt } from './panel-image-final-frame-execution'
+import {
+  buildFinalFrameExecutionPrompt,
+  buildFinalScreenPositionOverridePrompt,
+} from './panel-image-final-frame-execution'
 import {
   oppositeScreenPositionLabel,
   type ScreenPosition,
@@ -480,6 +483,7 @@ export function buildPanelVisualDirectorPrompt(params: {
   styleText: string
 }): string {
   const panel = params.promptContext.panel
+  const finalScreenPositionOverridePrompt = buildFinalScreenPositionOverridePrompt(params.promptContext)
   const parts = [
     `把这个镜头画成一张 ${params.aspectRatio} 单张电影分镜图。优先执行“当前镜头执行层”的最终单帧调度；导演描述、动作描述、参考与连续性信息都只能服务于这个最终画面。`,
     buildFinalFrameExecutionPrompt(params.promptContext),
@@ -493,6 +497,7 @@ export function buildPanelVisualDirectorPrompt(params: {
     hasPromptValue(panel.shot_blocking) ? `画面调度依据：${stringifyForPrompt(panel.shot_blocking)}` : '',
     hasPromptValue(panel.photography_rules) ? `摄影规则依据：${stringifyForPrompt(panel.photography_rules)}` : '',
     `画面风格：${params.styleText}`,
+    finalScreenPositionOverridePrompt,
   ].filter((part) => part.trim().length > 0)
 
   return parts.join('\n')

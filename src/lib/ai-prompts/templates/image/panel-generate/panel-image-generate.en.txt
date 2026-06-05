@@ -14,4 +14,4 @@ SECTION 3 - HARD BANS
 - The aspect ratio must be exactly {aspect_ratio}.
 - Character references only preserve identity and major appearance traits. Scene references only preserve layout and spatial anchors. The final look must follow the project visual style: {style}.
 - Unless the source explicitly asks for selfie, interview, surveillance view, direct POV, or a character staring at the viewer, characters must not look directly into camera. Prefer eyelines toward scene partners, props, offscreen targets, movement direction, or side/three-quarter profile.
-- If storyboard information conflicts with the source text, use the source for spatial relationship, character interaction, and action order; use the storyboard for shot scale, composition, and camera angle.
+- If the source text, action description, or references conflict with explicit screen-left / screen-right character position locks in SECTION 1, obey the SECTION 1 position locks. Direction words such as "to his left", "to her right", "move left", "move right", "step aside", or "step back" may only describe small body motion and must never change the final screen-side placement.

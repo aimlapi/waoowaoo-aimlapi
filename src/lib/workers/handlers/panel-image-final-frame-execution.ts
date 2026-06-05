@@ -137,6 +137,58 @@ function buildScreenPositionLockLines(locks: readonly PanelExecutionScreenPositi
   return lines
 }
 
+function screenPositionLocksFromCharacters(characters: ReadonlyArray<PanelCharacterReference>): PanelExecutionScreenPositionLock[] {
+  return characters.flatMap((character) => {
+    const position = screenPositionFromText(character.slot)
+    if (!position) return []
+    return [{
+      name: character.name,
+      characterId: character.characterId || null,
+      appearanceId: character.appearanceId || null,
+      appearance: character.appearance || null,
+      position,
+      slot: character.slot || null,
+      sourcePanelNumbers: [],
+    }]
+  })
+}
+
+function dedupeScreenPositionLocks(locks: readonly PanelExecutionScreenPositionLock[]): PanelExecutionScreenPositionLock[] {
+  const byKey = new Map<string, PanelExecutionScreenPositionLock>()
+  for (const lock of locks) {
+    const key = lock.characterId ? `id:${lock.characterId}` : `name:${lock.name.trim().toLowerCase()}`
+    if (!byKey.has(key)) {
+      byKey.set(key, lock)
+    }
+  }
+  return Array.from(byKey.values())
+}
+
+export function buildFinalScreenPositionOverridePrompt(context: PanelFinalFrameExecutionContext): string {
+  const continuityLocks = context.context.scene_continuity_state.screen_position_locks ?? []
+  const fallbackLocks = screenPositionLocksFromCharacters(context.panel.characters)
+  const locks = dedupeScreenPositionLocks([...continuityLocks, ...fallbackLocks])
+  if (locks.length === 0) return ''
+
+  const lines = [
+    '【最终站位覆盖 - 最高优先级，必须按观众看到的画面执行】',
+    '下面是最终交付图像的屏幕坐标，不是角色自身左右，也不是走位方向；任何“他左侧/她右侧/向左/向右/让开/收步”等动作词都只能表现为极小身体动作，绝不能改变最终站位。',
+    '如果原文、动作描述、actingNotes、参考图或连续性说明与下面的 screen-left / screen-right 锁位冲突，一律以下面锁位为准。',
+  ]
+
+  for (const lock of locks) {
+    const forbiddenPosition = oppositeScreenPositionLabel(lock.position)
+    const slot = lock.slot ? `；slot=${compactPromptText(lock.slot, 120)}` : ''
+    lines.push(`${lock.name} 最终必须位于${screenPositionLabel(lock.position)}${slot}${forbiddenPosition ? `；禁止出现在${forbiddenPosition}` : ''}。`)
+  }
+
+  if (locks.length >= 2) {
+    lines.push('最终图里不得把这些角色左右互换；若角色描述包含性别，也不得把女性/男性的位置互换。')
+  }
+
+  return lines.join('\n')
+}
+
 function buildContinuityExecutionLines(context: PanelFinalFrameExecutionContext): string[] {
   const continuity = context.context.scene_continuity_state
   const previous = continuity.previous_same_scene_panel

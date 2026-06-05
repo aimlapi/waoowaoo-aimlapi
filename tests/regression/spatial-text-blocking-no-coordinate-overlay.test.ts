@@ -56,6 +56,8 @@ describe('spatial text blocking regression', () => {
 
     expect(renderedPrompts[0]).toContain('FINAL VISUAL DIRECTION')
     expect(renderedPrompts[1]).toContain('最终画面指令')
+    expect(renderedPrompts[0]).toContain('obey the SECTION 1 position locks')
+    expect(renderedPrompts[1]).toContain('必须以【最终画面指令】的站位锁为准')
 
     for (const renderedPrompt of renderedPrompts) {
       expect(renderedPrompt).toContain('shot_blocking')

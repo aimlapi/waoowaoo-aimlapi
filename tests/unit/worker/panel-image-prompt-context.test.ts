@@ -59,7 +59,6 @@ function basePromptContext(overrides: Partial<PanelPromptContext['panel']>): Pan
           maintain_present_characters: true,
           allow_subject_focus_without_character_removal: true,
         },
-        screen_position_locks: [],
         scene_props: '',
         previous_same_scene_panel: {
           panel_number: 2,
@@ -68,6 +67,30 @@ function basePromptContext(overrides: Partial<PanelPromptContext['panel']>): Pan
           characters: ['周岑'],
           props: '',
         },
+        screen_position_locks: [
+          {
+            name: '林晏',
+            characterId: 'character-lin',
+            appearanceId: 'appearance-lin',
+            appearance: '选角定妆',
+            position: 'left',
+            positionLabel: '画面左侧',
+            forbiddenPositionLabel: '画面右侧',
+            slot: '美术馆展厅画作前偏左位置，面向画作站定',
+            sourcePanelNumbers: [3],
+          },
+          {
+            name: '周岑',
+            characterId: 'character-zhou',
+            appearanceId: 'appearance-zhou',
+            appearance: '选角定妆',
+            position: 'right',
+            positionLabel: '画面右侧',
+            forbiddenPositionLabel: '画面左侧',
+            slot: '美术馆展厅画作前偏右位置，面向画作站定',
+            sourcePanelNumbers: [3],
+          },
+        ],
         next_same_scene_panel: null,
       },
       reference_images: [],
@@ -95,6 +118,11 @@ describe('panel image prompt context final-frame execution layer', () => {
     expect(prompt).toContain('周岑：必须画在画面右侧，按最终画面坐标执行 slot「美术馆展厅画作前偏右位置，面向画作站定」；禁止把 周岑 画到画面左侧')
     expect(prompt).toContain('禁止互换角色 screen-left / screen-right 关系')
     expect(prompt).toContain('不要把人物左右互换，不要把并排关系改成面对面对峙')
+    expect(prompt).toContain('【最终站位覆盖 - 最高优先级，必须按观众看到的画面执行】')
+    expect(prompt).toContain('林晏 最终必须位于画面左侧')
+    expect(prompt).toContain('周岑 最终必须位于画面右侧')
+    expect(prompt).toContain('不得把女性/男性的位置互换')
+    expect(prompt.lastIndexOf('【最终站位覆盖')).toBeGreaterThan(prompt.lastIndexOf('动态意图转为单帧定格'))
     expect(prompt).not.toContain('禁止让人物正面肖像抢走画面中心')
   })
 
