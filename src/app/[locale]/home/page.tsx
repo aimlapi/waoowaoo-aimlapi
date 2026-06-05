@@ -428,23 +428,32 @@ export default function HomePage() {
                 </button>
               )}
               secondaryActions={(
-                <button
-                  onClick={() => setAiWriteOpen(true)}
-                  disabled={createLoading}
-                  className="glass-btn-base flex h-10 flex-shrink-0 items-center gap-1.5 border border-[var(--glass-stroke-strong)] px-3 text-sm transition-all hover:border-[var(--glass-tone-info-fg)]/40"
-                >
-                  <AppIcon name="sparkles" className="w-4 h-4 text-[#7c3aed]" />
-                  <span
-                    className="font-medium"
-                    style={{
-                      background: 'linear-gradient(135deg, #3b82f6, #7c3aed)',
-                      WebkitBackgroundClip: 'text',
-                      WebkitTextFillColor: 'transparent',
-                    }}
+                <>
+                  <button
+                    onClick={() => setAiWriteOpen(true)}
+                    disabled={createLoading}
+                    className="glass-btn-base flex h-10 flex-shrink-0 items-center gap-1.5 border border-[var(--glass-stroke-strong)] px-3 text-sm transition-all hover:border-[var(--glass-tone-info-fg)]/40"
                   >
-                    {t('aiWrite.trigger')}
-                  </span>
-                </button>
+                    <AppIcon name="sparkles" className="w-4 h-4 text-[#7c3aed]" />
+                    <span
+                      className="font-medium"
+                      style={{
+                        background: 'linear-gradient(135deg, #3b82f6, #7c3aed)',
+                        WebkitBackgroundClip: 'text',
+                        WebkitTextFillColor: 'transparent',
+                      }}
+                    >
+                      {t('aiWrite.trigger')}
+                    </span>
+                  </button>
+                  <Link
+                    href={{ pathname: '/dev-ab-test' }}
+                    className="glass-btn-base flex h-10 flex-shrink-0 items-center gap-1.5 border border-[var(--glass-stroke-strong)] px-3 text-sm font-medium transition-all hover:border-[var(--glass-tone-info-fg)]/40"
+                  >
+                    <AppIcon name="clapperboard" className="w-4 h-4 text-[var(--glass-tone-info-fg)]" />
+                    {t('storyboardSchemeTest')}
+                  </Link>
+                </>
               )}
               footer={createError ? (
                 <p className="rounded-xl border border-red-500/20 bg-red-500/10 px-4 py-3 text-sm text-red-600">

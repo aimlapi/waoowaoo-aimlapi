@@ -4,6 +4,7 @@
   "inputPlaceholder": "Enter your story idea, novel excerpt, or script outline...",
   "defaultProjectName": "New Project {timestamp}",
   "startCreation": "Start Creating",
+  "storyboardSchemeTest": "Storyboard Scheme Test",
   "recentProjects": "Recent Projects",
   "viewAll": "View All Projects",
   "noProjects": "No projects yet. Start your first creation from above!",

@@ -24,6 +24,7 @@ import {
   type DevAbCastingEvaluationResult,
 } from '@/lib/dev-ab-test/casting-evaluation'
 import { CastingEvaluationPanel, VariantInput, VariantResult } from './components'
+import { StoryboardProjectBatchTest } from './storyboard-batch-components'
 
 export default function DevAbTestPage() {
   const t = useTranslations('workspaceDetail.devAbTest')
@@ -245,6 +246,8 @@ export default function DevAbTestPage() {
             {evaluating ? t('judging') : t('runJudge')}
           </button>
         </header>
+
+        <StoryboardProjectBatchTest />
 
         <section className="grid gap-6 lg:grid-cols-[380px_minmax(0,1fr)]">
           <aside className="flex flex-col gap-4 rounded-lg border border-[var(--glass-stroke-base)] bg-[var(--glass-bg-surface)] p-4">
