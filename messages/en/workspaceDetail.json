@@ -73,7 +73,7 @@
     "subtitle": "Test multiple generation strategies in one place: batch-create three storyboard projects above, and keep the casting look-test A/B comparison below.",
     "storyboardBatch": {
       "title": "Three-scheme storyboard project batch",
-      "subtitle": "Create three new projects at once, each using a different panel strategy: baseline text, screen-side lock, and top-down A/B/C blocking for direct position-continuity comparison.",
+      "subtitle": "Create three new projects at once: a global continuity prompt, a storyboard shot-card board layout, and a first-panel image-reference chain for direct position-continuity comparison.",
       "run": "Generate Three Test Projects",
       "submitting": "Submitting...",
       "storyLabel": "Test story",
@@ -81,7 +81,7 @@
       "panelCount": "Panels per project",
       "ratio": "Aspect ratio",
       "style": "Visual style",
-      "defaultStory": "Interior room with a table, sofa, and door. Female character A stands on screen-left, male character B stands on screen-right, and character C enters from the door. The sequence must keep female left and male right, never cross the axis, never mirror, and never suddenly swap positions.",
+      "defaultStory": "Small apartment dining room. Door at the back-right side of the room, dining table in the center, sofa on the left wall, window on the back-left wall. Female character A wears a blue sweater and stands on the left side of the table. Male character B wears a dark jacket and stands on the right side of the table. Male character C wears a gray coat and enters through the back-right door. The sequence must keep A on screen-left and B on screen-right, never cross the axis, never mirror, and never suddenly swap positions.",
       "defaultProjectPrefix": "Storyboard position test",
       "needInput": "Enter a test story and project name prefix.",
       "failed": "Failed to generate the three storyboard test projects",

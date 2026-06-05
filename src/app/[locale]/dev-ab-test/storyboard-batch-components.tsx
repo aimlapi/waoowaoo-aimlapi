@@ -88,6 +88,11 @@ function parseBatchProjects(value: unknown): StoryboardBatchProject[] {
   return value.projects.map(parseBatchProject).filter((item): item is StoryboardBatchProject => item !== null)
 }
 
+function parseBatchTasks(value: unknown): StoryboardBatchTaskRef[] {
+  if (!isRecord(value) || !Array.isArray(value.tasks)) return []
+  return value.tasks.map(parseBatchTask).filter((item): item is StoryboardBatchTaskRef => item !== null)
+}
+
 function batchProjectTaskCounts(
   project: StoryboardBatchProject,
   taskDetails: Record<string, DevAbTaskDetail>
@@ -123,6 +128,7 @@ export function StoryboardProjectBatchTest() {
   const [error, setError] = useState<string | null>(null)
   const [projects, setProjects] = useState<StoryboardBatchProject[]>([])
   const [taskDetails, setTaskDetails] = useState<Record<string, DevAbTaskDetail>>({})
+  const [continuationStatus, setContinuationStatus] = useState<Record<string, 'submitting' | 'done'>>({})
 
   const allTasks = useMemo(() => projects.flatMap((project) => project.tasks), [projects])
   const allTerminal = projects.length > 0 && projects.every((project) => projectIsTerminal(project, taskDetails))
@@ -136,6 +142,7 @@ export function StoryboardProjectBatchTest() {
     setError(null)
     setProjects([])
     setTaskDetails({})
+    setContinuationStatus({})
     try {
       const response = await apiFetch('/api/dev-ab-test/storyboard-projects', {
         method: 'POST',
@@ -193,6 +200,59 @@ export function StoryboardProjectBatchTest() {
       if (timer !== null) window.clearTimeout(timer)
     }
   }, [allTasks, allTerminal])
+
+  useEffect(() => {
+    const project = projects.find((item) => item.schemeId === 'first-panel-img2img')
+    if (!project || continuationStatus[project.projectId]) return
+    const anchorTask = project.tasks.find((task) => task.panelNumber === 1)
+    if (!anchorTask) return
+    const anchorDetail = taskDetails[anchorTask.taskId]
+    const anchorImageUrl = anchorDetail?.result?.imageUrl
+    if (anchorDetail?.status !== 'completed' || !anchorImageUrl) return
+
+    let canceled = false
+    setContinuationStatus((current) => ({ ...current, [project.projectId]: 'submitting' }))
+    const submitRemainingPanels = async () => {
+      try {
+        const response = await apiFetch('/api/dev-ab-test/storyboard-projects/continue-reference', {
+          method: 'POST',
+          headers: { 'content-type': 'application/json' },
+          body: JSON.stringify({
+            projectId: project.projectId,
+            storyboardId: project.storyboardId,
+            anchorPanelId: anchorTask.panelId,
+            meta: { locale },
+          }),
+        })
+        if (!response.ok) throw new Error(await readApiErrorMessage(response, t('failed')))
+        const nextTasks = parseBatchTasks(await response.json())
+        if (canceled) return
+        setProjects((current) => current.map((item) => {
+          if (item.projectId !== project.projectId) return item
+          const existingTaskIds = new Set(item.tasks.map((task) => task.taskId))
+          const mergedTasks = [
+            ...item.tasks,
+            ...nextTasks.filter((task) => !existingTaskIds.has(task.taskId)),
+          ].sort((left, right) => left.panelNumber - right.panelNumber)
+          return { ...item, tasks: mergedTasks }
+        }))
+        setContinuationStatus((current) => ({ ...current, [project.projectId]: 'done' }))
+      } catch (caught) {
+        if (canceled) return
+        setContinuationStatus((current) => {
+          const next = { ...current }
+          delete next[project.projectId]
+          return next
+        })
+        setError(caught instanceof Error ? caught.message : t('failed'))
+      }
+    }
+
+    void submitRemainingPanels()
+    return () => {
+      canceled = true
+    }
+  }, [continuationStatus, locale, projects, t, taskDetails])
 
   return (
     <section className="flex flex-col gap-4 rounded-lg border border-[var(--glass-stroke-base)] bg-[var(--glass-bg-surface)] p-4">

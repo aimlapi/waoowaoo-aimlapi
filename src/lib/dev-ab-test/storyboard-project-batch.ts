@@ -1,12 +1,7 @@
 import { Prisma } from '@prisma/client'
 import type { ProjectPanel } from '@prisma/client'
 import { prisma } from '@/lib/prisma'
-import { TASK_TYPE } from '@/lib/task/types'
-import { submitTask } from '@/lib/task/submitter'
-import { buildDefaultTaskBillingInfo } from '@/lib/billing'
-import { withTaskUiPayload } from '@/lib/task/ui-payload'
 import {
-  buildImageBillingPayload,
   getProjectModelConfig,
   resolveProjectModelCapabilityGenerationOptions,
 } from '@/lib/config-service'
@@ -25,6 +20,7 @@ import {
   type StoryboardBatchSchemeId,
 } from './storyboard-batch-prompts'
 import { rollbackStoryboardBatchProject, rollbackStoryboardBatchProjects, toError } from './storyboard-batch-rollback'
+import { submitStoryboardPanelTask } from './storyboard-batch-submit'
 import type { Locale } from '@/i18n/routing'
 
 export interface CreateStoryboardBatchInput {
@@ -220,8 +216,8 @@ async function createStoryboardProject(input: CreateStoryboardBatchInput & {
           videoPrompt: prompt,
           photographyRules: JSON.stringify({
             schemeId: input.scheme.id,
-            spatialBlocking: input.scheme.id === 'top-down-abc' ? buildTopDownBlock(seed) : null,
-            screenLock: input.scheme.id !== 'baseline' ? buildScreenLockBlock(seed) : null,
+            spatialBlocking: input.scheme.id === 'first-panel-img2img' ? buildTopDownBlock(seed) : null,
+            screenLock: buildScreenLockBlock(seed),
           }),
         },
       })
@@ -246,47 +242,23 @@ async function createStoryboardProject(input: CreateStoryboardBatchInput & {
     invalidOverrideMessage: 'Invalid artStyle in storyboard batch payload',
   })
 
+  const initialPanels = input.scheme.id === 'first-panel-img2img' ? panels.slice(0, 1) : panels
   const tasks: StoryboardBatchTaskRef[] = []
-  for (const panel of panels) {
-    const payload = {
-      panelId: panel.id,
-      candidateCount: 1,
-      count: 1,
-      referenceMode: 'storyboard',
-      meta: { locale: input.locale },
-      imageModel: projectModelConfig.storyboardModel,
-      ...(Object.keys(capabilityOptions).length > 0 ? { generationOptions: capabilityOptions } : {}),
-    }
-    const billingPayload = await buildImageBillingPayload({
-      projectId: project.id,
-      userId: input.userId,
-      imageModel: projectModelConfig.storyboardModel,
-      basePayload: payload,
-    })
-    const task = await submitTask({
+  for (const panel of initialPanels) {
+    const task = await submitStoryboardPanelTask({
       userId: input.userId,
       locale: input.locale,
-      requestId: input.requestId ?? null,
+      requestId: input.requestId,
       projectId: project.id,
       episodeId: episode.id,
-      type: TASK_TYPE.IMAGE_PANEL,
-      targetType: 'ProjectPanel',
-      targetId: panel.id,
-      payload: withTaskUiPayload(billingPayload, { intent: 'generate', hasOutputAtStart: false }),
-      dedupeKey: `dev_storyboard_batch:${input.scheme.id}:${panel.id}:1:${styleSignature}`,
-      billingInfo: buildDefaultTaskBillingInfo(TASK_TYPE.IMAGE_PANEL, billingPayload),
-      operationId: 'dev_storyboard_batch',
-      operationSource: 'dev-ab-test',
-      operationConfirmed: true,
-      operationRequestId: input.requestId ?? null,
+      panel,
+      schemeId: input.scheme.id,
+      projectModelConfig,
+      capabilityOptions,
+      styleSignature,
     })
     submittedTaskIds.push(task.taskId)
-    tasks.push({
-      panelNumber: panel.panelNumber ?? panel.panelIndex + 1,
-      panelId: panel.id,
-      taskId: task.taskId,
-      status: task.status,
-    })
+    tasks.push(task)
   }
 
   return {
@@ -324,7 +296,7 @@ export async function createStoryboardBatchProjects(input: CreateStoryboardBatch
 
   const projects: StoryboardBatchProjectResult[] = []
   try {
-    for (const id of ['baseline', 'screen-lock', 'top-down-abc'] as const) {
+    for (const id of ['global-continuity-prompt', 'shot-card-board', 'first-panel-img2img'] as const) {
       projects.push(await createStoryboardProject({
         ...input,
         storyText,
