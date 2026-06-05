@@ -138,99 +138,163 @@ function buildCharacterCandidateMetadata(input: {
   }
 }
 
-function characterDescriptions(locale: Locale) {
-  if (locale === 'en') {
-    return [
-      {
-        name: 'Lin Qing',
-        introduction: '35-year-old single woman who has just lost her job and returns to her hometown.',
-        descriptions: [
-          'Lin Qing, female, 35, recently unemployed, restrained and tired, plain dark coat, muted sweater, old suitcase, realistic casting contact sheet candidate.',
-          'Lin Qing, female, 35, thinner and more fragile option, slightly messy hair, gray T-shirt and dark trousers, visible fatigue, realistic casting contact sheet candidate.',
-          'Lin Qing, female, 35, more composed option, short dark coat, simple backpack, guarded expression, realistic casting contact sheet candidate.',
-        ],
-        role: 'protagonist' as const,
-        scoreBase: 92,
-      },
-      {
-        name: 'Mother',
-        introduction: 'The protagonist’s mother, practical and emotionally reserved.',
-        descriptions: [
-          'Mother, female, early 60s, hometown apartment clothes, apron or cardigan, quiet practical gaze, realistic casting contact sheet candidate.',
-          'Mother, female, early 60s, rural-town everyday outfit, soft but guarded expression, realistic casting contact sheet candidate.',
-          'Mother, female, early 60s, winter house jacket, slightly stooped posture, realistic casting contact sheet candidate.',
-        ],
-        role: 'mother' as const,
-        scoreBase: 88,
-      },
-      {
-        name: 'Old Classmate',
-        introduction: 'A hometown acquaintance who reflects the protagonist’s changed relationship with the environment.',
-        descriptions: [
-          'Old classmate, male, late 30s, county-town worker jacket, kind but awkward presence, realistic casting contact sheet candidate.',
-          'Old classmate, male, late 30s, practical dark coat, slightly weathered face, realistic casting contact sheet candidate.',
-          'Old classmate, male, late 30s, casual sweater under work jacket, restrained smile, realistic casting contact sheet candidate.',
-        ],
-        role: 'old-classmate' as const,
-        scoreBase: 84,
-      },
-    ]
-  }
-  return [
-    {
-      name: '林青',
-      introduction: '35 岁，刚失业的单身女性，带着行李回老家。',
-      descriptions: [
-        '林青，女性，35 岁，刚失业，疲惫克制，素色深外套、暗色毛衣、旧行李箱，写实选角定妆 contact sheet 候选。',
-        '林青，女性，35 岁，更脆弱清瘦的方案，头发略乱，灰 T 恤和深色长裤，疲惫明显，写实选角定妆 contact sheet 候选。',
-        '林青，女性，35 岁，更收拢自持的方案，短款深色外套、简单双肩包，表情防备，写实选角定妆 contact sheet 候选。',
-      ],
-      role: 'protagonist' as const,
-      scoreBase: 92,
-    },
-    {
-      name: '母亲',
-      introduction: '主角的母亲，务实、节制，不善表达。',
-      descriptions: [
-        '母亲，女性，60 岁出头，老家居家服、围裙或针织开衫，眼神务实安静，写实选角定妆 contact sheet 候选。',
-        '母亲，女性，60 岁出头，县城日常穿着，柔和但有防备的表情，写实选角定妆 contact sheet 候选。',
-        '母亲，女性，60 岁出头，冬季居家棉服，身体微微佝偻，写实选角定妆 contact sheet 候选。',
-      ],
-      role: 'mother' as const,
-      scoreBase: 88,
-    },
-    {
-      name: '老同学',
-      introduction: '老家的旧识，映照主角与环境关系的变化。',
-      descriptions: [
-        '老同学，男性，30 岁后半，县城工装夹克，善意但笨拙的存在感，写实选角定妆 contact sheet 候选。',
-        '老同学，男性，30 岁后半，实用深色外套，脸有一点风霜感，写实选角定妆 contact sheet 候选。',
-        '老同学，男性，30 岁后半，毛衣外搭工作夹克，克制微笑，写实选角定妆 contact sheet 候选。',
-      ],
-      role: 'old-classmate' as const,
-      scoreBase: 84,
-    },
-  ]
+type CharacterAssetProfile = {
+  readonly name: string
+  readonly introduction: string
+  readonly descriptions: readonly string[]
+  readonly role: 'protagonist' | 'mother' | 'old-classmate'
+  readonly scoreBase: number
 }
 
-function locationAngleDescriptions(locale: Locale): readonly string[] {
-  if (locale === 'en') {
+type LocationAssetProfile = {
+  readonly name: string
+  readonly summary: string
+  readonly landmarks: readonly string[]
+}
+
+function compactForAssetPrompt(value: string, limit = 260): string {
+  const normalized = value.replace(/\s+/g, ' ').trim()
+  if (normalized.length <= limit) return normalized
+  return `${normalized.slice(0, limit).trim()}...`
+}
+
+function parseCharacterTable(screenplayText: string): Array<{ readonly name: string; readonly description: string }> {
+  const lines = screenplayText.split(/\r?\n/).map((line) => line.trim()).filter(Boolean)
+  const rows: Array<{ readonly name: string; readonly description: string }> = []
+  let insideCharacterTable = false
+  for (const line of lines) {
+    if (/^(角色表|Characters)\s*[:：]?/i.test(line)) {
+      insideCharacterTable = true
+      continue
+    }
+    if (insideCharacterTable && /^(场景|Scene)\s*\d+/i.test(line)) break
+    if (!insideCharacterTable) continue
+    const match = line.match(/^([^:：]{1,40})[:：](.+)$/)
+    if (!match) continue
+    const name = match[1]?.trim() ?? ''
+    const description = match[2]?.trim() ?? ''
+    if (!name || !description) continue
+    if (/仅声音|O\.S\.|voice only/i.test(name) || /仅声音|O\.S\.|voice only/i.test(description)) continue
+    rows.push({ name, description })
+  }
+  return rows
+}
+
+function fallbackCharacterRows(locale: Locale): Array<{ readonly name: string; readonly description: string }> {
+  return locale === 'en'
+    ? [
+        { name: 'Protagonist', description: '35-year-old single woman who has just lost her job and returns to her hometown.' },
+        { name: 'Mother', description: 'The protagonist’s mother, practical and emotionally reserved.' },
+        { name: 'Hometown passerby', description: 'A grounded local person from the protagonist’s hometown environment.' },
+      ]
+    : [
+        { name: '主角', description: '35 岁，刚失业的单身女性，带着行李回老家。' },
+        { name: '母亲', description: '主角的母亲，务实、节制，不善表达。' },
+        { name: '老家路人', description: '老家环境中的真实本地人，作为环境关系的补充角色。' },
+      ]
+}
+
+function ensureThreeCharacterRows(
+  rows: readonly { readonly name: string; readonly description: string }[],
+  locale: Locale,
+): Array<{ readonly name: string; readonly description: string }> {
+  const next = [...rows]
+  const fallback = fallbackCharacterRows(locale)
+  for (const item of fallback) {
+    if (next.length >= 3) break
+    if (next.some((existing) => existing.name === item.name)) continue
+    next.push(item)
+  }
+  return next.slice(0, 3)
+}
+
+function characterDescriptions(input: {
+  readonly locale: Locale
+  readonly screenplayText: string
+}): CharacterAssetProfile[] {
+  const rows = ensureThreeCharacterRows(parseCharacterTable(input.screenplayText), input.locale)
+  return rows.map((row, index) => {
+    const base = compactForAssetPrompt(`${row.name}：${row.description}`)
+    const zh = input.locale !== 'en'
+    const descriptions = zh
+      ? [
+          `${base}。写实选角定妆 contact sheet 候选，保持与剧本角色表一致。`,
+          `${base}。更脆弱疲惫的表演方案，生活化服装和自然状态，写实选角定妆 contact sheet 候选。`,
+          `${base}。更收拢自持的表演方案，动作克制，写实选角定妆 contact sheet 候选。`,
+        ]
+      : [
+          `${base}. Realistic casting contact sheet candidate, consistent with the screenplay character table.`,
+          `${base}. More fragile and tired performance option, lived-in clothing and natural state, realistic casting contact sheet candidate.`,
+          `${base}. More composed and guarded performance option, restrained body language, realistic casting contact sheet candidate.`,
+        ]
+    const role = index === 0 ? 'protagonist' : index === 1 ? 'mother' : 'old-classmate'
+    return {
+      name: row.name,
+      introduction: row.description,
+      descriptions,
+      role,
+      scoreBase: 92 - index * 4,
+    }
+  })
+}
+
+function parsePrimaryLocationProfile(screenplayText: string, locale: Locale): LocationAssetProfile {
+  const sceneMatches = Array.from(screenplayText.matchAll(/场景\s*\d+\s*[｜|]\s*([^\n]+)/g))
+  const finalScene = sceneMatches.at(-1)?.[1]?.trim()
+  if (finalScene) {
+    const name = finalScene.replace(/^(内景|外景|外景\/内景|INT\.|EXT\.)[.\s]*/i, '').trim()
+    const lower = screenplayText
+    const landmarks = [
+      lower.includes('窗台') ? (locale === 'en' ? 'windowsill' : '窗台') : '',
+      lower.includes('小凳') ? (locale === 'en' ? 'small stool' : '小凳') : '',
+      lower.includes('菜') ? (locale === 'en' ? 'vegetable basin' : '菜盆') : '',
+      lower.includes('行李箱') ? (locale === 'en' ? 'suitcase' : '行李箱') : '',
+      lower.includes('拖鞋') ? (locale === 'en' ? 'old slippers' : '旧拖鞋') : '',
+      lower.includes('小绿植') ? (locale === 'en' ? 'small green plant' : '小绿植') : '',
+    ].filter(Boolean)
+    return {
+      name,
+      summary: locale === 'en'
+        ? `Primary story location extracted from the screenplay: ${name}.`
+        : `从剧本中提取的主场景：${name}。`,
+      landmarks: landmarks.length > 0 ? landmarks : [locale === 'en' ? 'fixed lived-in objects from the screenplay' : '剧本中的固定生活物件'],
+    }
+  }
+  return locale === 'en'
+    ? {
+        name: 'Primary hometown location',
+        summary: 'Primary story location extracted from the screenplay.',
+        landmarks: ['fixed lived-in objects from the screenplay'],
+      }
+    : {
+        name: '老家主场景',
+        summary: '从剧本中提取的主场景。',
+        landmarks: ['剧本中的固定生活物件'],
+      }
+}
+
+function locationAngleDescriptions(input: {
+  readonly locale: Locale
+  readonly profile: LocationAssetProfile
+}): readonly string[] {
+  const landmarks = input.profile.landmarks.join(input.locale === 'en' ? ', ' : '、')
+  if (input.locale === 'en') {
     return [
-      '360 environment reference sheet angle FRONT: old county-town family apartment living-dining room, dining table center, sofa left wall, door back-right, window back-left, muted winter daylight, realistic location asset reference.',
-      '360 environment reference sheet angle FRONT-LEFT: same room, show left wall sofa, window, table relation, unchanged door position, realistic location asset reference.',
-      '360 environment reference sheet angle LEFT: same room, table and sofa alignment, visible window wall and lived-in objects, realistic location asset reference.',
-      '360 environment reference sheet angle BACK: same room from back side, door remains back-right in world layout, table center, sofa left wall, no mirrored layout, realistic location asset reference.',
-      '360 environment reference sheet angle RIGHT: same room, door side and table relation, window remains back-left in world layout, realistic location asset reference.',
-      '360 environment reference sheet detail board: door, window, table, sofa, ceiling light, floor texture, old apartment materials, consistent with the same room.',
+      `360 environment reference sheet angle FRONT: ${input.profile.name}. Fixed landmarks: ${landmarks}. Realistic location asset reference based only on the screenplay.`,
+      `360 environment reference sheet angle FRONT-LEFT: same ${input.profile.name}, preserve all fixed landmarks and world layout, no mirrored layout.`,
+      `360 environment reference sheet angle LEFT: same ${input.profile.name}, show spatial relation between landmarks, lived-in hometown texture.`,
+      `360 environment reference sheet angle BACK: same ${input.profile.name} from the reverse side, unchanged landmark positions, no new room.`,
+      `360 environment reference sheet angle RIGHT: same ${input.profile.name}, consistent light direction, materials, entrances, windows, and ground texture.`,
+      `360 environment reference sheet detail board: close details of ${landmarks}, ceiling or sky edge, floor or ground texture, all belonging to the same location.`,
     ]
   }
   return [
-    '360 场景参考板 FRONT 角度：老家县城小公寓客餐厅，餐桌在中心，沙发在左墙，门在后右，窗在后左，冬天自然光，写实场景资产参考。',
-    '360 场景参考板 FRONT-LEFT 角度：同一房间，清楚展示左墙沙发、窗、餐桌关系，门的位置不变，写实场景资产参考。',
-    '360 场景参考板 LEFT 角度：同一房间，餐桌与沙发的轴线关系明确，窗墙和生活杂物可见，写实场景资产参考。',
-    '360 场景参考板 BACK 角度：同一房间从背面看，世界坐标中门仍在后右，餐桌居中，沙发在左墙，不镜像，写实场景资产参考。',
-    '360 场景参考板 RIGHT 角度：同一房间，门侧和餐桌关系明确，窗仍属于世界坐标后左，写实场景资产参考。',
-    '360 场景细节板：门、窗、餐桌、沙发、顶灯、地面材质、老公寓生活痕迹，必须属于同一个房间。',
+    `360 场景参考板 FRONT 角度：${input.profile.name}。固定物件/地标：${landmarks}。只基于剧本生成的写实场景资产参考。`,
+    `360 场景参考板 FRONT-LEFT 角度：同一个${input.profile.name}，保留所有固定物件和世界布局，不镜像。`,
+    `360 场景参考板 LEFT 角度：同一个${input.profile.name}，展示固定物件之间的空间关系和老家生活质地。`,
+    `360 场景参考板 BACK 角度：从反方向看同一个${input.profile.name}，固定物件位置不变，不生成新房间。`,
+    `360 场景参考板 RIGHT 角度：同一个${input.profile.name}，光线方向、材质、门窗或地面质感保持一致。`,
+    `360 场景细节板：${landmarks}、顶面或天空边缘、地面材质等细节，必须属于同一个场景。`,
   ]
 }
 
@@ -241,6 +305,7 @@ async function createCharacterAssets(input: {
   readonly projectId: string
   readonly episodeId: string
   readonly artStyle: string
+  readonly screenplayText: string
 }): Promise<{
   readonly characterIds: readonly string[]
   readonly appearanceIds: readonly string[]
@@ -252,7 +317,10 @@ async function createCharacterAssets(input: {
   const characterNames: string[] = []
   const tasks: StoryboardMethodTestTaskRef[] = []
 
-  for (const characterInput of characterDescriptions(input.locale)) {
+  for (const characterInput of characterDescriptions({
+    locale: input.locale,
+    screenplayText: input.screenplayText,
+  })) {
     const metadata = characterInput.descriptions.map((description, index) => buildCharacterCandidateMetadata({
       role: characterInput.role,
       description,
@@ -318,19 +386,23 @@ async function createSceneAsset(input: {
   readonly projectId: string
   readonly episodeId: string
   readonly artStyle: string
+  readonly screenplayText: string
 }): Promise<{
   readonly locationId: string
   readonly tasks: readonly StoryboardMethodTestTaskRef[]
 }> {
-  const locationName = input.locale === 'en' ? 'Hometown apartment dining room 360 reference' : '老家小公寓客餐厅 360 参考'
-  const descriptions = locationAngleDescriptions(input.locale)
+  const locationProfile = parsePrimaryLocationProfile(input.screenplayText, input.locale)
+  const descriptions = locationAngleDescriptions({
+    locale: input.locale,
+    profile: locationProfile,
+  })
   const location = await prisma.projectLocation.create({
     data: {
       projectId: input.projectId,
-      name: locationName,
-      summary: input.locale === 'en'
-        ? 'A single 360-degree scene reference asset with fixed table, sofa, door, and window positions for storyboard continuity testing.'
-        : '用于分镜连续性测试的单一 360 度场景参考资产：餐桌、沙发、门、窗位置固定。',
+      name: input.locale === 'en'
+        ? `${locationProfile.name} 360 reference`
+        : `${locationProfile.name} 360 参考`,
+      summary: locationProfile.summary,
       assetKind: 'location',
       images: {
         create: descriptions.map((description, index) => ({
@@ -431,6 +503,7 @@ export async function createStoryboardMethodTestSession(
       projectId: project.id,
       episodeId: episode.id,
       artStyle: input.artStyle,
+      screenplayText: screenplay.screenplayText,
     })
     upstreamTasks.push(...characterAssets.tasks)
 
@@ -441,6 +514,7 @@ export async function createStoryboardMethodTestSession(
       projectId: project.id,
       episodeId: episode.id,
       artStyle: input.artStyle,
+      screenplayText: screenplay.screenplayText,
     })
     upstreamTasks.push(...sceneAsset.tasks)
 
