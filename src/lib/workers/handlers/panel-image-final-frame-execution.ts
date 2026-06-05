@@ -164,6 +164,35 @@ function dedupeScreenPositionLocks(locks: readonly PanelExecutionScreenPositionL
   return Array.from(byKey.values())
 }
 
+function characterLabel(index: number): string {
+  const alphabet = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ'
+  return alphabet[index] || `P${index + 1}`
+}
+
+function buildTopDownBlockingControlLines(locks: readonly PanelExecutionScreenPositionLock[]): string[] {
+  if (locks.length === 0) return []
+  const labels = locks.map((lock, index) => ({
+    lock,
+    label: characterLabel(index),
+  }))
+  const sortedByScreen = [...labels].sort((left, right) => {
+    const order: Record<ScreenPosition, number> = { left: 0, center: 1, right: 2 }
+    return order[left.lock.position] - order[right.lock.position]
+  })
+  const screenOrder = sortedByScreen
+    .map(({ label, lock }) => `${label}/${lock.name}=${screenPositionLabel(lock.position)}`)
+    .join('；')
+
+  return [
+    '【俯视平面图 + A/B/C 人物编号 + Master Shot + 参考图控制 + 不越轴】',
+    `人物编号只供生成理解，不要把字母画进图像：${labels.map(({ label, lock }) => `${label}=${lock.name}`).join('；')}。`,
+    `俯视平面图：观众/摄影机位于当前画面正面；场景锚点位于画面深处；从观众最终画面看，人物屏幕顺序固定为：${screenOrder}。`,
+    'Master shot 约束：先在脑中建立一个全景/中景 master shot 的人物平面调度，再从这个 master shot 裁切当前镜头；裁切、推近、环绕、跟随只能改变景别，不能镜像、重排或左右互换人物。',
+    '不越轴约束：摄影机必须停留在同一侧叙事轴线上；禁止越轴、禁止镜像翻转、禁止把 screen-left 角色画到 screen-right，也禁止把 screen-right 角色画到 screen-left。',
+    'ControlNet/参考图约束：如当前模型支持 ControlNet 或参考图控制，请把本俯视平面图当作构图控制；如只支持普通参考图，也必须让人物身份参考服从本平面图站位。参考图只锁身份、服装和场景锚点，不得覆盖 A/B/C 站位。',
+  ]
+}
+
 export function buildFinalScreenPositionOverridePrompt(context: PanelFinalFrameExecutionContext): string {
   const continuityLocks = context.context.scene_continuity_state.screen_position_locks ?? []
   const fallbackLocks = screenPositionLocksFromCharacters(context.panel.characters)
@@ -175,6 +204,7 @@ export function buildFinalScreenPositionOverridePrompt(context: PanelFinalFrameE
     '下面是最终交付图像的屏幕坐标，不是角色自身左右，也不是走位方向；任何“他左侧/她右侧/向左/向右/让开/收步”等动作词都只能表现为极小身体动作，绝不能改变最终站位。',
     '如果原文、动作描述、actingNotes、参考图或连续性说明与下面的 screen-left / screen-right 锁位冲突，一律以下面锁位为准。',
   ]
+  lines.push(...buildTopDownBlockingControlLines(locks))
 
   for (const lock of locks) {
     const forbiddenPosition = oppositeScreenPositionLabel(lock.position)
