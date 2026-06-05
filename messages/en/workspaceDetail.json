@@ -72,9 +72,9 @@
     "title": "Generation Scheme Test Lab",
     "subtitle": "Test multiple generation strategies in one place: batch-create three storyboard projects above, and keep the casting look-test A/B comparison below.",
     "storyboardBatch": {
-      "title": "Three-scheme storyboard project batch",
-      "subtitle": "Create three new projects at once: a global continuity prompt, a storyboard shot-card board layout, and a first-panel image-reference chain for direct position-continuity comparison.",
-      "run": "Generate Three Test Projects",
+      "title": "Single-project storyboard branch test",
+      "subtitle": "Create one shared upstream project, then branch into three storyboard methods inside that project: global continuity prompt, storyboard shot-card board layout, and first-panel image-reference chain.",
+      "run": "Generate One Project With Three Storyboards",
       "submitting": "Submitting...",
       "storyLabel": "Test story",
       "prefixLabel": "Project name prefix",

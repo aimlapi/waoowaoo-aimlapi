@@ -72,9 +72,9 @@
     "title": "生成方案测试台",
     "subtitle": "用于同时测试多套生成策略：上方批量生成三种分镜项目，下方保留选角定妆 A/B 对比。",
     "storyboardBatch": {
-      "title": "三方案分镜项目批量生成",
-      "subtitle": "一次创建三个新项目：全局连续性 Prompt、分镜板 Shot Card 版式、首张 panel 作为参考图的图生图链路，方便直接比较人物站位一致性。",
-      "run": "生成三个测试项目",
+      "title": "单项目三方案分镜分叉测试",
+      "subtitle": "先创建一个共享上游项目，再在同一项目内分叉生成三套 storyboard：全局连续性 Prompt、分镜板 Shot Card 版式、首张 panel 作为参考图的图生图链路。",
+      "run": "生成单项目三套分镜",
       "submitting": "提交中...",
       "storyLabel": "测试故事",
       "prefixLabel": "项目名前缀",
