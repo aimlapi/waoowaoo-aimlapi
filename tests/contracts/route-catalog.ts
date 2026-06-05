@@ -63,6 +63,8 @@ const ROUTE_FILES = [
   'src/app/api/dev-ab-test/evaluate-casting/route.ts',
   'src/app/api/dev-ab-test/storyboard-projects/continue-reference/route.ts',
   'src/app/api/dev-ab-test/storyboard-projects/route.ts',
+  'src/app/api/storyboard-method-test/continue-reference/route.ts',
+  'src/app/api/storyboard-method-test/session/route.ts',
   'src/app/api/files/[...path]/route.ts',
   'src/app/api/mutation-batches/[batchId]/revert/route.ts',
   'src/app/api/storage/sign/route.ts',

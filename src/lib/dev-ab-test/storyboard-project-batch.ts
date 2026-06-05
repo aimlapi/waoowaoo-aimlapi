@@ -1,4 +1,3 @@
-import { Prisma } from '@prisma/client'
 import type { ProjectPanel } from '@prisma/client'
 import { prisma } from '@/lib/prisma'
 import {
@@ -6,7 +5,6 @@ import {
   resolveProjectModelCapabilityGenerationOptions,
 } from '@/lib/config-service'
 import { resolveProjectImageStyleSignatureForTask } from '@/lib/image-generation/style'
-import { DEFAULT_GROUP_VIDEO_MODEL } from '@/lib/ai-exec/video-defaults'
 import { encodeImageUrls } from '@/lib/contracts/image-urls-contract'
 import {
   buildCharacterRefs,
@@ -19,6 +17,7 @@ import {
   type SchemeDefinition,
   type StoryboardBatchSchemeId,
 } from './storyboard-batch-prompts'
+import { createDevStoryboardProjectShell } from './project-shell'
 import { rollbackStoryboardBatchProject, toError } from './storyboard-batch-rollback'
 import { submitStoryboardPanelTask } from './storyboard-batch-submit'
 import type { Locale } from '@/i18n/routing'
@@ -56,55 +55,20 @@ export interface StoryboardBatchResult {
   readonly projects: StoryboardBatchProjectResult[]
 }
 
-type SharedStoryboardSetup = {
+export type SharedStoryboardSetup = {
   readonly projectId: string
   readonly projectName: string
   readonly episodeId: string
   readonly characterIds: readonly string[]
   readonly appearanceIds: readonly string[]
-}
-
-async function createProjectShell(input: {
-  readonly userId: string
-  readonly name: string
-  readonly description: string
-  readonly videoRatio: string
-  readonly artStyle: string
-}) {
-  const userPreference = await prisma.userPreference.findUnique({ where: { userId: input.userId } })
-  const projectData: Prisma.ProjectUncheckedCreateInput = {
-    name: input.name,
-    description: input.description,
-    userId: input.userId,
-    ...(userPreference
-      ? {
-          analysisModel: userPreference.analysisModel,
-          characterModel: userPreference.characterModel,
-          locationModel: userPreference.locationModel,
-          storyboardModel: userPreference.storyboardModel,
-          editModel: userPreference.editModel,
-          videoModel: userPreference.videoModel,
-          singleShotVideoModel: userPreference.videoModel,
-          sequenceVideoModel: DEFAULT_GROUP_VIDEO_MODEL,
-          audioModel: userPreference.audioModel,
-          musicModel: userPreference.musicModel,
-          videoResolution: userPreference.videoResolution,
-          imageResolution: userPreference.imageResolution,
-        }
-      : {}),
-    videoRatio: input.videoRatio,
-    artStyle: input.artStyle,
-    visualStylePresetSource: 'system',
-    visualStylePresetId: input.artStyle,
-  }
-  return await prisma.project.create({ data: projectData })
+  readonly characterNames: readonly string[]
 }
 
 async function createSharedStoryboardSetup(input: CreateStoryboardBatchInput & {
   readonly storyText: string
   readonly projectNamePrefix: string
 }): Promise<SharedStoryboardSetup> {
-  const project = await createProjectShell({
+  const project = await createDevStoryboardProjectShell({
     userId: input.userId,
     name: input.projectNamePrefix,
     description: input.locale === 'en'
@@ -126,6 +90,7 @@ async function createSharedStoryboardSetup(input: CreateStoryboardBatchInput & {
 
   const characterIds: string[] = []
   const appearanceIds: string[] = []
+  const characterNames: string[] = []
   for (const name of ['Character A', 'Character B', 'Character C']) {
     const character = await prisma.projectCharacter.create({
       data: {
@@ -147,6 +112,7 @@ async function createSharedStoryboardSetup(input: CreateStoryboardBatchInput & {
       include: { appearances: { orderBy: { appearanceIndex: 'asc' } } },
     })
     characterIds.push(character.id)
+    characterNames.push(name)
     const appearanceId = character.appearances[0]?.id
     if (!appearanceId) throw new Error(`STORYBOARD_BATCH_APPEARANCE_MISSING:${name}`)
     appearanceIds.push(appearanceId)
@@ -169,6 +135,7 @@ async function createSharedStoryboardSetup(input: CreateStoryboardBatchInput & {
     episodeId: episode.id,
     characterIds,
     appearanceIds,
+    characterNames,
   }
 }
 
@@ -216,6 +183,7 @@ async function createStoryboardBranch(input: CreateStoryboardBatchInput & {
         schemeId: input.scheme.id,
         storyText: input.storyText,
         seed,
+        allSeeds: seeds,
         locale: input.locale,
       })
       const panel = await tx.projectPanel.create({
@@ -231,6 +199,7 @@ async function createStoryboardBranch(input: CreateStoryboardBatchInput & {
             seed,
             characterIds: input.setup.characterIds,
             appearanceIds: input.setup.appearanceIds,
+            characterNames: input.setup.characterNames,
           })),
           props: JSON.stringify(seed.props),
           srtSegment: seed.description,
@@ -239,6 +208,7 @@ async function createStoryboardBranch(input: CreateStoryboardBatchInput & {
           videoPrompt: prompt,
           photographyRules: JSON.stringify({
             schemeId: input.scheme.id,
+            singleBoardOutput: input.scheme.id === 'shot-card-board',
             spatialBlocking: input.scheme.id === 'first-panel-img2img' ? buildTopDownBlock(seed) : null,
             screenLock: buildScreenLockBlock(seed),
           }),
@@ -249,7 +219,9 @@ async function createStoryboardBranch(input: CreateStoryboardBatchInput & {
     return { storyboard: createdStoryboard, panels: createdPanels }
   })
 
-  const initialPanels = input.scheme.id === 'first-panel-img2img' ? panels.slice(0, 1) : panels
+  const initialPanels = input.scheme.id === 'first-panel-img2img' || input.scheme.id === 'shot-card-board'
+    ? panels.slice(0, 1)
+    : panels
   const tasks: StoryboardBatchTaskRef[] = []
   for (const panel of initialPanels) {
     const task = await submitStoryboardPanelTask({
@@ -294,34 +266,12 @@ export async function createStoryboardBatchProjects(input: CreateStoryboardBatch
       projectNamePrefix,
     })
     projectIdToCleanup = setup.projectId
-    const projectModelConfig = await getProjectModelConfig(setup.projectId, input.userId)
-    if (!projectModelConfig.storyboardModel) throw new Error('STORYBOARD_MODEL_NOT_CONFIGURED')
-    const capabilityOptions = await resolveProjectModelCapabilityGenerationOptions({
-      projectId: setup.projectId,
-      userId: input.userId,
-      modelType: 'image',
-      modelKey: projectModelConfig.storyboardModel,
-    })
-    const styleSignature = await resolveProjectImageStyleSignatureForTask({
-      projectId: setup.projectId,
-      userId: input.userId,
-      locale: input.locale,
-      episodeId: setup.episodeId,
-      invalidOverrideMessage: 'Invalid artStyle in storyboard batch payload',
-    })
-    for (const id of ['global-continuity-prompt', 'shot-card-board', 'first-panel-img2img'] as const) {
-      projects.push(await createStoryboardBranch({
-        ...input,
-        storyText,
-        projectNamePrefix,
-        panelCount: clampPanelCount(input.panelCount),
-        scheme: schemeById(id),
-        setup,
-        projectModelConfig,
-        capabilityOptions,
-        styleSignature,
-      }))
-    }
+    projects.push(...await createStoryboardBatchBranches({
+      ...input,
+      storyText,
+      projectNamePrefix,
+      setup,
+    }))
   } catch (error) {
     const originalError = toError(error)
     try {
@@ -338,4 +288,41 @@ export async function createStoryboardBatchProjects(input: CreateStoryboardBatch
     throw originalError
   }
   return { projects }
+}
+
+export async function createStoryboardBatchBranches(input: CreateStoryboardBatchInput & {
+  readonly setup: SharedStoryboardSetup
+}): Promise<StoryboardBatchProjectResult[]> {
+  const storyText = input.storyText.trim()
+  if (!storyText) throw new Error('STORYBOARD_BATCH_STORY_REQUIRED')
+
+  const projectModelConfig = await getProjectModelConfig(input.setup.projectId, input.userId)
+  if (!projectModelConfig.storyboardModel) throw new Error('STORYBOARD_MODEL_NOT_CONFIGURED')
+  const capabilityOptions = await resolveProjectModelCapabilityGenerationOptions({
+    projectId: input.setup.projectId,
+    userId: input.userId,
+    modelType: 'image',
+    modelKey: projectModelConfig.storyboardModel,
+  })
+  const styleSignature = await resolveProjectImageStyleSignatureForTask({
+    projectId: input.setup.projectId,
+    userId: input.userId,
+    locale: input.locale,
+    episodeId: input.setup.episodeId,
+    invalidOverrideMessage: 'Invalid artStyle in storyboard batch payload',
+  })
+
+  const results: StoryboardBatchProjectResult[] = []
+  for (const id of ['global-continuity-prompt', 'shot-card-board', 'first-panel-img2img'] as const) {
+    results.push(await createStoryboardBranch({
+      ...input,
+      storyText,
+      panelCount: clampPanelCount(input.panelCount),
+      scheme: schemeById(id),
+      projectModelConfig,
+      capabilityOptions,
+      styleSignature,
+    }))
+  }
+  return results
 }

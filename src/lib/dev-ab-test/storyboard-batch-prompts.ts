@@ -212,113 +212,106 @@ function panelLabel(seed: StoryboardBatchPanelPromptSeed): string {
   return `Panel ${String(seed.panelNumber).padStart(2, '0')}`
 }
 
-function buildFamilyDinnerContinuityPrompt(seed: StoryboardBatchPanelPromptSeed): string {
-  const isPanelFour = seed.panelNumber === 4
+function buildGlobalContinuityPrompt(input: {
+  readonly seed: StoryboardBatchPanelPromptSeed
+  readonly storyText: string
+}): string {
+  const story = compactStory(input.storyText)
   return [
     'You are generating storyboard panels for a continuous film scene.',
     '',
+    'CREATIVE BRIEF / SHARED UPSTREAM STORY:',
+    story,
+    '',
     'GLOBAL WORLD STATE:',
-    'Scene ID: family_dinner_01',
-    'Location: small apartment dining room.',
-    'Fixed objects:',
-    '- Door: back-right side of the room.',
-    '- Dining table: center of the room.',
-    '- Sofa: left wall.',
-    '- Window: back-left wall.',
+    'Use the creative brief as the single source of truth for premise, mood, protagonist, time period, and environment.',
+    'The story is a restrained realistic film scene chain, not a new fantasy, comedy, or action premise.',
+    'Preserve the same social environment, hometown geography, season, clothing logic, and emotional tone across every panel.',
     '',
     'CHARACTER STATE:',
-    'Character A:',
-    '- female, 35, blue sweater.',
-    '- Position: left side of the table.',
-    '- Facing: toward Character B.',
-    '- Screen rule: must always appear on the left side of the frame when A and B are both visible.',
+    'Character A is the protagonist described in the creative brief. Keep her age, gender, life situation, clothing continuity, body language, and emotional restraint consistent.',
+    'Any supporting character must be grounded in the same realistic hometown environment and must not steal the protagonist focus.',
+    'The protagonist should carry the emotional arc through small gestures, pauses, glances, and spatial distance rather than melodramatic posing.',
     '',
-    'Character B:',
-    '- male, 38, dark jacket.',
-    '- Position: right side of the table.',
-    '- Facing: toward Character A.',
-    '- Screen rule: must always appear on the right side of the frame when A and B are both visible.',
-    '',
-    'Character C:',
-    '- male, 50, gray coat.',
-    '- Initial position: outside the door.',
-    '- Action: enters through the back-right door and stops behind the table.',
-    '',
-    'CAMERA AXIS / CONTINUITY:',
-    '- Maintain the 180-degree axis between Character A and Character B.',
+    'CAMERA / CONTINUITY:',
+    '- Maintain spatial continuity from panel to panel.',
     '- Camera must stay on the same side of the axis for all shots.',
-    '- Do not mirror the room.',
-    '- Do not swap Character A and Character B.',
-    '- Do not change furniture positions.',
-    '- Do not move the door, sofa, table, or window.',
+    '- Do not mirror the location.',
+    '- Do not suddenly move fixed objects, roads, doors, windows, furniture, vehicles, or background geography.',
+    '- Do not change the protagonist identity, age, clothing logic, or emotional state abruptly.',
     '- Preserve left-right continuity across every panel.',
     '',
     'REFERENCE CONDITIONING:',
     'Use the provided master shot as the spatial reference.',
-    'Use the provided character reference images for A, B, and C.',
+    'Use the provided character and location references from the shared upstream project.',
     'Use the previous panel as continuity reference.',
-    'The new panel should feel like a different camera angle inside the same physical room, not a newly generated room.',
+    'The new panel should feel like a different camera angle inside the same physical world, not a newly generated story.',
     '',
     'SHOT TO GENERATE:',
-    isPanelFour ? 'Panel 04' : panelLabel(seed),
-    isPanelFour ? 'Shot size: medium wide shot.' : `Shot size: ${seed.shotType}.`,
-    'Camera position: near the dining table, still on the same side of the A-B axis.',
-    'Lens: 35mm.',
-    isPanelFour
-      ? 'Composition: A remains on screen-left, B remains on screen-right, C enters from the back-right door.'
-      : 'Composition: A remains on screen-left, B remains on screen-right, fixed room layout remains unchanged.',
-    isPanelFour
-      ? 'Action: C opens the door and steps into the room. A turns her head slightly toward C. B stays still.'
-      : `Action: ${seed.description}`,
+    panelLabel(input.seed),
+    `Shot size: ${input.seed.shotType}.`,
+    `Camera position: ${input.seed.cameraMove}.`,
+    'Lens: 35mm or 50mm naturalistic perspective.',
+    `Location: ${input.seed.location}.`,
+    `Action: ${input.seed.description}`,
     '',
     'VISUAL STYLE:',
-    'Realistic cinematic storyboard.',
-    'Muted earth tones.',
-    'Soft practical interior lighting.',
+    'Realistic cinematic storyboard, Hou Hsiao-hsien-inspired restraint, long-take sensibility, observational framing.',
+    'Muted natural colors, quiet hometown textures, available light, emotional distance.',
     '35mm film texture.',
     'High realism, no cartoon style.',
     '',
     'NEGATIVE CONSTRAINTS:',
     '- No mirrored composition.',
-    '- No character position swapping.',
-    '- No new furniture.',
-    '- No missing table.',
-    '- No changed door location.',
+    '- No changed protagonist identity.',
+    '- No sudden genre change.',
+    '- No new unrelated location.',
     '- No duplicate characters.',
     '- No inconsistent clothing.',
     '- No camera crossing the axis.',
   ].join('\n')
 }
 
-function buildShotCardBoardPrompt(seed: StoryboardBatchPanelPromptSeed): string {
-  const startSecond = Math.max(0, (seed.panelNumber - 1) * 3)
-  const endSecond = startSecond + 3
+function buildShotCardBoardPrompt(input: {
+  readonly seed: StoryboardBatchPanelPromptSeed
+  readonly storyText: string
+  readonly allSeeds: readonly StoryboardBatchPanelPromptSeed[]
+}): string {
+  const seed = input.seed
+  const story = compactStory(input.storyText)
+  const shotRows = input.allSeeds.map((item) => {
+    const startSecond = Math.max(0, (item.panelNumber - 1) * 3)
+    const endSecond = startSecond + 3
+    return [
+      `Panel ${String(item.panelNumber).padStart(2, '0')}`,
+      `timecode 00:${String(startSecond).padStart(2, '0')} - 00:${String(endSecond).padStart(2, '0')}`,
+      `shot ${item.shotType}`,
+      `camera ${item.cameraMove}`,
+      `location ${item.location}`,
+      `action ${item.description}`,
+    ].join(' | ')
+  })
   return [
-    'Create a cinematic storyboard shot-card board inspired by a professional film previsualization sheet.',
+    'Create one single cinematic storyboard overview image inspired by a professional film previsualization sheet.',
+    'This one image must contain all storyboard panels and production information for the requested scene chain. Do not generate a single isolated panel.',
     '',
     'BOARD FORMAT:',
     '- Warm off-white production-board background.',
-    '- One clearly framed scene card for the requested panel.',
-    '- Header contains scene number, timecode, shot title, and lens.',
-    '- The card contains two horizontal cinematic thumbnails: first frame on the left, next frame on the right.',
-    '- Put a simple white arrow between the two thumbnails to show action direction.',
-    '- Add compact production metadata below the frames: location, shot size, camera, action, characters, props.',
-    '- Include small character reference tiles and a tiny floor-plan/compass continuity marker along the bottom edge.',
+    '- A grid of compact storyboard cards, one card per panel.',
+    '- Each card contains a cinematic thumbnail, scene number, timecode, shot title, lens, location, camera, action, characters, and props.',
+    '- Use simple white arrows between cards to show continuity direction.',
+    '- Include character reference tiles, a tiny floor-plan/compass continuity marker, and technical specs along the bottom edge.',
+    '- The whole image should read like a single production planning board at a glance.',
     '',
-    'SCENE CARD:',
-    `Scene ${String(seed.panelNumber).padStart(2, '0')}`,
-    `Timecode: 00:${String(startSecond).padStart(2, '0')} - 00:${String(endSecond).padStart(2, '0')}`,
-    `Shot size: ${seed.shotType}`,
-    `Camera: ${seed.cameraMove}`,
-    `Location: ${seed.location}`,
-    `Action: ${seed.description}`,
+    'COMPLETE STORYBOARD BOARD:',
+    `Creative brief: ${story}`,
+    `Anchor panel for task routing: ${panelLabel(seed)}.`,
+    ...shotRows,
     '',
     'CONTINUITY RULES:',
-    '- Character A is female in a blue sweater and must remain screen-left.',
-    '- Character B is male in a dark jacket and must remain screen-right.',
-    '- Character C is male in a gray coat and enters from the back-right door when visible.',
-    '- Dining table center, sofa left wall, window back-left wall, door back-right.',
-    '- Do not mirror the room. Do not swap A and B. Do not move furniture.',
+    '- Keep the protagonist, hometown environment, clothing continuity, season, and emotional tone from the creative brief.',
+    '- Do not mirror the location. Do not abruptly change fixed objects or background geography.',
+    '- Make the board feel like production planning for the same film scene chain, not unrelated concept art.',
     '',
     'VISUAL STYLE:',
     'Realistic cinematic storyboard thumbnails, muted earth tones, practical interior light, 35mm film texture.',
@@ -326,12 +319,18 @@ function buildShotCardBoardPrompt(seed: StoryboardBatchPanelPromptSeed): string 
   ].join('\n')
 }
 
-function buildFirstPanelReferencePrompt(seed: StoryboardBatchPanelPromptSeed): string {
+function buildFirstPanelReferencePrompt(input: {
+  readonly seed: StoryboardBatchPanelPromptSeed
+  readonly storyText: string
+}): string {
+  const seed = input.seed
+  const story = compactStory(input.storyText)
   const referenceLine = seed.panelNumber === 1
     ? 'This is the master reference panel. Establish the room geography clearly and make the image usable as the sole visual source for later panels.'
-    : 'Use panel 01 as the only source-panel image reference. Preserve the same room, furniture positions, clothing, character identity, and screen-left/screen-right blocking from that image.'
+    : 'Use panel 01 as the only source-panel image reference. Preserve the same physical world, clothing, character identity, hometown texture, and spatial blocking from that image.'
   return [
-    'Generate a realistic cinematic storyboard panel for the same family_dinner_01 scene.',
+    'Generate a realistic cinematic storyboard panel for the same continuous film scene.',
+    `Creative brief: ${story}`,
     referenceLine,
     '',
     `Panel: ${panelLabel(seed)}`,
@@ -341,13 +340,11 @@ function buildFirstPanelReferencePrompt(seed: StoryboardBatchPanelPromptSeed): s
     `Action: ${seed.description}`,
     '',
     'Continuity locks:',
-    '- A: female, blue sweater, screen-left / left side of table.',
-    '- B: male, dark jacket, screen-right / right side of table.',
-    '- C: male, gray coat, enters from the back-right door when present.',
-    '- Fixed objects: dining table center, sofa left wall, window back-left wall, door back-right.',
-    '- Do not mirror, do not cross the 180-degree axis, do not swap A and B.',
+    '- Keep the protagonist from the creative brief recognizable across every panel.',
+    '- Preserve the same hometown environment, clothing logic, fixed objects, and emotional restraint.',
+    '- Do not mirror, do not cross the 180-degree axis, do not abruptly change the protagonist or location.',
     '',
-    'Style: realistic cinematic storyboard, muted earth tones, soft practical interior lighting, 35mm film texture.',
+    'Style: realistic cinematic storyboard, Hou Hsiao-hsien-inspired restraint, muted earth tones, available light, 35mm film texture.',
   ].join('\n')
 }
 
@@ -355,6 +352,7 @@ export function buildStoryboardBatchPanelPrompt(input: {
   readonly schemeId: StoryboardBatchSchemeId
   readonly storyText: string
   readonly seed: StoryboardBatchPanelPromptSeed
+  readonly allSeeds?: readonly StoryboardBatchPanelPromptSeed[]
   readonly locale: Locale
 }): string {
   const story = compactStory(input.storyText)
@@ -372,10 +370,18 @@ export function buildStoryboardBatchPanelPrompt(input: {
         '写实短片分镜画面，表演克制，环境有真实生活质感，画面内不要文字标注。',
       ].join('\n')
 
-  if (input.schemeId === 'global-continuity-prompt') return buildFamilyDinnerContinuityPrompt(input.seed)
-  if (input.schemeId === 'shot-card-board') return buildShotCardBoardPrompt(input.seed)
+  if (input.schemeId === 'global-continuity-prompt') {
+    return buildGlobalContinuityPrompt({ seed: input.seed, storyText: input.storyText })
+  }
+  if (input.schemeId === 'shot-card-board') {
+    return buildShotCardBoardPrompt({
+      seed: input.seed,
+      storyText: input.storyText,
+      allSeeds: input.allSeeds ?? PANEL_SEEDS,
+    })
+  }
   if (input.schemeId === 'first-panel-img2img') {
-    return `${buildFirstPanelReferencePrompt(input.seed)}\n\n${buildTopDownBlock(input.seed)}`
+    return `${buildFirstPanelReferencePrompt({ seed: input.seed, storyText: input.storyText })}\n\n${buildTopDownBlock(input.seed)}`
   }
   return `${base}\n\n${buildScreenLockBlock(input.seed)}`
 }
@@ -384,10 +390,11 @@ export function buildCharacterRefs(input: {
   readonly seed: StoryboardBatchPanelPromptSeed
   readonly characterIds: readonly string[]
   readonly appearanceIds: readonly string[]
+  readonly characterNames?: readonly string[]
 }): CreatedCharacterRef[] {
   return input.seed.characterSlots.map((slot, index) => ({
     characterId: input.characterIds[index] ?? input.characterIds[0] ?? '',
-    name: `Character ${String.fromCharCode(65 + index)}`,
+    name: input.characterNames?.[index] ?? `Character ${String.fromCharCode(65 + index)}`,
     appearanceId: input.appearanceIds[index] ?? input.appearanceIds[0] ?? '',
     appearanceIndex: 0,
     appearance: 'storyboard test appearance',

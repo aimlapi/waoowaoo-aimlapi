@@ -132,6 +132,36 @@
       "productionUsability": "后续资产可用性"
     }
   },
+  "storyboardMethodTest": {
+    "title": "正常项目流分镜方法测试",
+    "subtitle": "先生成剧本、独立风格示意、人物定妆资产和 360 场景资产，再在同一个项目里分叉测试三种分镜生成方案。",
+    "run": "创建测试项目",
+    "submitting": "提交中...",
+    "creativeBrief": "创意",
+    "styleReferenceNote": "风格示意说明",
+    "projectName": "项目名",
+    "ratio": "画幅",
+    "panelCount": "分镜数",
+    "artStyle": "项目风格",
+    "defaultCreativeBrief": "一个 35 岁突然失业的中年单身女性，回老家的过程中逐渐与大环境和解的故事，16:9 画幅，侯孝贤画风。",
+    "defaultStyleReferenceNote": "只作为风格气质示意，不参与后续人物、场景或分镜参考。",
+    "defaultProjectName": "返乡和解分镜方法测试",
+    "needInput": "请填写创意和项目名。",
+    "failed": "分镜方法测试项目创建失败",
+    "upstreamTitle": "前置项目流程",
+    "screenplayReady": "剧本已生成",
+    "completed": "完成 {count}",
+    "running": "进行中 {count}",
+    "failedCount": "失败 {count}",
+    "openProject": "打开项目",
+    "taskDetails": "任务详情",
+    "panelLabel": "Panel {number}",
+    "stage": {
+      "style-reference": "风格示意",
+      "character-asset": "人物定妆",
+      "scene-asset": "360 场景"
+    }
+  },
   "modelSetup": {
     "title": "开始创作前，请先配置默认模型",
     "description": "当前账号还没有默认分析模型，智能分集和后续 AI 流程无法使用。请先完成默认模型配置。",

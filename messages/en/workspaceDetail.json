@@ -132,6 +132,36 @@
       "productionUsability": "Production usability"
     }
   },
+  "storyboardMethodTest": {
+    "title": "Normal-flow Storyboard Method Test",
+    "subtitle": "Generate screenplay, isolated style indication, character casting assets, and 360 scene assets first, then branch into three storyboard generation methods inside the same project.",
+    "run": "Create Test Project",
+    "submitting": "Submitting...",
+    "creativeBrief": "Creative brief",
+    "styleReferenceNote": "Style indication note",
+    "projectName": "Project name",
+    "ratio": "Aspect ratio",
+    "panelCount": "Panels",
+    "artStyle": "Project style",
+    "defaultCreativeBrief": "A 35-year-old single woman suddenly loses her job and gradually reconciles with the larger environment while returning to her hometown. 16:9 aspect ratio, Hou Hsiao-hsien visual sensibility.",
+    "defaultStyleReferenceNote": "Only a mood/style indication; it must not be used as a later character, scene, or storyboard reference.",
+    "defaultProjectName": "Homecoming reconciliation storyboard method test",
+    "needInput": "Enter the creative brief and project name.",
+    "failed": "Failed to create storyboard method test project",
+    "upstreamTitle": "Upstream project flow",
+    "screenplayReady": "Screenplay generated",
+    "completed": "Done {count}",
+    "running": "Running {count}",
+    "failedCount": "Failed {count}",
+    "openProject": "Open Project",
+    "taskDetails": "Task details",
+    "panelLabel": "Panel {number}",
+    "stage": {
+      "style-reference": "Style indication",
+      "character-asset": "Character casting",
+      "scene-asset": "360 scene"
+    }
+  },
   "modelSetup": {
     "title": "Set up default models before starting",
     "description": "No default analysis model is configured for this account. Smart split and downstream AI flows cannot run until it is set.",

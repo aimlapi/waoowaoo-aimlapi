@@ -121,6 +121,6 @@ describe('storyboard batch project service', () => {
     expect(new Set(result.projects.map((project) => project.storyboardId)).size).toBe(3)
     expect(result.projects.find((project) => project.schemeId === 'first-panel-img2img')?.tasks).toHaveLength(1)
     expect(result.projects.find((project) => project.schemeId === 'global-continuity-prompt')?.tasks).toHaveLength(3)
-    expect(result.projects.find((project) => project.schemeId === 'shot-card-board')?.tasks).toHaveLength(3)
+    expect(result.projects.find((project) => project.schemeId === 'shot-card-board')?.tasks).toHaveLength(1)
   })
 })
