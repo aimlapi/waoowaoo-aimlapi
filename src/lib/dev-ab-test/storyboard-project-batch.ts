@@ -15,6 +15,7 @@ import {
   PANEL_SEEDS,
   schemeById,
   type SchemeDefinition,
+  type StoryboardBatchPanelPromptSeed,
   type StoryboardBatchSchemeId,
 } from './storyboard-batch-prompts'
 import { createDevStoryboardProjectShell } from './project-shell'
@@ -62,6 +63,30 @@ export type SharedStoryboardSetup = {
   readonly characterIds: readonly string[]
   readonly appearanceIds: readonly string[]
   readonly characterNames: readonly string[]
+}
+
+function adaptSeedForCharacterCount(
+  seed: StoryboardBatchPanelPromptSeed,
+  characterCount: number,
+): StoryboardBatchPanelPromptSeed {
+  if (characterCount <= 1) {
+    return {
+      ...seed,
+      characterSlots: ['screen-left'],
+    }
+  }
+  if (characterCount === 2) {
+    return {
+      ...seed,
+      characterSlots: ['screen-left', 'screen-right'],
+      description: seed.description
+        .replace(
+          'character C enters and changes the emotional balance of the scene.',
+          'the environment and silence change the emotional balance of the scene.',
+        ),
+    }
+  }
+  return seed
 }
 
 async function createSharedStoryboardSetup(input: CreateStoryboardBatchInput & {
@@ -179,38 +204,39 @@ async function createStoryboardBranch(input: CreateStoryboardBatchInput & {
     })
     const createdPanels: ProjectPanel[] = []
     for (const seed of seeds) {
+      const panelSeed = adaptSeedForCharacterCount(seed, input.setup.characterIds.length)
       const prompt = buildStoryboardBatchPanelPrompt({
         schemeId: input.scheme.id,
         storyText: input.storyText,
-        seed,
+        seed: panelSeed,
         allSeeds: seeds,
         locale: input.locale,
       })
       const panel = await tx.projectPanel.create({
         data: {
           storyboardId: createdStoryboard.id,
-          panelIndex: seed.panelNumber - 1,
-          panelNumber: seed.panelNumber,
-          shotType: seed.shotType,
-          cameraMove: seed.cameraMove,
-          description: seed.description,
-          location: seed.location,
+          panelIndex: panelSeed.panelNumber - 1,
+          panelNumber: panelSeed.panelNumber,
+          shotType: panelSeed.shotType,
+          cameraMove: panelSeed.cameraMove,
+          description: panelSeed.description,
+          location: panelSeed.location,
           characters: JSON.stringify(buildCharacterRefs({
-            seed,
+            seed: panelSeed,
             characterIds: input.setup.characterIds,
             appearanceIds: input.setup.appearanceIds,
             characterNames: input.setup.characterNames,
           })),
-          props: JSON.stringify(seed.props),
-          srtSegment: seed.description,
-          duration: seed.duration,
+          props: JSON.stringify(panelSeed.props),
+          srtSegment: panelSeed.description,
+          duration: panelSeed.duration,
           imagePrompt: prompt,
           videoPrompt: prompt,
           photographyRules: JSON.stringify({
             schemeId: input.scheme.id,
             singleBoardOutput: input.scheme.id === 'shot-card-board',
-            spatialBlocking: input.scheme.id === 'first-panel-img2img' ? buildTopDownBlock(seed) : null,
-            screenLock: buildScreenLockBlock(seed),
+            spatialBlocking: input.scheme.id === 'first-panel-img2img' ? buildTopDownBlock(panelSeed) : null,
+            screenLock: buildScreenLockBlock(panelSeed),
           }),
         },
       })

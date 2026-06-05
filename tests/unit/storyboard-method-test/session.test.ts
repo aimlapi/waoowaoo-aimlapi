@@ -59,7 +59,6 @@ const generateProjectEditScreenplayMock = vi.hoisted(() => vi.fn(async () => ({
     '角色表：',
     '林静：35岁，短发有些凌乱，米白衬衫、深色长裤，突然失业后独自返乡的单身女性。',
     '母亲：60岁上下，灰白短发，旧开衫、围裙，住在老家的母亲。',
-    '老同学：30岁后半，县城工装夹克，旧识。',
     '人事（仅声音）：公司人事。',
     '场景 3｜外景/内景. 老家院子和厨房门口 - 傍晚',
     '动作：母亲坐在小凳上择菜，林静拖着行李箱进院，把小绿植放到窗台上。',
@@ -141,7 +140,7 @@ describe('storyboard method test session service', () => {
     expect(screenplayCallOrder).toBeLessThan(styleReferenceCallOrder)
     expect(styleReferenceCallOrder).toBeLessThan(assetCallOrder)
     expect(assetCallOrder).toBeLessThan(storyboardCallOrder)
-    expect(prismaMock.projectCharacter.create).toHaveBeenCalledTimes(3)
+    expect(prismaMock.projectCharacter.create).toHaveBeenCalledTimes(2)
     expect(prismaMock.projectLocation.create).toHaveBeenCalledTimes(1)
     expect(prismaMock.projectLocation.create).toHaveBeenCalledWith(expect.objectContaining({
       data: expect.objectContaining({
@@ -152,13 +151,12 @@ describe('storyboard method test session service', () => {
       'style-reference',
       'character-asset',
       'character-asset',
-      'character-asset',
       'scene-asset',
     ])
     expect(createStoryboardBatchBranchesMock).toHaveBeenCalledWith(expect.objectContaining({
       storyText: expect.stringContaining('林静'),
       setup: expect.objectContaining({
-        characterNames: ['林静', '母亲', '老同学'],
+        characterNames: ['林静', '母亲'],
       }),
     }))
     expect(result.projectId).toBe('project-1')

@@ -194,25 +194,19 @@ function fallbackCharacterRows(locale: Locale): Array<{ readonly name: string; r
       ]
 }
 
-function ensureThreeCharacterRows(
+function normalizeCharacterRows(
   rows: readonly { readonly name: string; readonly description: string }[],
   locale: Locale,
 ): Array<{ readonly name: string; readonly description: string }> {
-  const next = [...rows]
-  const fallback = fallbackCharacterRows(locale)
-  for (const item of fallback) {
-    if (next.length >= 3) break
-    if (next.some((existing) => existing.name === item.name)) continue
-    next.push(item)
-  }
-  return next.slice(0, 3)
+  if (rows.length > 0) return rows.slice(0, 3)
+  return fallbackCharacterRows(locale).slice(0, 1)
 }
 
 function characterDescriptions(input: {
   readonly locale: Locale
   readonly screenplayText: string
 }): CharacterAssetProfile[] {
-  const rows = ensureThreeCharacterRows(parseCharacterTable(input.screenplayText), input.locale)
+  const rows = normalizeCharacterRows(parseCharacterTable(input.screenplayText), input.locale)
   return rows.map((row, index) => {
     const base = compactForAssetPrompt(`${row.name}：${row.description}`)
     const zh = input.locale !== 'en'

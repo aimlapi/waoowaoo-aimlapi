@@ -393,9 +393,9 @@ export function buildCharacterRefs(input: {
   readonly characterNames?: readonly string[]
 }): CreatedCharacterRef[] {
   return input.seed.characterSlots.map((slot, index) => ({
-    characterId: input.characterIds[index] ?? input.characterIds[0] ?? '',
+    characterId: input.characterIds[index] ?? '',
     name: input.characterNames?.[index] ?? `Character ${String.fromCharCode(65 + index)}`,
-    appearanceId: input.appearanceIds[index] ?? input.appearanceIds[0] ?? '',
+    appearanceId: input.appearanceIds[index] ?? '',
     appearanceIndex: 0,
     appearance: 'storyboard test appearance',
     slot,

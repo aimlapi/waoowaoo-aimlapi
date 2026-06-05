@@ -123,4 +123,41 @@ describe('storyboard batch project service', () => {
     expect(result.projects.find((project) => project.schemeId === 'global-continuity-prompt')?.tasks).toHaveLength(3)
     expect(result.projects.find((project) => project.schemeId === 'shot-card-board')?.tasks).toHaveLength(1)
   })
+
+  it('does not duplicate the protagonist when only two screenplay characters exist', async () => {
+    const { createStoryboardBatchBranches } = await import('@/lib/dev-ab-test/storyboard-project-batch')
+
+    await createStoryboardBatchBranches({
+      userId: 'user-1',
+      locale: 'zh',
+      requestId: 'request-1',
+      storyText: '两人戏：林静和母亲在老家院子择菜。',
+      projectNamePrefix: '两人分镜测试',
+      videoRatio: '16:9',
+      artStyle: 'realistic',
+      panelCount: 4,
+      setup: {
+        projectId: 'project-1',
+        projectName: '两人分镜测试',
+        episodeId: 'episode-1',
+        characterIds: ['character-lin', 'character-mother'],
+        appearanceIds: ['appearance-lin', 'appearance-mother'],
+        characterNames: ['林静', '母亲'],
+      },
+    })
+
+    const panelCreates = txMock.projectPanel.create.mock.calls.map((call) => call[0].data)
+    const twoCharacterPanel = panelCreates.find((data) => data.panelNumber === 4)
+    expect(twoCharacterPanel).toBeTruthy()
+    const characters = JSON.parse(String(twoCharacterPanel?.characters)) as Array<{
+      readonly characterId: string
+      readonly name: string
+      readonly slot: string
+    }>
+    expect(characters).toEqual([
+      expect.objectContaining({ characterId: 'character-lin', name: '林静', slot: 'screen-left' }),
+      expect.objectContaining({ characterId: 'character-mother', name: '母亲', slot: 'screen-right' }),
+    ])
+    expect(String(twoCharacterPanel?.description)).not.toContain('character C')
+  })
 })
