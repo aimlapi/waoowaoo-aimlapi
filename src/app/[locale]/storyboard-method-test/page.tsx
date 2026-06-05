@@ -55,6 +55,31 @@ type TaskCounts = {
   readonly running: number
 }
 
+const stylePresetKeys = [
+  'photoreal',
+  'surreal',
+  'stopMotion',
+  'oilAnimation',
+  'japaneseHandDrawn',
+  'westernComics',
+  'experimental',
+  'miniature',
+] as const
+
+const pipelineStepKeys = [
+  'screenplay',
+  'style',
+  'character',
+  'scene',
+  'methods',
+] as const
+
+const methodKeys = [
+  'globalContinuity',
+  'topDownSpatialLock',
+  'firstPanelLock',
+] as const
+
 function isRecord(value: unknown): value is Record<string, unknown> {
   return !!value && typeof value === 'object' && !Array.isArray(value)
 }
@@ -336,6 +361,16 @@ export default function StoryboardMethodTestPage() {
             </button>
           </div>
 
+          <div className="grid gap-3 md:grid-cols-5">
+            {pipelineStepKeys.map((key, index) => (
+              <div key={key} className="rounded-lg border border-[var(--glass-stroke-base)] bg-black/10 px-3 py-3">
+                <div className="text-xs font-semibold text-[var(--glass-text-tertiary)]">{t('pipeline.step', { number: index + 1 })}</div>
+                <div className="mt-1 text-sm font-semibold">{t(`pipeline.${key}.title`)}</div>
+                <p className="mt-1 text-xs leading-5 text-[var(--glass-text-secondary)]">{t(`pipeline.${key}.description`)}</p>
+              </div>
+            ))}
+          </div>
+
           <div className="grid gap-4 lg:grid-cols-[minmax(0,1fr)_320px]">
             <label className="flex flex-col gap-2">
               <span className="text-sm font-medium">{t('creativeBrief')}</span>
@@ -363,6 +398,18 @@ export default function StoryboardMethodTestPage() {
                   rows={4}
                   className="resize-none rounded-lg border border-[var(--glass-stroke-base)] bg-[var(--glass-bg-surface-strong)] px-3 py-2 text-sm leading-5 outline-none focus:border-[var(--glass-stroke-focus)]"
                 />
+                <div className="flex flex-wrap gap-2">
+                  {stylePresetKeys.map((key) => (
+                    <button
+                      key={key}
+                      type="button"
+                      onClick={() => setStyleReferenceNote(t(`stylePresets.${key}`))}
+                      className="rounded-md border border-[var(--glass-stroke-base)] px-2 py-1 text-xs text-[var(--glass-text-secondary)] hover:bg-[var(--glass-bg-surface-strong)]"
+                    >
+                      {t(`stylePresets.${key}`)}
+                    </button>
+                  ))}
+                </div>
               </label>
               <div className="grid grid-cols-2 gap-3">
                 <label className="flex flex-col gap-2">
@@ -402,6 +449,16 @@ export default function StoryboardMethodTestPage() {
           </div>
 
           {error && <p className="rounded-lg border border-red-500/30 bg-red-500/10 px-3 py-2 text-sm text-red-200">{error}</p>}
+        </section>
+
+        <section className="grid gap-4 lg:grid-cols-3">
+          {methodKeys.map((key) => (
+            <article key={key} className="rounded-lg border border-[var(--glass-stroke-base)] bg-[var(--glass-bg-surface)] p-4">
+              <h2 className="text-base font-semibold">{t(`methods.${key}.title`)}</h2>
+              <p className="mt-2 text-sm leading-6 text-[var(--glass-text-secondary)]">{t(`methods.${key}.description`)}</p>
+              <p className="mt-3 rounded-lg bg-black/10 px-3 py-2 text-xs leading-5 text-[var(--glass-text-tertiary)]">{t(`methods.${key}.lock`)}</p>
+            </article>
+          ))}
         </section>
 
         {session && (

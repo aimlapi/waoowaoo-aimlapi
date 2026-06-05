@@ -121,7 +121,22 @@ describe('storyboard batch project service', () => {
     expect(new Set(result.projects.map((project) => project.storyboardId)).size).toBe(3)
     expect(result.projects.find((project) => project.schemeId === 'first-panel-img2img')?.tasks).toHaveLength(1)
     expect(result.projects.find((project) => project.schemeId === 'global-continuity-prompt')?.tasks).toHaveLength(3)
-    expect(result.projects.find((project) => project.schemeId === 'shot-card-board')?.tasks).toHaveLength(1)
+    expect(result.projects.find((project) => project.schemeId === 'top-down-spatial-lock')?.tasks).toHaveLength(3)
+
+    const topDownPanelCreates = txMock.projectPanel.create.mock.calls
+      .map((call) => call[0].data)
+      .filter((data) => String(data.imagePrompt).includes('SPATIAL TRUTH / TOP-DOWN LOCK:'))
+    expect(topDownPanelCreates).toHaveLength(3)
+    const firstTopDownRules = JSON.parse(String(topDownPanelCreates[0]?.photographyRules)) as {
+      readonly schemeId: string
+      readonly singleBoardOutput: boolean
+      readonly spatialBlocking: string | null
+    }
+    expect(firstTopDownRules).toEqual(expect.objectContaining({
+      schemeId: 'top-down-spatial-lock',
+      singleBoardOutput: false,
+    }))
+    expect(firstTopDownRules.spatialBlocking).toContain('俯视平面图')
   })
 
   it('does not duplicate the protagonist when only two screenplay characters exist', async () => {

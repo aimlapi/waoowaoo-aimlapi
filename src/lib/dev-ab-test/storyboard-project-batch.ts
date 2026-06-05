@@ -234,8 +234,10 @@ async function createStoryboardBranch(input: CreateStoryboardBatchInput & {
           videoPrompt: prompt,
           photographyRules: JSON.stringify({
             schemeId: input.scheme.id,
-            singleBoardOutput: input.scheme.id === 'shot-card-board',
-            spatialBlocking: input.scheme.id === 'first-panel-img2img' ? buildTopDownBlock(panelSeed) : null,
+            singleBoardOutput: false,
+            spatialBlocking: input.scheme.id === 'top-down-spatial-lock' || input.scheme.id === 'first-panel-img2img'
+              ? buildTopDownBlock(panelSeed)
+              : null,
             screenLock: buildScreenLockBlock(panelSeed),
           }),
         },
@@ -245,7 +247,7 @@ async function createStoryboardBranch(input: CreateStoryboardBatchInput & {
     return { storyboard: createdStoryboard, panels: createdPanels }
   })
 
-  const initialPanels = input.scheme.id === 'first-panel-img2img' || input.scheme.id === 'shot-card-board'
+  const initialPanels = input.scheme.id === 'first-panel-img2img'
     ? panels.slice(0, 1)
     : panels
   const tasks: StoryboardBatchTaskRef[] = []
@@ -339,7 +341,7 @@ export async function createStoryboardBatchBranches(input: CreateStoryboardBatch
   })
 
   const results: StoryboardBatchProjectResult[] = []
-  for (const id of ['global-continuity-prompt', 'shot-card-board', 'first-panel-img2img'] as const) {
+  for (const id of ['global-continuity-prompt', 'top-down-spatial-lock', 'first-panel-img2img'] as const) {
     results.push(await createStoryboardBranch({
       ...input,
       storyText,

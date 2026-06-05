@@ -73,7 +73,7 @@
     "subtitle": "Test multiple generation strategies in one place: batch-create three storyboard projects above, and keep the casting look-test A/B comparison below.",
     "storyboardBatch": {
       "title": "Single-project storyboard branch test",
-      "subtitle": "Create one shared upstream project, then branch into three storyboard methods inside that project: global continuity prompt, storyboard shot-card board layout, and first-panel image-reference chain.",
+      "subtitle": "Create one shared upstream project, then branch into three storyboard methods inside that project: global continuity prompt, top-down spatial lock, and first-panel image-reference chain.",
       "run": "Generate One Project With Three Storyboards",
       "submitting": "Submitting...",
       "storyLabel": "Test story",
@@ -134,7 +134,7 @@
   },
   "storyboardMethodTest": {
     "title": "Normal-flow Storyboard Method Test",
-    "subtitle": "Generate screenplay, isolated style indication, character casting assets, and 360 scene assets first, then branch into three storyboard generation methods inside the same project.",
+    "subtitle": "All upstream steps are identical: generate a normal screenplay, 3 style-only indication images, character casting assets, and 360 scene assets, then compare three storyboard continuity methods.",
     "run": "Create Test Project",
     "submitting": "Submitting...",
     "creativeBrief": "Creative brief",
@@ -144,7 +144,7 @@
     "panelCount": "Panels",
     "artStyle": "Project style",
     "defaultCreativeBrief": "A 35-year-old single woman suddenly loses her job and gradually reconciles with the larger environment while returning to her hometown. 16:9 aspect ratio, Hou Hsiao-hsien visual sensibility.",
-    "defaultStyleReferenceNote": "Only a mood/style indication; it must not be used as a later character, scene, or storyboard reference.",
+    "defaultStyleReferenceNote": "Photographic realism, surreal photography, stop-motion model; style/mood indication only, never a later character, scene, or storyboard reference.",
     "defaultProjectName": "Homecoming reconciliation storyboard method test",
     "needInput": "Enter the creative brief and project name.",
     "failed": "Failed to create storyboard method test project",
@@ -156,6 +156,56 @@
     "openProject": "Open Project",
     "taskDetails": "Task details",
     "panelLabel": "Panel {number}",
+    "pipeline": {
+      "step": "Step {number}",
+      "screenplay": {
+        "title": "Normal Screenplay",
+        "description": "Generate a grounded screenplay first; every later asset and storyboard branch starts from that screenplay."
+      },
+      "style": {
+        "title": "3 Style Indications",
+        "description": "Mood/style only. These images are not character, scene, storyboard, or continuity references."
+      },
+      "character": {
+        "title": "Character Assets",
+        "description": "Casting sheets, look choices, and scoring follow the character reference contact-sheet logic."
+      },
+      "scene": {
+        "title": "360 Scene Assets",
+        "description": "Generate angles and detail references for one consistent space, following the 360 scene-board logic."
+      },
+      "methods": {
+        "title": "3 Storyboard Methods",
+        "description": "Compare prompt continuity, top-down spatial lock, and first-panel visual lock inside the same upstream project."
+      }
+    },
+    "stylePresets": {
+      "photoreal": "Photographic realism",
+      "surreal": "Surreal photography",
+      "stopMotion": "Stop-motion model",
+      "oilAnimation": "Oil-paint animation",
+      "japaneseHandDrawn": "Japanese hand-drawn",
+      "westernComics": "Western comics",
+      "experimental": "Experimental film",
+      "miniature": "Miniature model"
+    },
+    "methods": {
+      "globalContinuity": {
+        "title": "Method 1: Reference Prompt",
+        "description": "Each panel uses full world state, character state, 180-degree axis rules, reference conditioning, and negative constraints.",
+        "lock": "Watch whether text rules alone preserve A/B left-right continuity, fixed objects, and door/window placement."
+      },
+      "topDownSpatialLock": {
+        "title": "Method 2: Top-down Spatial Truth",
+        "description": "The floor plan is the spatial truth. A/B/C coordinates and facing are locked; unchanged positions carry forward and only explicit movement updates a lock.",
+        "lock": "Watch whether spatial locks prevent mirroring, axis crossing, position swaps, and furniture drift better than prompt-only control."
+      },
+      "firstPanelLock": {
+        "title": "Method 3: First-panel Lock",
+        "description": "Panel 01 is generated as the master reference; once it completes, later panels are automatically submitted using that first panel as the visual lock.",
+        "lock": "Watch whether image-to-image reference preserves first-frame blocking or gets pulled away by later action prompts."
+      }
+    },
     "stage": {
       "style-reference": "Style indication",
       "character-asset": "Character casting",

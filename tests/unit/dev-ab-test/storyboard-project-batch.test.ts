@@ -39,26 +39,25 @@ describe('storyboard project batch prompts', () => {
     expect(prompt).toContain('- No camera crossing the axis.')
   })
 
-  it('builds a single-image storyboard shot-card overview prompt', () => {
+  it('builds a top-down spatial lock prompt that carries unchanged positions forward', () => {
     const prompt = buildStoryboardBatchPanelPrompt({
-      schemeId: 'shot-card-board',
+      schemeId: 'top-down-spatial-lock',
       storyText: 'A woman stays left and a man stays right.',
       seed,
       allSeeds: [seed],
       locale: 'en',
     })
 
-    expect(prompt).toContain('Create one single cinematic storyboard overview image inspired by a professional film previsualization sheet.')
-    expect(prompt).toContain('This one image must contain all storyboard panels and production information')
-    expect(prompt).toContain('BOARD FORMAT:')
-    expect(prompt).toContain('- Warm off-white production-board background.')
-    expect(prompt).toContain('- A grid of compact storyboard cards, one card per panel.')
-    expect(prompt).toContain('COMPLETE STORYBOARD BOARD:')
-    expect(prompt).toContain('Anchor panel for task routing: Panel 03.')
-    expect(prompt).toContain('Panel 03 | timecode 00:06 - 00:09 | shot wide two-shot')
-    expect(prompt).toContain('Creative brief: A woman stays left and a man stays right.')
-    expect(prompt).toContain('CONTINUITY RULES:')
-    expect(prompt).toContain('- Keep the protagonist, hometown environment, clothing continuity, season, and emotional tone from the creative brief.')
+    expect(prompt).toContain('Generate one storyboard panel using the top-down floor plan as the spatial truth.')
+    expect(prompt).toContain('SPATIAL TRUTH / TOP-DOWN LOCK:')
+    expect(prompt).toContain('俯视平面图 + A/B/C 人物编号 + master shot + ControlNet/参考图 + 不越轴。')
+    expect(prompt).toContain('CHARACTER POSITION LOCKS:')
+    expect(prompt).toContain('Character A: screen-left; reuse the previous locked position unless the action explicitly moves this character.')
+    expect(prompt).toContain('Character B: screen-right; reuse the previous locked position unless the action explicitly moves this character.')
+    expect(prompt).toContain('If a character is not described as moving in this panel, keep that character at the prior top-down coordinate')
+    expect(prompt).toContain('Use previous panel continuity plus the top-down lock; when they conflict, the top-down spatial truth wins.')
+    expect(prompt).toContain('SHOT TO GENERATE:')
+    expect(prompt).toContain('Panel 03')
   })
 
   it('builds first-panel image-reference instructions plus top-down A/B/C blocking', () => {

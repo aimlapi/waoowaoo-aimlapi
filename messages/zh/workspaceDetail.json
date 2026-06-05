@@ -73,7 +73,7 @@
     "subtitle": "用于同时测试多套生成策略：上方批量生成三种分镜项目，下方保留选角定妆 A/B 对比。",
     "storyboardBatch": {
       "title": "单项目三方案分镜分叉测试",
-      "subtitle": "先创建一个共享上游项目，再在同一项目内分叉生成三套 storyboard：全局连续性 Prompt、分镜板 Shot Card 版式、首张 panel 作为参考图的图生图链路。",
+      "subtitle": "先创建一个共享上游项目，再在同一项目内分叉生成三套 storyboard：全局连续性 Prompt、俯视图空间锁定、首张 panel 作为参考图的图生图链路。",
       "run": "生成单项目三套分镜",
       "submitting": "提交中...",
       "storyLabel": "测试故事",
@@ -134,7 +134,7 @@
   },
   "storyboardMethodTest": {
     "title": "正常项目流分镜方法测试",
-    "subtitle": "先生成剧本、独立风格示意、人物定妆资产和 360 场景资产，再在同一个项目里分叉测试三种分镜生成方案。",
+    "subtitle": "前序步骤完全一致：像正常项目一样生成剧本、只做风格示意的 3 张风格图、人物定妆/选角资产、360 场景资产，然后进入三种分镜连续性方法对照。",
     "run": "创建测试项目",
     "submitting": "提交中...",
     "creativeBrief": "创意",
@@ -144,7 +144,7 @@
     "panelCount": "分镜数",
     "artStyle": "项目风格",
     "defaultCreativeBrief": "一个 35 岁突然失业的中年单身女性，回老家的过程中逐渐与大环境和解的故事，16:9 画幅，侯孝贤画风。",
-    "defaultStyleReferenceNote": "只作为风格气质示意，不参与后续人物、场景或分镜参考。",
+    "defaultStyleReferenceNote": "摄影写实、超现实摄影、定格模型；只作为风格气质示意，不参与后续人物、场景或分镜参考。",
     "defaultProjectName": "返乡和解分镜方法测试",
     "needInput": "请填写创意和项目名。",
     "failed": "分镜方法测试项目创建失败",
@@ -156,6 +156,56 @@
     "openProject": "打开项目",
     "taskDetails": "任务详情",
     "panelLabel": "Panel {number}",
+    "pipeline": {
+      "step": "步骤 {number}",
+      "screenplay": {
+        "title": "正常生成剧本",
+        "description": "先用创意生成可落地剧本，后续资产和分镜都只从这个剧本分叉。"
+      },
+      "style": {
+        "title": "3 张风格示意",
+        "description": "只示意风格，不绑定人物、场景、分镜，也不作为连续性参考。"
+      },
+      "character": {
+        "title": "人物资产",
+        "description": "定妆照、选角图、多组形象选择与评分都按人物参考图一类 contact sheet 逻辑生成。"
+      },
+      "scene": {
+        "title": "360 场景资产",
+        "description": "按场景参考图二类方式生成同一空间的各角度和细节参考。"
+      },
+      "methods": {
+        "title": "三方法分镜",
+        "description": "在同一上游项目内测试 Prompt、俯视空间锁、首帧锁定三种 panel 方案。"
+      }
+    },
+    "stylePresets": {
+      "photoreal": "摄影写实",
+      "surreal": "超现实摄影",
+      "stopMotion": "定格模型",
+      "oilAnimation": "油画动画",
+      "japaneseHandDrawn": "日式手绘",
+      "westernComics": "欧美漫画",
+      "experimental": "实验影像",
+      "miniature": "微缩模型"
+    },
+    "methods": {
+      "globalContinuity": {
+        "title": "方案一：参考提示词",
+        "description": "每张 panel 使用完整 world state、角色状态、180 度轴线、参考条件和负面约束，按连续电影场景生成。",
+        "lock": "重点观察：是否能只靠文字规则保持 A/B 左右关系、固定物件和门窗位置。"
+      },
+      "topDownSpatialLock": {
+        "title": "方案二：俯视图空间真相",
+        "description": "把俯视图当成空间真相，标记 A/B/C 坐标和朝向；没发生移动就沿用锁定，发生移动才更新对应角色。",
+        "lock": "重点观察：空间锁是否比纯 prompt 更能防止镜像、越轴、换位和家具漂移。"
+      },
+      "firstPanelLock": {
+        "title": "方案三：首帧画面锁定",
+        "description": "先生成 panel 01 作为 master reference，再等首帧完成后自动提交后续 panel，后续只能依照首帧的人物站位和画面关系。",
+        "lock": "重点观察：图生图参考是否稳定延续首帧关系，还是会被后续动作提示带偏。"
+      }
+    },
     "stage": {
       "style-reference": "风格示意",
       "character-asset": "人物定妆",

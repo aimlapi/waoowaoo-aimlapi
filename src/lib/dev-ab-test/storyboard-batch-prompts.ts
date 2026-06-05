@@ -1,6 +1,6 @@
 import type { Locale } from '@/i18n/routing'
 
-export type StoryboardBatchSchemeId = 'global-continuity-prompt' | 'shot-card-board' | 'first-panel-img2img'
+export type StoryboardBatchSchemeId = 'global-continuity-prompt' | 'top-down-spatial-lock' | 'first-panel-img2img'
 
 export type CharacterSlot = 'screen-left' | 'screen-center' | 'screen-right'
 
@@ -43,14 +43,14 @@ export const SCHEMES: readonly SchemeDefinition[] = [
     },
   },
   {
-    id: 'shot-card-board',
+    id: 'top-down-spatial-lock',
     title: {
-      zh: '分镜板 Shot Card 版式',
-      en: 'Storyboard shot-card board',
+      zh: '俯视图空间锁定',
+      en: 'Top-down spatial lock',
     },
     summary: {
-      zh: '参考电影分镜板排版：场景编号、时间码、双画面、箭头、镜头参数、角色参考和技术规格。',
-      en: 'Uses a film storyboard-board layout: scene number, timecode, paired frames, arrows, shot metadata, character refs, and technical specs.',
+      zh: '先把俯视图作为空间真相，按 A/B/C 标记人物坐标；人物未移动时沿用锁定，发生移动时更新锁定。',
+      en: 'Uses the top-down floor plan as spatial truth, marks A/B/C coordinates, carries locks forward unless a shot explicitly moves a character.',
     },
   },
   {
@@ -272,50 +272,51 @@ function buildGlobalContinuityPrompt(input: {
   ].join('\n')
 }
 
-function buildShotCardBoardPrompt(input: {
+function buildTopDownSpatialLockPrompt(input: {
   readonly seed: StoryboardBatchPanelPromptSeed
   readonly storyText: string
-  readonly allSeeds: readonly StoryboardBatchPanelPromptSeed[]
 }): string {
   const seed = input.seed
   const story = compactStory(input.storyText)
-  const shotRows = input.allSeeds.map((item) => {
-    const startSecond = Math.max(0, (item.panelNumber - 1) * 3)
-    const endSecond = startSecond + 3
-    return [
-      `Panel ${String(item.panelNumber).padStart(2, '0')}`,
-      `timecode 00:${String(startSecond).padStart(2, '0')} - 00:${String(endSecond).padStart(2, '0')}`,
-      `shot ${item.shotType}`,
-      `camera ${item.cameraMove}`,
-      `location ${item.location}`,
-      `action ${item.description}`,
-    ].join(' | ')
+  const spatialBlock = buildTopDownBlock(seed)
+  const lockedCharacters = seed.characterSlots.map((slot, index) => {
+    const label = String.fromCharCode(65 + index)
+    const movementRule = seed.panelNumber <= 1
+      ? 'initialize this character lock from the top-down position.'
+      : 'reuse the previous locked position unless the action explicitly moves this character.'
+    return `Character ${label}: ${slot}; ${movementRule}`
   })
   return [
-    'Create one single cinematic storyboard overview image inspired by a professional film previsualization sheet.',
-    'This one image must contain all storyboard panels and production information for the requested scene chain. Do not generate a single isolated panel.',
+    'Generate one storyboard panel using the top-down floor plan as the spatial truth.',
+    'The floor plan is not decorative. It is the binding source for character coordinates, camera side, entrances, exits, and fixed object positions.',
     '',
-    'BOARD FORMAT:',
-    '- Warm off-white production-board background.',
-    '- A grid of compact storyboard cards, one card per panel.',
-    '- Each card contains a cinematic thumbnail, scene number, timecode, shot title, lens, location, camera, action, characters, and props.',
-    '- Use simple white arrows between cards to show continuity direction.',
-    '- Include character reference tiles, a tiny floor-plan/compass continuity marker, and technical specs along the bottom edge.',
-    '- The whole image should read like a single production planning board at a glance.',
+    'SHARED STORY SOURCE:',
+    story,
     '',
-    'COMPLETE STORYBOARD BOARD:',
-    `Creative brief: ${story}`,
-    `Anchor panel for task routing: ${panelLabel(seed)}.`,
-    ...shotRows,
+    'SPATIAL TRUTH / TOP-DOWN LOCK:',
+    spatialBlock,
     '',
-    'CONTINUITY RULES:',
-    '- Keep the protagonist, hometown environment, clothing continuity, season, and emotional tone from the creative brief.',
-    '- Do not mirror the location. Do not abruptly change fixed objects or background geography.',
-    '- Make the board feel like production planning for the same film scene chain, not unrelated concept art.',
+    'CHARACTER POSITION LOCKS:',
+    ...lockedCharacters,
+    'If a character is not described as moving in this panel, keep that character at the prior top-down coordinate and preserve screen-side continuity.',
+    'If a character enters, exits, or crosses to a new position, update only that character lock and keep every other lock unchanged.',
+    '',
+    'SHOT TO GENERATE:',
+    panelLabel(seed),
+    `Shot size: ${seed.shotType}.`,
+    `Camera: ${seed.cameraMove}.`,
+    `Location: ${seed.location}.`,
+    `Action: ${seed.description}`,
+    '',
+    'CONTINUITY CONSTRAINTS:',
+    '- Keep camera on the same side of the A/B axis.',
+    '- Do not mirror the room or exterior geography.',
+    '- Do not swap screen-left and screen-right character identities.',
+    '- Do not invent new fixed furniture, doors, windows, roads, vehicles, or landmarks.',
+    '- Use previous panel continuity plus the top-down lock; when they conflict, the top-down spatial truth wins.',
     '',
     'VISUAL STYLE:',
-    'Realistic cinematic storyboard thumbnails, muted earth tones, practical interior light, 35mm film texture.',
-    'No cartoon style. No messy unreadable layout. No duplicate characters.',
+    'Realistic cinematic storyboard panel, muted earth tones, practical or natural light, 35mm film texture, high realism, no cartoon style.',
   ].join('\n')
 }
 
@@ -373,11 +374,10 @@ export function buildStoryboardBatchPanelPrompt(input: {
   if (input.schemeId === 'global-continuity-prompt') {
     return buildGlobalContinuityPrompt({ seed: input.seed, storyText: input.storyText })
   }
-  if (input.schemeId === 'shot-card-board') {
-    return buildShotCardBoardPrompt({
+  if (input.schemeId === 'top-down-spatial-lock') {
+    return buildTopDownSpatialLockPrompt({
       seed: input.seed,
       storyText: input.storyText,
-      allSeeds: input.allSeeds ?? PANEL_SEEDS,
     })
   }
   if (input.schemeId === 'first-panel-img2img') {
