@@ -77,18 +77,19 @@ function baseProjectDescription(locale: Locale): string {
 
 function buildScreenplayPrompt(input: CreateStoryboardMethodTestSessionInput): string {
   const styleNote = input.styleReferenceNote.trim()
+  const artStyle = input.artStyle.trim()
   if (input.locale === 'en') {
     return [
       input.creativeBrief.trim(),
       `Aspect ratio: ${input.videoRatio}.`,
-      'Visual direction: restrained realist cinema inspired by Hou Hsiao-hsien: long-take observation, emotional distance, natural light, quiet hometown textures.',
+      artStyle ? `Project visual direction: ${artStyle}.` : '',
       styleNote ? `User style indication note: ${styleNote}. This note is only for the standalone style indication stage; do not bind it to character identity or storyboard continuity.` : '',
     ].filter(Boolean).join('\n')
   }
   return [
     input.creativeBrief.trim(),
     `画幅：${input.videoRatio}。`,
-    '视觉方向：侯孝贤式克制写实电影，长镜头观察感、情绪距离、自然光、安静的老家生活质地。',
+    artStyle ? `项目视觉方向：${artStyle}。` : '',
     styleNote ? `用户风格示意说明：${styleNote}。该说明只用于独立风格示意阶段，不绑定后续人物身份或分镜连续性。` : '',
   ].filter(Boolean).join('\n')
 }

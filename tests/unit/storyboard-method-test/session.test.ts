@@ -128,10 +128,16 @@ describe('storyboard method test session service', () => {
       styleReferenceNote: '风格示意只用于气质参考。',
       projectName: '返乡和解分镜方法测试',
       videoRatio: '16:9',
-      artStyle: 'realistic',
+      artStyle: '肯洛奇式社会写实',
       panelCount: 6,
     })
 
+    const screenplayCall = generateProjectEditScreenplayMock.mock.calls.at(0) as unknown as readonly [{
+      readonly prompt: string
+    }]
+    const screenplayPrompt = screenplayCall[0].prompt
+    expect(screenplayPrompt).toContain('项目视觉方向：肯洛奇式社会写实。')
+    expect(screenplayPrompt).not.toContain('侯孝贤')
     const screenplayCallOrder = generateProjectEditScreenplayMock.mock.invocationCallOrder[0] ?? 0
     const styleReferenceCallOrder = submitProjectVisualReferenceCasesMock.mock.invocationCallOrder[0] ?? 0
     const assetCallOrder = submitAssetGenerateTaskMock.mock.invocationCallOrder[0] ?? 0
