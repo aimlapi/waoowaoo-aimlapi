@@ -66,13 +66,13 @@ describe('visual reference cases task handler', () => {
           key: 'sunny-paris-walk',
           title: '晴日巴黎散步',
           description: '清亮自然光和开阔公园空间，让爱情像天气一样轻盈。',
-          visualDirection: 'sunny Paris park romance, medium-long shot, wide environment, natural daylight, relaxed walking composition',
+          visualDirection: '共享场景：同一对恋人在巴黎公园长椅旁并肩站立，人物站位、长椅、树道、远处行人和中远景构图完全一致。画风处理：美式动漫风，清亮自然光，粗线条角色设计，宽阔环境，轻盈色块。',
         },
         {
           key: 'river-bookstall-evening',
           title: '河岸旧书黄昏',
           description: '塞纳河旧书摊、晚霞和行人层次，突出偶遇的温柔距离。',
-          visualDirection: 'Seine riverside bookstall at dusk, long shot, visible spatial layout, warm evening light, layered pedestrians',
+          visualDirection: '共享场景：同一对恋人在巴黎公园长椅旁并肩站立，人物站位、长椅、树道、远处行人和中远景构图完全一致。画风处理：黑白文艺片风，高反差银盐颗粒，克制光影，环境层次清楚。',
         },
       ]),
       reasoning: '',
@@ -121,7 +121,7 @@ describe('visual reference cases task handler', () => {
         screenplayId: 'screenplay-1',
         title: '晴日巴黎散步',
         description: expect.stringContaining('清亮自然光'),
-        prompt: expect.stringContaining('sunny Paris park romance'),
+        prompt: expect.stringContaining('共享场景：同一对恋人在巴黎公园长椅旁并肩站立'),
         status: 'processing',
         taskId: 'task-visual-reference-1',
         sortIndex: 0,
@@ -136,7 +136,7 @@ describe('visual reference cases task handler', () => {
       data: expect.objectContaining({
         title: '河岸旧书黄昏',
         description: expect.stringContaining('塞纳河旧书摊'),
-        prompt: expect.stringContaining('Seine riverside bookstall at dusk'),
+        prompt: expect.stringContaining('画风处理：黑白文艺片风'),
         sortIndex: 1,
       }),
       select: {
@@ -152,6 +152,13 @@ describe('visual reference cases task handler', () => {
       action: 'visual_reference_style_plan',
     }))
     expect(aiExecMock.executeAiTextStep.mock.calls[0]?.[0].messages[0]?.content).toContain('不要复用固定预设组合')
+    expect(aiExecMock.executeAiTextStep.mock.calls[0]?.[0].messages[0]?.content).toContain('所有方案必须表现完全同一个场景')
+    expect(aiExecMock.executeAiTextStep.mock.calls[0]?.[0].messages[0]?.content).toContain('美式动漫/漫画、日式动漫、性冷淡极简')
+    expect(aiExecMock.executeAiTextStep.mock.calls[0]?.[0].messages[0]?.content).toContain('每个 visualDirection 必须明确包含')
+    expect(utilsMock.resolveImageSourceFromGeneration.mock.calls[0]?.[1].prompt).toContain('共享场景：同一对恋人在巴黎公园长椅旁并肩站立')
+    expect(utilsMock.resolveImageSourceFromGeneration.mock.calls[1]?.[1].prompt).toContain('共享场景：同一对恋人在巴黎公园长椅旁并肩站立')
+    expect(utilsMock.resolveImageSourceFromGeneration.mock.calls[0]?.[1].prompt).toContain('不要重新从剧本里选择其他瞬间')
+    expect(utilsMock.resolveImageSourceFromGeneration.mock.calls[0]?.[1].prompt).toContain('只改变画风处理')
     expect(utilsMock.resolveImageSourceFromGeneration.mock.calls[0]?.[1].prompt).toContain('色彩体系、构图规则、材质颗粒')
     expect(utilsMock.resolveImageSourceFromGeneration.mock.calls[0]?.[1].prompt).toContain('中远景、远景或全景式建立镜头')
     expect(utilsMock.resolveImageSourceFromGeneration.mock.calls[0]?.[1].prompt).toContain('避免脸部特写、半身特写')
