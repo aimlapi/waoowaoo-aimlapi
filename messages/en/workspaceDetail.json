@@ -156,6 +156,10 @@
     "openProject": "Open Project",
     "taskDetails": "Task details",
     "panelLabel": "Panel {number}",
+    "methodPending": "This method has not been generated yet. Start it separately after the upstream flow is ready.",
+    "generateMethod": "Generate This Method",
+    "methodSubmitting": "Submitting...",
+    "waitingUpstream": "Waiting for Upstream",
     "pipeline": {
       "step": "Step {number}",
       "screenplay": {

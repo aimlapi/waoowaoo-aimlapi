@@ -40,6 +40,13 @@ type StoryboardBranch = {
   readonly tasks: StoryboardTaskRef[]
 }
 
+type StoryboardSchemeId = 'global-continuity-prompt' | 'top-down-spatial-lock' | 'first-panel-img2img'
+
+type MethodCard = {
+  readonly key: 'globalContinuity' | 'topDownSpatialLock' | 'firstPanelLock'
+  readonly schemeId: StoryboardSchemeId
+}
+
 type StoryboardMethodSession = {
   readonly projectId: string
   readonly episodeId: string
@@ -74,11 +81,11 @@ const pipelineStepKeys = [
   'methods',
 ] as const
 
-const methodKeys = [
-  'globalContinuity',
-  'topDownSpatialLock',
-  'firstPanelLock',
-] as const
+const methodCards: readonly MethodCard[] = [
+  { key: 'globalContinuity', schemeId: 'global-continuity-prompt' },
+  { key: 'topDownSpatialLock', schemeId: 'top-down-spatial-lock' },
+  { key: 'firstPanelLock', schemeId: 'first-panel-img2img' },
+]
 
 function isRecord(value: unknown): value is Record<string, unknown> {
   return !!value && typeof value === 'object' && !Array.isArray(value)
@@ -167,6 +174,11 @@ function parseStoryboardTasks(value: unknown): StoryboardTaskRef[] {
   return value.tasks.map(parseStoryboardTask).filter((task): task is StoryboardTaskRef => task !== null)
 }
 
+function parseStoryboardBranchResponse(value: unknown): StoryboardBranch | null {
+  if (!isRecord(value)) return null
+  return parseStoryboardBranch(value.branch)
+}
+
 function countTaskStatuses(tasks: readonly { readonly taskId: string; readonly status: string }[], details: Record<string, DevAbTaskDetail>): TaskCounts {
   return tasks.reduce<TaskCounts>((counts, task) => {
     const status = details[task.taskId]?.status || task.status
@@ -199,6 +211,11 @@ export default function StoryboardMethodTestPage() {
   const [session, setSession] = useState<StoryboardMethodSession | null>(null)
   const [taskDetails, setTaskDetails] = useState<Record<string, DevAbTaskDetail>>({})
   const [continuationStatus, setContinuationStatus] = useState<Record<string, 'submitting' | 'done'>>({})
+  const [branchSubmitting, setBranchSubmitting] = useState<Record<StoryboardSchemeId, boolean>>({
+    'global-continuity-prompt': false,
+    'top-down-spatial-lock': false,
+    'first-panel-img2img': false,
+  })
 
   const storyboardTasks = useMemo(
     () => session?.storyboardBranches.flatMap((branch) => branch.tasks) ?? [],
@@ -220,6 +237,11 @@ export default function StoryboardMethodTestPage() {
     setSession(null)
     setTaskDetails({})
     setContinuationStatus({})
+    setBranchSubmitting({
+      'global-continuity-prompt': false,
+      'top-down-spatial-lock': false,
+      'first-panel-img2img': false,
+    })
     try {
       const response = await apiFetch('/api/storyboard-method-test/session', {
         method: 'POST',
@@ -244,6 +266,40 @@ export default function StoryboardMethodTestPage() {
       setSubmitting(false)
     }
   }, [artStyle, creativeBrief, locale, panelCount, projectName, styleReferenceNote, t, videoRatio])
+
+  const generateBranch = useCallback(async (schemeId: StoryboardSchemeId) => {
+    if (!session) return
+    setError(null)
+    setBranchSubmitting((current) => ({ ...current, [schemeId]: true }))
+    try {
+      const response = await apiFetch('/api/storyboard-method-test/branch', {
+        method: 'POST',
+        headers: { 'content-type': 'application/json' },
+        body: JSON.stringify({
+          projectId: session.projectId,
+          episodeId: session.episodeId,
+          schemeId,
+          panelCount,
+          meta: { locale },
+        }),
+      })
+      if (!response.ok) throw new Error(await readApiErrorMessage(response, t('failed')))
+      const branch = parseStoryboardBranchResponse(await response.json())
+      if (!branch) throw new Error(t('failed'))
+      setSession((current) => {
+        if (!current) return current
+        if (current.storyboardBranches.some((item) => item.schemeId === branch.schemeId)) return current
+        return {
+          ...current,
+          storyboardBranches: [...current.storyboardBranches, branch],
+        }
+      })
+    } catch (caught) {
+      setError(caught instanceof Error ? caught.message : t('failed'))
+    } finally {
+      setBranchSubmitting((current) => ({ ...current, [schemeId]: false }))
+    }
+  }, [locale, panelCount, session, t])
 
   useEffect(() => {
     if (allTasks.length === 0 || terminal) return
@@ -339,6 +395,7 @@ export default function StoryboardMethodTestPage() {
   }, [continuationStatus, locale, session, t, taskDetails])
 
   const upstreamCounts = countTaskStatuses(session?.upstreamTasks ?? [], taskDetails)
+  const upstreamReady = allTerminal(session?.upstreamTasks ?? [], taskDetails)
 
   return (
     <div className="min-h-screen bg-[var(--glass-bg-page)] text-[var(--glass-text-primary)]">
@@ -452,11 +509,11 @@ export default function StoryboardMethodTestPage() {
         </section>
 
         <section className="grid gap-4 lg:grid-cols-3">
-          {methodKeys.map((key) => (
-            <article key={key} className="rounded-lg border border-[var(--glass-stroke-base)] bg-[var(--glass-bg-surface)] p-4">
-              <h2 className="text-base font-semibold">{t(`methods.${key}.title`)}</h2>
-              <p className="mt-2 text-sm leading-6 text-[var(--glass-text-secondary)]">{t(`methods.${key}.description`)}</p>
-              <p className="mt-3 rounded-lg bg-black/10 px-3 py-2 text-xs leading-5 text-[var(--glass-text-tertiary)]">{t(`methods.${key}.lock`)}</p>
+          {methodCards.map((method) => (
+            <article key={method.schemeId} className="rounded-lg border border-[var(--glass-stroke-base)] bg-[var(--glass-bg-surface)] p-4">
+              <h2 className="text-base font-semibold">{t(`methods.${method.key}.title`)}</h2>
+              <p className="mt-2 text-sm leading-6 text-[var(--glass-text-secondary)]">{t(`methods.${method.key}.description`)}</p>
+              <p className="mt-3 rounded-lg bg-black/10 px-3 py-2 text-xs leading-5 text-[var(--glass-text-tertiary)]">{t(`methods.${method.key}.lock`)}</p>
             </article>
           ))}
         </section>
@@ -495,7 +552,27 @@ export default function StoryboardMethodTestPage() {
             </section>
 
             <section className="grid gap-4 lg:grid-cols-3">
-              {session.storyboardBranches.map((branch) => {
+              {methodCards.map((method) => {
+                const branch = session.storyboardBranches.find((item) => item.schemeId === method.schemeId)
+                if (!branch) {
+                  return (
+                    <article key={method.schemeId} className="flex flex-col gap-3 rounded-lg border border-dashed border-[var(--glass-stroke-base)] bg-[var(--glass-bg-surface)] p-4">
+                      <div>
+                        <h2 className="text-base font-semibold">{t(`methods.${method.key}.title`)}</h2>
+                        <p className="mt-1 text-sm leading-5 text-[var(--glass-text-secondary)]">{t('methodPending')}</p>
+                      </div>
+                      <button
+                        type="button"
+                        onClick={() => void generateBranch(method.schemeId)}
+                        disabled={!upstreamReady || branchSubmitting[method.schemeId]}
+                        className="mt-auto inline-flex items-center justify-center gap-2 rounded-lg bg-[var(--glass-accent-from)] px-4 py-2 text-sm font-semibold text-white transition-opacity hover:opacity-90 disabled:cursor-not-allowed disabled:opacity-50"
+                      >
+                        <AppIcon name="play" className="h-4 w-4" />
+                        {branchSubmitting[method.schemeId] ? t('methodSubmitting') : upstreamReady ? t('generateMethod') : t('waitingUpstream')}
+                      </button>
+                    </article>
+                  )
+                }
                 const counts = countTaskStatuses(branch.tasks, taskDetails)
                 return (
                   <article key={branch.storyboardId} className="flex flex-col gap-3 rounded-lg border border-[var(--glass-stroke-base)] bg-[var(--glass-bg-surface)] p-4">

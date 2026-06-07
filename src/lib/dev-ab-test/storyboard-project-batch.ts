@@ -320,6 +320,7 @@ export async function createStoryboardBatchProjects(input: CreateStoryboardBatch
 
 export async function createStoryboardBatchBranches(input: CreateStoryboardBatchInput & {
   readonly setup: SharedStoryboardSetup
+  readonly schemeIds?: readonly StoryboardBatchSchemeId[]
 }): Promise<StoryboardBatchProjectResult[]> {
   const storyText = input.storyText.trim()
   if (!storyText) throw new Error('STORYBOARD_BATCH_STORY_REQUIRED')
@@ -341,7 +342,8 @@ export async function createStoryboardBatchBranches(input: CreateStoryboardBatch
   })
 
   const results: StoryboardBatchProjectResult[] = []
-  for (const id of ['global-continuity-prompt', 'top-down-spatial-lock', 'first-panel-img2img'] as const) {
+  const schemeIds = input.schemeIds ?? ['global-continuity-prompt', 'top-down-spatial-lock', 'first-panel-img2img'] as const
+  for (const id of schemeIds) {
     results.push(await createStoryboardBranch({
       ...input,
       storyText,

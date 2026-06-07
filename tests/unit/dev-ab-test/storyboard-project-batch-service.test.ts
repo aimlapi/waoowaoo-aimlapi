@@ -175,4 +175,34 @@ describe('storyboard batch project service', () => {
     ])
     expect(String(twoCharacterPanel?.description)).not.toContain('character C')
   })
+
+  it('creates only the requested storyboard branch when schemeIds is provided', async () => {
+    const { createStoryboardBatchBranches } = await import('@/lib/dev-ab-test/storyboard-project-batch')
+
+    const result = await createStoryboardBatchBranches({
+      userId: 'user-1',
+      locale: 'zh',
+      requestId: 'request-1',
+      storyText: '两人戏：林静和母亲在老家院子择菜。',
+      projectNamePrefix: '两人分镜测试',
+      videoRatio: '16:9',
+      artStyle: 'realistic',
+      panelCount: 3,
+      setup: {
+        projectId: 'project-1',
+        projectName: '两人分镜测试',
+        episodeId: 'episode-1',
+        characterIds: ['character-lin', 'character-mother'],
+        appearanceIds: ['appearance-lin', 'appearance-mother'],
+        characterNames: ['林静', '母亲'],
+      },
+      schemeIds: ['top-down-spatial-lock'],
+    })
+
+    expect(result).toHaveLength(1)
+    expect(result[0]?.schemeId).toBe('top-down-spatial-lock')
+    expect(txMock.projectClip.create).toHaveBeenCalledTimes(1)
+    expect(txMock.projectStoryboard.create).toHaveBeenCalledTimes(1)
+    expect(submitStoryboardPanelTaskMock).toHaveBeenCalledTimes(3)
+  })
 })

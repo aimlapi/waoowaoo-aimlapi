@@ -156,6 +156,10 @@
     "openProject": "打开项目",
     "taskDetails": "任务详情",
     "panelLabel": "Panel {number}",
+    "methodPending": "此方案尚未生成，可在前置流程完成后单独启动。",
+    "generateMethod": "生成这个方案",
+    "methodSubmitting": "提交中...",
+    "waitingUpstream": "等待前置流程",
     "pipeline": {
       "step": "步骤 {number}",
       "screenplay": {

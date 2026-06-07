@@ -5,6 +5,11 @@ type CreateInput = {
   readonly data: Record<string, unknown>
 }
 
+type StoryboardRow = {
+  readonly id: string
+  readonly storyboardTextJson: string | null
+}
+
 const prismaMock = vi.hoisted(() => ({
   userPreference: {
     findUnique: vi.fn(async () => ({
@@ -25,11 +30,24 @@ const prismaMock = vi.hoisted(() => ({
       id: 'project-1',
       name: String(input.data.name),
     })),
+    findFirst: vi.fn(async () => ({
+      id: 'project-1',
+      name: '返乡和解分镜方法测试',
+      videoRatio: '16:9',
+      artStyle: '肯洛奇式社会写实',
+    })),
     update: vi.fn(async () => ({ id: 'project-1' })),
     delete: vi.fn(async () => ({ id: 'project-1' })),
   },
   projectEpisode: {
     create: vi.fn(async () => ({ id: 'episode-1' })),
+    findFirst: vi.fn(async () => ({ id: 'episode-1' })),
+  },
+  projectEditScreenplay: {
+    findFirst: vi.fn(async () => ({
+      status: 'ready',
+      screenplayText: '角色表：林静、母亲。场景：老家院子。',
+    })),
   },
   projectCharacter: {
     create: vi.fn(async (input: CreateInput) => {
@@ -40,6 +58,10 @@ const prismaMock = vi.hoisted(() => ({
         appearances: [{ id: `appearance-${name}` }],
       }
     }),
+    findMany: vi.fn(async () => [
+      { id: 'character-lin', name: '林静', appearances: [{ id: 'appearance-lin' }] },
+      { id: 'character-mother', name: '母亲', appearances: [{ id: 'appearance-mother' }] },
+    ]),
   },
   projectLocation: {
     create: vi.fn(async () => ({
@@ -49,6 +71,9 @@ const prismaMock = vi.hoisted(() => ({
   },
   task: {
     updateMany: vi.fn(async () => ({ count: 0 })),
+  },
+  projectStoryboard: {
+    findMany: vi.fn(async (): Promise<StoryboardRow[]> => []),
   },
 }))
 
@@ -79,13 +104,16 @@ const submitAssetGenerateTaskMock = vi.hoisted(() => vi.fn(async (input: {
 })))
 
 const createStoryboardBatchBranchesMock = vi.hoisted(() => vi.fn(async (input: {
+  readonly schemeIds?: readonly string[]
   readonly setup: {
     readonly projectId: string
     readonly episodeId: string
     readonly characterNames: readonly string[]
   }
-}) => [{
-  schemeId: 'global-continuity-prompt',
+}) => {
+  const schemeId = input.schemeIds?.[0] ?? 'global-continuity-prompt'
+  return [{
+  schemeId,
   schemeTitle: '全局连续性 Prompt',
   schemeSummary: 'summary',
   projectId: input.setup.projectId,
@@ -94,7 +122,8 @@ const createStoryboardBatchBranchesMock = vi.hoisted(() => vi.fn(async (input: {
   projectName: '返乡和解分镜方法测试',
   tasks: [{ panelNumber: 1, panelId: 'panel-1', taskId: 'task-panel-1', status: 'queued' }],
   characterNames: input.setup.characterNames,
-}]))
+}]
+}))
 
 vi.mock('@/lib/prisma', () => ({ prisma: prismaMock }))
 vi.mock('@/lib/edit-script/service', () => ({
@@ -161,6 +190,7 @@ describe('storyboard method test session service', () => {
     ])
     expect(createStoryboardBatchBranchesMock).toHaveBeenCalledWith(expect.objectContaining({
       storyText: expect.stringContaining('林静'),
+      schemeIds: ['global-continuity-prompt'],
       setup: expect.objectContaining({
         characterNames: ['林静', '母亲'],
       }),
@@ -169,5 +199,50 @@ describe('storyboard method test session service', () => {
     expect(result.episodeId).toBe('episode-1')
     expect(result.screenplayId).toBe('screenplay-1')
     expect(result.storyboardBranches).toHaveLength(1)
+  })
+
+  it('creates a single requested storyboard method branch later', async () => {
+    const { createStoryboardMethodTestBranch } = await import('@/lib/storyboard-method-test/session')
+
+    const result = await createStoryboardMethodTestBranch({
+      userId: 'user-1',
+      locale: 'zh',
+      requestId: 'request-2',
+      projectId: 'project-1',
+      episodeId: 'episode-1',
+      schemeId: 'top-down-spatial-lock',
+      panelCount: 6,
+    })
+
+    expect(createStoryboardBatchBranchesMock).toHaveBeenCalledWith(expect.objectContaining({
+      schemeIds: ['top-down-spatial-lock'],
+      storyText: expect.stringContaining('林静'),
+      setup: expect.objectContaining({
+        projectId: 'project-1',
+        episodeId: 'episode-1',
+        characterIds: ['character-lin', 'character-mother'],
+        appearanceIds: ['appearance-lin', 'appearance-mother'],
+        characterNames: ['林静', '母亲'],
+      }),
+    }))
+    expect(result.schemeId).toBe('top-down-spatial-lock')
+  })
+
+  it('rejects duplicate storyboard method branch creation', async () => {
+    prismaMock.projectStoryboard.findMany.mockResolvedValueOnce([{
+      id: 'storyboard-existing',
+      storyboardTextJson: JSON.stringify({ schemeId: 'top-down-spatial-lock' }),
+    }])
+    const { createStoryboardMethodTestBranch } = await import('@/lib/storyboard-method-test/session')
+
+    await expect(createStoryboardMethodTestBranch({
+      userId: 'user-1',
+      locale: 'zh',
+      requestId: 'request-3',
+      projectId: 'project-1',
+      episodeId: 'episode-1',
+      schemeId: 'top-down-spatial-lock',
+      panelCount: 6,
+    })).rejects.toThrow('STORYBOARD_METHOD_TEST_BRANCH_ALREADY_EXISTS')
   })
 })

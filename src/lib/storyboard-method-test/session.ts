@@ -7,6 +7,7 @@ import {
   type SharedStoryboardSetup,
   type StoryboardBatchProjectResult,
 } from '@/lib/dev-ab-test/storyboard-project-batch'
+import { type StoryboardBatchSchemeId } from '@/lib/dev-ab-test/storyboard-batch-prompts'
 import { rollbackStoryboardBatchProject, toError } from '@/lib/dev-ab-test/storyboard-batch-rollback'
 import { generateProjectEditScreenplay } from '@/lib/edit-script/service'
 import { submitAssetGenerateTask } from '@/lib/assets/services/asset-actions'
@@ -44,6 +45,16 @@ export interface StoryboardMethodTestSessionResult {
   readonly storyboardBranches: StoryboardBatchProjectResult[]
 }
 
+export interface CreateStoryboardMethodTestBranchInput {
+  readonly userId: string
+  readonly locale: Locale
+  readonly requestId?: string | null
+  readonly projectId: string
+  readonly episodeId: string
+  readonly schemeId: StoryboardBatchSchemeId
+  readonly panelCount: number
+}
+
 function isRecord(value: unknown): value is Record<string, unknown> {
   return !!value && typeof value === 'object' && !Array.isArray(value)
 }
@@ -66,6 +77,17 @@ function readTaskRef(value: unknown, input: {
     targetId: input.targetId,
     taskId,
     status: readString(value.status) || 'queued',
+  }
+}
+
+function readStoryboardSchemeIdFromTextJson(value: string | null): string | null {
+  if (!value) return null
+  try {
+    const parsed = JSON.parse(value) as unknown
+    if (!isRecord(parsed)) return null
+    return readString(parsed.schemeId) || null
+  } catch {
+    return null
   }
 }
 
@@ -531,6 +553,7 @@ export async function createStoryboardMethodTestSession(
       artStyle: input.artStyle,
       panelCount: input.panelCount,
       setup,
+      schemeIds: ['global-continuity-prompt'],
     }))
 
     return {
@@ -559,4 +582,100 @@ export async function createStoryboardMethodTestSession(
     }
     throw originalError
   }
+}
+
+export async function createStoryboardMethodTestBranch(
+  input: CreateStoryboardMethodTestBranchInput,
+): Promise<StoryboardBatchProjectResult> {
+  const [project, episode, screenplay, characters, existingStoryboards] = await Promise.all([
+    prisma.project.findFirst({
+      where: { id: input.projectId, userId: input.userId },
+      select: {
+        id: true,
+        name: true,
+        videoRatio: true,
+        artStyle: true,
+      },
+    }),
+    prisma.projectEpisode.findFirst({
+      where: { id: input.episodeId, projectId: input.projectId },
+      select: { id: true },
+    }),
+    prisma.projectEditScreenplay.findFirst({
+      where: {
+        projectId: input.projectId,
+        episodeId: input.episodeId,
+      },
+      select: {
+        status: true,
+        screenplayText: true,
+      },
+    }),
+    prisma.projectCharacter.findMany({
+      where: { projectId: input.projectId },
+      orderBy: { createdAt: 'asc' },
+      select: {
+        id: true,
+        name: true,
+        appearances: {
+          orderBy: { appearanceIndex: 'asc' },
+          take: 1,
+          select: { id: true },
+        },
+      },
+    }),
+    prisma.projectStoryboard.findMany({
+      where: { episodeId: input.episodeId },
+      select: {
+        id: true,
+        storyboardTextJson: true,
+      },
+    }),
+  ])
+
+  if (!project || !episode) throw new Error('STORYBOARD_METHOD_TEST_PROJECT_NOT_FOUND')
+  if (!screenplay || screenplay.status !== 'ready') throw new Error('STORYBOARD_METHOD_TEST_SCREENPLAY_NOT_READY')
+  if (!project.videoRatio || (project.videoRatio !== '9:16' && project.videoRatio !== '16:9' && project.videoRatio !== '21:9')) {
+    throw new Error('STORYBOARD_METHOD_TEST_VIDEO_RATIO_INVALID')
+  }
+  const artStyle = readString(project.artStyle)
+  if (!artStyle) throw new Error('STORYBOARD_METHOD_TEST_ART_STYLE_MISSING')
+  if (existingStoryboards.some((storyboard) => readStoryboardSchemeIdFromTextJson(storyboard.storyboardTextJson) === input.schemeId)) {
+    throw new Error('STORYBOARD_METHOD_TEST_BRANCH_ALREADY_EXISTS')
+  }
+
+  const characterIds: string[] = []
+  const appearanceIds: string[] = []
+  const characterNames: string[] = []
+  for (const character of characters) {
+    const appearanceId = character.appearances[0]?.id
+    if (!appearanceId) throw new Error(`STORYBOARD_METHOD_TEST_APPEARANCE_MISSING:${character.name}`)
+    characterIds.push(character.id)
+    appearanceIds.push(appearanceId)
+    characterNames.push(character.name)
+  }
+  if (characterIds.length === 0) throw new Error('STORYBOARD_METHOD_TEST_CHARACTERS_MISSING')
+
+  const setup: SharedStoryboardSetup = {
+    projectId: project.id,
+    projectName: project.name,
+    episodeId: episode.id,
+    characterIds,
+    appearanceIds,
+    characterNames,
+  }
+  const [branch] = await createStoryboardBatchBranches({
+    userId: input.userId,
+    locale: input.locale,
+    requestId: input.requestId,
+    storyText: screenplay.screenplayText,
+    projectNamePrefix: project.name,
+    videoRatio: project.videoRatio,
+    artStyle,
+    panelCount: input.panelCount,
+    setup,
+    schemeIds: [input.schemeId],
+  })
+  if (!branch) throw new Error('STORYBOARD_METHOD_TEST_BRANCH_CREATE_EMPTY')
+  return branch
 }
