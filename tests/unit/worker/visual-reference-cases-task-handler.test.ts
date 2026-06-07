@@ -119,8 +119,8 @@ describe('visual reference cases task handler', () => {
         projectId: 'project-1',
         episodeId: 'episode-1',
         screenplayId: 'screenplay-1',
-        title: '晴日巴黎散步',
-        description: expect.stringContaining('清亮自然光'),
+        title: '真人写实感',
+        description: expect.stringContaining('真人写实感版本'),
         prompt: expect.stringContaining('共享场景：同一对恋人在巴黎公园长椅旁并肩站立'),
         status: 'processing',
         taskId: 'task-visual-reference-1',
@@ -134,9 +134,9 @@ describe('visual reference cases task handler', () => {
     })
     expect(prismaMock.projectVisualReferenceCase.create).toHaveBeenNthCalledWith(2, {
       data: expect.objectContaining({
-        title: '河岸旧书黄昏',
-        description: expect.stringContaining('塞纳河旧书摊'),
-        prompt: expect.stringContaining('画风处理：黑白文艺片风'),
+        title: '动画感',
+        description: expect.stringContaining('动画感版本'),
+        prompt: expect.stringContaining('风格：动画感'),
         sortIndex: 1,
       }),
       select: {
@@ -153,18 +153,21 @@ describe('visual reference cases task handler', () => {
     }))
     expect(aiExecMock.executeAiTextStep.mock.calls[0]?.[0].messages[0]?.content).toContain('不要复用固定预设组合')
     expect(aiExecMock.executeAiTextStep.mock.calls[0]?.[0].messages[0]?.content).toContain('所有方案必须表现完全同一个场景')
-    expect(aiExecMock.executeAiTextStep.mock.calls[0]?.[0].messages[0]?.content).toContain('美式动漫/漫画、日式动漫、性冷淡极简')
-    expect(aiExecMock.executeAiTextStep.mock.calls[0]?.[0].messages[0]?.content).toContain('这一组必须跨越不同媒介家族')
-    expect(aiExecMock.executeAiTextStep.mock.calls[0]?.[0].messages[0]?.content).toContain('最多只能有 1 个普通摄影写实')
-    expect(aiExecMock.executeAiTextStep.mock.calls[0]?.[0].messages[0]?.content).toContain('主动跳出到动画、粘土、图形、霓虹、黑白、微缩')
+    expect(aiExecMock.executeAiTextStep.mock.calls[0]?.[0].messages[0]?.content).toContain('第 1 张真人写实感')
+    expect(aiExecMock.executeAiTextStep.mock.calls[0]?.[0].messages[0]?.content).toContain('第 2 张动画感')
+    expect(aiExecMock.executeAiTextStep.mock.calls[0]?.[0].messages[0]?.content).toContain('第 3 张诡异感')
+    expect(aiExecMock.executeAiTextStep.mock.calls[0]?.[0].messages[0]?.content).toContain('不要发明其他风格家族')
+    expect(aiExecMock.executeAiTextStep.mock.calls[0]?.[0].messages[0]?.content).toContain('风格文字要简单直接')
     expect(aiExecMock.executeAiTextStep.mock.calls[0]?.[0].messages[0]?.content).toContain('每个 visualDirection 必须明确包含')
     expect(utilsMock.resolveImageSourceFromGeneration.mock.calls[0]?.[1].prompt).toContain('共享场景：同一对恋人在巴黎公园长椅旁并肩站立')
     expect(utilsMock.resolveImageSourceFromGeneration.mock.calls[1]?.[1].prompt).toContain('共享场景：同一对恋人在巴黎公园长椅旁并肩站立')
+    expect(utilsMock.resolveImageSourceFromGeneration.mock.calls[0]?.[1].prompt).toContain('风格：真人写实感')
+    expect(utilsMock.resolveImageSourceFromGeneration.mock.calls[1]?.[1].prompt).toContain('风格：动画感')
+    expect(utilsMock.resolveImageSourceFromGeneration.mock.calls[1]?.[1].prompt).toContain('下面文字只用于继承共享场景内容')
     expect(utilsMock.resolveImageSourceFromGeneration.mock.calls[0]?.[1].prompt).toContain('不要重新从剧本里选择其他瞬间')
     expect(utilsMock.resolveImageSourceFromGeneration.mock.calls[0]?.[1].prompt).toContain('只改变画风处理')
-    expect(utilsMock.resolveImageSourceFromGeneration.mock.calls[0]?.[1].prompt).toContain('画风家族优先级高于当前项目风格')
-    expect(utilsMock.resolveImageSourceFromGeneration.mock.calls[0]?.[1].prompt).toContain('成图必须明显变成这个媒介家族')
-    expect(utilsMock.resolveImageSourceFromGeneration.mock.calls[0]?.[1].prompt).toContain('色彩体系、构图规则、材质颗粒')
+    expect(utilsMock.resolveImageSourceFromGeneration.mock.calls[0]?.[1].prompt).toContain('只执行视觉方向里点名的直接感觉')
+    expect(utilsMock.resolveImageSourceFromGeneration.mock.calls[0]?.[1].prompt).toContain('不要额外加入其他风格家族')
     expect(utilsMock.resolveImageSourceFromGeneration.mock.calls[0]?.[1].prompt).toContain('中远景、远景或全景式建立镜头')
     expect(utilsMock.resolveImageSourceFromGeneration.mock.calls[0]?.[1].prompt).toContain('避免脸部特写、半身特写')
     expect(utilsMock.resolveImageSourceFromGeneration).toHaveBeenCalledWith(

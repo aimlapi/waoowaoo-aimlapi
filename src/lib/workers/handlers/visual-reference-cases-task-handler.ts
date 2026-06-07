@@ -19,6 +19,13 @@ interface VisualReferenceStylePreset {
   readonly visualDirection: string
 }
 
+interface RequiredStyleSlot {
+  readonly keySuffix: string
+  readonly title: string
+  readonly description: string
+  readonly visualDirection: string
+}
+
 interface VisualReferenceCaseForGeneration {
   readonly id: string
   readonly status: string
@@ -77,10 +84,9 @@ function buildStylePlanPrompt(input: {
       `Read the confirmed screenplay and design exactly ${input.count} visual reference style options for this specific story.`,
       'The options must be inferred from this screenplay: genre, location, era, emotional rhythm, themes, character relationships, production scale, and key situations. Do not reuse a fixed preset set.',
       'First choose one shared representative scene from the screenplay. Every option must depict that exact same scene, same characters, same character positions, same props, same camera angle family, and same spatial composition. Only the visual style changes.',
-      'Each option must be unmistakably different from the others as a complete visual world: palette, composition grammar, production design, texture, wardrobe/props rendering, lighting logic, line/shape language, camera distance, and emotional temperature.',
-      'Push the style distance hard when the story allows it. Examples of valid directions include American animation/comics, Japanese anime, cool minimalist design, social realism, macaron palette, claymation/stop-motion clay, neon palette, black-and-white art film, experimental video, or miniature model. Do not make all options minor color grades of the same realistic image.',
-      'The set must span different medium families, not merely different cinematic moods. For 3 options, choose 3 different families from this menu: hand-drawn anime, American 3D animation/comics, claymation or stop-motion material model, minimalist cool design, macaron pastel production design, neon/sci-fi color world, black-and-white art film, harsh social realism, experimental video, miniature model. Never choose more than one plain photographic realism / social realism / cinematic realism option in the same set.',
-      'If the current project style is realistic, treat it only as story context. The visual reference options are allowed and expected to break away into animation, clay, graphic, neon, monochrome, or other non-realistic style families for comparison.',
+      'Use only these required slots in order: 1) live-action realistic feel, 2) animated feel, 3) eerie feel. Do not invent additional named style families.',
+      'The title for each slot should be exactly: Live-action Realistic Feel, Animated Feel, Eerie Feel.',
+      'Keep style wording simple and direct. Do not add specific sub-style menus, genre labels, or ornate art-direction language.',
       'All options must prefer medium-long shots, long shots, or wide establishing compositions, showing characters inside an environment. Avoid close-ups, face close-ups, tight bust shots, cropped portraits, and macro details.',
       'Return strict JSON only. No markdown. No extra prose.',
       'Schema: [{"key":"kebab-case-id","title":"short user-facing title","description":"one concise sentence","visualDirection":"detailed image-generation direction"}]',
@@ -94,10 +100,9 @@ function buildStylePlanPrompt(input: {
     `请阅读这份已经确认的剧本，并为这个剧本专门设计 ${input.count} 个视觉参考风格方案。`,
     '这些方案必须从本剧本里推导出来：类型、地点、时代、情绪节奏、主题、人物关系、制作规模和关键场面。不要复用固定预设组合。',
     '请先从剧本中选择一个共享代表场景。所有方案必须表现完全同一个场景、同一批人物、同一人物站位、同一道具、同一类机位和同一个空间构图，只允许画风发生变化。',
-    '每个方案都必须像一个完整的视觉世界，并且彼此明显不同：色彩体系、构图规则、美术设计、材质颗粒、服装/道具呈现方式、光源逻辑、线条/造型语言、镜头距离和情绪温度都要拉开。',
-    '画风差异要尽量拉大。可用方向包括但不限于：美式动漫/漫画、日式动漫、性冷淡极简、社会现实主义写实、马卡龙配色、粘土动画/定格粘土、霓虹配色、黑白文艺片、实验影像、微缩模型。不要把所有方案都做成同一张写实图的轻微调色。',
-    '这一组必须跨越不同媒介家族，不只是不同电影情绪。若生成 3 个方案，就从这些家族里选择 3 个不同家族：手绘日式动漫、美式 3D 动画/漫画、粘土动画或定格材料模型、性冷淡极简设计、马卡龙粉彩美术、霓虹/科幻配色世界、黑白文艺片、粗粝社会现实主义、实验影像、微缩模型。同一组里最多只能有 1 个普通摄影写实/社会写实/电影写实方案。',
-    '如果当前项目风格是 realistic，也只把它当作故事语境；风格示意图应该允许并且主动跳出到动画、粘土、图形、霓虹、黑白、微缩等非写实风格家族，用来做对照。',
+    '只按顺序使用这三个固定槽位：第 1 张真人写实感，第 2 张动画感，第 3 张诡异感。不要发明其他风格家族。',
+    '每个槽位的标题必须分别严格写成：真人写实感、动画感、诡异感。',
+    '风格文字要简单直接，不要加入具体流派菜单、类型片标签或花哨美术描述。',
     '所有方案都必须优先中远景、远景或全景式建立镜头，把人物放在环境里展示整体风格。避免脸部特写、半身特写、裁切头像和微距细节。',
     '只返回严格 JSON，不要 markdown，不要解释。',
     '格式：[{"key":"英文短横线id","title":"给用户看的短标题","description":"一句具体说明","visualDirection":"可直接用于图像生成的详细视觉方向"}]',
@@ -120,6 +125,109 @@ function normalizeStylePlanItem(item: Record<string, unknown>, index: number): V
     title,
     description,
     visualDirection,
+  }
+}
+
+function getRequiredStyleSlot(locale: Locale, index: number): RequiredStyleSlot | null {
+  if (locale === 'en') {
+    const slots: readonly RequiredStyleSlot[] = [
+      {
+        keySuffix: 'live-action-realistic-feel',
+        title: 'Live-action Realistic Feel',
+        description: 'The shared scene with a live-action realistic feel.',
+        visualDirection: [
+          'Style: live-action realistic feel.',
+          'Make the shared scene feel like a real live-action shot with believable people, space, light, and materials.',
+          'Do not make it animated or eerie.',
+        ].join(' '),
+      },
+      {
+        keySuffix: 'animated-feel',
+        title: 'Animated Feel',
+        description: 'The shared scene with an animated feel.',
+        visualDirection: [
+          'Style: animated feel.',
+          'Make the shared scene clearly feel animated, with non-live-action character and environment rendering.',
+          'Do not make it look like a real live-action shot.',
+        ].join(' '),
+      },
+      {
+        keySuffix: 'eerie-feel',
+        title: 'Eerie Feel',
+        description: 'The shared scene with an eerie feel.',
+        visualDirection: [
+          'Style: eerie feel.',
+          'Make the shared scene clearly feel strange and unsettling while keeping the same scene readable.',
+          'Do not make it only a normal realistic shot.',
+        ].join(' '),
+      },
+    ]
+    return slots[index] ?? null
+  }
+
+  const slots: readonly RequiredStyleSlot[] = [
+    {
+      keySuffix: 'live-action-realistic-feel',
+      title: '真人写实感',
+      description: '同一场景的真人写实感版本。',
+      visualDirection: [
+        '风格：真人写实感。',
+        '让同一场景像真人实拍画面，人物、空间、光线和材质都可信。',
+        '不要动画感，也不要诡异感。',
+      ].join(' '),
+    },
+    {
+      keySuffix: 'animated-feel',
+      title: '动画感',
+      description: '同一场景的动画感版本。',
+      visualDirection: [
+        '风格：动画感。',
+        '让同一场景明显像动画画面，人物和环境都不是真人实拍质感。',
+        '不要真人写实感。',
+      ].join(' '),
+    },
+    {
+      keySuffix: 'eerie-feel',
+      title: '诡异感',
+      description: '同一场景的诡异感版本。',
+      visualDirection: [
+        '风格：诡异感。',
+        '让同一场景明显变得诡异、不安，但场景内容仍然可辨认。',
+        '不要只是普通真人写实感。',
+      ].join(' '),
+    },
+  ]
+  return slots[index] ?? null
+}
+
+function applyRequiredStyleSlot(input: {
+  readonly preset: VisualReferenceStylePreset
+  readonly locale: Locale
+  readonly index: number
+}): VisualReferenceStylePreset {
+  const slot = getRequiredStyleSlot(input.locale, input.index)
+  if (!slot) return input.preset
+  if (input.locale === 'en') {
+    return {
+      key: `${input.preset.key}-${slot.keySuffix}`,
+      title: slot.title,
+      description: slot.description,
+      visualDirection: [
+        slot.visualDirection,
+        'Use the following text only for the shared scene content, characters, positions, props, camera angle family, and spatial composition.',
+        input.preset.visualDirection,
+      ].join(' '),
+    }
+  }
+  return {
+    key: `${input.preset.key}-${slot.keySuffix}`,
+    title: slot.title,
+    description: slot.description,
+    visualDirection: [
+      slot.visualDirection,
+      '下面文字只用于继承共享场景内容、人物、站位、道具、机位类型和空间构图。',
+      input.preset.visualDirection,
+    ].join(' '),
   }
 }
 
@@ -157,7 +265,11 @@ async function generateVisualReferenceStylePlans(input: {
   if (plans.length !== input.count) {
     throw new Error(`VISUAL_REFERENCE_STYLE_PLAN_COUNT_MISMATCH: expected ${input.count}, got ${plans.length}`)
   }
-  return plans
+  return plans.map((preset, index) => applyRequiredStyleSlot({
+    preset,
+    locale: input.locale,
+    index,
+  }))
 }
 
 function buildReferencePrompt(input: {
@@ -175,9 +287,7 @@ function buildReferencePrompt(input: {
       'Create one standalone visual reference image for a confirmed screenplay.',
       'This is only a mood/style reference for the user. It must not look like a storyboard panel, asset sheet, UI mockup, poster with text, or production diagram.',
       `Visual direction: ${input.preset.visualDirection}.`,
-      'Commit strongly to this option; it should look unmistakably different from the other visual references even at thumbnail size.',
-      'Build a complete visual world: color palette, composition grammar, texture, wardrobe or props, light source, camera distance, and emotional temperature. Do not merely reuse the same realistic scene with a different color grade.',
-      'The named style family in Visual direction overrides the current project art style. If it says anime, claymation, neon, monochrome art film, miniature, or graphic minimalism, the output must visibly become that medium family.',
+      'Commit only to the direct feel named in Visual direction. Do not add extra style families or sub-style labels.',
       'Do not choose a new moment from the screenplay. Use the shared scene described inside Visual direction exactly; preserve its characters, positions, props, camera angle family, and spatial composition. Change only the style treatment.',
       'Use a medium-long shot, long shot, or wide establishing composition. Show the characters within the surrounding environment so the overall art direction, set design, color world, and spatial layout are visible. Avoid close-ups, face close-ups, tight bust shots, cropped portraits, macro details, or any small-scale framing that hides the style world.',
       input.aspectRatio ? `Aspect ratio: ${input.aspectRatio}.` : '',
@@ -191,9 +301,7 @@ function buildReferencePrompt(input: {
     '为一份已经确认的剧本生成一张独立的画面风格参考图。',
     '这只是交给用户看的画面气质参考，不是正式分镜、不是角色资产设定图、不是海报、不是 UI，也不是生产流程图。',
     `视觉方向：${input.preset.visualDirection}。`,
-    '请强烈执行这个方向，让它在缩略图尺寸下也能和其他视觉参考明显不同。',
-    '请建立完整的视觉世界：色彩体系、构图规则、材质颗粒、服装或道具、光源逻辑、镜头距离和情绪温度都要改变，不要只是同一个写实场景换调色。',
-    '视觉方向里指定的画风家族优先级高于当前项目风格。如果写了动漫、粘土动画、霓虹、黑白文艺片、微缩模型或图形极简，成图必须明显变成这个媒介家族。',
+    '只执行视觉方向里点名的直接感觉，不要额外加入其他风格家族或具体流派标签。',
     '不要重新从剧本里选择其他瞬间。必须严格使用视觉方向里描述的共享场景，保留同一批人物、人物站位、道具、机位类型和空间构图，只改变画风处理。',
     '景别请优先使用中远景、远景或全景式建立镜头。人物要放在环境里，让整体美术风格、场景设计、色彩世界和空间关系都能看清楚。避免脸部特写、半身特写、裁切头像、微距细节或任何看不清整体风格的小景别。',
     input.aspectRatio ? `画幅比例：${input.aspectRatio}。` : '',
