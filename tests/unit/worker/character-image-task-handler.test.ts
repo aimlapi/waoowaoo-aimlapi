@@ -215,7 +215,7 @@ describe('worker character-image-task-handler behavior', () => {
     }
     expect(generationInput.prompt).toContain('选中的视觉风格案例（最高优先级）：')
     expect(generationInput.prompt).toContain('冷白写实')
-    expect(generationInput.prompt).toContain('禁止把写实风格转换成动漫、漫画或插画风')
+    expect(generationInput.prompt).toContain('选中案例的媒介类别具有约束力')
     expect(generationInput.prompt).not.toContain('真实电影级画面质感')
     expect(generationInput.options?.referenceImages).toEqual(['normalized-style-ref'])
   })
@@ -276,7 +276,7 @@ describe('worker character-image-task-handler behavior', () => {
               prompt: '同一角色换上防水长外套和深色战术靴，身份标记保持一致',
               expression: '中性',
               prop: '',
-              background: '摄影棚背景',
+              background: '低干扰背景',
               purpose: '测试服装跨度',
             },
             {
@@ -285,7 +285,7 @@ describe('worker character-image-task-handler behavior', () => {
               prompt: '同一角色手持折叠手杖，道具不遮挡脸部',
               expression: '中性',
               prop: '折叠手杖',
-              background: '摄影棚背景',
+              background: '低干扰背景',
               purpose: '测试道具匹配',
             },
             {

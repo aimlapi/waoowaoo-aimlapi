@@ -142,6 +142,9 @@ export async function handleCharacterStyleTestTask(job: Job<TaskJobData>) {
     projectId: job.data.projectId,
     episodeId: job.data.episodeId,
   })
+  if (promptMode === 'casting_photo' && !selectedVisualReferenceStyle) {
+    throw new Error('SELECTED_VISUAL_REFERENCE_STYLE_REQUIRED')
+  }
   const styleReferenceImages = await normalizeOptionalReferenceImagesForGeneration(
     selectedVisualReferenceStyle?.imageUrl ? [selectedVisualReferenceStyle.imageUrl] : [],
     {

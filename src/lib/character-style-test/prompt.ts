@@ -102,7 +102,7 @@ function buildChineseCastingCandidateBrief(candidateIndex: number | undefined): 
     ].join(' '),
     [
       '候选 C 方向：造型记忆点与轮廓识别优先。',
-      '在仍然可被选角的真实摄影范围内，强化不同发型轮廓、服装层次、标志性配饰、身体标记或独特穿搭比例。',
+      '在仍然适合作为角色定妆候选的范围内，强化不同发型轮廓、服装层次、标志性配饰、身体标记或独特穿搭比例。',
       '必须与候选 A/B 拉开：脸型气质、发型、服装结构和识别点都要明显不同，不能只是同一人物的第三张相似 contact sheet。',
     ].join(' '),
   ] as const
@@ -134,39 +134,41 @@ function buildEnglishCastingCandidateBrief(candidateIndex: number | undefined): 
 function buildChineseCastingPhotoPrompt(characterRequest: string, candidateIndex?: number): string {
   const candidateBrief = buildChineseCastingCandidateBrief(candidateIndex)
   return [
-    '生成一张用于选角与人物定妆判断的真人摄影 contact sheet，不是概念设计图。',
-    `人物定妆需求（唯一来源）：${characterRequest}`,
+    '生成一张用于选角、试镜与人物定妆判断的 contact sheet / look-test sheet。',
+    '媒介和画风必须由已选视觉参考案例决定：真人案例就保持真人向摄影定妆；动画、定格、插画、CG 或其他媒介案例就保持对应媒介的角色定妆包。不要自行指定真人、动画、CG、插画或任何旧风格预设。',
+    `人物定妆需求（来自剧本和角色需求）：${characterRequest}`,
     candidateBrief,
-    '候选差异硬约束：本次如果生成 3 组候选，三组之间必须像三个真实可选演员/妆造方案，而不是同一个生成结果的复刻。A/B/C 的脸型气质、发型轮廓、服装结构、表演状态和记忆点必须能被肉眼区分。',
-    '画面目标：像真实剧组选角资料照、演员定妆照、服装试装 contact sheet，用来判断这个演员与这套妆造是否适合角色。',
-    '这是一组完整候选形象包：整张图必须是一张照片拼版，包含同一真实人物的多张定妆照片；不是单纯白底三视图，也不是多名演员拼在一起。',
-    '必须包含的基础资料：正面半身身份照、正面全身站姿、左侧面、右侧面、背面或 3/4 背面；基础资料可以使用白墙、灰墙、试镜房或服装间背景，必须能清楚评估脸、发型、身高比例、体态、服装版型、鞋子和侧面轮廓。',
+    '候选差异硬约束：本次如果生成 3 组候选，三组之间必须像三个真实可选角色定妆方案，而不是同一个生成结果的复刻。A/B/C 的脸型气质、发型轮廓、服装结构、表演状态和记忆点必须能被肉眼区分。',
+    '画面目标：像剧组用于选角、试镜、定妆和服装试装的候选资料，用来判断这个角色形象与这套妆造是否适合剧本。',
+    '这是一组完整候选形象包：整张图必须是一张拼版，包含同一角色身份的多张定妆参考；不是单纯白底三视图，也不是多个不同角色拼在一起。',
+    '必须包含的基础资料：正面半身身份照、正面全身站姿、左侧面、右侧面、背面或 3/4 背面；基础资料可以使用低干扰背景，但背景、光线、材质和色彩仍必须服从已选视觉参考案例。',
     '必须包含的拓展定妆照：至少两种不同表情（例如中性、脆弱/哭过、浅笑/防备笑）、至少两套不同服装或穿搭层次、至少两个故事相关背景或工作/生活场景、至少一个手部/耳后/疤痕/纹身/配饰/关键道具细节特写。',
-    '同一候选包内必须保持同一演员身份：脸型、五官距离、鼻梁、颧骨、眼神、体型、身高比例、发量和主要身体标记必须稳定；允许服装、情绪、背景和局部妆造变化，但不能换人。',
-    '摄影质感：真实相机拍摄，轻微胶片颗粒，普通室内自然光或柔和棚灯，肤色真实，五官不修成偶像海报，不要过度磨皮，不要电影海报级打光。',
-    '场景背景：可以有朴素白墙基础照，也必须有角色故事相关的实景定妆照；背景服务于判断角色适配度，不要变成海报、剧照大片或世界观概念图。',
+    '同一候选包内必须保持同一角色身份：脸型、五官距离、鼻梁、颧骨、眼神、体型、身高比例、发量和主要身体标记必须稳定；允许服装、情绪、背景和局部妆造变化，但不能换人或换角色。',
+    '画面质感：只继承已选视觉参考案例的媒介、材质、颗粒、光线和色彩体系；不要额外添加参考案例之外的写实摄影、动漫、漫画、插画、CG、赛博、海报或棚拍风格。',
+    '场景背景：必须来自剧本中的角色生活/工作/剧情语境，并服从已选视觉参考案例的风格语言；背景服务于判断角色适配度，不要变成与剧本无关的海报、剧照大片或世界观概念图。',
     '构图优先级：清楚看脸、发型、表情变化、身高比例、体态、服装变化、鞋子、侧背轮廓、关键细节；全身照必须完整露出脚。',
-    '绝对禁止：概念艺术、插画、CG、动漫、过强电影感海报、赛博海报、角色设定板风格背景、三维建模感、不同人物混入、文字标签、姓名、电话、邮箱、身高腰围信息、水印、Logo。',
-    '如果需要纸质 casting sheet 的感觉，只模拟照片拼版与留白，不要生成任何可读个人信息。',
+    '绝对禁止：任何来自旧项目风格、系统风格预设、用户历史偏好或固定模板的风格注入；不同人物混入、文字标签、姓名、电话、邮箱、身高腰围信息、水印、Logo。',
+    '如果需要纸质 casting sheet 的感觉，只模拟拼版与留白，不要生成任何可读个人信息。',
   ].filter(Boolean).join('\n')
 }
 
 function buildEnglishCastingPhotoPrompt(characterRequest: string, candidateIndex?: number): string {
   const candidateBrief = buildEnglishCastingCandidateBrief(candidateIndex)
   return [
-    'Generate one realistic casting and costume look-test photo contact sheet, not a concept design image.',
-    `Casting and look-test request, the only source: ${characterRequest}`,
+    'Generate one contact sheet / look-test sheet for casting, audition, and character look approval.',
+    'The medium and rendering style must come from the selected visual reference case: keep live-action references live-action, and keep animation, stop-motion, illustration, CG, or any other selected medium in that same medium. Do not independently choose live-action, anime, CG, illustration, or any legacy style preset.',
+    `Casting and look-test request from the screenplay and character requirements: ${characterRequest}`,
     candidateBrief,
-    'Candidate separation hard rule: when generating three candidates, they must read like three real casting/look-test options, not replicas of the same generated result. A/B/C must be visibly distinguishable in face impression, hair silhouette, costume structure, performance state, and visual hook.',
-    'Goal: make it feel like real production casting photos, actor audition references, and costume fitting photos used to judge whether this actor and look fit the role.',
-    'This is one complete candidate look package: the image must be one photo collage containing multiple look-test photos of the same real person. It is not a plain white-background turnaround only, and it must not mix multiple actors.',
-    'Required identity material: frontal half-body headshot, frontal full-body standing view, left profile, right profile, and back or three-quarter back view. These baseline views may use a white wall, gray wall, audition room, or fitting-room wall, and must clearly show face, hair, height proportion, posture, costume fit, shoes, and side silhouette.',
+    'Candidate separation hard rule: when generating three candidates, they must read like three viable character look-test options, not replicas of the same generated result. A/B/C must be visibly distinguishable in face impression, hair silhouette, costume structure, performance state, and visual hook.',
+    'Goal: make it feel like production material for casting, audition, look approval, and costume fitting, used to judge whether this character image and styling fit the screenplay.',
+    'This is one complete candidate look package: the image must be one collage containing multiple look-test views of the same character identity. It is not a plain white-background turnaround only, and it must not mix multiple different characters.',
+    'Required identity material: frontal half-body identity view, frontal full-body standing view, left profile, right profile, and back or three-quarter back view. These baseline views may use a low-distraction background, but the background, lighting, material, and palette must still obey the selected visual reference case.',
     'Required extended look-test material: at least two different expressions such as neutral, vulnerable/after crying, slight smile/guarded smile; at least two different outfits or styling layers; at least two story-related backgrounds or work/life settings; at least one close-up of hand, behind-ear detail, scar, tattoo, accessory, or key prop.',
-    'Within this candidate package, preserve one actor identity: face shape, feature spacing, nose bridge, cheekbones, gaze, body type, height proportion, hair volume, and key body marks must stay stable. Wardrobe, emotion, background, and small makeup changes may vary, but the person must not change.',
-    'Photo quality: real camera photography, subtle film grain, ordinary indoor natural light or soft studio light, believable skin tone, face not retouched into a fashion poster, no dramatic movie-poster lighting.',
-    'Backgrounds: include plain baseline studio views, but also include story-relevant real-world look-test stills. Backgrounds must help judge role fit and must not become posters, finished film stills, or worldbuilding concept art.',
+    'Within this candidate package, preserve one character identity: face shape, feature spacing, nose bridge, cheekbones, gaze, body type, height proportion, hair volume, and key body marks must stay stable. Wardrobe, emotion, background, and small makeup/styling changes may vary, but the person or character identity must not change.',
+    'Image texture: inherit only the selected visual reference case medium, material, grain, lighting, and palette. Do not add realism, anime, comic, illustration, CG, cyberpunk, poster, or studio-shot styling that is not present in the selected reference case.',
+    'Backgrounds: use the character’s story life/work/plot context from the screenplay, while obeying the selected visual reference visual language. Backgrounds must help judge role fit and must not become unrelated posters, finished film stills, or worldbuilding concept art.',
     'Composition priorities: clearly show face, hair, expression variation, height proportion, body posture, costume variation, shoes, side/back silhouette, and key details. Full-body views must show complete feet.',
-    'Strict bans: concept art, illustration, CG, anime, overly cinematic poster lighting, cyberpunk poster, character-sheet fantasy background, 3D render look, mixed actor identities, text labels, names, phone numbers, emails, height/waist data, watermark, Logo.',
+    'Strict bans: style injection from legacy project style, system style presets, user history, or fixed templates; mixed character identities, text labels, names, phone numbers, emails, height/waist data, watermark, Logo.',
     'If a paper casting-sheet feeling is needed, simulate only the photo collage and blank margins. Do not generate readable personal information.',
   ].filter(Boolean).join('\n')
 }

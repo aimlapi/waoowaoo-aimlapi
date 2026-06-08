@@ -1,6 +1,6 @@
 import type { Job } from 'bullmq'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
-import { CHARACTER_PROMPT_SUFFIX, CHARACTER_IMAGE_BANANA_RATIO, getArtStylePrompt } from '@/lib/constants'
+import { CHARACTER_PROMPT_SUFFIX, CHARACTER_IMAGE_BANANA_RATIO } from '@/lib/constants'
 import { TASK_TYPE, type TaskJobData, type TaskType } from '@/lib/task/types'
 
 const sharpMock = vi.hoisted(() =>
@@ -252,7 +252,7 @@ describe('worker reference-to-character', () => {
     expect(cosKeys?.every((item) => item.startsWith('cos/reference-key-'))).toBe(true)
   })
 
-  it('uses project visual style when project reference generation has no override', async () => {
+  it('does not inject project artStyle when project reference generation has no override', async () => {
     const job = buildJob(
       {
         referenceImageUrls: ['https://example.com/ref-a.png'],
@@ -265,10 +265,11 @@ describe('worker reference-to-character', () => {
     await handleReferenceToCharacterTask(job)
 
     const { prompt } = readGenerateCall(0)
-    expect(prompt).toContain(getArtStylePrompt('realistic', 'zh'))
+    expect(prompt).not.toContain('真实电影级画面质感')
+    expect(prompt).not.toContain('realistic')
   })
 
-  it('uses explicit override instead of project visual style for project reference generation', async () => {
+  it('ignores explicit legacy artStyle override for project reference generation', async () => {
     const job = buildJob(
       {
         referenceImageUrls: ['https://example.com/ref-a.png'],
@@ -282,8 +283,9 @@ describe('worker reference-to-character', () => {
     await handleReferenceToCharacterTask(job)
 
     const { prompt } = readGenerateCall(0)
-    expect(prompt).toContain(getArtStylePrompt('japanese-anime', 'zh'))
-    expect(prompt).not.toContain(getArtStylePrompt('realistic', 'zh'))
+    expect(prompt).not.toContain('japanese-anime')
+    expect(prompt).not.toContain('现代日系动漫风格')
+    expect(prompt).not.toContain('真实电影级画面质感')
   })
 
   it('generates project reference sheets as clean images', async () => {

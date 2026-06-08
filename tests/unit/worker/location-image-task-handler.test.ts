@@ -237,7 +237,7 @@ describe('worker location-image-task-handler behavior', () => {
     }
     expect(generationInput.prompt).toContain('选中的视觉风格案例（最高优先级）：')
     expect(generationInput.prompt).toContain('雨夜写实')
-    expect(generationInput.prompt).toContain('禁止把写实风格转换成动漫、漫画或插画风')
+    expect(generationInput.prompt).toContain('选中案例的媒介类别具有约束力')
     expect(generationInput.prompt).not.toContain('现代日系动漫风格')
     expect(generationInput.options).toEqual({
       aspectRatio: LOCATION_IMAGE_RATIO,

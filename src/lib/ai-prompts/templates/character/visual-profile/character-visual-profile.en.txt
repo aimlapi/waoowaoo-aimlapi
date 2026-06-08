@@ -64,7 +64,7 @@ Output format (JSON only):
                   "prompt": "front, side, and back casting stills with neutral expression and consistent costume, body profile, and identifiers",
                   "expression": "neutral",
                   "prop": "",
-                  "background": "plain studio background",
+                  "background": "low-distraction background; concrete visual style follows the later visual reference case",
                   "purpose": "check identity, body, outfit, and marks"
                 },
                 {
@@ -73,7 +73,7 @@ Output format (JSON only):
                   "prompt": "same character with a crying facial expression, wet eyes and tightened facial muscles, unchanged costume logic",
                   "expression": "crying",
                   "prop": "",
-                  "background": "plain low-distraction background",
+                  "background": "low-distraction background; concrete visual style follows the later visual reference case",
                   "purpose": "test sad-scene expression fit"
                 },
                 {
@@ -82,7 +82,7 @@ Output format (JSON only):
                   "prompt": "same character with a natural smile, unchanged costume logic",
                   "expression": "smiling",
                   "prop": "",
-                  "background": "plain low-distraction background",
+                  "background": "low-distraction background; concrete visual style follows the later visual reference case",
                   "purpose": "test warmth and expression range"
                 },
                 {
@@ -91,7 +91,7 @@ Output format (JSON only):
                   "prompt": "same character in a visibly different outfit layer, material, or styling that still fits the same role identity",
                   "expression": "neutral",
                   "prop": "",
-                  "background": "plain studio background",
+                  "background": "low-distraction background; concrete visual style follows the later visual reference case",
                   "purpose": "test costume range and casting flexibility"
                 },
                 {
@@ -100,7 +100,7 @@ Output format (JSON only):
                   "prompt": "same character wearing or holding the most identity-relevant prop without blocking face or outfit",
                   "expression": "neutral",
                   "prop": "specific identity-relevant prop",
-                  "background": "plain studio background",
+                  "background": "low-distraction background; concrete visual style follows the later visual reference case",
                   "purpose": "test prop and identity fit"
                 },
                 {

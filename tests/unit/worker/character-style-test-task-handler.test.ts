@@ -153,28 +153,60 @@ describe('worker character-style-test-task-handler', () => {
     expect(handlerSharedMock.generateCleanImageToStorage).not.toHaveBeenCalled()
   })
 
-  it('casting photo mode -> generates an actor look-test contact sheet prompt', async () => {
+  it('casting photo mode without selected visual reference -> explicit error before image generation', async () => {
+    await expect(handleCharacterStyleTestTask(buildJob({
+      characterRequest: '冷峻女黑客，黑色长风衣',
+      imageModel: 'character-model-1',
+      promptMode: 'casting_photo',
+    }))).rejects.toThrow('SELECTED_VISUAL_REFERENCE_STYLE_REQUIRED')
+    expect(handlerSharedMock.generateCleanImageToStorage).not.toHaveBeenCalled()
+  })
+
+  it('casting photo mode -> generates a look-test contact sheet prompt from the selected visual reference', async () => {
+    prismaMock.projectVisualReferenceCase.findFirst.mockResolvedValueOnce({
+      id: 'style-case-1',
+      title: '动画向｜冷白定格',
+      description: '定格动画，粘土与布艺材质，低饱和冷白光。',
+      prompt: 'stop-motion clay and fabric character look-test, muted cool palette',
+      imageUrl: '/m/style-case-1',
+      imageMedia: null,
+    })
+    outboundMock.normalizeOptionalReferenceImagesForGeneration.mockResolvedValueOnce(['normalized-style-ref'])
+
     const result = await handleCharacterStyleTestTask(buildJob({
       characterRequest: '冷峻女黑客，黑色长风衣',
       imageModel: 'character-model-1',
       promptMode: 'casting_photo',
-    }))
+    }, 'project-1'))
 
     expect(result.styleSummary).toBe('本次选角定妆照来源：冷峻女黑客，黑色长风衣')
     const generationInput = handlerSharedMock.generateCleanImageToStorage.mock.calls[0]?.[0] as GenerationInput | undefined
-    expect(generationInput?.prompt).toContain('真人摄影 contact sheet')
+    expect(generationInput?.prompt).toContain('用于选角、试镜与人物定妆判断的 contact sheet')
+    expect(generationInput?.prompt).toContain('媒介和画风必须由已选视觉参考案例决定')
+    expect(generationInput?.prompt).toContain('动画向｜冷白定格')
     expect(generationInput?.prompt).toContain('完整候选形象包')
     expect(generationInput?.prompt).toContain('至少两种不同表情')
     expect(generationInput?.prompt).toContain('至少两套不同服装或穿搭层次')
-    expect(generationInput?.prompt).toContain('绝对禁止：概念艺术、插画、CG')
+    expect(generationInput?.prompt).toContain('绝对禁止：任何来自旧项目风格、系统风格预设')
     expect(generationInput?.prompt).toContain('姓名、电话、邮箱')
+    expect(generationInput?.prompt).not.toContain('真人摄影 contact sheet')
+    expect(generationInput?.prompt).not.toContain('绝对禁止：概念艺术、插画、CG')
     expect(generationInput?.prompt).not.toContain('本次角色资产风格规范')
+    expect(generationInput?.options.referenceImages).toEqual(['normalized-style-ref'])
   })
 
   it('casting candidate mode -> generates three candidates, scores them, and persists the winner', async () => {
     handlerSharedMock.generateCleanImageToStorage.mockImplementation(async (input: GenerationInput) =>
       `cos/${input.targetId}.jpg`,
     )
+    prismaMock.projectVisualReferenceCase.findFirst.mockResolvedValueOnce({
+      id: 'style-case-1',
+      title: '真人向｜冷白写实',
+      description: '低饱和写实职场室内，冷白光和自然皮肤质感。',
+      prompt: 'photorealistic restrained office drama, cool white light, muted palette',
+      imageUrl: '/m/style-case-1',
+      imageMedia: null,
+    })
 
     const result = await handleCharacterStyleTestTask(buildJob({
       characterRequest: '二十三岁公司实习生，温柔但有距离感',
@@ -251,7 +283,7 @@ describe('worker character-style-test-task-handler', () => {
       const input = call[0] as GenerationInput
       expect(input.prompt).toContain('选中的视觉风格案例（最高优先级）：')
       expect(input.prompt).toContain('冷白写实')
-      expect(input.prompt).toContain('禁止把写实风格转换成动漫、漫画或插画风')
+      expect(input.prompt).toContain('选中案例的媒介类别具有约束力')
       expect(input.options.referenceImages).toEqual(['normalized-style-ref'])
     }
   })

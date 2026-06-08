@@ -3,13 +3,13 @@
 Use the provided reference image to extract face traits, hairstyle, body shape, and outfit structure.
 
 ## Style priority
-Follow the user-selected style instruction as the highest-priority rule.
+Follow the style instruction passed by the current workflow as the highest-priority rule.
 Use reference images only to preserve character identity traits (face, hairstyle, body shape, outfit structure), and do not let reference style override the requested style.
-Only if no explicit style instruction is provided, you may preserve the original visual style.
+If no style instruction is provided, do not add a fixed live-action, anime, CG, illustration, studio, or other preset style.
 
 ## Generation rules
 1. Ignore the original image color cast and lighting defects
-2. Use clean, soft studio lighting
+2. Use low-distraction, style-neutral lighting; the concrete lighting texture must come from the current style instruction
 3. Keep natural, aesthetically correct body proportions
 4. Do not copy blur, noise, compression artifacts, or defects
 5. Output must be clear, sharp, and production-quality
