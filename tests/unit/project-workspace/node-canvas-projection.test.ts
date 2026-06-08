@@ -342,7 +342,7 @@ describe('workspace node canvas projection', () => {
     })
     expect(screenplayNode?.data.action).toEqual({
       type: 'generate_visual_reference_cases',
-      count: 3,
+      count: 2,
     })
 
     const editScriptNode = projection.nodes.find((node) => node.id === 'edit-script:edit-video')
@@ -376,7 +376,7 @@ describe('workspace node canvas projection', () => {
     expect(screenplayNode?.data.actionLabel).toBe('actions.generateVisualReferences')
     expect(screenplayNode?.data.action).toEqual({
       type: 'generate_visual_reference_cases',
-      count: 3,
+      count: 2,
     })
   })
 
@@ -421,7 +421,7 @@ describe('workspace node canvas projection', () => {
     expect(screenplayNode?.data.editScreenplayDetails?.visualReferenceRunning).toBe(false)
     expect(screenplayNode?.data.action).toEqual({
       type: 'generate_visual_reference_cases',
-      count: 3,
+      count: 2,
     })
     expect(screenplayNode?.data.actionLabel).toBe('actions.regenerateVisualReferences')
     expect(screenplayNode?.data.secondaryAction).toBeUndefined()

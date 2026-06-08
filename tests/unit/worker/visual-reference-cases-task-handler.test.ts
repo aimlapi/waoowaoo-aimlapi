@@ -64,15 +64,17 @@ describe('visual reference cases task handler', () => {
       text: JSON.stringify([
         {
           key: 'sunny-paris-walk',
-          title: '晴日巴黎散步',
+          category: 'live_action',
+          title: '诗意现实公园',
           description: '清亮自然光和开阔公园空间，让爱情像天气一样轻盈。',
-          visualDirection: '共享场景：同一对恋人在巴黎公园长椅旁并肩站立，人物站位、长椅、树道、远处行人和中远景构图完全一致。画风处理：美式动漫风，清亮自然光，粗线条角色设计，宽阔环境，轻盈色块。',
+          visualDirection: '共享场景：同一对恋人在巴黎公园长椅旁并肩站立，人物站位、长椅、树道、远处行人和中远景构图完全一致。维度组合：现实程度选择诗意现实主义，色彩体系选择低饱和与暖色调，情绪氛围选择浪漫，场景美术为真实公园长椅、湿润石径和轻微年代感街灯。风格处理：真实摄影机拍摄，柔和自然光，克制电影调色，宽阔环境。',
         },
         {
           key: 'river-bookstall-evening',
-          title: '河岸旧书黄昏',
+          category: 'animation',
+          title: '绘画感纸艺公园',
           description: '塞纳河旧书摊、晚霞和行人层次，突出偶遇的温柔距离。',
-          visualDirection: '共享场景：同一对恋人在巴黎公园长椅旁并肩站立，人物站位、长椅、树道、远处行人和中远景构图完全一致。画风处理：黑白文艺片风，高反差银盐颗粒，克制光影，环境层次清楚。',
+          visualDirection: '共享场景：同一对恋人在巴黎公园长椅旁并肩站立，人物站位、长椅、树道、远处行人和中远景构图完全一致。维度组合：媒介选择二维动画，材质选择纸艺与颜料，视觉风格选择绘画感，色彩体系选择高饱和暖色调，情绪氛围选择梦幻与浪漫。风格处理：设计化剪影，纸张层次和颜料边缘，绘制背景，环境层次清楚。',
         },
       ]),
       reasoning: '',
@@ -119,8 +121,8 @@ describe('visual reference cases task handler', () => {
         projectId: 'project-1',
         episodeId: 'episode-1',
         screenplayId: 'screenplay-1',
-        title: '真人电影实拍',
-        description: expect.stringContaining('真人电影实拍版本'),
+        title: '诗意现实公园',
+        description: expect.stringContaining('清亮自然光'),
         prompt: expect.stringContaining('共享场景：同一对恋人在巴黎公园长椅旁并肩站立'),
         status: 'processing',
         taskId: 'task-visual-reference-1',
@@ -134,9 +136,9 @@ describe('visual reference cases task handler', () => {
     })
     expect(prismaMock.projectVisualReferenceCase.create).toHaveBeenNthCalledWith(2, {
       data: expect.objectContaining({
-        title: '强风格二维动画',
-        description: expect.stringContaining('强风格二维动画版本'),
-        prompt: expect.stringContaining('风格槽位 2：强风格二维动画'),
+        title: '绘画感纸艺公园',
+        description: expect.stringContaining('塞纳河旧书摊'),
+        prompt: expect.stringContaining('风格大类：animation'),
         sortIndex: 1,
       }),
       select: {
@@ -152,22 +154,23 @@ describe('visual reference cases task handler', () => {
       action: 'visual_reference_style_plan',
     }))
     expect(aiExecMock.executeAiTextStep.mock.calls[0]?.[0].messages[0]?.content).toContain('不要复用固定预设组合')
-    expect(aiExecMock.executeAiTextStep.mock.calls[0]?.[0].messages[0]?.content).toContain('所有方案必须表现完全同一个场景')
-    expect(aiExecMock.executeAiTextStep.mock.calls[0]?.[0].messages[0]?.content).toContain('第 1 张真人电影实拍')
-    expect(aiExecMock.executeAiTextStep.mock.calls[0]?.[0].messages[0]?.content).toContain('第 2 张强风格二维动画')
-    expect(aiExecMock.executeAiTextStep.mock.calls[0]?.[0].messages[0]?.content).toContain('第 3 张诡异惊悚/超现实噩梦')
-    expect(aiExecMock.executeAiTextStep.mock.calls[0]?.[0].messages[0]?.content).toContain('不要把它们收敛成轻微调色差异')
-    expect(aiExecMock.executeAiTextStep.mock.calls[0]?.[0].messages[0]?.content).toContain('三个方案必须是媒介级差异')
-    expect(aiExecMock.executeAiTextStep.mock.calls[0]?.[0].messages[0]?.content).toContain('每个 visualDirection 必须明确包含')
+    expect(aiExecMock.executeAiTextStep.mock.calls[0]?.[0].messages[0]?.content).toContain('两个方案必须表现完全同一个场景')
+    expect(aiExecMock.executeAiTextStep.mock.calls[0]?.[0].messages[0]?.content).toContain('一个真人向，一个动画向')
+    expect(aiExecMock.executeAiTextStep.mock.calls[0]?.[0].messages[0]?.content).toContain('真人向方案必须从下面素材库里组合')
+    expect(aiExecMock.executeAiTextStep.mock.calls[0]?.[0].messages[0]?.content).toContain('纪录片式 / 现实主义 / 诗意现实主义')
+    expect(aiExecMock.executeAiTextStep.mock.calls[0]?.[0].messages[0]?.content).toContain('动画向方案必须从下面素材库里组合')
+    expect(aiExecMock.executeAiTextStep.mock.calls[0]?.[0].messages[0]?.content).toContain('二维动画 / 三维动画 / 定格动画')
+    expect(aiExecMock.executeAiTextStep.mock.calls[0]?.[0].messages[0]?.content).toContain('第一项 category 必须是 live_action')
+    expect(aiExecMock.executeAiTextStep.mock.calls[0]?.[0].messages[0]?.content).toContain('不能直接复制画面')
     expect(utilsMock.resolveImageSourceFromGeneration.mock.calls[0]?.[1].prompt).toContain('共享场景：同一对恋人在巴黎公园长椅旁并肩站立')
     expect(utilsMock.resolveImageSourceFromGeneration.mock.calls[1]?.[1].prompt).toContain('共享场景：同一对恋人在巴黎公园长椅旁并肩站立')
-    expect(utilsMock.resolveImageSourceFromGeneration.mock.calls[0]?.[1].prompt).toContain('风格槽位 1：真人电影实拍')
-    expect(utilsMock.resolveImageSourceFromGeneration.mock.calls[1]?.[1].prompt).toContain('风格槽位 2：强风格二维动画')
-    expect(utilsMock.resolveImageSourceFromGeneration.mock.calls[1]?.[1].prompt).toContain('下面文字只用于继承共享场景内容')
+    expect(utilsMock.resolveImageSourceFromGeneration.mock.calls[0]?.[1].prompt).toContain('风格大类：live_action')
+    expect(utilsMock.resolveImageSourceFromGeneration.mock.calls[1]?.[1].prompt).toContain('风格大类：animation')
+    expect(utilsMock.resolveImageSourceFromGeneration.mock.calls[1]?.[1].prompt).toContain('维度组合：媒介选择二维动画')
     expect(utilsMock.resolveImageSourceFromGeneration.mock.calls[0]?.[1].prompt).toContain('不要重新从剧本里选择其他瞬间')
     expect(utilsMock.resolveImageSourceFromGeneration.mock.calls[0]?.[1].prompt).toContain('只改变画风处理')
-    expect(utilsMock.resolveImageSourceFromGeneration.mock.calls[0]?.[1].prompt).toContain('媒介级风格槽位')
-    expect(utilsMock.resolveImageSourceFromGeneration.mock.calls[0]?.[1].prompt).toContain('巨大差异')
+    expect(utilsMock.resolveImageSourceFromGeneration.mock.calls[0]?.[1].prompt).toContain('媒介级巨大差异')
+    expect(utilsMock.resolveImageSourceFromGeneration.mock.calls[0]?.[1].prompt).toContain('打光策略、场面调度和角色表演')
     expect(utilsMock.resolveImageSourceFromGeneration.mock.calls[0]?.[1].prompt).toContain('中远景、远景或全景式建立镜头')
     expect(utilsMock.resolveImageSourceFromGeneration.mock.calls[0]?.[1].prompt).toContain('避免脸部特写、半身特写')
     expect(utilsMock.resolveImageSourceFromGeneration).toHaveBeenCalledWith(
@@ -216,6 +219,43 @@ describe('visual reference cases task handler', () => {
     }))).rejects.toThrow('analysisModel is required')
 
     expect(aiExecMock.executeAiTextStep).not.toHaveBeenCalled()
+    expect(prismaMock.projectVisualReferenceCase.create).not.toHaveBeenCalled()
+    expect(utilsMock.resolveImageSourceFromGeneration).not.toHaveBeenCalled()
+  })
+
+  it('fails explicitly when the style plan does not return live-action then animation', async () => {
+    aiExecMock.executeAiTextStep.mockResolvedValueOnce({
+      text: JSON.stringify([
+        {
+          key: 'live-action-case',
+          category: 'live_action',
+          title: '真人现实感',
+          description: '真人向方案。',
+          visualDirection: '共享场景：雨夜街边。维度组合：现实主义。风格处理：真实摄影。',
+        },
+        {
+          key: 'wrong-live-action-case',
+          category: 'live_action',
+          title: '错误真人重复',
+          description: '第二项错误地仍是真人。',
+          visualDirection: '共享场景：雨夜街边。维度组合：现实主义。风格处理：真实摄影。',
+        },
+      ]),
+      reasoning: '',
+      usage: null,
+      completion: null,
+    })
+
+    await expect(handleVisualReferenceCasesTask(buildJob({
+      episodeId: 'episode-1',
+      screenplayId: 'screenplay-1',
+      screenplayText: '第一场，雨夜。主角站在街边，看见远处的灯光。',
+      imageModel: 'image-model-1',
+      analysisModel: 'analysis-model-1',
+      count: 2,
+      aspectRatio: '16:9',
+    }))).rejects.toThrow('VISUAL_REFERENCE_STYLE_CATEGORY_MISMATCH')
+
     expect(prismaMock.projectVisualReferenceCase.create).not.toHaveBeenCalled()
     expect(utilsMock.resolveImageSourceFromGeneration).not.toHaveBeenCalled()
   })

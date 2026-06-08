@@ -97,7 +97,7 @@ describe('project visual reference cases route', () => {
       method: 'POST',
       body: {
         episodeId: 'episode-1',
-        count: 3,
+        count: 2,
       },
     })
 
@@ -114,12 +114,30 @@ describe('project visual reference cases route', () => {
       episodeId: 'episode-1',
       userId: 'user-1',
       locale: 'zh',
-      count: 3,
+      count: 2,
     }))
     expect(body).toEqual(expect.objectContaining({
       async: true,
       taskId: 'task-visual-reference-1',
     }))
+  })
+
+  it('POST rejects legacy three-case visual reference requests', async () => {
+    const request = buildMockRequest({
+      path: '/api/projects/project-1/visual-reference-cases',
+      method: 'POST',
+      body: {
+        episodeId: 'episode-1',
+        count: 3,
+      },
+    })
+
+    const response = await visualReferenceCasesPost(request, {
+      params: Promise.resolve({ projectId: 'project-1' }),
+    })
+
+    expect(response.status).toBe(400)
+    expect(serviceMock.submitProjectVisualReferenceCases).not.toHaveBeenCalled()
   })
 
   it('PATCH selects only the completed visual reference case record', async () => {

@@ -91,6 +91,7 @@ export function renderSelectedVisualReferenceStylePromptBlock(input: {
       `Selected style description: ${description}`,
       `Selected style generation prompt: ${prompt}`,
       'Preserve the selected reference image visual language: medium, realism level, palette, lighting, texture, lens feeling, production design, and atmosphere.',
+      'Use it as tone and style guidance only; do not directly copy its exact composition, character positions, prop layout, or scene moment unless the current screenplay shot independently requires them.',
       'Do not convert photorealistic selected references into anime/comic/illustration unless the selected reference itself is clearly anime/comic/illustration.',
     ].join('\n')
   }
@@ -102,6 +103,7 @@ export function renderSelectedVisualReferenceStylePromptBlock(input: {
     `选中风格描述：${description}`,
     `选中风格生成提示词：${prompt}`,
     '请继承该风格案例图的媒介属性、写实/绘画程度、色彩体系、光线、材质颗粒、镜头感、美术设计和整体氛围。',
+    '它只用于整体基调和风格语言参考；除非当前剧本镜头本身需要，否则不要直接复制案例图的具体构图、人物站位、道具摆法或场景瞬间。',
     '除非选中的风格案例本身就是动漫/漫画/插画，否则禁止把写实风格转换成动漫、漫画或插画风。',
   ].join('\n')
 }

@@ -505,7 +505,7 @@ export async function createStoryboardMethodTestSession(
       episodeId: episode.id,
       userId: input.userId,
       locale: input.locale,
-      count: 3,
+      count: 2,
     })
     upstreamTasks.push(readTaskRef(visualReferenceTask, {
       stage: 'style-reference',

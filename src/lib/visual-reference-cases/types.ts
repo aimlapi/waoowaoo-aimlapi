@@ -29,7 +29,7 @@ export const getVisualReferenceCasesRequestSchema = z.object({
 
 export const createVisualReferenceCasesRequestSchema = z.object({
   episodeId: z.string().trim().min(1),
-  count: z.number().int().min(1).max(5).optional(),
+  count: z.number().int().min(1).max(2).optional(),
 })
 
 export const selectVisualReferenceCaseRequestSchema = z.object({

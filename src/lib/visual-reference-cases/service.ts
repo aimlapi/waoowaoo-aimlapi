@@ -219,8 +219,17 @@ export async function readProjectVisualReferenceCases(input: {
 }
 
 function normalizeCount(value: number | undefined): number {
-  if (value === undefined) return 3
-  return Math.max(1, Math.min(5, Math.floor(value)))
+  if (value === undefined) return 2
+  if (!Number.isFinite(value)) throw new ApiError('INVALID_PARAMS', {
+    code: 'VISUAL_REFERENCE_CASE_COUNT_INVALID',
+    message: 'Visual reference case count must be 1 or 2.',
+  })
+  const count = Math.floor(value)
+  if (count < 1 || count > 2) throw new ApiError('INVALID_PARAMS', {
+    code: 'VISUAL_REFERENCE_CASE_COUNT_INVALID',
+    message: 'Visual reference case count must be 1 or 2.',
+  })
+  return count
 }
 
 export async function submitProjectVisualReferenceCases(input: SubmitVisualReferenceCasesInput) {

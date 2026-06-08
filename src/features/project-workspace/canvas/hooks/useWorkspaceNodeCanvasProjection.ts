@@ -1167,7 +1167,7 @@ export function buildWorkspaceNodeCanvasProjection({
     const screenplayTitle = extractEditScreenplayTitle(editScreenplay.screenplayText)
     const visualReferenceRunning = visualReferenceCases.some((visualReferenceCase) => visualReferenceCase.status === 'processing')
     const visualReferenceAction: WorkspaceCanvasNodeAction | undefined = editScreenplay.status === 'ready' && !visualReferenceRunning
-      ? { type: 'generate_visual_reference_cases', count: 3 }
+      ? { type: 'generate_visual_reference_cases', count: 2 }
       : undefined
     nodes.push(createNode({
       id: `edit-screenplay:${editScreenplay.id}`,
