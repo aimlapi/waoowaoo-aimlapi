@@ -186,6 +186,10 @@ describe('worker character-style-test-task-handler', () => {
     }, 'project-1'))
 
     expect(handlerSharedMock.generateCleanImageToStorage).toHaveBeenCalledTimes(3)
+    expect(handlerSharedMock.generateCleanImageToStorage.mock.calls[0]?.[0].prompt).toContain('候选 A 方向：生活真实度优先')
+    expect(handlerSharedMock.generateCleanImageToStorage.mock.calls[1]?.[0].prompt).toContain('候选 B 方向：情绪创伤与表演强度优先')
+    expect(handlerSharedMock.generateCleanImageToStorage.mock.calls[2]?.[0].prompt).toContain('候选 C 方向：造型记忆点与轮廓识别优先')
+    expect(handlerSharedMock.generateCleanImageToStorage.mock.calls[2]?.[0].prompt).toContain('候选差异硬约束')
     expect(evaluatorMock.evaluateCharacterCastingCandidates).toHaveBeenCalledWith(expect.objectContaining({
       userId: 'user-1',
       analysisModel: 'analysis-model-1',

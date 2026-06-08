@@ -338,6 +338,7 @@ export async function handleAnalyzeNovelTask(job: Job<TaskJobData>) {
       descriptions: cleanDescriptions,
       fallbackDescription: readText(item.summary) || name,
       availableSlots,
+      variationMode: 'location',
     })
 
     createdLocations.push(created)

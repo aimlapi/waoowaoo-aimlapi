@@ -208,7 +208,19 @@ describe('worker analyze-novel behavior', () => {
         {
           locationId: 'loc-new-1',
           imageIndex: 0,
-          description: '雨夜街道',
+          description: expect.stringContaining('【场景候选 1 / 主建立视角】'),
+          availableSlots: '[]',
+        },
+        {
+          locationId: 'loc-new-1',
+          imageIndex: 1,
+          description: expect.stringContaining('【场景候选 2 / 反向或侧向空间视角】'),
+          availableSlots: '[]',
+        },
+        {
+          locationId: 'loc-new-1',
+          imageIndex: 2,
+          description: expect.stringContaining('【场景候选 3 / 角色落位与细节视角】'),
           availableSlots: '[]',
         },
       ],

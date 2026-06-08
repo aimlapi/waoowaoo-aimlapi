@@ -90,9 +90,21 @@ function buildEnglishBasePrompt(characterRequest: string): string {
 function buildChineseCastingCandidateBrief(candidateIndex: number | undefined): string {
   if (candidateIndex === undefined) return ''
   const briefs = [
-    '候选组方向：生活真实度优先，演员气质克制、可信、接近真实职场或现实人物；服装变化要自然，不要过度造型。',
-    '候选组方向：情绪辨识度优先，脸部状态、眼神和表情跨度更强，能看出角色内在伤口、欲望或压抑感。',
-    '候选组方向：造型记忆点优先，在不破坏真实感的前提下强化发型、服装层次、配饰或关键身体标记，让角色一眼可记住。',
+    [
+      '候选 A 方向：生活真实度优先。',
+      '演员脸型、年龄气质和体态要偏普通真实、克制、接近现实中会遇到的人；服装以日常基础层次和真实旧衣质感为主。',
+      '必须与候选 B/C 拉开：不要使用强戏剧化眼神、明显造型发型、强配饰或高度记忆点妆造。',
+    ].join(' '),
+    [
+      '候选 B 方向：情绪创伤与表演强度优先。',
+      '演员脸部状态、眼神湿度、疲惫感、脆弱表情和内在压抑要明显强于 A/C；服装可以更松垮、磨损或带生活崩塌感。',
+      '必须与候选 A/C 拉开：不要只是同一张脸换表情，不要沿用 A 的日常中性妆造或 C 的造型记忆点。',
+    ].join(' '),
+    [
+      '候选 C 方向：造型记忆点与轮廓识别优先。',
+      '在仍然可被选角的真实摄影范围内，强化不同发型轮廓、服装层次、标志性配饰、身体标记或独特穿搭比例。',
+      '必须与候选 A/B 拉开：脸型气质、发型、服装结构和识别点都要明显不同，不能只是同一人物的第三张相似 contact sheet。',
+    ].join(' '),
   ] as const
   return briefs[candidateIndex] ?? ''
 }
@@ -100,9 +112,21 @@ function buildChineseCastingCandidateBrief(candidateIndex: number | undefined): 
 function buildEnglishCastingCandidateBrief(candidateIndex: number | undefined): string {
   if (candidateIndex === undefined) return ''
   const briefs = [
-    'Candidate direction: grounded realism first, restrained and believable performer presence, close to a real workplace or everyday person; wardrobe variation should feel natural, not over-styled.',
-    'Candidate direction: emotional readability first, stronger face state, gaze, and expression range that reveals inner wounds, desire, or repression.',
-    'Candidate direction: memorable styling first, strengthening hair, wardrobe layers, accessories, or key body marks while staying realistic and castable.',
+    [
+      'Candidate A direction: grounded everyday realism first.',
+      'The actor face, age impression, and body presence should feel ordinary, restrained, and close to someone encountered in real life; wardrobe uses practical everyday layers and worn real clothing.',
+      'Differentiate from B/C: do not use highly dramatic gaze, statement hair, strong accessories, or memorable styling marks.',
+    ].join(' '),
+    [
+      'Candidate B direction: emotional wound and performance intensity first.',
+      'The actor face state, wet gaze, fatigue, vulnerable expressions, and suppressed inner pressure should be much stronger than A/C; wardrobe may feel looser, worn, or life-collapsed.',
+      'Differentiate from A/C: do not make this merely the same face with another expression, and do not reuse A’s neutral everyday styling or C’s graphic styling hook.',
+    ].join(' '),
+    [
+      'Candidate C direction: memorable silhouette and styling hook first.',
+      'Still realistic and castable, but with stronger hair silhouette, wardrobe layering, signature accessory, visible body mark, or distinctive proportion.',
+      'Differentiate from A/B: face impression, hair, costume structure, and visual hook must be visibly different, not a third near-identical contact sheet of the same generated person.',
+    ].join(' '),
   ] as const
   return briefs[candidateIndex] ?? ''
 }
@@ -113,6 +137,7 @@ function buildChineseCastingPhotoPrompt(characterRequest: string, candidateIndex
     '生成一张用于选角与人物定妆判断的真人摄影 contact sheet，不是概念设计图。',
     `人物定妆需求（唯一来源）：${characterRequest}`,
     candidateBrief,
+    '候选差异硬约束：本次如果生成 3 组候选，三组之间必须像三个真实可选演员/妆造方案，而不是同一个生成结果的复刻。A/B/C 的脸型气质、发型轮廓、服装结构、表演状态和记忆点必须能被肉眼区分。',
     '画面目标：像真实剧组选角资料照、演员定妆照、服装试装 contact sheet，用来判断这个演员与这套妆造是否适合角色。',
     '这是一组完整候选形象包：整张图必须是一张照片拼版，包含同一真实人物的多张定妆照片；不是单纯白底三视图，也不是多名演员拼在一起。',
     '必须包含的基础资料：正面半身身份照、正面全身站姿、左侧面、右侧面、背面或 3/4 背面；基础资料可以使用白墙、灰墙、试镜房或服装间背景，必须能清楚评估脸、发型、身高比例、体态、服装版型、鞋子和侧面轮廓。',
@@ -132,6 +157,7 @@ function buildEnglishCastingPhotoPrompt(characterRequest: string, candidateIndex
     'Generate one realistic casting and costume look-test photo contact sheet, not a concept design image.',
     `Casting and look-test request, the only source: ${characterRequest}`,
     candidateBrief,
+    'Candidate separation hard rule: when generating three candidates, they must read like three real casting/look-test options, not replicas of the same generated result. A/B/C must be visibly distinguishable in face impression, hair silhouette, costume structure, performance state, and visual hook.',
     'Goal: make it feel like real production casting photos, actor audition references, and costume fitting photos used to judge whether this actor and look fit the role.',
     'This is one complete candidate look package: the image must be one photo collage containing multiple look-test photos of the same real person. It is not a plain white-background turnaround only, and it must not mix multiple actors.',
     'Required identity material: frontal half-body headshot, frontal full-body standing view, left profile, right profile, and back or three-quarter back view. These baseline views may use a white wall, gray wall, audition room, or fitting-room wall, and must clearly show face, hair, height proportion, posture, costume fit, shoes, and side silhouette.',

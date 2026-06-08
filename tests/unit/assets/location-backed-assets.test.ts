@@ -95,4 +95,36 @@ describe('location-backed assets service', () => {
       ],
     })
   })
+
+  it('expands one location description into distinct view candidates when requested', async () => {
+    const mod = await import('@/lib/assets/services/location-backed-assets')
+
+    await mod.seedProjectLocationBackedImageSlots({
+      locationId: 'location-1',
+      descriptions: ['老旧两居室厨房兼客厅，餐桌在中央，门在右后方'],
+      fallbackDescription: '老旧两居室厨房兼客厅',
+      variationMode: 'location',
+    })
+
+    const createArg = prismaMock.locationImage.createMany.mock.calls[0]?.[0]
+    expect(createArg).toEqual({
+      data: [
+        expect.objectContaining({
+          locationId: 'location-1',
+          imageIndex: 0,
+          description: expect.stringContaining('【场景候选 1 / 主建立视角】'),
+        }),
+        expect.objectContaining({
+          locationId: 'location-1',
+          imageIndex: 1,
+          description: expect.stringContaining('【场景候选 2 / 反向或侧向空间视角】'),
+        }),
+        expect.objectContaining({
+          locationId: 'location-1',
+          imageIndex: 2,
+          description: expect.stringContaining('【场景候选 3 / 角色落位与细节视角】'),
+        }),
+      ],
+    })
+  })
 })

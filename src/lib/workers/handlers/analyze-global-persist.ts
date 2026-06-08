@@ -198,6 +198,7 @@ export async function persistAnalyzeGlobalChunk(params: {
         descriptions: cleanDescriptions,
         fallbackDescription: summary || name,
         availableSlots,
+        variationMode: 'location',
       })
 
       params.existingLocationNames.push(name)

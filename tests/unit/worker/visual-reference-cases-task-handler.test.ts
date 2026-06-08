@@ -119,8 +119,8 @@ describe('visual reference cases task handler', () => {
         projectId: 'project-1',
         episodeId: 'episode-1',
         screenplayId: 'screenplay-1',
-        title: '真人写实感',
-        description: expect.stringContaining('真人写实感版本'),
+        title: '真人电影实拍',
+        description: expect.stringContaining('真人电影实拍版本'),
         prompt: expect.stringContaining('共享场景：同一对恋人在巴黎公园长椅旁并肩站立'),
         status: 'processing',
         taskId: 'task-visual-reference-1',
@@ -134,9 +134,9 @@ describe('visual reference cases task handler', () => {
     })
     expect(prismaMock.projectVisualReferenceCase.create).toHaveBeenNthCalledWith(2, {
       data: expect.objectContaining({
-        title: '动画感',
-        description: expect.stringContaining('动画感版本'),
-        prompt: expect.stringContaining('风格：动画感'),
+        title: '强风格二维动画',
+        description: expect.stringContaining('强风格二维动画版本'),
+        prompt: expect.stringContaining('风格槽位 2：强风格二维动画'),
         sortIndex: 1,
       }),
       select: {
@@ -153,21 +153,21 @@ describe('visual reference cases task handler', () => {
     }))
     expect(aiExecMock.executeAiTextStep.mock.calls[0]?.[0].messages[0]?.content).toContain('不要复用固定预设组合')
     expect(aiExecMock.executeAiTextStep.mock.calls[0]?.[0].messages[0]?.content).toContain('所有方案必须表现完全同一个场景')
-    expect(aiExecMock.executeAiTextStep.mock.calls[0]?.[0].messages[0]?.content).toContain('第 1 张真人写实感')
-    expect(aiExecMock.executeAiTextStep.mock.calls[0]?.[0].messages[0]?.content).toContain('第 2 张动画感')
-    expect(aiExecMock.executeAiTextStep.mock.calls[0]?.[0].messages[0]?.content).toContain('第 3 张诡异感')
-    expect(aiExecMock.executeAiTextStep.mock.calls[0]?.[0].messages[0]?.content).toContain('不要发明其他风格家族')
-    expect(aiExecMock.executeAiTextStep.mock.calls[0]?.[0].messages[0]?.content).toContain('风格文字要简单直接')
+    expect(aiExecMock.executeAiTextStep.mock.calls[0]?.[0].messages[0]?.content).toContain('第 1 张真人电影实拍')
+    expect(aiExecMock.executeAiTextStep.mock.calls[0]?.[0].messages[0]?.content).toContain('第 2 张强风格二维动画')
+    expect(aiExecMock.executeAiTextStep.mock.calls[0]?.[0].messages[0]?.content).toContain('第 3 张诡异惊悚/超现实噩梦')
+    expect(aiExecMock.executeAiTextStep.mock.calls[0]?.[0].messages[0]?.content).toContain('不要把它们收敛成轻微调色差异')
+    expect(aiExecMock.executeAiTextStep.mock.calls[0]?.[0].messages[0]?.content).toContain('三个方案必须是媒介级差异')
     expect(aiExecMock.executeAiTextStep.mock.calls[0]?.[0].messages[0]?.content).toContain('每个 visualDirection 必须明确包含')
     expect(utilsMock.resolveImageSourceFromGeneration.mock.calls[0]?.[1].prompt).toContain('共享场景：同一对恋人在巴黎公园长椅旁并肩站立')
     expect(utilsMock.resolveImageSourceFromGeneration.mock.calls[1]?.[1].prompt).toContain('共享场景：同一对恋人在巴黎公园长椅旁并肩站立')
-    expect(utilsMock.resolveImageSourceFromGeneration.mock.calls[0]?.[1].prompt).toContain('风格：真人写实感')
-    expect(utilsMock.resolveImageSourceFromGeneration.mock.calls[1]?.[1].prompt).toContain('风格：动画感')
+    expect(utilsMock.resolveImageSourceFromGeneration.mock.calls[0]?.[1].prompt).toContain('风格槽位 1：真人电影实拍')
+    expect(utilsMock.resolveImageSourceFromGeneration.mock.calls[1]?.[1].prompt).toContain('风格槽位 2：强风格二维动画')
     expect(utilsMock.resolveImageSourceFromGeneration.mock.calls[1]?.[1].prompt).toContain('下面文字只用于继承共享场景内容')
     expect(utilsMock.resolveImageSourceFromGeneration.mock.calls[0]?.[1].prompt).toContain('不要重新从剧本里选择其他瞬间')
     expect(utilsMock.resolveImageSourceFromGeneration.mock.calls[0]?.[1].prompt).toContain('只改变画风处理')
-    expect(utilsMock.resolveImageSourceFromGeneration.mock.calls[0]?.[1].prompt).toContain('只执行视觉方向里点名的直接感觉')
-    expect(utilsMock.resolveImageSourceFromGeneration.mock.calls[0]?.[1].prompt).toContain('不要额外加入其他风格家族')
+    expect(utilsMock.resolveImageSourceFromGeneration.mock.calls[0]?.[1].prompt).toContain('媒介级风格槽位')
+    expect(utilsMock.resolveImageSourceFromGeneration.mock.calls[0]?.[1].prompt).toContain('巨大差异')
     expect(utilsMock.resolveImageSourceFromGeneration.mock.calls[0]?.[1].prompt).toContain('中远景、远景或全景式建立镜头')
     expect(utilsMock.resolveImageSourceFromGeneration.mock.calls[0]?.[1].prompt).toContain('避免脸部特写、半身特写')
     expect(utilsMock.resolveImageSourceFromGeneration).toHaveBeenCalledWith(

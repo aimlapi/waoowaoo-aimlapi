@@ -31,6 +31,7 @@ describe('character style test prompt modes', () => {
     expect(prompt).toContain('至少两种不同表情')
     expect(prompt).toContain('至少两套不同服装或穿搭层次')
     expect(prompt).toContain('至少两个故事相关背景或工作/生活场景')
+    expect(prompt).toContain('候选差异硬约束')
     expect(prompt).toContain('姓名、电话、邮箱')
     expect(prompt).not.toContain('强风格化的电影概念设定')
   })
@@ -43,7 +44,8 @@ describe('character style test prompt modes', () => {
       candidateIndex: 2,
     })
 
-    expect(prompt).toContain('候选组方向：造型记忆点优先')
+    expect(prompt).toContain('候选 C 方向：造型记忆点与轮廓识别优先')
+    expect(prompt).toContain('不能只是同一人物的第三张相似 contact sheet')
     expect(prompt).toContain('同一候选包内必须保持同一演员身份')
   })
 
