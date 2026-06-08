@@ -1143,8 +1143,22 @@ function EditScreenplayContent({
   readonly expanded: boolean
 }) {
   const details = data.editScreenplayDetails
+  const [expandedVisualReferenceCaseIds, setExpandedVisualReferenceCaseIds] = useState<ReadonlySet<string>>(() => new Set())
+
   if (!details) return <p className={`${SELECTABLE_TEXT_CLASS} text-sm leading-6 text-[var(--glass-text-secondary)]`}>{data.body}</p>
   const visualReferenceCases = details.visualReferenceCases
+
+  function toggleVisualReferenceDescription(caseId: string) {
+    setExpandedVisualReferenceCaseIds((current) => {
+      const next = new Set(current)
+      if (next.has(caseId)) {
+        next.delete(caseId)
+      } else {
+        next.add(caseId)
+      }
+      return next
+    })
+  }
 
   return (
     <div className="space-y-2">
@@ -1158,6 +1172,8 @@ function EditScreenplayContent({
           </p>
           {visualReferenceCases.map((visualReferenceCase, index) => {
             const displayImageUrl = toDisplayImageUrl(visualReferenceCase.imageUrl) ?? visualReferenceCase.imageUrl
+            const descriptionExpanded = expandedVisualReferenceCaseIds.has(visualReferenceCase.id)
+            const hasDescription = hasText(visualReferenceCase.description)
             const canSelect = visualReferenceCase.status === 'completed'
               && Boolean(displayImageUrl)
               && !visualReferenceCase.isSelected
@@ -1195,9 +1211,23 @@ function EditScreenplayContent({
                       <p className={`${SELECTABLE_TEXT_CLASS} truncate text-xs font-semibold text-[var(--glass-text-primary)]`}>
                         {visualReferenceCase.title}
                       </p>
-                      <p className={`${SELECTABLE_TEXT_CLASS} mt-1 line-clamp-2 text-[11px] leading-4 text-[var(--glass-text-secondary)]`}>
-                        {visualReferenceCase.description}
-                      </p>
+                      {hasDescription ? (
+                        <>
+                          <p className={`${SELECTABLE_TEXT_CLASS} mt-1 text-[11px] leading-4 text-[var(--glass-text-secondary)] ${descriptionExpanded ? '' : 'line-clamp-2'}`}>
+                            {visualReferenceCase.description}
+                          </p>
+                          <button
+                            type="button"
+                            className="mt-1 text-[11px] font-semibold text-slate-700 underline-offset-2 transition hover:text-slate-950 hover:underline"
+                            onClick={(event) => {
+                              event.stopPropagation()
+                              toggleVisualReferenceDescription(visualReferenceCase.id)
+                            }}
+                          >
+                            {descriptionExpanded ? labels('collapseDetails') : labels('expandDetails')}
+                          </button>
+                        </>
+                      ) : null}
                     </div>
                     <span className={`${SELECTABLE_TEXT_CLASS} shrink-0 rounded-full bg-slate-100 px-2 py-1 text-[10px] font-semibold text-[var(--glass-text-tertiary)]`}>
                       {labels(`visualReferenceStatus.${visualReferenceCase.status}`)}
