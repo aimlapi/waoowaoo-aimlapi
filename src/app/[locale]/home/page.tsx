@@ -385,20 +385,6 @@ export default function HomePage() {
                       {t('aiWrite.trigger')}
                     </span>
                   </button>
-                  <Link
-                    href={{ pathname: '/dev-ab-test' }}
-                    className="glass-btn-base flex h-10 flex-shrink-0 items-center gap-1.5 border border-[var(--glass-stroke-strong)] px-3 text-sm font-medium transition-all hover:border-[var(--glass-tone-info-fg)]/40"
-                  >
-                    <AppIcon name="clapperboard" className="w-4 h-4 text-[var(--glass-tone-info-fg)]" />
-                    {t('storyboardSchemeTest')}
-                  </Link>
-                  <Link
-                    href={{ pathname: '/storyboard-method-test' }}
-                    className="glass-btn-base flex h-10 flex-shrink-0 items-center gap-1.5 border border-[var(--glass-stroke-strong)] px-3 text-sm font-medium transition-all hover:border-[var(--glass-tone-info-fg)]/40"
-                  >
-                    <AppIcon name="grid" className="w-4 h-4 text-[var(--glass-tone-info-fg)]" />
-                    {t('storyboardMethodTest')}
-                  </Link>
                 </>
               )}
               footer={createError ? (
