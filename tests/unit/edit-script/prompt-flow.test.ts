@@ -1,32 +1,8 @@
 import { describe, expect, it } from 'vitest'
 import { AI_PROMPT_IDS, buildAiPrompt } from '@/lib/ai-prompts'
 
-const styleBibleJson = JSON.stringify({
-  strategy: 'style_bible',
-  styleSummary: '安静克制的东方自然主义禅修影像。',
-  stylePolicy: {
-    visual: {
-      negativePrompt: '不要商业广告感，不要高反差大片感，不要炫技运镜。',
-      imageFilterPrompt: '柔和自然光，低对比度，轻微柔焦，清澈空气感，淡雅胶片质感',
-      lightingPrompt: '晨间漫射自然光，低光比。',
-      colorPrompt: '低饱和自然灰绿、木色、石灰色。',
-      texturePrompt: '细腻胶片颗粒，真实木材、布料、石面质感。',
-      compositionPrompt: '留白多，稳定构图。',
-    },
-    camera: {
-      movementPrompt: '固定镜头、缓慢推近、轻微横移。',
-      lensAndDepthPrompt: '35mm，自然景深。',
-      videoRhythmPrompt: '慢节奏，长停顿，少切换，剪辑克制。',
-    },
-    sound: {
-      soundFilterPrompt: '柔和低动态，自然空气感，清晰但不过度锐利',
-    },
-    hardBans: ['不要字幕', '不要水印', '不要logo'],
-  },
-})
-
 describe('edit script block-first prompt flow', () => {
-  it('builds a style-bible-first prompt chain with one style source', () => {
+  it('keeps edit prompts free of text-only style sources before visual references', () => {
     const screenplayText = [
       '标题：《灯下的人》',
       '',
@@ -36,30 +12,6 @@ describe('edit script block-first prompt flow', () => {
       '',
       '动作：人物走入昏暗房间，沿着窗边的光线慢慢前行，在桌前停下。',
     ].join('\n')
-
-    const styleBiblePrompt = buildAiPrompt({
-      promptId: AI_PROMPT_IDS.EDIT_SCRIPT_STYLE_BIBLE,
-      locale: 'zh',
-      variables: {
-        user_request: '生成一条禅修短片',
-        duration_seconds: '8',
-        aspect_ratio: '9:16',
-        project_style_json: JSON.stringify({ explicitStyle: 'realistic', aspectRatio: '9:16' }),
-      },
-    })
-
-    expect(styleBiblePrompt).toContain('视觉风格策略生成器')
-    expect(styleBiblePrompt).toContain('完整剧本生成之后')
-    expect(styleBiblePrompt).toContain('Style Bible 是后续资产图、分镜图、视频提示词、声音提示词的唯一风格来源')
-    expect(styleBiblePrompt).toContain('不要输出大而全的正向风格字段')
-    expect(styleBiblePrompt).toContain('imageFilterPrompt 必须是一句可直接塞进图片或视频提示词的画面滤镜短语')
-    expect(styleBiblePrompt).toContain('sound.soundFilterPrompt')
-    expect(styleBiblePrompt).toContain('hardBans')
-    expect(styleBiblePrompt).toContain('禅意东方作者电影')
-    expect(styleBiblePrompt).toContain('柔和自然光，低对比度，轻微柔焦')
-    expect(styleBiblePrompt).toContain('不要商业广告感，不要高反差大片感')
-    expect(styleBiblePrompt).not.toContain('春夏秋冬又一春')
-    expect(styleBiblePrompt).not.toContain('金基德')
 
     const screenplayPrompt = buildAiPrompt({
       promptId: AI_PROMPT_IDS.EDIT_SCRIPT_SCREENPLAY,
@@ -86,13 +38,11 @@ describe('edit script block-first prompt flow', () => {
         screenplay_text: screenplayText,
         duration_seconds: '8',
         aspect_ratio: '9:16',
-        style_bible_json: styleBibleJson,
       },
     })
 
     expect(primaryPrompt).toContain('统一剪辑结构表 Agent')
-    expect(primaryPrompt).toContain('Style Bible 是唯一风格来源')
-    expect(primaryPrompt).toContain('不要从旧项目风格配置或其他风格上下文另起一套风格')
+    expect(primaryPrompt).toContain('本阶段不生成画风、不选择媒介、不写全局色彩/材质/滤镜规则')
     expect(primaryPrompt).toContain('videoBlocks 是视频生成主结构')
     expect(primaryPrompt).toContain('本阶段只生成结构、动作、摄影、声音和片段编排')
     expect(primaryPrompt).toContain('shots[].videoPrompt 和 videoBlocks[].prompt 会在资产提取与资产描述完成后由下一阶段生成')
@@ -102,6 +52,8 @@ describe('edit script block-first prompt flow', () => {
     expect(primaryPrompt).not.toContain('visual_action_json')
     expect(primaryPrompt).not.toContain('2x2')
     expect(primaryPrompt).not.toContain('宫格')
+    expect(primaryPrompt).not.toContain('Style Bible')
+    expect(primaryPrompt).not.toContain('style_bible_json')
 
     const assetExtractPrompt = buildAiPrompt({
       promptId: AI_PROMPT_IDS.EDIT_SCRIPT_ASSET_EXTRACT,
@@ -127,19 +79,14 @@ describe('edit script block-first prompt flow', () => {
         asset_context_json: JSON.stringify({ assets: [] }),
         adjacent_blocks_json: JSON.stringify({ previous: null, next: null }),
         aspect_ratio: '9:16',
-        style_bible_json: styleBibleJson,
       },
     })
 
-    expect(videoPromptBlock).toContain('严格遵守 Style Bible')
-    expect(videoPromptBlock).toContain('用户在 user_request 中明确要求的风格和限制最高优先级')
+    expect(videoPromptBlock).toContain('风格案例图会在后续图像和视频生成时作为唯一风格源追加')
     expect(videoPromptBlock).not.toContain('rawUserStyle')
-    expect(videoPromptBlock).toContain('styleBible.stylePolicy.visual.negativePrompt')
-    expect(videoPromptBlock).toContain('styleBible.stylePolicy.visual.imageFilterPrompt')
-    expect(videoPromptBlock).toContain('styleBible.stylePolicy.sound.soundFilterPrompt')
-    expect(videoPromptBlock).toContain('画面滤镜')
-    expect(videoPromptBlock).toContain('声音滤镜')
-    expect(videoPromptBlock).toContain('不得改写或替代角色 voiceTimbreText')
+    expect(videoPromptBlock).not.toContain('styleBible')
+    expect(videoPromptBlock).not.toContain('style_bible_json')
+    expect(videoPromptBlock).toContain('固定音色必须逐字使用资产字段')
     expect(videoPromptBlock).not.toContain('videoPromptBible')
 
     const panelFinalPromptBlock = buildAiPrompt({
@@ -147,7 +94,7 @@ describe('edit script block-first prompt flow', () => {
       locale: 'zh',
       variables: {
         source_snapshot_json: JSON.stringify({ shots: [], videoBlocks: [] }),
-        camera_style_bible_json: JSON.stringify({ imageFilterPrompt: '柔和自然光，低对比度' }),
+        visual_reference_camera_policy_json: JSON.stringify({ imageFilterPrompt: '柔和自然光，低对比度' }),
         spatial_profile_strategy_output_json: JSON.stringify({ strategy: 'spatial_text_blocking', locations: [] }),
         video_block_json: JSON.stringify({ sourceVideoBlockId: 'block-1' }),
         block_shots_json: JSON.stringify([{ shotNumber: 1 }]),
@@ -158,7 +105,7 @@ describe('edit script block-first prompt flow', () => {
 
     expect(panelFinalPromptBlock).toContain('videoBlock 最终分镜图片提示词生成器')
     expect(panelFinalPromptBlock).toContain('核心产物是每个 panel 的 finalPanelPrompt')
-    expect(panelFinalPromptBlock).toContain('camera_style_bible_json 就是本步骤使用的 Camera Style Bible')
+    expect(panelFinalPromptBlock).toContain('visual_reference_camera_policy_json 是从选中风格案例图派生出的视觉参考镜头策略')
     expect(panelFinalPromptBlock).toContain('风格只能影响画面表达方式')
     expect(panelFinalPromptBlock).toContain('严禁因为风格添加原 shot、videoPrompt、资产图或空间档案里没有的人物、道具、建筑、天气、时代元素、服装、符号或剧情动作')
     expect(panelFinalPromptBlock).toContain('不要只在末尾堆成“风格：……”')
@@ -180,12 +127,12 @@ describe('edit script block-first prompt flow', () => {
         screenplay_text: screenplayText,
         duration_seconds: '8',
         aspect_ratio: '9:16',
-        style_bible_json: styleBibleJson,
       },
     })
 
-    expect(englishPrimaryPrompt).toContain('Style Bible is the only style source')
+    expect(englishPrimaryPrompt).toContain('This stage must not generate rendering style')
     expect(englishPrimaryPrompt).toContain('15-second limit is the highest-priority hard ceiling')
     expect(englishPrimaryPrompt).toContain('Do not mechanically split them into multiple 2-shot groups')
+    expect(englishPrimaryPrompt).not.toContain('Style Bible')
   })
 })

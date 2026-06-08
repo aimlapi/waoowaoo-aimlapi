@@ -762,12 +762,6 @@
           "eyebrow": "编剧模块",
           "meta": "作为剪辑先行表的剧情输入"
         },
-        "editStyleBible": {
-          "title": "Style Bible",
-          "eyebrow": "风格圣经",
-          "body": "全链路统一使用的画面、镜头和声音滤镜风格规则。",
-          "meta": "资产、分镜和视频提示词共用的唯一风格来源"
-        },
         "editPipelineStep": {
           "eyebrow": "剪辑生成步骤",
           "body": "从剪辑先行表拆出的阶段字段",

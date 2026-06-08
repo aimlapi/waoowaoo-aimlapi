@@ -1,7 +1,6 @@
 import type { Job } from 'bullmq'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 import { TASK_TYPE, type TaskJobData } from '@/lib/task/types'
-import { buildZenStyleBibleFixture } from '../../fixtures/edit-script-style-bible'
 
 const prismaMock = vi.hoisted(() => ({
   project: {
@@ -58,9 +57,12 @@ const sharedMock = vi.hoisted(() => ({
   ) => {
     void options
     return {
-      referenceImages: items.map((item, index) => {
-        const defaults = ['normalized-sketch', 'normalized-hero', 'normalized-scene-anchor']
-        return defaults[index] || `normalized:${item.url}`
+      referenceImages: items.map((item) => {
+        if (item.role === 'style_reference') return 'normalized-style-reference'
+        if (item.role === 'sketch') return 'normalized-sketch'
+        if (item.role === 'character') return 'normalized-hero'
+        if (item.role === 'scene_anchor') return 'normalized-scene-anchor'
+        return `normalized:${item.url}`
       }),
       referenceImagesMap: items.map((item, index) => ({
         image_no: `图 ${index + 1}`,
@@ -166,7 +168,14 @@ describe('worker panel-image-task-handler behavior', () => {
       visualStylePresetId: 'realistic',
       artStyle: 'realistic',
     })
-    prismaMock.projectVisualReferenceCase.findFirst.mockResolvedValue(null)
+    prismaMock.projectVisualReferenceCase.findFirst.mockResolvedValue({
+      id: 'style-case-default',
+      title: '真人向｜冷白写实',
+      description: '真人向；低饱和冷白写实；共享场景为分镜所在叙事空间。',
+      prompt: 'Shared scene: storyboard moment in story environment. Chosen dimensions: live-action realism, muted palette. Style treatment: restrained photorealistic reference.',
+      imageUrl: '/m/style-case-default',
+      imageMedia: null,
+    })
 
     prismaMock.projectPanel.findUnique.mockResolvedValue({
       id: 'panel-1',
@@ -235,16 +244,17 @@ describe('worker panel-image-task-handler behavior', () => {
       expect.anything(),
       expect.objectContaining({
         modelId: 'storyboard-model-1',
-        prompt: 'panel-image-prompt',
+        prompt: expect.stringContaining('选中的视觉风格案例（最高优先级）：'),
         allowTaskExternalIdResume: false,
         options: expect.objectContaining({
-          referenceImages: ['normalized-sketch', 'normalized-hero', 'normalized-scene-anchor'],
+          referenceImages: ['normalized-style-reference', 'normalized-sketch', 'normalized-hero', 'normalized-scene-anchor'],
           aspectRatio: '16:9',
         }),
       }),
     )
     expect(sharedMock.normalizeReferenceImageItemsForGeneration).toHaveBeenCalledWith(
       expect.arrayContaining([
+        expect.objectContaining({ role: 'style_reference', name: '真人向｜冷白写实' }),
         expect.objectContaining({ role: 'sketch', name: 'storyboard sketch' }),
         expect.objectContaining({ role: 'character', name: 'Hero' }),
         expect.objectContaining({ role: 'scene_anchor', name: 'Old Town' }),
@@ -283,9 +293,10 @@ describe('worker panel-image-task-handler behavior', () => {
       }
     }
     expect(context.reference_and_continuity?.reference_images).toEqual([
-      { image_no: '图 1', role: 'sketch', name: '分镜草图' },
-      { image_no: '图 2', role: 'character', name: 'Hero', appearance: 'default', slot: '街道左侧靠墙的留白位置' },
-      { image_no: '图 3', role: 'scene_anchor', name: 'Old Town' },
+      { image_no: '图 1', role: 'style_reference', name: '真人向｜冷白写实' },
+      { image_no: '图 2', role: 'sketch', name: '分镜草图' },
+      { image_no: '图 3', role: 'character', name: 'Hero', appearance: 'default', slot: '街道左侧靠墙的留白位置' },
+      { image_no: '图 4', role: 'scene_anchor', name: 'Old Town' },
     ])
     expect(context.reference_and_continuity?.scene_continuity_state?.present_characters).toEqual([
       expect.objectContaining({ name: 'Hero', visibility: 'featured' }),
@@ -332,34 +343,26 @@ describe('worker panel-image-task-handler behavior', () => {
       options?: { referenceImages?: string[] }
       prompt?: string
     } | undefined
-    expect(generationInput?.options?.referenceImages?.[0]).toBe('normalized-sketch')
+    expect(generationInput?.options?.referenceImages?.[0]).toBe('normalized-style-reference')
   })
 
-  it('appends Style Bible block to final storyboard image prompt', async () => {
-    prismaMock.projectEditScript.findFirst.mockResolvedValueOnce({
-      styleBibleJson: buildZenStyleBibleFixture(),
-    })
-
+  it('uses the selected visual reference case as the only style source in storyboard image prompt', async () => {
     await handlePanelImageTask(buildJob({ candidateCount: 1 }))
 
     expect(utilsMock.resolveImageSourceFromGeneration).toHaveBeenCalledWith(
       expect.anything(),
       expect.objectContaining({
-        prompt: expect.stringContaining('系统 Style Bible 视觉要求（固定追加，必须遵守）：'),
+        prompt: expect.stringContaining('选中的视觉风格案例（最高优先级）：'),
       }),
     )
     expect(utilsMock.resolveImageSourceFromGeneration).toHaveBeenCalledWith(
       expect.anything(),
       expect.objectContaining({
-        prompt: expect.stringContaining('用途：分镜图生成'),
+        prompt: expect.stringContaining('真人向｜冷白写实'),
       }),
     )
-    expect(utilsMock.resolveImageSourceFromGeneration).toHaveBeenCalledWith(
-      expect.anything(),
-      expect.objectContaining({
-        prompt: expect.stringContaining('镜头与景深：35mm镜头，中浅景深，自然透视。'),
-      }),
-    )
+    const generationInput = utilsMock.resolveImageSourceFromGeneration.mock.calls[0]?.[1] as { prompt: string }
+    expect(generationInput.prompt).not.toContain('Style Bible')
     expect(utilsMock.resolveImageSourceFromGeneration).toHaveBeenCalledWith(
       expect.anything(),
       expect.objectContaining({
@@ -608,6 +611,7 @@ describe('worker panel-image-task-handler behavior', () => {
       expect.objectContaining({
         options: expect.objectContaining({
           referenceImages: [
+            'normalized-style-reference',
             'normalized-sketch',
             'normalized-hero',
             'normalized-scene-anchor',
@@ -690,13 +694,13 @@ describe('worker panel-image-task-handler behavior', () => {
     }
     expect(context.panel_constraints?.shot_blocking?.cameraPlacement).toBe('从街道中线偏右拍向左侧墙面')
     expect(context.reference_and_continuity?.location_reference?.spatial_profile?.anchors?.[0]?.label).toBe('左侧墙面')
-    expect(context.reference_and_continuity?.reference_images?.map((item) => item.role)).toEqual(['sketch', 'character', 'scene_anchor'])
+    expect(context.reference_and_continuity?.reference_images?.map((item) => item.role)).toEqual(['style_reference', 'sketch', 'character', 'scene_anchor'])
     expect(context.reference_and_continuity?.scene_continuity_state?.scene_anchor_name).toBe('Old Town')
     expect(utilsMock.resolveImageSourceFromGeneration).toHaveBeenCalledWith(
       expect.anything(),
       expect.objectContaining({
         options: expect.objectContaining({
-          referenceImages: ['normalized-sketch', 'normalized-hero', 'normalized-scene-anchor'],
+          referenceImages: ['normalized-style-reference', 'normalized-sketch', 'normalized-hero', 'normalized-scene-anchor'],
         }),
       }),
     )
@@ -719,8 +723,9 @@ describe('worker panel-image-task-handler behavior', () => {
       Array<{ role: string; url: string; name: string }>,
       unknown,
     ]>
-    expect(normalizeCalls[0]?.[0].map((item) => item.role)).toEqual(['source_panel', 'extra'])
+    expect(normalizeCalls[0]?.[0].map((item) => item.role)).toEqual(['style_reference', 'source_panel', 'extra'])
     expect(normalizeCalls[0]?.[0]).toEqual([
+      expect.objectContaining({ role: 'style_reference' }),
       expect.objectContaining({ url: 'images/previous-panel.png', role: 'source_panel' }),
       expect.objectContaining({ url: 'https://example.com/manual-ref.png', role: 'extra' }),
     ])
@@ -728,7 +733,7 @@ describe('worker panel-image-task-handler behavior', () => {
       expect.anything(),
       expect.objectContaining({
         options: expect.objectContaining({
-          referenceImages: ['normalized-sketch', 'normalized-hero'],
+          referenceImages: ['normalized-style-reference', 'normalized:images/previous-panel.png', 'normalized:https://example.com/manual-ref.png'],
         }),
       }),
     )

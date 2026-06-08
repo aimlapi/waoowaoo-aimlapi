@@ -25,10 +25,9 @@ import { totalVideoGroupDuration, validateVideoGroupShotNumbers } from '@/lib/vi
 import type { VideoGridMode, VideoGroupShot } from '@/lib/video-groups/types'
 import { ensureMediaObjectFromStorageKey } from '@/lib/media/service'
 import {
-  appendStyleBiblePromptBlock,
-  parseNullableEditScriptStyleBible,
-  resolveEditScriptStyleBibleForStoryboardTask,
-} from '@/lib/edit-script/style-bible-prompt'
+  appendSelectedVisualReferenceStylePromptBlock,
+  requireSelectedVisualReferenceStyle,
+} from '@/lib/visual-reference-cases/selected-style'
 
 type AnyObj = Record<string, unknown>
 type VideoOptionValue = string | number | boolean
@@ -136,15 +135,13 @@ async function generateVideoForPanel(
   if (!prompt) {
     throw new Error(`Panel ${panel.id} has no video prompt`)
   }
-  const styleBible = await resolveEditScriptStyleBibleForStoryboardTask({
+  const selectedVisualReferenceStyle = await requireSelectedVisualReferenceStyle({
     projectId: job.data.projectId,
     episodeId: job.data.episodeId,
-    storyboardId: panel.storyboardId,
   })
-  const generationPrompt = appendStyleBiblePromptBlock({
+  const generationPrompt = appendSelectedVisualReferenceStylePromptBlock({
     prompt,
-    styleBible,
-    usage: 'video',
+    style: selectedVisualReferenceStyle,
     locale: job.data.locale,
   })
 
@@ -406,7 +403,6 @@ async function handleAssetReferenceVideoGroupTask(params: {
       select: {
         shotsJson: true,
         videoBlocksJson: true,
-        styleBibleJson: true,
       },
     }),
   ])
@@ -428,11 +424,13 @@ async function handleAssetReferenceVideoGroupTask(params: {
     videoBlocksJson: editScript.videoBlocksJson,
     shotNumbers,
   })
-  const styleBible = parseNullableEditScriptStyleBible(editScript.styleBibleJson)
-  const generationPrompt = appendStyleBiblePromptBlock({
+  const selectedVisualReferenceStyle = await requireSelectedVisualReferenceStyle({
+    projectId: job.data.projectId,
+    episodeId: job.data.episodeId || normalizeString(payload.episodeId),
+  })
+  const generationPrompt = appendSelectedVisualReferenceStylePromptBlock({
     prompt,
-    styleBible,
-    usage: 'video',
+    style: selectedVisualReferenceStyle,
     locale: job.data.locale,
   })
 
@@ -570,7 +568,6 @@ async function handleVideoGroupTask(job: Job<TaskJobData>) {
       select: {
         shotsJson: true,
         videoBlocksJson: true,
-        styleBibleJson: true,
       },
     }),
     prisma.projectPanel.findMany({
@@ -618,11 +615,13 @@ async function handleVideoGroupTask(job: Job<TaskJobData>) {
     videoBlocksJson: editScript.videoBlocksJson,
     shotNumbers,
   })
-  const styleBible = parseNullableEditScriptStyleBible(editScript.styleBibleJson)
-  const generationPrompt = appendStyleBiblePromptBlock({
+  const selectedVisualReferenceStyle = await requireSelectedVisualReferenceStyle({
+    projectId: job.data.projectId,
+    episodeId: job.data.episodeId || normalizeString(payload.episodeId),
+  })
+  const generationPrompt = appendSelectedVisualReferenceStylePromptBlock({
     prompt,
-    styleBible,
-    usage: 'video',
+    style: selectedVisualReferenceStyle,
     locale: job.data.locale,
   })
   await prisma.projectVideoGroup.update({

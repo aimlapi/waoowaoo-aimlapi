@@ -4,9 +4,9 @@ import { ApiError } from '@/lib/api-errors'
 import { getProjectModelConfig } from '@/lib/config-service'
 import { decodeImageUrlsFromDb } from '@/lib/contracts/image-urls-contract'
 import { normalizeVideoBlockPlanResponse } from '@/lib/video-groups/planner'
-import { editScriptStyleBibleSchema } from '@/lib/edit-script/types'
 import { parseLocationSpatialProfile, type LocationSpatialProfile } from '@/lib/location-spatial-profile/types'
 import type { EditAssetRequirement, EditScriptPayload, EditScriptShot } from '@/lib/edit-script/types'
+import { requireSelectedVisualReferenceStyle } from '@/lib/visual-reference-cases/selected-style'
 import type {
   StoryboardConsistencyAssetSnapshot,
   StoryboardConsistencyModelConfigSnapshot,
@@ -89,7 +89,7 @@ function mapEditScript(script: PersistedEditScript): EditScriptPayload {
     projectId: script.projectId,
     episodeId: script.episodeId,
     userPrompt: script.userPrompt,
-    styleBible: editScriptStyleBibleSchema.parse({ styleBible: script.styleBibleJson }).styleBible,
+    styleBible: null,
     screenplayText: script.screenplayText,
     title: script.title,
     logline: script.logline,
@@ -250,7 +250,7 @@ export async function buildStoryboardConsistencySource(input: {
   readonly sourceSnapshot: StoryboardConsistencySourceSnapshot
   readonly modelConfigSnapshot: StoryboardConsistencyModelConfigSnapshot
 }> {
-  const [project, script, config] = await Promise.all([
+  const [project, script, config, visualReferenceStyle] = await Promise.all([
     prisma.project.findFirst({
       where: { id: input.projectId, userId: input.userId },
       select: {
@@ -274,6 +274,10 @@ export async function buildStoryboardConsistencySource(input: {
       },
     }),
     getProjectModelConfig(input.projectId, input.userId),
+    requireSelectedVisualReferenceStyle({
+      projectId: input.projectId,
+      episodeId: input.episodeId,
+    }),
   ])
   if (!project || !script) throw new ApiError('NOT_FOUND')
   const editScript = mapEditScript(script)
@@ -284,13 +288,6 @@ export async function buildStoryboardConsistencySource(input: {
     })
   }
   if (!editScript.id) throw new Error('EDIT_SCRIPT_ID_REQUIRED')
-  const styleBible = editScript.styleBible
-  if (!styleBible) {
-    throw new ApiError('INVALID_PARAMS', {
-      code: 'EDIT_SCRIPT_STYLE_BIBLE_REQUIRED',
-      message: 'Style Bible is required before storyboard generation',
-    })
-  }
   const modelConfigSnapshot = requireModelConfig(config)
   const assets = await buildAssetSnapshots(editScript.requirements)
   const videoBlocks: StoryboardConsistencySourceVideoBlock[] = editScript.videoBlocks.map((block, blockIndex) => ({
@@ -317,7 +314,7 @@ export async function buildStoryboardConsistencySource(input: {
         userPrompt: editScript.userPrompt,
         screenplayText: editScript.screenplayText,
       },
-      styleBible,
+      visualReferenceStyle,
       shots: editScript.shots,
       videoBlocks,
       assets,

@@ -204,7 +204,7 @@ export async function generateStoryboardPanelFinalPrompts(input: GenerationConte
       source_snapshot_json: stringifyForPrompt(input.snapshot),
       spatial_profile_strategy_output_json: stringifyForPrompt(cameraPlanSpatialProfileOutput),
     },
-    stepTitle: 'Generate edit-script storyboard camera style bible',
+    stepTitle: 'Generate edit-script storyboard visual-reference camera policy',
     stepIndex: 1,
     stepTotal: 2,
   })
@@ -217,7 +217,7 @@ export async function generateStoryboardPanelFinalPrompts(input: GenerationConte
       promptId: AI_PROMPT_IDS.EDIT_SCRIPT_STORYBOARD_PANEL_FINAL_PROMPT_BLOCK,
       variables: {
         source_snapshot_json: stringifyForPrompt(input.snapshot),
-        camera_style_bible_json: stringifyForPrompt(bible.cameraStyleBible),
+        visual_reference_camera_policy_json: stringifyForPrompt(bible.cameraStyleBible),
         spatial_profile_strategy_output_json: stringifyForPrompt(blockSpatialProfileOutput),
         video_block_json: stringifyForPrompt(block),
         block_shots_json: stringifyForPrompt(shotsForBlock(input.snapshot, block)),

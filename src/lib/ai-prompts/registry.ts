@@ -177,10 +177,6 @@ export const AI_PROMPT_CATALOG: Record<AiPromptId, AiPromptCatalogEntry> = {
       'timeline_map',
     ],
   },
-  [AI_PROMPT_IDS.EDIT_SCRIPT_STYLE_BIBLE]: {
-    pathStem: 'edit-script/style-bible',
-    variableKeys: ['user_request', 'duration_seconds', 'aspect_ratio', 'project_style_json'],
-  },
   [AI_PROMPT_IDS.EDIT_SCRIPT_SCREENPLAY]: {
     pathStem: 'edit-script/screenplay',
     variableKeys: ['user_request', 'duration_seconds', 'aspect_ratio'],
@@ -192,7 +188,6 @@ export const AI_PROMPT_CATALOG: Record<AiPromptId, AiPromptCatalogEntry> = {
       'screenplay_text',
       'duration_seconds',
       'aspect_ratio',
-      'style_bible_json',
     ],
   },
   [AI_PROMPT_IDS.EDIT_SCRIPT_ASSET_EXTRACT]: {
@@ -209,7 +204,6 @@ export const AI_PROMPT_CATALOG: Record<AiPromptId, AiPromptCatalogEntry> = {
       'asset_context_json',
       'adjacent_blocks_json',
       'aspect_ratio',
-      'style_bible_json',
     ],
   },
   [AI_PROMPT_IDS.EDIT_SCRIPT_VIDEO_BLOCK_ARRANGEMENT]: {
@@ -223,7 +217,6 @@ export const AI_PROMPT_CATALOG: Record<AiPromptId, AiPromptCatalogEntry> = {
       'changed_block_shots_json',
       'asset_context_json',
       'aspect_ratio',
-      'style_bible_json',
     ],
   },
   [AI_PROMPT_IDS.EDIT_SCRIPT_VIDEO_BLOCK_MERGE]: {
@@ -237,7 +230,6 @@ export const AI_PROMPT_CATALOG: Record<AiPromptId, AiPromptCatalogEntry> = {
       'asset_context_json',
       'adjacent_blocks_json',
       'aspect_ratio',
-      'style_bible_json',
     ],
   },
   [AI_PROMPT_IDS.EDIT_SCRIPT_STORYBOARD_PANEL]: {
@@ -260,7 +252,7 @@ export const AI_PROMPT_CATALOG: Record<AiPromptId, AiPromptCatalogEntry> = {
     pathStem: 'edit-script/storyboard-panel-final-prompt-block',
     variableKeys: [
       'source_snapshot_json',
-      'camera_style_bible_json',
+      'visual_reference_camera_policy_json',
       'spatial_profile_strategy_output_json',
       'video_block_json',
       'block_shots_json',

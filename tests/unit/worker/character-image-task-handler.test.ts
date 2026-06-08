@@ -2,7 +2,6 @@ import type { Job } from 'bullmq'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 import { CHARACTER_ASSET_IMAGE_RATIO, CHARACTER_PROMPT_SUFFIX } from '@/lib/constants'
 import { TASK_TYPE, type TaskJobData } from '@/lib/task/types'
-import { buildZenStyleBibleFixture } from '../../fixtures/edit-script-style-bible'
 
 const utilsMock = vi.hoisted(() => ({
   assertTaskActive: vi.fn(async () => undefined),
@@ -88,7 +87,14 @@ describe('worker character-image-task-handler behavior', () => {
       visualStylePresetSource: 'system',
       visualStylePresetId: 'realistic',
     })
-    prismaMock.projectVisualReferenceCase.findFirst.mockResolvedValue(null)
+    prismaMock.projectVisualReferenceCase.findFirst.mockResolvedValue({
+      id: 'style-case-default',
+      title: '真人向｜冷白写实',
+      description: '真人向；低饱和冷白写实；共享场景为角色所在叙事空间。',
+      prompt: 'Shared scene: character in story environment. Chosen dimensions: live-action realism, muted palette. Style treatment: restrained photorealistic reference.',
+      imageUrl: '/m/style-case-default',
+      imageMedia: null,
+    })
 
     prismaMock.characterAppearance.findUnique.mockResolvedValue({
       id: 'appearance-2',
@@ -214,21 +220,16 @@ describe('worker character-image-task-handler behavior', () => {
     expect(generationInput.options?.referenceImages).toEqual(['normalized-style-ref'])
   })
 
-  it('appends Style Bible block to final character asset image prompt', async () => {
-    prismaMock.projectEditScript.findFirst.mockResolvedValueOnce({
-      styleBibleJson: buildZenStyleBibleFixture(),
-    })
-
+  it('uses the selected visual reference case as the only style source in character image prompt', async () => {
     await handleCharacterImageTask(buildJob({ imageIndex: 0 }, 'appearance-2', 'episode-1'))
 
     const generationInput = sharedMock.generateCleanImageToStorage.mock.calls[0]?.[0] as {
       prompt: string
     }
     expect(generationInput.prompt).toContain('角色描述A')
-    expect(generationInput.prompt).toContain('系统 Style Bible 视觉要求（固定追加，必须遵守）：')
-    expect(generationInput.prompt).toContain('用途：资产图生成')
-    expect(generationInput.prompt).toContain('画面滤镜：轻微柔焦，35mm镜头，克制高光。')
-    expect(generationInput.prompt).toContain('负向约束：避免商业广告感，避免高反差大片感，避免炫技运镜。')
+    expect(generationInput.prompt).toContain('选中的视觉风格案例（最高优先级）：')
+    expect(generationInput.prompt).toContain('真人向｜冷白写实')
+    expect(generationInput.prompt).not.toContain('Style Bible')
   })
 
   it('candidate casting stills -> appends expression prop and background requirements to image prompt', async () => {

@@ -12,7 +12,6 @@ export type WorkspaceCanvasNodeKind =
   | 'videoClip'
   | 'finalTimeline'
   | 'editScreenplay'
-  | 'editStyleBible'
   | 'editPipelineStep'
   | 'editScript'
   | 'spaceConsistency'
@@ -20,7 +19,7 @@ export type WorkspaceCanvasNodeKind =
   | 'bgmScore'
   | 'editRequiredAsset'
 
-export type WorkspaceCanvasTargetType = 'episode' | 'clip' | 'storyboard' | 'panel' | 'videoGroup' | 'editScreenplay' | 'editStyleBible' | 'editPipelineStep' | 'editScript' | 'editAssetRequirement' | 'projectCharacter' | 'projectLocation'
+export type WorkspaceCanvasTargetType = 'episode' | 'clip' | 'storyboard' | 'panel' | 'videoGroup' | 'editScreenplay' | 'editPipelineStep' | 'editScript' | 'editAssetRequirement' | 'projectCharacter' | 'projectLocation'
 
 export type WorkspaceCanvasNodeAction =
   | { readonly type: 'update_story'; readonly value: string }
@@ -307,33 +306,6 @@ export interface WorkspaceCanvasEditScreenplayDetails {
   readonly visualReferenceRunning: boolean
 }
 
-export interface WorkspaceCanvasStyleBibleVisualPolicy {
-  readonly negativePrompt?: string | null
-  readonly imageFilterPrompt?: string | null
-  readonly lightingPrompt?: string | null
-  readonly colorPrompt?: string | null
-  readonly texturePrompt?: string | null
-  readonly compositionPrompt?: string | null
-}
-
-export interface WorkspaceCanvasStyleBibleCameraPolicy {
-  readonly movementPrompt?: string | null
-  readonly lensAndDepthPrompt?: string | null
-  readonly videoRhythmPrompt?: string | null
-}
-
-export interface WorkspaceCanvasStyleBibleSoundPolicy {
-  readonly soundFilterPrompt?: string | null
-}
-
-export interface WorkspaceCanvasStyleBibleDetails {
-  readonly styleSummary?: string | null
-  readonly visual: WorkspaceCanvasStyleBibleVisualPolicy
-  readonly camera: WorkspaceCanvasStyleBibleCameraPolicy
-  readonly sound: WorkspaceCanvasStyleBibleSoundPolicy
-  readonly hardBans: readonly string[]
-}
-
 export interface WorkspaceCanvasVideoPlanDetails {
   readonly editScriptId: string
   readonly blockIndex: number
@@ -472,7 +444,6 @@ export interface WorkspaceCanvasNodeData extends Record<string, unknown> {
   readonly finalDetails?: WorkspaceCanvasFinalDetails
   readonly bgmScoreDetails?: WorkspaceCanvasBgmScoreDetails
   readonly editScreenplayDetails?: WorkspaceCanvasEditScreenplayDetails
-  readonly styleBibleDetails?: WorkspaceCanvasStyleBibleDetails
   readonly editPipelineStepDetails?: WorkspaceCanvasEditPipelineStepDetails
   readonly editScriptDetails?: WorkspaceCanvasEditScriptDetails
   readonly spaceConsistencyDetails?: WorkspaceCanvasSpaceConsistencyDetails

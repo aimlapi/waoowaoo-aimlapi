@@ -151,7 +151,7 @@ export function createEditScriptOperations(): ProjectAgentOperationRegistryDraft
   return {
     generate_edit_screenplay: defineOperation({
       id: 'generate_edit_screenplay',
-      summary: 'Generate the editable screenplay artifact and persisted Style Bible for edit-first production from the current project request.',
+      summary: 'Generate the editable screenplay artifact for edit-first production from the current project request.',
       intent: 'act',
       prerequisites: { episodeId: 'required' },
       effects: EFFECTS_SYNC_AI_WRITE,
@@ -173,7 +173,7 @@ export function createEditScriptOperations(): ProjectAgentOperationRegistryDraft
     }),
     generate_edit_script: defineOperation({
       id: 'generate_edit_script',
-      summary: 'Generate the edit-first core table from an existing ready screenplay and its persisted Style Bible. Fails if no ready screenplay exists.',
+      summary: 'Generate the edit-first core table from an existing ready screenplay. Fails if no ready screenplay exists.',
       intent: 'act',
       prerequisites: { episodeId: 'required' },
       effects: EFFECTS_SYNC_AI_WRITE,

@@ -116,8 +116,10 @@ function buildStylePlanPrompt(input: {
       'Return strict JSON only. No markdown. No extra prose.',
       'Schema: [{"key":"kebab-case-id","category":"live_action","title":"short user-facing title","description":"one concise sentence","visualDirection":"detailed image-generation direction"},{"key":"kebab-case-id","category":"animation","title":"short user-facing title","description":"one concise sentence","visualDirection":"detailed image-generation direction"}]',
       'The first item must be category live_action. The second item must be category animation.',
+      'Each title must clearly label the option as live-action-facing or animation-facing.',
+      'Each description must name the category, the selected dimensions, and the shared scene in one concise user-facing sentence.',
       'Each visualDirection must explicitly include: "Shared scene: ..." describing the identical scene content, "Chosen dimensions: ..." listing the selected library values and inferred scene art direction when relevant, and "Style treatment: ..." describing only that option’s style transformation.',
-      'Keep title short. Keep description concrete. visualDirection should be directly usable in an image prompt and must include wide/medium-long framing guidance.',
+      'Keep title short. Keep description concrete enough for a user to understand why this style fits. visualDirection should be directly usable in an image prompt and must include wide/medium-long framing guidance.',
       userPromptPreview ? `User request: ${userPromptPreview}` : '',
       `Screenplay: ${screenplayPreview}`,
     ].filter(Boolean).join('\n')
@@ -136,8 +138,10 @@ function buildStylePlanPrompt(input: {
     '只返回严格 JSON，不要 markdown，不要解释。',
     '格式：[{"key":"英文短横线id","category":"live_action","title":"给用户看的短标题","description":"一句具体说明","visualDirection":"可直接用于图像生成的详细视觉方向"},{"key":"英文短横线id","category":"animation","title":"给用户看的短标题","description":"一句具体说明","visualDirection":"可直接用于图像生成的详细视觉方向"}]',
     '第一项 category 必须是 live_action，第二项 category 必须是 animation。',
+    '每个 title 必须明确标出是真人向还是动画向。',
+    '每个 description 必须用一句给用户看的话说明：风格大类、选中的维度组合、共享场景是什么。',
     '每个 visualDirection 必须明确包含：“共享场景：……”描述相同场景内容，“维度组合：……”列出选中的素材库维度与必要的场景美术推导，然后包含“风格处理：……”只描述该方案的风格变化。',
-    'title 要短，description 要具体，visualDirection 必须能直接进入生图提示词，并且包含中远景/整体环境构图要求。',
+    'title 要短，description 要具体到用户能看懂为什么适合这个剧本，visualDirection 必须能直接进入生图提示词，并且包含中远景/整体环境构图要求。',
     userPromptPreview ? `用户需求：${userPromptPreview}` : '',
     `剧本：${screenplayPreview}`,
   ].filter(Boolean).join('\n')

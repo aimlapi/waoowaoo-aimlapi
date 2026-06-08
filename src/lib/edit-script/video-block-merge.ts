@@ -15,10 +15,9 @@ import type {
   EditAssetStatus,
   EditScriptPayload,
   EditScriptShot,
-  EditScriptStyleBible,
   EditScriptVideoBlock,
 } from './types'
-import { editScriptStyleBibleSchema, editScriptVideoBlockMergeSchema } from './types'
+import { editScriptVideoBlockMergeSchema } from './types'
 import { assertNoRunningVideoGroupOverlap } from './video-group-running-guard'
 
 interface MergeEditScriptVideoBlocksInput {
@@ -55,20 +54,11 @@ interface PersistedEditScript {
   readonly status: string
   readonly shotsJson: Prisma.JsonValue
   readonly videoBlocksJson: Prisma.JsonValue | null
-  readonly styleBibleJson: Prisma.JsonValue | null
   readonly requirements: readonly PersistedEditScriptRequirement[]
 }
 
 function stringifyForPrompt(value: unknown): string {
   return JSON.stringify(value, null, 2)
-}
-
-function parseStyleBibleJson(value: Prisma.JsonValue | null): EditScriptStyleBible {
-  const parsed = editScriptStyleBibleSchema.safeParse({ styleBible: value })
-  if (!parsed.success) {
-    throw new Error('EDIT_SCRIPT_STYLE_BIBLE_REQUIRED')
-  }
-  return parsed.data.styleBible
 }
 
 function isRecord(value: unknown): value is Record<string, unknown> {
@@ -145,7 +135,7 @@ function buildStructureFromPersistedScript(script: PersistedEditScript): Omit<Ed
     durationSec: script.durationSec,
     shotCount: script.shotCount,
     status: script.status,
-    styleBible: parseStyleBibleJson(script.styleBibleJson),
+    styleBible: null,
     shots,
     videoBlocks: parseVideoBlocksJson(script.videoBlocksJson, shots),
   }
@@ -272,7 +262,7 @@ function mapPersistedEditScript(script: PersistedEditScript): EditScriptPayload 
     durationSec: script.durationSec,
     shotCount: script.shotCount,
     status: script.status,
-    styleBible: parseStyleBibleJson(script.styleBibleJson),
+    styleBible: null,
     shots,
     videoBlocks: parseVideoBlocksJson(script.videoBlocksJson, shots),
     requirements: persistedRequirementsForPrompt(script),
@@ -343,7 +333,6 @@ export async function mergeProjectEditScriptVideoBlocks(
   if (!script) throw new ApiError('NOT_FOUND')
 
   const structure = buildStructureFromPersistedScript(script)
-  const styleBible = parseStyleBibleJson(script.styleBibleJson)
   const leftBlock = structure.videoBlocks[input.leftBlockIndex]
   const rightBlock = structure.videoBlocks[input.rightBlockIndex]
   if (!leftBlock || !rightBlock) throw new ApiError('INVALID_PARAMS')
@@ -401,7 +390,6 @@ export async function mergeProjectEditScriptVideoBlocks(
       asset_context_json: buildVideoPromptAssetContext(persistedRequirementsForPrompt(script)),
       adjacent_blocks_json: stringifyForPrompt(mergedAdjacentVideoBlocks(structure, input.leftBlockIndex, input.rightBlockIndex)),
       aspect_ratio: project.videoRatio ?? '',
-      style_bible_json: stringifyForPrompt(styleBible),
     },
   })
   const parsed = editScriptVideoBlockMergeSchema.parse(raw)

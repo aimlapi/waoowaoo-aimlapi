@@ -75,6 +75,17 @@ export async function resolveSelectedVisualReferenceStyle(input: {
   }
 }
 
+export async function requireSelectedVisualReferenceStyle(input: {
+  readonly projectId: string
+  readonly episodeId?: string | null
+}): Promise<SelectedVisualReferenceStyle> {
+  const style = await resolveSelectedVisualReferenceStyle(input)
+  if (!style) {
+    throw new Error('SELECTED_VISUAL_REFERENCE_STYLE_REQUIRED')
+  }
+  return style
+}
+
 export function renderSelectedVisualReferenceStylePromptBlock(input: {
   readonly style: SelectedVisualReferenceStyle
   readonly locale: Locale
@@ -85,8 +96,8 @@ export function renderSelectedVisualReferenceStylePromptBlock(input: {
   if (input.locale === 'en') {
     return [
       'Selected visual reference style, highest priority:',
-      'Use the selected style reference image as the visual source of truth for rendering style.',
-      'If this block conflicts with older project style config, system style preset, or older Style Bible wording, follow this selected visual reference.',
+      'Use the selected style reference image as the only visual style source of truth for rendering style.',
+      'Do not use project style config, system style presets, or any text-only style policy as a parallel style source.',
       `Selected style title: ${title}`,
       `Selected style description: ${description}`,
       `Selected style generation prompt: ${prompt}`,
@@ -97,8 +108,8 @@ export function renderSelectedVisualReferenceStylePromptBlock(input: {
   }
   return [
     '选中的视觉风格案例（最高优先级）：',
-    '必须把用户选中的风格案例图作为后续画风的事实来源。',
-    '如果本段与旧项目风格配置、系统风格预设或旧 Style Bible 文字冲突，必须以这个选中的视觉风格案例为准。',
+    '必须把用户选中的风格案例图作为后续画风的唯一事实来源。',
+    '不要把项目风格配置、系统风格预设或任何纯文字风格规则当成并列风格来源。',
     `选中风格标题：${title}`,
     `选中风格描述：${description}`,
     `选中风格生成提示词：${prompt}`,

@@ -38,28 +38,12 @@ function buildSourceSnapshot(): StoryboardConsistencySourceSnapshot {
       userPrompt: 'temple lesson',
       screenplayText: null,
     },
-    styleBible: {
-      strategy: 'style_bible',
-      styleSummary: 'Restrained naturalistic temple visual style.',
-      stylePolicy: {
-        visual: {
-          negativePrompt: 'No subtitles.',
-          imageFilterPrompt: 'soft natural light',
-          lightingPrompt: 'soft daylight',
-          colorPrompt: 'muted stone and wood',
-          texturePrompt: 'stone, wood, linen',
-          compositionPrompt: 'balanced composition',
-        },
-        camera: {
-          movementPrompt: 'locked camera',
-          lensAndDepthPrompt: '35mm natural depth',
-          videoRhythmPrompt: 'slow rhythm',
-        },
-        sound: {
-          soundFilterPrompt: 'quiet wind',
-        },
-        hardBans: ['No subtitles.'],
-      },
+    visualReferenceStyle: {
+      id: 'visual-reference-1',
+      title: 'Live-action temple courtyard',
+      description: 'A restrained live-action reference for the shared temple courtyard scene.',
+      prompt: 'Shared scene: old monk and disciple in a temple courtyard. Chosen dimensions: muted natural light, stone and wood texture. Style treatment: restrained live-action realism.',
+      imageUrl: 'https://cdn.example.com/style.png',
     },
     shots: [{
       shotNumber: 1,

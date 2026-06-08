@@ -2,29 +2,13 @@ import { describe, expect, it } from 'vitest'
 import { assertRequiredLocationPreviews } from '@/lib/edit-script/storyboard-consistency/service'
 import type { StoryboardConsistencySourceSnapshot } from '@/lib/edit-script/storyboard-consistency/types'
 
-function buildStyleBible(): StoryboardConsistencySourceSnapshot['styleBible'] {
+function buildVisualReferenceStyle(): StoryboardConsistencySourceSnapshot['visualReferenceStyle'] {
   return {
-    strategy: 'style_bible',
-    styleSummary: 'Restrained naturalistic temple visual style.',
-    stylePolicy: {
-      visual: {
-        negativePrompt: 'No subtitles, no logos, no commercial gloss.',
-        imageFilterPrompt: 'soft natural light, low contrast, quiet temple textures',
-        lightingPrompt: 'Soft diffused daylight.',
-        colorPrompt: 'Muted stone, wood, and gray green.',
-        texturePrompt: 'Stone, wood, linen, and fine film grain.',
-        compositionPrompt: 'Stable balanced composition.',
-      },
-      camera: {
-        movementPrompt: 'Locked camera and slow push-in.',
-        lensAndDepthPrompt: '35mm lens, natural depth.',
-        videoRhythmPrompt: 'Slow rhythm. Restrained pacing.',
-      },
-      sound: {
-        soundFilterPrompt: 'soft natural low dynamic sound',
-      },
-      hardBans: ['No subtitles.', 'No watermark.', 'No logo.'],
-    },
+    id: 'visual-reference-1',
+    title: 'Live-action temple courtyard',
+    description: 'A restrained live-action reference for the shared temple courtyard scene.',
+    prompt: 'Shared scene: old monk and disciple in a temple courtyard. Chosen dimensions: muted natural light, stone and wood texture. Style treatment: restrained live-action realism.',
+    imageUrl: 'https://cdn.example.com/style.png',
   }
 }
 
@@ -46,7 +30,7 @@ function buildSourceSnapshot(overrides: Partial<StoryboardConsistencySourceSnaps
       userPrompt: 'temple lesson',
       screenplayText: null,
     },
-    styleBible: buildStyleBible(),
+    visualReferenceStyle: buildVisualReferenceStyle(),
     shots: [
       {
         shotNumber: 1,

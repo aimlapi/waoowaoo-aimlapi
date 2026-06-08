@@ -16,12 +16,8 @@ import {
 import { buildLocationImagePromptCore } from '@/lib/location-image-prompt'
 import { buildPropImagePromptCore } from '@/lib/prop-image-prompt'
 import {
-  appendStyleBiblePromptBlock,
-  resolveEditScriptStyleBibleForTask,
-} from '@/lib/edit-script/style-bible-prompt'
-import {
   appendSelectedVisualReferenceStylePromptBlock,
-  resolveSelectedVisualReferenceStyle,
+  requireSelectedVisualReferenceStyle,
 } from '@/lib/visual-reference-cases/selected-style'
 import { normalizeOptionalReferenceImagesForGeneration } from '@/lib/media/outbound-image'
 import { analyzeAndPersistProjectLocationImageSpatialProfile } from '@/lib/location-spatial-profile/service'
@@ -69,7 +65,7 @@ export async function handleLocationImageTask(job: Job<TaskJobData>) {
   if (assetType === 'location' && !spatialProfileModel) throw new Error('LOCATION_SPATIAL_PROFILE_MODEL_REQUIRED')
   const requestedCount = resolveRequestedLocationCount(payload)
 
-  const selectedVisualReferenceStyle = await resolveSelectedVisualReferenceStyle({
+  const selectedVisualReferenceStyle = await requireSelectedVisualReferenceStyle({
     projectId,
     episodeId: job.data.episodeId,
   })
@@ -79,10 +75,6 @@ export async function handleLocationImageTask(job: Job<TaskJobData>) {
       context: { taskType: String(job.data.type), scope: 'location.visualStyleReference' },
     },
   )
-  const styleBible = await resolveEditScriptStyleBibleForTask({
-    projectId,
-    episodeId: job.data.episodeId,
-  })
   // targetId may be locationId (group) or locationImageId (single)
   const maybeLocationImage = await db.locationImage.findUnique({
     where: { id: job.data.targetId },
@@ -144,14 +136,8 @@ export async function handleLocationImageTask(job: Job<TaskJobData>) {
       ? addPropPromptSuffix(promptCore)
       : addLocationPromptSuffix(promptCore)
     const promptBase = promptWithSuffix
-    const promptWithStyleBible = appendStyleBiblePromptBlock({
-      prompt: promptBase,
-      styleBible,
-      usage: 'assetImage',
-      locale: job.data.locale,
-    })
     const prompt = appendSelectedVisualReferenceStylePromptBlock({
-      prompt: promptWithStyleBible,
+      prompt: promptBase,
       style: selectedVisualReferenceStyle,
       locale: job.data.locale,
     })

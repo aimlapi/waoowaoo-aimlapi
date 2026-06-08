@@ -1,7 +1,7 @@
 import { z } from 'zod'
-import { editScriptStyleBibleSchema } from '@/lib/edit-script/types'
 import { locationSpatialProfileSchema, type LocationSpatialProfile } from '@/lib/location-spatial-profile/types'
-import type { EditAssetRequirement, EditScriptPayload, EditScriptShot, EditScriptStyleBible, EditScriptVideoBlock } from '@/lib/edit-script/types'
+import type { EditAssetRequirement, EditScriptPayload, EditScriptShot, EditScriptVideoBlock } from '@/lib/edit-script/types'
+import type { SelectedVisualReferenceStyle } from '@/lib/visual-reference-cases/selected-style'
 
 export interface StoryboardConsistencyModelConfigSnapshot {
   readonly analysisModel: string
@@ -33,7 +33,7 @@ export interface StoryboardConsistencySourceSnapshot {
     readonly videoRatio: string
   }
   readonly editScript: Pick<EditScriptPayload, 'id' | 'title' | 'logline' | 'durationSec' | 'shotCount' | 'userPrompt' | 'screenplayText'>
-  readonly styleBible: EditScriptStyleBible
+  readonly visualReferenceStyle: SelectedVisualReferenceStyle
   readonly shots: readonly EditScriptShot[]
   readonly videoBlocks: readonly StoryboardConsistencySourceVideoBlock[]
   readonly assets: readonly StoryboardConsistencyAssetSnapshot[]
@@ -95,7 +95,13 @@ export const storyboardConsistencySourceSnapshotSchema = z.object({
     userPrompt: z.string(),
     screenplayText: z.string().nullable().optional(),
   }),
-  styleBible: editScriptStyleBibleSchema.shape.styleBible,
+  visualReferenceStyle: z.object({
+    id: z.string().min(1),
+    title: z.string(),
+    description: z.string(),
+    prompt: z.string(),
+    imageUrl: z.string().nullable(),
+  }),
   shots: z.array(sourceShotSchema).min(1),
   videoBlocks: z.array(sourceVideoBlockSchema).min(1),
   assets: z.array(sourceAssetSchema),

@@ -428,7 +428,7 @@ describe('workspace node canvas projection', () => {
     expect(screenplayNode?.data.runtimeTargets).toContainEqual(visualReferenceTarget)
   })
 
-  it('projects the style bible as the style source between screenplay and edit generation', () => {
+  it('does not project legacy style bible data as a style source', () => {
     const styleBible = createStyleBible()
     const editScreenplay = createEditScreenplay({ styleBible })
     const editScript = createSingleVideoEditScript({ videoBlocks: [], styleBible })
@@ -445,7 +445,6 @@ describe('workspace node canvas projection', () => {
 
     expect(projection.nodes.map((node) => node.id)).toEqual([
       'edit-screenplay:screenplay-1',
-      'edit-style-bible:screenplay-1',
       'edit-pipeline:edit-video:timeline',
       'edit-pipeline:edit-video:visualAction',
       'edit-pipeline:edit-video:camera',
@@ -455,8 +454,7 @@ describe('workspace node canvas projection', () => {
       'edit-script:edit-video',
     ])
     expect(projection.edges.map((edge) => `${edge.source}->${edge.target}`)).toEqual([
-      'edit-screenplay:screenplay-1->edit-style-bible:screenplay-1',
-      'edit-style-bible:screenplay-1->edit-pipeline:edit-video:timeline',
+      'edit-screenplay:screenplay-1->edit-pipeline:edit-video:timeline',
       'edit-pipeline:edit-video:timeline->edit-pipeline:edit-video:visualAction',
       'edit-pipeline:edit-video:visualAction->edit-pipeline:edit-video:camera',
       'edit-pipeline:edit-video:camera->edit-pipeline:edit-video:audio',
@@ -467,18 +465,12 @@ describe('workspace node canvas projection', () => {
 
     const styleNode = projection.nodes.find((node) => node.id === 'edit-style-bible:screenplay-1')
     const timelineNode = projection.nodes.find((node) => node.id === 'edit-pipeline:edit-video:timeline')
-    expect(styleNode?.data.kind).toBe('editStyleBible')
-    expect(styleNode?.data.layoutNodeType).toBe('editStyleBible')
-    expect(styleNode?.data.targetType).toBe('editStyleBible')
-    expect(styleNode?.data.title).toBe('nodes.editStyleBible.title')
-    expect(styleNode?.data.body).toBe('低饱和自然光禅意电影质感。')
-    expect(styleNode?.data.styleBibleDetails?.styleSummary).toBe('低饱和自然光禅意电影质感。')
-    expect(styleNode?.data.styleBibleDetails?.visual.imageFilterPrompt).toBe('清澈空气感，35mm 镜头，克制高光。')
-    expect(styleNode?.data.styleBibleDetails?.hardBans).toEqual(['商业广告感', '高反差大片感', '炫技运镜'])
+    expect(styleNode).toBeUndefined()
+    expect(projection.nodes.map((node) => node.data.kind)).not.toContain('editStyleBible')
     expect(timelineNode?.position.y ?? 0).toBeGreaterThanOrEqual(
-      (styleNode?.position.y ?? 0) + (styleNode?.data.height ?? 0),
+      (projection.nodes[0]?.position.y ?? 0) + (projection.nodes[0]?.data.height ?? 0),
     )
-    expect(styleNode && timelineNode ? nodesOverlap(styleNode, timelineNode) : true).toBe(false)
+    expect(projection.nodes[0] && timelineNode ? nodesOverlap(projection.nodes[0], timelineNode) : true).toBe(false)
   })
 
   it('keeps long edit screenplay cards from covering the edit pipeline in the default layout', () => {

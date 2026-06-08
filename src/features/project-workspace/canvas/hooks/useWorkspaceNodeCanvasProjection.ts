@@ -34,7 +34,6 @@ import type {
   WorkspaceCanvasScriptDetails,
   WorkspaceCanvasScriptScene,
   WorkspaceCanvasShotDetails,
-  WorkspaceCanvasStyleBibleDetails,
   WorkspaceCanvasTextLine,
 } from '../node-canvas-types'
 import {
@@ -46,7 +45,6 @@ import {
   WORKSPACE_CANVAS_EDIT_ASSET_NODE_SIZE,
   WORKSPACE_CANVAS_EDIT_PIPELINE_STEP_NODE_SIZE,
   WORKSPACE_CANVAS_EDIT_SCREENPLAY_NODE_SIZE,
-  WORKSPACE_CANVAS_EDIT_STYLE_BIBLE_NODE_SIZE,
   WORKSPACE_CANVAS_EDIT_SCRIPT_TABLE_NODE_WIDTH,
   WORKSPACE_CANVAS_EDIT_SCRIPT_TO_ASSET_GAP_Y,
   WORKSPACE_CANVAS_SPACE_CONSISTENCY_NODE_SIZE,
@@ -66,9 +64,6 @@ const BGM_SCORE_NODE_HEIGHT = WORKSPACE_CANVAS_BGM_SCORE_NODE_SIZE.height
 const FINAL_NODE_WIDTH = WORKSPACE_CANVAS_FINAL_NODE_SIZE.width
 const EDIT_SCREENPLAY_NODE_WIDTH = WORKSPACE_CANVAS_EDIT_SCREENPLAY_NODE_SIZE.width
 const EDIT_SCREENPLAY_NODE_HEIGHT = WORKSPACE_CANVAS_EDIT_SCREENPLAY_NODE_SIZE.height
-const EDIT_STYLE_BIBLE_NODE_WIDTH = WORKSPACE_CANVAS_EDIT_STYLE_BIBLE_NODE_SIZE.width
-const EDIT_STYLE_BIBLE_NODE_HEIGHT = WORKSPACE_CANVAS_EDIT_STYLE_BIBLE_NODE_SIZE.height
-const EDIT_STYLE_BIBLE_LAYER_GAP_Y = 120
 const EDIT_PIPELINE_STEP_NODE_WIDTH = WORKSPACE_CANVAS_EDIT_PIPELINE_STEP_NODE_SIZE.width
 const EDIT_PIPELINE_STEP_NODE_HEIGHT = WORKSPACE_CANVAS_EDIT_PIPELINE_STEP_NODE_SIZE.height
 const EDIT_PIPELINE_STEP_GRID_COLUMNS = 3
@@ -203,47 +198,6 @@ function dateLikeToString(value: string | Date | null | undefined): string | nul
   if (typeof value === 'string' && value.trim()) return value.trim()
   if (value instanceof Date) return value.toISOString()
   return null
-}
-
-function styleBibleHasPolicyText(details: WorkspaceCanvasStyleBibleDetails): boolean {
-  const visualValues = Object.values(details.visual)
-  const cameraValues = Object.values(details.camera)
-  const soundValues = Object.values(details.sound)
-  return [
-    details.styleSummary,
-    ...visualValues,
-    ...cameraValues,
-    ...soundValues,
-  ].some((value) => typeof value === 'string' && value.trim().length > 0) || details.hardBans.length > 0
-}
-
-function buildStyleBibleDetails(value: unknown): WorkspaceCanvasStyleBibleDetails | null {
-  if (!isRecord(value)) return null
-  const stylePolicy = readJsonRecord(value.stylePolicy)
-  const visual = readJsonRecord(stylePolicy.visual)
-  const camera = readJsonRecord(stylePolicy.camera)
-  const sound = readJsonRecord(stylePolicy.sound)
-  const details: WorkspaceCanvasStyleBibleDetails = {
-    styleSummary: stringValue(value.styleSummary),
-    visual: {
-      negativePrompt: stringValue(visual.negativePrompt),
-      imageFilterPrompt: stringValue(visual.imageFilterPrompt),
-      lightingPrompt: stringValue(visual.lightingPrompt),
-      colorPrompt: stringValue(visual.colorPrompt),
-      texturePrompt: stringValue(visual.texturePrompt),
-      compositionPrompt: stringValue(visual.compositionPrompt),
-    },
-    camera: {
-      movementPrompt: stringValue(camera.movementPrompt),
-      lensAndDepthPrompt: stringValue(camera.lensAndDepthPrompt),
-      videoRhythmPrompt: stringValue(camera.videoRhythmPrompt),
-    },
-    sound: {
-      soundFilterPrompt: stringValue(sound.soundFilterPrompt),
-    },
-    hardBans: readStringArray(stylePolicy.hardBans),
-  }
-  return styleBibleHasPolicyText(details) ? details : null
 }
 
 function parseStringList(value: string | null | undefined): string[] {
@@ -1212,58 +1166,9 @@ export function buildWorkspaceNodeCanvasProjection({
     }
   }
 
-  const styleBibleSourceValue = editScreenplay?.styleBible ?? editScript?.styleBible ?? null
-  const styleBibleSourceId = editScreenplay && editScreenplay.styleBible !== undefined && editScreenplay.styleBible !== null
-    ? editScreenplay.id
-    : editScript && editScript.styleBible !== undefined && editScript.styleBible !== null
-      ? editScript.id
-      : null
-  const styleBibleDetails = buildStyleBibleDetails(styleBibleSourceValue)
-  const editStyleBibleNodeId = styleBibleDetails && styleBibleSourceId ? `edit-style-bible:${styleBibleSourceId}` : null
-  const editStyleBibleFallbackY = editScreenplay
-    ? editScreenplayFallbackY + editScreenplayHeight + EDIT_STYLE_BIBLE_LAYER_GAP_Y
-    : hasStory ? 430 : 180
-  const editStyleSourceBottomY = editStyleBibleNodeId
-    ? editStyleBibleFallbackY + EDIT_STYLE_BIBLE_NODE_HEIGHT
-    : editScreenplay
-      ? editScreenplayFallbackY + editScreenplayHeight
-      : null
-  if (styleBibleDetails && styleBibleSourceId && editStyleBibleNodeId) {
-    nodes.push(createNode({
-      id: editStyleBibleNodeId,
-      fallbackX: STORY_COLUMN_X,
-      fallbackY: editStyleBibleFallbackY,
-      zIndex: zIndex++,
-      savedLayoutByKey,
-      ignoreSavedLayout: true,
-      data: {
-        kind: 'editStyleBible',
-        layoutNodeType: 'editStyleBible',
-        targetType: 'editStyleBible',
-        targetId: styleBibleSourceId,
-        title: translate('nodes.editStyleBible.title'),
-        eyebrow: translate('nodes.editStyleBible.eyebrow'),
-        body: compactText(
-          styleBibleDetails.styleSummary
-            ?? styleBibleDetails.visual.imageFilterPrompt
-            ?? translate('nodes.editStyleBible.body'),
-          translate('nodes.editStyleBible.body'),
-        ),
-        meta: translate('nodes.editStyleBible.meta'),
-        statusLabel: translate('status.ready'),
-        width: EDIT_STYLE_BIBLE_NODE_WIDTH,
-        height: EDIT_STYLE_BIBLE_NODE_HEIGHT,
-        indexLabel: 'B',
-        styleBibleDetails,
-        onAction,
-      },
-    }))
-    if (editScreenplayNodeId) {
-      edges.push(createEdge(`edge:edit-screenplay-edit-style-bible:${styleBibleSourceId}`, editScreenplayNodeId, editStyleBibleNodeId))
-    } else if (hasStory) {
-      edges.push(createEdge(`edge:analysis-edit-style-bible:${styleBibleSourceId}`, analysisNodeId, editStyleBibleNodeId))
-    }
-  }
+  const editStyleSourceBottomY = editScreenplay
+    ? editScreenplayFallbackY + editScreenplayHeight
+    : null
 
   if (editScript) {
     const editScriptNodeId = `edit-script:${editScript.id}`
@@ -1411,9 +1316,7 @@ export function buildWorkspaceNodeCanvasProjection({
     }))
     if (pipelineNodeIds.length > 0) {
       const firstPipelineNodeId = pipelineNodeIds[0]
-      if (editStyleBibleNodeId) {
-        edges.push(createEdge(`edge:edit-style-bible-edit-pipeline:${editScript.id}`, editStyleBibleNodeId, firstPipelineNodeId))
-      } else if (editScreenplayNodeId) {
+      if (editScreenplayNodeId) {
         edges.push(createEdge(`edge:edit-screenplay-edit-pipeline:${editScript.id}`, editScreenplayNodeId, firstPipelineNodeId))
       } else if (hasStory) {
         edges.push(createEdge(`edge:analysis-edit-pipeline:${editScript.id}`, analysisNodeId, firstPipelineNodeId))
@@ -1423,8 +1326,6 @@ export function buildWorkspaceNodeCanvasProjection({
         if (nextNodeId) edges.push(createEdge(`edge:edit-pipeline:${editScript.id}:${index + 1}`, nodeId, nextNodeId))
       })
       edges.push(createEdge(`edge:edit-pipeline-edit-script:${editScript.id}`, pipelineNodeIds[pipelineNodeIds.length - 1], editScriptNodeId))
-    } else if (editStyleBibleNodeId) {
-      edges.push(createEdge(`edge:edit-style-bible-edit-script:${editScript.id}`, editStyleBibleNodeId, editScriptNodeId))
     } else if (editScreenplayNodeId) {
       edges.push(createEdge(`edge:edit-screenplay-edit-script:${editScript.id}`, editScreenplayNodeId, editScriptNodeId))
     } else if (hasStory) {

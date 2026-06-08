@@ -4,7 +4,7 @@ import {
   buildEditAssetDesignInstruction,
   designEditAssetRequirements,
 } from '@/lib/edit-script/asset-design'
-import type { EditAssetRequirement, EditScriptShot, EditScriptStyleBible } from '@/lib/edit-script/types'
+import type { EditAssetRequirement, EditScriptShot } from '@/lib/edit-script/types'
 
 vi.mock('@/lib/asset-utils/ai-design', () => ({
   aiDesign: vi.fn(),
@@ -46,30 +46,6 @@ const requirements: readonly EditAssetRequirement[] = [
   },
 ]
 
-const styleBible: EditScriptStyleBible = {
-  strategy: 'style_bible',
-  styleSummary: '低饱和银灰色、硬质冷光、干净宽频、克制高光的冷峻科幻质感。',
-  stylePolicy: {
-    visual: {
-      negativePrompt: '不要塑料感，不要霓虹赛博感，不要商业广告锐度。',
-      imageFilterPrompt: '低饱和银灰色，硬质冷光，干净未来材质，克制高光',
-      lightingPrompt: '硬质冷光，阴影边缘清楚但不过度高反差。',
-      colorPrompt: '银灰、冷白和少量红色状态灯。',
-      texturePrompt: '拉丝金属、磨砂玻璃和干净制服面料。',
-      compositionPrompt: '对称、留白、秩序感强。',
-    },
-    camera: {
-      movementPrompt: '固定镜头和轻微推近。',
-      lensAndDepthPrompt: '35mm，自然景深。',
-      videoRhythmPrompt: '缓慢、克制，少切换。',
-    },
-    sound: {
-      soundFilterPrompt: '干净宽频，低动态，轻微空间混响',
-    },
-    hardBans: ['不要字幕', '不要水印', '不要logo'],
-  },
-}
-
 describe('edit script asset design', () => {
   beforeEach(() => {
     vi.clearAllMocks()
@@ -78,24 +54,22 @@ describe('edit script asset design', () => {
   it('builds a structured asset design instruction from edit table shots', () => {
     const instruction = buildEditAssetDesignInstruction({
       userPrompt: '一分钟冷峻科幻短片',
-      styleBible,
       requirement: requirements[0],
       shots,
     })
 
     const parsed = JSON.parse(instruction) as {
       readonly task: string
-      readonly styleBible: EditScriptStyleBible
       readonly asset: { readonly kind: string; readonly name: string; readonly fixedVoiceTimbreText: string | null }
       readonly linkedShots: ReadonlyArray<{ readonly shotNumber: number; readonly visualAction: string }>
       readonly constraints: readonly string[]
     }
     expect(parsed.task).toBe('design_edit_first_required_asset_for_image_generation')
-    expect(parsed.styleBible.stylePolicy.visual.imageFilterPrompt).toBe('低饱和银灰色，硬质冷光，干净未来材质，克制高光')
+    expect(JSON.stringify(parsed)).not.toContain('styleBible')
     expect(parsed.asset).toMatchObject({ kind: 'character', name: '冷静研究员' })
     expect(parsed.asset.fixedVoiceTimbreText).toBe('成年女性声线，冷静清亮，中音区，口腔共鸣干净，鼻音弱，颗粒感少。')
-    expect(parsed.constraints).toContain('Use styleBible.stylePolicy.visual as the only asset-level visual policy.')
-    expect(parsed.constraints).toContain('The asset description must include stable lighting, color palette, material texture, composition, image-filter traits, and visual bans from the Style Bible that can directly guide image generation.')
+    expect(parsed.constraints).toContain('Do not invent a style source inside the asset description.')
+    expect(parsed.constraints).toContain('The selected visual reference case is applied later at image generation time as the only style source.')
     expect(parsed.linkedShots).toEqual([
       expect.objectContaining({
         shotNumber: 1,
@@ -122,7 +96,6 @@ describe('edit script asset design', () => {
       locale: 'zh',
       analysisModel: 'analysis-model',
       userPrompt: '一分钟冷峻科幻短片',
-      styleBible,
       shots,
       requirements,
     })
@@ -155,7 +128,6 @@ describe('edit script asset design', () => {
       locale: 'zh',
       analysisModel: 'analysis-model',
       userPrompt: '一分钟冷峻科幻短片',
-      styleBible,
       shots,
       requirements: [requirements[0]],
     })).rejects.toThrow('EDIT_SCRIPT_ASSET_DESIGN_FAILED:character:冷静研究员:AI返回格式错误')

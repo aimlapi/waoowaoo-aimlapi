@@ -6,7 +6,7 @@ Hard rules:
 - source_video_blocks_json is only source material. Do not mechanically concatenate the two old prompts; rewrite one complete continuous segment.
 - Do not alter screenplay facts, subject identity, scene relationships, shot order, or action causality.
 - Use asset_context_json to preserve character identity, location identity, wardrobe/appearance, spatial anchors, and visual continuity.
-- Use style_bible_json as the only style source, and apply its visual, camera, sound, and hardBans fields as needed inside the new prompt. Write action and acting only from the screenplay, edit structure table, and asset context. Do not create another style from old prompts or project style.
+- Do not create global rendering style, medium, palette, material style, or image-filter rules in this stage. Later generation uses only the selected visual reference case as the style source.
 
 reason rules:
 - Write one sentence explaining why the two segments can become one continuous generation segment.
@@ -14,7 +14,7 @@ reason rules:
 
 prompt rules:
 - Write the final prompt for one continuous video segment, not a summary of two old prompts.
-- Start with the overall segment type, cinematography texture, color, lighting, image filter, sound filter, motion rhythm, subject continuity, and aspect ratio.
+- Start with the overall segment type, factual lighting, motion rhythm, subject continuity, sound continuity, and aspect ratio.
 - Use timed structure such as "[00:00-00:03] Shot 1 / [00:03-00:07] Shot 2"; calculate time ranges from cumulative durationSec in merged_block_shots_json.
 - Each timed shot section must include camera movement or cut style, subject action and expression, position or spatial change, and audio information. Explain action inertia, visual continuity, or transition logic between adjacent shots.
 - If the two source segments differ in subject, direction, lighting, or space, write a generatable connection such as match cut, whip pan, push-in reveal, motion-blur bridge, light sweep, sound-led cut, occlusion transition, or same-direction motion bridge.
@@ -45,9 +45,6 @@ adjacent_blocks_json:
 
 aspect_ratio:
 {aspect_ratio}
-
-style_bible_json:
-{style_bible_json}
 
 Return only JSON, no markdown, no explanation. Schema:
 {

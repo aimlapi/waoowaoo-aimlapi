@@ -1,7 +1,6 @@
 import type { Job } from 'bullmq'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 import { TASK_TYPE, type TaskJobData } from '@/lib/task/types'
-import { buildZenStyleBibleFixture } from '../../fixtures/edit-script-style-bible'
 
 type WorkerProcessor = (job: Job<TaskJobData>) => Promise<unknown>
 
@@ -85,6 +84,9 @@ const prismaMock = vi.hoisted(() => ({
   },
   project: {
     findUnique: vi.fn(),
+  },
+  projectVisualReferenceCase: {
+    findFirst: vi.fn(),
   },
   projectEditScript: {
     findFirst: vi.fn(),
@@ -224,6 +226,14 @@ describe('worker video processor behavior', () => {
       videoRatio: '9:16',
       artStyle: 'cinematic',
     })
+    prismaMock.projectVisualReferenceCase.findFirst.mockResolvedValue({
+      id: 'style-case-default',
+      title: '真人向｜冷白写实',
+      description: '真人向；低饱和冷白写实；共享场景为当前视频片段。',
+      prompt: 'Shared scene: current video segment. Chosen dimensions: live-action realism, muted palette. Style treatment: restrained photorealistic reference.',
+      imageUrl: '/m/style-case-default',
+      imageMedia: null,
+    })
     prismaMock.projectEditScript.findFirst.mockResolvedValue({
       shotsJson: [
         {
@@ -321,7 +331,7 @@ describe('worker video processor behavior', () => {
         { url: 'images/panel-4.png', role: 'reference', order: 4, source: 'storyboard' },
       ],
       options: expect.objectContaining({
-        prompt: 'stored continuous group prompt',
+        prompt: expect.stringContaining('选中的视觉风格案例（最高优先级）：'),
         duration: 14,
         aspectRatio: '9:16',
       }),
@@ -343,7 +353,7 @@ describe('worker video processor behavior', () => {
     }))
   })
 
-  it('VIDEO_GROUP: appends Style Bible block to final generation prompt', async () => {
+  it('VIDEO_GROUP: appends selected visual reference style to final generation prompt', async () => {
     const processor = workerState.processor
     expect(processor).toBeTruthy()
 
@@ -377,7 +387,6 @@ describe('worker video processor behavior', () => {
           prompt: 'stored continuous group prompt',
         },
       ],
-      styleBibleJson: buildZenStyleBibleFixture(),
     })
     prismaMock.projectPanel.findMany.mockResolvedValueOnce([
       { ...buildPanel({ id: 'panel-1' }), panelNumber: 1, imageMedia: { storageKey: 'images/panel-1.png' } },
@@ -403,12 +412,12 @@ describe('worker video processor behavior', () => {
     }))
     expect(utilsMock.resolveVideoSourceFromGeneration).toHaveBeenCalledWith(expect.anything(), expect.objectContaining({
       options: expect.objectContaining({
-        prompt: expect.stringContaining('用途：最终视频生成'),
+        prompt: expect.stringContaining('选中的视觉风格案例（最高优先级）：'),
       }),
     }))
     expect(utilsMock.resolveVideoSourceFromGeneration).toHaveBeenCalledWith(expect.anything(), expect.objectContaining({
       options: expect.objectContaining({
-        prompt: expect.stringContaining('声音滤镜：低噪、近自然声场、不过度压缩。'),
+        prompt: expect.stringContaining('真人向｜冷白写实'),
       }),
     }))
   })
@@ -465,7 +474,7 @@ describe('worker video processor behavior', () => {
     }))
   })
 
-  it('VIDEO_GROUP asset_reference: appends Style Bible block inside asset-reference prompt', async () => {
+  it('VIDEO_GROUP asset_reference: appends selected visual reference style inside asset-reference prompt', async () => {
     const processor = workerState.processor
     expect(processor).toBeTruthy()
 
@@ -491,7 +500,6 @@ describe('worker video processor behavior', () => {
         },
       ],
       videoBlocksJson: [],
-      styleBibleJson: buildZenStyleBibleFixture(),
     })
     utilsMock.uploadVideoSourceToCos.mockResolvedValueOnce('asset-reference-video/group-asset.mp4')
 
@@ -520,7 +528,7 @@ describe('worker video processor behavior', () => {
     }))
     expect(utilsMock.resolveVideoSourceFromGeneration).toHaveBeenCalledWith(expect.anything(), expect.objectContaining({
       options: expect.objectContaining({
-        prompt: expect.stringContaining('用途：最终视频生成'),
+        prompt: expect.stringContaining('选中的视觉风格案例（最高优先级）：'),
       }),
     }))
   })
@@ -835,13 +843,9 @@ describe('worker video processor behavior', () => {
     )
   })
 
-  it('VIDEO_PANEL: appends Style Bible block to final panel video prompt', async () => {
+  it('VIDEO_PANEL: appends selected visual reference style to final panel video prompt', async () => {
     const processor = workerState.processor
     expect(processor).toBeTruthy()
-
-    prismaMock.projectEditScript.findFirst.mockResolvedValueOnce({
-      styleBibleJson: buildZenStyleBibleFixture(),
-    })
 
     const job = buildJob({
       type: TASK_TYPE.VIDEO_PANEL,
@@ -868,7 +872,7 @@ describe('worker video processor behavior', () => {
       expect.anything(),
       expect.objectContaining({
         options: expect.objectContaining({
-          prompt: expect.stringContaining('用途：最终视频生成'),
+          prompt: expect.stringContaining('选中的视觉风格案例（最高优先级）：'),
         }),
       }),
     )
@@ -876,7 +880,7 @@ describe('worker video processor behavior', () => {
       expect.anything(),
       expect.objectContaining({
         options: expect.objectContaining({
-          prompt: expect.stringContaining('声音滤镜：低噪、近自然声场、不过度压缩。'),
+          prompt: expect.stringContaining('真人向｜冷白写实'),
         }),
       }),
     )

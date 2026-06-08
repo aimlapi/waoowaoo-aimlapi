@@ -12,12 +12,8 @@ import {
 } from '../utils'
 import { normalizeOptionalReferenceImagesForGeneration } from '@/lib/media/outbound-image'
 import {
-  appendStyleBiblePromptBlock,
-  resolveEditScriptStyleBibleForTask,
-} from '@/lib/edit-script/style-bible-prompt'
-import {
   appendSelectedVisualReferenceStylePromptBlock,
-  resolveSelectedVisualReferenceStyle,
+  requireSelectedVisualReferenceStyle,
 } from '@/lib/visual-reference-cases/selected-style'
 import {
   AnyObj,
@@ -142,11 +138,7 @@ export async function handleCharacterImageTask(job: Job<TaskJobData>) {
 
   if (!appearance) throw new Error('Character appearance not found')
 
-  const selectedVisualReferenceStyle = await resolveSelectedVisualReferenceStyle({
-    projectId,
-    episodeId: job.data.episodeId,
-  })
-  const styleBible = await resolveEditScriptStyleBibleForTask({
+  const selectedVisualReferenceStyle = await requireSelectedVisualReferenceStyle({
     projectId,
     episodeId: job.data.episodeId,
   })
@@ -199,14 +191,8 @@ export async function handleCharacterImageTask(job: Job<TaskJobData>) {
     const metadata = candidateMetadata[index] ?? candidateMetadata[0] ?? null
     const rawWithCastingStills = `${raw}${buildCastingStillPromptBlock(metadata, job.data.locale)}`
     const promptBase = addCharacterPromptSuffix(rawWithCastingStills)
-    const promptWithStyleBible = appendStyleBiblePromptBlock({
-      prompt: promptBase,
-      styleBible,
-      usage: 'assetImage',
-      locale: job.data.locale,
-    })
     const prompt = appendSelectedVisualReferenceStylePromptBlock({
-      prompt: promptWithStyleBible,
+      prompt: promptBase,
       style: selectedVisualReferenceStyle,
       locale: job.data.locale,
     })

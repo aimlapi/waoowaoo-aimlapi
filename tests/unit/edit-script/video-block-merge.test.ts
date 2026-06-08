@@ -73,32 +73,6 @@ vi.mock('@/lib/assets/services/asset-actions', () => ({ submitAssetGenerateTask:
 import { mergeProjectEditScriptVideoBlocks } from '@/lib/edit-script/video-block-merge'
 import { AI_PROMPT_IDS } from '@/lib/ai-prompts'
 
-function buildStyleBibleJson() {
-  return {
-    strategy: 'style_bible',
-    styleSummary: 'Cinematic realism.',
-    stylePolicy: {
-      visual: {
-        negativePrompt: 'No distortion or unreadable frames.',
-        imageFilterPrompt: 'Clean cinematic image.',
-        lightingPrompt: 'Soft contrast lighting.',
-        colorPrompt: 'Cool neutral palette.',
-        texturePrompt: 'Fine film grain.',
-        compositionPrompt: 'Balanced composition.',
-      },
-      camera: {
-        movementPrompt: 'Smooth camera movement.',
-        lensAndDepthPrompt: '35mm lens with moderate depth.',
-        videoRhythmPrompt: 'Steady visual rhythm with clear continuity pacing.',
-      },
-      sound: {
-        soundFilterPrompt: 'Clean room tone.',
-      },
-      hardBans: ['No subtitles.'],
-    },
-  }
-}
-
 function buildScript(durationOverrides: readonly number[] = [4, 4, 3, 3]) {
   const shotsJson = durationOverrides.map((durationSec, index) => {
     const shotNumber = index + 1
@@ -124,7 +98,7 @@ function buildScript(durationOverrides: readonly number[] = [4, 4, 3, 3]) {
     shotCount: durationOverrides.length,
     status: 'ready',
     shotsJson,
-    styleBibleJson: buildStyleBibleJson(),
+    styleBibleJson: null,
     videoBlocksJson: [
       {
         kind: 'group',

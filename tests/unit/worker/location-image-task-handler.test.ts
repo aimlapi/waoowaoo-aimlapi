@@ -2,7 +2,6 @@ import type { Job } from 'bullmq'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 import { LOCATION_IMAGE_RATIO, PROP_IMAGE_RATIO } from '@/lib/constants'
 import { TASK_TYPE, type TaskJobData } from '@/lib/task/types'
-import { buildZenStyleBibleFixture } from '../../fixtures/edit-script-style-bible'
 
 const utilsMock = vi.hoisted(() => ({
   assertTaskActive: vi.fn(async () => undefined),
@@ -104,7 +103,14 @@ describe('worker location-image-task-handler behavior', () => {
       visualStylePresetSource: 'system',
       visualStylePresetId: 'japanese-anime',
     })
-    prismaMock.projectVisualReferenceCase.findFirst.mockResolvedValue(null)
+    prismaMock.projectVisualReferenceCase.findFirst.mockResolvedValue({
+      id: 'style-case-default',
+      title: '真人向｜雨夜写实',
+      description: '真人向；低饱和雨夜写实；共享场景为故事主场景。',
+      prompt: 'Shared scene: story location at night. Chosen dimensions: live-action realism, muted palette. Style treatment: restrained photorealistic reference.',
+      imageUrl: '/m/style-case-default',
+      imageMedia: null,
+    })
     outboundMock.normalizeOptionalReferenceImagesForGeneration.mockResolvedValue([])
 
     prismaMock.locationImage.findUnique.mockResolvedValue({
@@ -239,28 +245,23 @@ describe('worker location-image-task-handler behavior', () => {
     })
   })
 
-  it('appends Style Bible block to final location asset image prompt', async () => {
-    prismaMock.projectEditScript.findFirst.mockResolvedValueOnce({
-      styleBibleJson: buildZenStyleBibleFixture(),
-    })
-
+  it('uses the selected visual reference case as the only style source in location image prompt', async () => {
     await handleLocationImageTask(buildJob({ imageIndex: 0 }, 'location-image-1', 'episode-1'))
 
     expect(sharedMock.generateCleanImageToStorage).toHaveBeenCalledWith(
       expect.objectContaining({
-        prompt: expect.stringContaining('系统 Style Bible 视觉要求（固定追加，必须遵守）：'),
+        prompt: expect.stringContaining('选中的视觉风格案例（最高优先级）：'),
       }),
     )
     expect(sharedMock.generateCleanImageToStorage).toHaveBeenCalledWith(
       expect.objectContaining({
-        prompt: expect.stringContaining('用途：资产图生成'),
+        prompt: expect.stringContaining('真人向｜雨夜写实'),
       }),
     )
-    expect(sharedMock.generateCleanImageToStorage).toHaveBeenCalledWith(
-      expect.objectContaining({
-        prompt: expect.stringContaining('色彩：低饱和，自然灰绿、木色、石灰色。'),
-      }),
-    )
+    const generationCalls = sharedMock.generateCleanImageToStorage.mock.calls as unknown as Array<[{ prompt: string }]>
+    const generationInput = generationCalls[0]?.[0]
+    expect(generationInput).toBeDefined()
+    expect(generationInput.prompt).not.toContain('Style Bible')
   })
 
   it('ignores invalid legacy payload artStyle', async () => {

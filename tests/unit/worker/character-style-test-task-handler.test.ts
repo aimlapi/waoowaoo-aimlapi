@@ -143,7 +143,7 @@ describe('worker character-style-test-task-handler', () => {
     expect(generationInput?.prompt).toContain('左侧约 1/3 宽度为角色大头正面身份特写')
     expect(generationInput?.prompt).toContain('右侧约 2/3 宽度横向排列同一角色的正面全身、侧面全身、背面全身')
     expect(generationInput?.prompt).toContain('资产图不能使用纯白底')
-    expect(generationInput?.prompt).toContain('不要引用项目 Style Bible')
+    expect(generationInput?.prompt).toContain('不要继承项目既有风格')
   })
 
   it('missing image model -> explicit error before image generation', async () => {

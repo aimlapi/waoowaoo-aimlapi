@@ -33,8 +33,6 @@ function nodeIconName(kind: WorkspaceCanvasFlowNode['data']['kind']): AppIconNam
       return 'film'
     case 'editScreenplay':
       return 'bookOpen'
-    case 'editStyleBible':
-      return 'sparklesAlt'
     case 'editPipelineStep':
       return 'chart'
     case 'editScript':
@@ -291,7 +289,7 @@ function nodeShowsMetaFooter(kind: WorkspaceCanvasFlowNode['data']['kind']): boo
 }
 
 export function nodeNeedsActualHeightMeasurement(kind: WorkspaceCanvasFlowNode['data']['kind']): boolean {
-  return kind === 'editScreenplay' || kind === 'editStyleBible' || kind === 'editScript' || kind === 'videoPlan' || kind === 'bgmScore'
+  return kind === 'editScreenplay' || kind === 'editScript' || kind === 'videoPlan' || kind === 'bgmScore'
 }
 
 export function nodeFreezesMeasurementWhileRunning(kind: WorkspaceCanvasFlowNode['data']['kind']): boolean {
@@ -1135,70 +1133,6 @@ function EditScriptContent({
   )
 }
 
-function renderStylePolicySection(
-  title: string,
-  items: readonly { readonly label: string; readonly value?: string | null }[],
-) {
-  const visibleItems = items.filter((item) => hasText(item.value))
-  if (visibleItems.length === 0) return null
-  return renderSection(title, (
-    <div className="space-y-2">
-      {visibleItems.map((item) => (
-        <div key={item.label} className="space-y-1">
-          <p className={`${SELECTABLE_TEXT_CLASS} text-[10px] font-semibold text-[var(--glass-text-tertiary)]`}>{item.label}</p>
-          {renderTextBlock(item.value)}
-        </div>
-      ))}
-    </div>
-  ))
-}
-
-function StyleBibleContent({
-  data,
-  labels,
-  expanded,
-}: {
-  readonly data: WorkspaceCanvasFlowNode['data']
-  readonly labels: ReturnType<typeof useTranslations>
-  readonly expanded: boolean
-}) {
-  const details = data.styleBibleDetails
-  if (!details) return <p className={`${SELECTABLE_TEXT_CLASS} text-sm leading-6 text-[var(--glass-text-secondary)]`}>{data.body}</p>
-
-  if (!expanded) {
-    return (
-      <div className="space-y-2">
-        {details.styleSummary ? renderSection(labels('styleSummary'), renderSummaryText(details.styleSummary, 3)) : null}
-        {details.visual.imageFilterPrompt ? renderSection(labels('imageFilterPrompt'), renderSummaryText(details.visual.imageFilterPrompt, 3)) : null}
-        {details.visual.negativePrompt ? renderSection(labels('negativePrompt'), renderSummaryText(details.visual.negativePrompt, 3)) : null}
-      </div>
-    )
-  }
-
-  return (
-    <div className="space-y-2">
-      {renderTextSection(labels('styleSummary'), details.styleSummary)}
-      {renderStylePolicySection(labels('visualPolicy'), [
-        { label: labels('negativePrompt'), value: details.visual.negativePrompt },
-        { label: labels('imageFilterPrompt'), value: details.visual.imageFilterPrompt },
-        { label: labels('lightingPrompt'), value: details.visual.lightingPrompt },
-        { label: labels('colorPrompt'), value: details.visual.colorPrompt },
-        { label: labels('texturePrompt'), value: details.visual.texturePrompt },
-        { label: labels('compositionPrompt'), value: details.visual.compositionPrompt },
-      ])}
-      {renderStylePolicySection(labels('cameraPolicy'), [
-        { label: labels('movementPrompt'), value: details.camera.movementPrompt },
-        { label: labels('lensAndDepthPrompt'), value: details.camera.lensAndDepthPrompt },
-        { label: labels('videoRhythmPrompt'), value: details.camera.videoRhythmPrompt },
-      ])}
-      {renderStylePolicySection(labels('soundPolicy'), [
-        { label: labels('soundFilterPrompt'), value: details.sound.soundFilterPrompt },
-      ])}
-      {renderChips(labels('hardBans'), details.hardBans)}
-    </div>
-  )
-}
-
 function EditScreenplayContent({
   data,
   labels,
@@ -1706,8 +1640,6 @@ function NodeContent({
       return <BgmScoreContent data={data} labels={labels} expanded={expanded} />
     case 'editScreenplay':
       return <EditScreenplayContent data={data} labels={labels} expanded={expanded} />
-    case 'editStyleBible':
-      return <StyleBibleContent data={data} labels={labels} expanded={expanded} />
     case 'editPipelineStep':
       return <EditPipelineStepContent data={data} labels={labels} expanded={expanded} />
     case 'editScript':
@@ -1772,7 +1704,7 @@ export default function WorkspaceNode({ data }: NodeProps<WorkspaceCanvasFlowNod
     const observer = new ResizeObserver(measure)
     observer.observe(element)
     return () => observer.disconnect()
-  }, [data.kind, data.expanded, data.isRunning, data.bgmScoreDetails, data.editScreenplayDetails, data.styleBibleDetails, data.editScriptDetails, nodeId, onMeasureNodeSize])
+  }, [data.kind, data.expanded, data.isRunning, data.bgmScoreDetails, data.editScreenplayDetails, data.editScriptDetails, nodeId, onMeasureNodeSize])
 
   return (
     <div className={`relative overflow-visible ${data.kind === 'editScript' ? 'h-auto' : 'h-full'}`}>
