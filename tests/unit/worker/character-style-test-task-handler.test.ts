@@ -87,6 +87,14 @@ type GenerationInput = {
   }
 }
 
+type CastingEvaluationCallInput = {
+  readonly candidates: readonly [
+    { readonly request: string },
+    { readonly request: string },
+    { readonly request: string },
+  ]
+}
+
 function buildCastingPlanJson(): string {
   return JSON.stringify({
     candidates: [
@@ -239,7 +247,7 @@ describe('worker character-style-test-task-handler', () => {
     expect(generationInput?.prompt).toContain('用于选角、试镜与人物定妆判断的 contact sheet')
     expect(generationInput?.prompt).toContain('媒介和画风必须由已选视觉参考案例决定')
     expect(generationInput?.prompt).toContain('动画向｜冷白定格')
-    expect(generationInput?.prompt).toContain('完整候选形象包')
+    expect(generationInput?.prompt).toContain('当前这张图是一位候选演员的完整形象包')
     expect(generationInput?.prompt).toContain('至少两种不同表情')
     expect(generationInput?.prompt).toContain('至少两套不同服装或穿搭层次')
     expect(generationInput?.prompt).toContain('绝对禁止：任何来自旧项目风格、系统风格预设')
@@ -277,6 +285,8 @@ describe('worker character-style-test-task-handler', () => {
     expect(handlerSharedMock.generateCleanImageToStorage.mock.calls[1]?.[0].prompt).toContain('候选 B 方向：情绪创伤与表演强度优先')
     expect(handlerSharedMock.generateCleanImageToStorage.mock.calls[2]?.[0].prompt).toContain('候选 C 方向：造型记忆点与轮廓识别优先')
     expect(handlerSharedMock.generateCleanImageToStorage.mock.calls[2]?.[0].prompt).toContain('候选差异硬约束')
+    expect(handlerSharedMock.generateCleanImageToStorage.mock.calls[2]?.[0].prompt).toContain('三位不同候选演员/不同脸头模')
+    expect(handlerSharedMock.generateCleanImageToStorage.mock.calls[2]?.[0].prompt).toContain('不要用同一个 seed、同一张脸、同一底模')
     expect(aiExecMock.executeAiTextStep).toHaveBeenCalledWith(expect.objectContaining({
       action: 'character_casting_plan_generate',
       model: 'analysis-model-1',
@@ -288,6 +298,7 @@ describe('worker character-style-test-task-handler', () => {
     expect(handlerSharedMock.generateCleanImageToStorage.mock.calls[1]?.[0].prompt).toContain('长脸，颧骨更明显')
     expect(handlerSharedMock.generateCleanImageToStorage.mock.calls[2]?.[0].prompt).toContain('候选 2 的硬差异选角方案：C 轮廓记忆路线')
     expect(handlerSharedMock.generateCleanImageToStorage.mock.calls[2]?.[0].prompt).toContain('齐耳短发')
+    expect(handlerSharedMock.generateCleanImageToStorage.mock.calls[2]?.[0].prompt).toContain('跨候选身份锁定')
     expect(evaluatorMock.evaluateCharacterCastingCandidates).toHaveBeenCalledWith(expect.objectContaining({
       userId: 'user-1',
       analysisModel: 'analysis-model-1',
@@ -298,6 +309,12 @@ describe('worker character-style-test-task-handler', () => {
         expect.objectContaining({ candidateIndex: 2, imageUrl: 'https://signed.example/cos/task-character-style-test-1-candidate-2.jpg' }),
       ],
     }))
+    const evaluationCalls = evaluatorMock.evaluateCharacterCastingCandidates.mock.calls as unknown as Array<[
+      CastingEvaluationCallInput,
+    ]>
+    const evaluationCall = evaluationCalls[0]?.[0]
+    if (!evaluationCall) throw new Error('Expected evaluateCharacterCastingCandidates to be called')
+    expect(evaluationCall.candidates[1].request).toContain('第 2 位不同演员脸候选')
     expect(prismaMock.characterAppearance.update).toHaveBeenCalledWith({
       where: { id: 'appearance-1' },
       data: expect.objectContaining({

@@ -126,7 +126,8 @@ function buildPlanPrompt(input: CharacterCastingPlanInput): string {
 
   if (input.locale === 'en') {
     return [
-      'Create three hard-differentiated casting plans for the same screenplay role before image generation.',
+      'Create three hard-differentiated actor casting plans for the same screenplay role before image generation.',
+      'Each plan represents a different actor face/head-mold candidate for the role, not the same actor restyled three times.',
       'The plans are not final images. They are strict inputs for three later character look-test prompts.',
       '',
       'Role request from the screenplay:',
@@ -141,8 +142,9 @@ function buildPlanPrompt(input: CharacterCastingPlanInput): string {
       '- Keep all plans within the same role and the selected visual reference medium.',
       '- Do not copy the reference image composition, character positions, prop layout, or exact scene moment.',
       '- Do not introduce project style config, legacy style presets, or user-history style.',
-      '- The three plans must be visibly different casting options: different face impression, hair silhouette, body/posture, costume structure, performance state, and signature detail.',
-      '- Each plan must still obey the screenplay facts. Do not remove required role facts; vary how those facts are embodied.',
+      '- Across A/B/C, the candidates must look like different people and different actors. They must not share the same face, head shape, facial proportions, or base model.',
+      '- The three plans must be visibly different casting options: different face length/width, cheekbones, jaw, nose bridge, eye spacing, eye shape, mouth shape, hair silhouette, body/posture, costume structure, performance state, and signature detail.',
+      '- Each plan must still obey the screenplay facts. Do not remove required role facts; vary how those facts are embodied by different faces, bodies, and performance temperaments.',
       '- Write concrete visual decisions that an image model can execute. Avoid vague words like more realistic, more emotional, or more stylish unless followed by visible specifics.',
       '',
       'Return JSON only with this exact shape:',
@@ -152,7 +154,8 @@ function buildPlanPrompt(input: CharacterCastingPlanInput): string {
   }
 
   return [
-    '请在生成图片前，先为同一个剧本角色设计三套“硬差异”的选角定妆方案。',
+    '请在生成图片前，先为同一个剧本角色设计三套“不同演员/不同脸”的硬差异选角定妆方案。',
+    '每套方案代表同一剧本角色的一位不同候选演员/不同头模，不是同一个演员换衣服、换表情或换妆。',
     '这些方案不是最终图片，而是后续三张候选定妆图的强约束输入。',
     '',
     '来自剧本的角色需求：',
@@ -167,8 +170,9 @@ function buildPlanPrompt(input: CharacterCastingPlanInput): string {
     '- 三套方案必须仍然是同一个剧本角色，并保持已选视觉参考案例的媒介类别。',
     '- 绝对不要复制视觉参考案例图的构图、人物站位、道具摆法或具体场景瞬间。',
     '- 不要引入项目风格配置、旧项目风格、系统风格预设或用户历史偏好。',
-    '- 三套方案必须像真正可比较的选角方案：脸型年龄感、发型轮廓、体型姿态、服装结构、表演状态、记忆点细节都要肉眼可区分。',
-    '- 必须遵守剧本事实，不能删掉角色必需特征；只能改变这些事实被具象化的方式。',
+    '- A/B/C 必须达到陌生人/不同演员级别差异，不能像同一个人换衣服、换表情、换年龄滤镜或换发型；必须明显不是同一张脸、同一个头模或同一个底模。',
+    '- 三套方案必须像真正可比较的选角方案：脸长脸宽、颧骨、下颌、鼻梁、眼距、眼型、嘴型、头颅轮廓、发型轮廓、体型姿态、服装结构、表演状态、记忆点细节都要肉眼可区分。',
+    '- 必须遵守剧本事实，不能删掉角色必需特征；只能让这些事实由不同脸型、不同五官比例、不同体态和不同表演气质承载。',
     '- 所有描述都要是图像模型能执行的可见决定。不要只写“更真实、更情绪化、更有风格”，必须写出具体脸、发、体态、衣服、细节。',
     '',
     '只返回 JSON，结构必须完全如下：',
@@ -222,6 +226,7 @@ export function renderCharacterCastingPlanPromptBlock(input: {
       'Difference locks against the other candidates:',
       formatList(plan.differenceLocks),
       `Candidate-specific image directive: ${plan.promptDirective}`,
+      'Across-candidate identity lock: this is a different actor face candidate for the same role, and must clearly not be the same person as the other candidates.',
       'This candidate must follow this plan exactly; do not average it with other candidates.',
     ].join('\n')
   }
@@ -239,6 +244,7 @@ export function renderCharacterCastingPlanPromptBlock(input: {
     '与其他候选拉开的硬锁定差异：',
     formatList(plan.differenceLocks),
     `本候选图片专属指令：${plan.promptDirective}`,
+    '跨候选身份锁定：这是同一剧本角色的一位不同演员脸候选，必须明显不是其他候选那张脸。',
     '本候选必须严格执行这套方案；不要把其他候选方案平均混合进来。',
   ].join('\n')
 }

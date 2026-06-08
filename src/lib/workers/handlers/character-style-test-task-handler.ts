@@ -64,6 +64,7 @@ function buildCandidateDescription(
   if (candidatePlan) {
     return [
       `${characterRequest}；${candidatePlan.label}`,
+      `候选身份定位：这是同一剧本角色的第 ${candidateIndex + 1} 位不同演员脸候选，不得与其他候选共用同一张脸、同一头模或同一底模。`,
       `选角前提：${candidatePlan.castingPremise}`,
       `脸型与年龄感：${candidatePlan.faceAndAge}`,
       `发型与轮廓：${candidatePlan.hairAndSilhouette}`,
@@ -75,9 +76,9 @@ function buildCandidateDescription(
     ].join('\n')
   }
   const directions = [
-    '生活真实度优先的候选形象包',
-    '情绪辨识度优先的候选形象包',
-    '造型记忆点优先的候选形象包',
+    '生活真实度优先的不同演员脸候选形象包',
+    '情绪辨识度优先的不同演员脸候选形象包',
+    '造型记忆点优先的不同演员脸候选形象包',
   ] as const
   return `${characterRequest}；${directions[candidateIndex]}`
 }

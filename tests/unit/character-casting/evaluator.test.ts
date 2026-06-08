@@ -54,8 +54,12 @@ describe('character casting evaluator', () => {
     const firstCall = calls[0]
     if (!firstCall) throw new Error('Expected executeVisionCompletion to be called')
     const prompt = firstCall[0].textPrompt
+    expect(prompt).toContain('硬性身份判定')
+    expect(prompt).toContain('不同演员脸候选')
+    expect(prompt).toContain('同一个头模或同一个底模')
     expect(prompt).toContain('反假评分规则')
     expect(prompt).toContain('不得假装它们各有不同优点')
+    expect(prompt).toContain('打到 3 分或以下')
     expect(prompt).toContain('候选缺少有效差异')
     expect(prompt).toContain('winnerIndex 只能把 0 当作占位赢家')
     expect(result.winnerIndex).toBe(0)

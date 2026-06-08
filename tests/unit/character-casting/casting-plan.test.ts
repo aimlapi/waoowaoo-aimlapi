@@ -106,6 +106,8 @@ describe('character casting plan', () => {
     }))
     expect(call.messages[0]?.content).toContain('已选视觉参考案例，唯一风格来源')
     expect(call.messages[0]?.content).toContain('三套方案必须像真正可比较的选角方案')
+    expect(call.messages[0]?.content).toContain('不同演员/不同脸')
+    expect(call.messages[0]?.content).toContain('必须明显不是同一张脸')
   })
 
   it('renders a candidate-specific prompt block with concrete visible differences', () => {
@@ -115,6 +117,8 @@ describe('character casting plan', () => {
     expect(block).toContain('候选 2 的硬差异选角方案：C 暴富造型路线')
     expect(block).toContain('油亮后梳稀发')
     expect(block).toContain('粗金链')
+    expect(block).toContain('跨候选身份锁定')
+    expect(block).toContain('必须明显不是其他候选那张脸')
     expect(block).toContain('本候选必须严格执行这套方案')
   })
 

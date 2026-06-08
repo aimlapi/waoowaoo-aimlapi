@@ -29,7 +29,7 @@ export type CharacterCastingEvaluationInput = {
 }
 
 const CRITERIA_ZH: Record<CharacterCastingCriterionKey, string> = {
-  roleConsistency: '角色一致性：同一组内是否像同一个演员，五官、体型、年龄感、精神状态是否稳定',
+  roleConsistency: '单张候选包内部一致性：只评估该图内部多格是否像同一位候选演员，五官、体型、年龄感、精神状态是否稳定',
   identityReadability: '脸部与身份辨识度：面相、职业身份、人物气质是否清楚可读',
   contactSheetCompleteness: '选角素材完整度：是否包含身份照、正侧背、全身、局部细节、道具和场景定妆照',
   expressionRange: '表情跨度：中性、脆弱、微笑或其他情绪是否真实，并且没有崩脸或换人',
@@ -40,7 +40,7 @@ const CRITERIA_ZH: Record<CharacterCastingCriterionKey, string> = {
 }
 
 const CRITERIA_EN: Record<CharacterCastingCriterionKey, string> = {
-  roleConsistency: 'Role consistency: each sheet preserves one actor identity, facial structure, body profile, age impression, and visible state',
+  roleConsistency: 'Within-sheet consistency: only judge whether panels inside each sheet preserve one candidate actor identity, facial structure, body profile, age impression, and visible state',
   identityReadability: 'Face and identity readability: readable face, profession, personality, and casting presence',
   contactSheetCompleteness: 'Casting material completeness: identity views, front/side/back, full body, details, prop, and scene stills',
   expressionRange: 'Expression range: believable neutral, vulnerable, smiling, or other emotional states without face drift',
@@ -68,7 +68,8 @@ function buildEvaluationPrompt(input: CharacterCastingEvaluationInput): string {
       'Candidate generation requests:',
       candidateLines,
       '',
-      'Anti-fake-scoring rule: before scoring, compare the three images against each other. If two or three candidates are near-duplicates, share the same face, same styling, same contact-sheet layout, or only differ by tiny color/expression changes, say so plainly in summary, give those duplicated candidates low scores for identityReadability, costumeRange, expressionRange, backgroundFit, and productionUsability, and do not invent different strengths that are not visibly present.',
+      'Hard identity judgment: A/B/C are supposed to be different actor faces for the same role. If the visible faces look like the same person or the same base model, this is a generation failure even if the prompts describe different plans.',
+      'Anti-fake-scoring rule: before scoring, compare the three images against each other. If two or three candidates are near-duplicates, share the same face, same head mold, same facial proportions, same styling, same contact-sheet layout, or only differ by tiny color/expression changes, say so plainly in summary, give those duplicated candidates scores of 3 or below for identityReadability, costumeRange, expressionRange, backgroundFit, and productionUsability, and do not invent different strengths that are not visibly present.',
       'If all three candidates are effectively the same generated person/look, winnerIndex must be 0 only as a placeholder, and summary must state that there is no meaningful casting difference.',
       '',
       'Score every candidate on each criterion from 0 to 10. Judge from the actual visible image content, not only the prompts.',
@@ -90,7 +91,8 @@ function buildEvaluationPrompt(input: CharacterCastingEvaluationInput): string {
     '候选生成需求：',
     candidateLines,
     '',
-    '反假评分规则：评分前必须先横向比较三张图。如果两张或三张候选几乎重复、共用同一张脸、同一套造型、同一 contact sheet 版式，或者只是轻微换色/换表情，不得假装它们各有不同优点；必须在 summary 里直说“候选缺少有效差异”，并把重复候选在 identityReadability、costumeRange、expressionRange、backgroundFit、productionUsability 等维度打低分。',
+    '硬性身份判定：A/B/C 本应是同一剧本角色的不同演员脸候选。如果可见脸部像同一个人、同一个头模或同一个底模，即使提示词写了不同方案，也视为生成失败。',
+    '反假评分规则：评分前必须先横向比较三张图。如果两张或三张候选几乎重复、共用同一张脸、同一头模、同一五官比例、同一套造型、同一 contact sheet 版式，或者只是轻微换色/换表情，不得假装它们各有不同优点；必须在 summary 里直说“候选缺少有效差异”，并把重复候选在 identityReadability、costumeRange、expressionRange、backgroundFit、productionUsability 等维度打到 3 分或以下。',
     '如果三张本质上是同一个生成人物/同一套妆造，winnerIndex 只能把 0 当作占位赢家，同时 summary 必须说明没有真正可比较的选角差异。',
     '',
     '请根据图片中实际可见内容评分，不要只看提示词。每个候选的每个维度打 0 到 10 分。',
