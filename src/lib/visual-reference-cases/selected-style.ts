@@ -86,7 +86,7 @@ export function renderSelectedVisualReferenceStylePromptBlock(input: {
     return [
       'Selected visual reference style, highest priority:',
       'Use the selected style reference image as the visual source of truth for rendering style.',
-      'If this block conflicts with project artStyle, system style preset, or older Style Bible wording, follow this selected visual reference.',
+      'If this block conflicts with older project style config, system style preset, or older Style Bible wording, follow this selected visual reference.',
       `Selected style title: ${title}`,
       `Selected style description: ${description}`,
       `Selected style generation prompt: ${prompt}`,
@@ -98,7 +98,7 @@ export function renderSelectedVisualReferenceStylePromptBlock(input: {
   return [
     '选中的视觉风格案例（最高优先级）：',
     '必须把用户选中的风格案例图作为后续画风的事实来源。',
-    '如果本段与项目 artStyle、系统风格预设或旧 Style Bible 文字冲突，必须以这个选中的视觉风格案例为准。',
+    '如果本段与旧项目风格配置、系统风格预设或旧 Style Bible 文字冲突，必须以这个选中的视觉风格案例为准。',
     `选中风格标题：${title}`,
     `选中风格描述：${description}`,
     `选中风格生成提示词：${prompt}`,

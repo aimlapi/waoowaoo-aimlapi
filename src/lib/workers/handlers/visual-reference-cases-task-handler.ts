@@ -213,7 +213,6 @@ function buildReferencePrompt(input: {
   readonly screenplayText: string
   readonly userPrompt: string | null
   readonly aspectRatio: string | null
-  readonly artStyle: string | null
   readonly preset: VisualReferenceStylePreset
 }) {
   const screenplayPreview = compactText(input.screenplayText, 1600)
@@ -229,7 +228,6 @@ function buildReferencePrompt(input: {
       'This image is a style case for overall tone only. It must guide later editing rhythm, art direction, character look, locations, props, lighting, staging, and performance without becoming a frame to copy directly.',
       'Use a medium-long shot, long shot, or wide establishing composition. Show the characters within the surrounding environment so the overall art direction, set design, color world, and spatial layout are visible. Avoid close-ups, face close-ups, tight bust shots, cropped portraits, macro details, or any small-scale framing that hides the style world.',
       input.aspectRatio ? `Aspect ratio: ${input.aspectRatio}.` : '',
-      input.artStyle ? `Current project art style hint: ${input.artStyle}.` : '',
       userPromptPreview ? `Original request: ${userPromptPreview}` : '',
       `Screenplay excerpt: ${screenplayPreview}`,
       'Render this shared-scene style variant as a polished key image. Make the medium and genre difference unmistakable at thumbnail size. No captions, no subtitles, no text overlays, no logos.',
@@ -245,7 +243,6 @@ function buildReferencePrompt(input: {
     '这张图只作为整体基调的风格案例。后续剪辑节奏、画风、角色形象、场景、道具、打光策略、场面调度和角色表演都要参考它的气质，但不能直接照搬画面。',
     '景别请优先使用中远景、远景或全景式建立镜头。人物要放在环境里，让整体美术风格、场景设计、色彩世界和空间关系都能看清楚。避免脸部特写、半身特写、裁切头像、微距细节或任何看不清整体风格的小景别。',
     input.aspectRatio ? `画幅比例：${input.aspectRatio}。` : '',
-    input.artStyle ? `当前项目风格提示：${input.artStyle}。` : '',
     userPromptPreview ? `用户原始需求：${userPromptPreview}` : '',
     `剧本节选：${screenplayPreview}`,
     '请把这个共享场景的画风变体生成一张完成度高的关键画面，在缩略图尺寸也必须一眼看出媒介和类型差异。不要字幕、不要说明文字、不要 logo、不要文字叠加。',
@@ -326,7 +323,6 @@ export async function handleVisualReferenceCasesTask(job: Job<TaskJobData>) {
   const analysisModel = readRequiredString(payload.analysisModel, 'analysisModel')
   const count = readCount(payload.count)
   const aspectRatio = readOptionalString(payload.aspectRatio)
-  const artStyle = readOptionalString(payload.artStyle)
   const userPrompt = readOptionalString(payload.userPrompt)
   const imageOptions = readImageOptions(payload.generationOptions)
 
@@ -355,7 +351,6 @@ export async function handleVisualReferenceCasesTask(job: Job<TaskJobData>) {
       screenplayText,
       userPrompt,
       aspectRatio,
-      artStyle,
       preset,
     })
     const visualCase = await resolveVisualReferenceCaseForGeneration({

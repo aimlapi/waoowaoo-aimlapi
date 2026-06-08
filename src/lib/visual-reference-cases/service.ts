@@ -241,7 +241,6 @@ export async function submitProjectVisualReferenceCases(input: SubmitVisualRefer
         analysisModel: true,
         storyboardModel: true,
         videoRatio: true,
-        artStyle: true,
       },
     }),
     prisma.projectEpisode.findFirst({
@@ -289,7 +288,6 @@ export async function submitProjectVisualReferenceCases(input: SubmitVisualRefer
     count,
     analysisModel: project.analysisModel,
     aspectRatio: project.videoRatio,
-    artStyle: project.artStyle,
   }
   const billingPayload = await buildImageBillingPayload({
     projectId: input.projectId,
