@@ -19,6 +19,9 @@ describe('character prompt suffix regression', () => {
     const generated = addCharacterPromptSuffix(basePrompt)
 
     expect(generated).toContain(CHARACTER_PROMPT_SUFFIX)
+    expect(generated).toContain('画面只能出现当前这一个角色')
+    expect(generated).toContain('绝对不要出现其他人物、围观者、路人')
+    expect(generated).toContain('照片/镜子/屏幕里的人像或人形剪影')
     expect(countOccurrences(generated, CHARACTER_PROMPT_SUFFIX)).toBe(1)
   })
 

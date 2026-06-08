@@ -150,13 +150,14 @@ function buildChineseCastingPhotoPrompt(
     '候选差异硬约束：本次如果生成 3 组候选，三组之间必须像三个真实可选角色定妆方案，而不是同一个生成结果的复刻。A/B/C 的脸型气质、发型轮廓、服装结构、表演状态和记忆点必须能被肉眼区分。',
     '画面目标：像剧组用于选角、试镜、定妆和服装试装的候选资料，用来判断这个角色形象与这套妆造是否适合剧本。',
     '这是一组完整候选形象包：整张图必须是一张拼版，包含同一角色身份的多张定妆参考；不是单纯白底三视图，也不是多个不同角色拼在一起。',
+    '单人隔离规则：整张候选图只能出现当前这一个角色本人；所有格子、背景、道具细节和生活场景里都绝对不要出现其他人物、围观者、路人、亲友、同事、儿童、手部代入、身体局部、照片/镜子/屏幕里的人像或人形剪影。',
     '必须包含的基础资料：正面半身身份照、正面全身站姿、左侧面、右侧面、背面或 3/4 背面；基础资料可以使用低干扰背景，但背景、光线、材质和色彩仍必须服从已选视觉参考案例。',
     '必须包含的拓展定妆照：至少两种不同表情（例如中性、脆弱/哭过、浅笑/防备笑）、至少两套不同服装或穿搭层次、至少两个故事相关背景或工作/生活场景、至少一个手部/耳后/疤痕/纹身/配饰/关键道具细节特写。',
     '同一候选包内必须保持同一角色身份：脸型、五官距离、鼻梁、颧骨、眼神、体型、身高比例、发量和主要身体标记必须稳定；允许服装、情绪、背景和局部妆造变化，但不能换人或换角色。',
     '画面质感：只继承已选视觉参考案例的媒介、材质、颗粒、光线和色彩体系；不要额外添加参考案例之外的写实摄影、动漫、漫画、插画、CG、赛博、海报或棚拍风格。',
     '场景背景：必须来自剧本中的角色生活/工作/剧情语境，并服从已选视觉参考案例的风格语言；背景服务于判断角色适配度，不要变成与剧本无关的海报、剧照大片或世界观概念图。',
     '构图优先级：清楚看脸、发型、表情变化、身高比例、体态、服装变化、鞋子、侧背轮廓、关键细节；全身照必须完整露出脚。',
-    '绝对禁止：任何来自旧项目风格、系统风格预设、用户历史偏好或固定模板的风格注入；不同人物混入、文字标签、姓名、电话、邮箱、身高腰围信息、水印、Logo。',
+    '绝对禁止：任何来自旧项目风格、系统风格预设、用户历史偏好或固定模板的风格注入；不同人物混入、其他人物出镜、文字标签、姓名、电话、邮箱、身高腰围信息、水印、Logo。',
     '如果需要纸质 casting sheet 的感觉，只模拟拼版与留白，不要生成任何可读个人信息。',
   ].filter(Boolean).join('\n')
 }
@@ -176,13 +177,14 @@ function buildEnglishCastingPhotoPrompt(
     'Candidate separation hard rule: when generating three candidates, they must read like three viable character look-test options, not replicas of the same generated result. A/B/C must be visibly distinguishable in face impression, hair silhouette, costume structure, performance state, and visual hook.',
     'Goal: make it feel like production material for casting, audition, look approval, and costume fitting, used to judge whether this character image and styling fit the screenplay.',
     'This is one complete candidate look package: the image must be one collage containing multiple look-test views of the same character identity. It is not a plain white-background turnaround only, and it must not mix multiple different characters.',
+    'Single-character isolation rule: the entire candidate sheet may show only this current character. No other people, extras, bystanders, relatives, coworkers, children, inserted hands, body parts, portraits, reflections, screen images of people, or human silhouettes may appear in any panel, background, prop detail, or story-context setting.',
     'Required identity material: frontal half-body identity view, frontal full-body standing view, left profile, right profile, and back or three-quarter back view. These baseline views may use a low-distraction background, but the background, lighting, material, and palette must still obey the selected visual reference case.',
     'Required extended look-test material: at least two different expressions such as neutral, vulnerable/after crying, slight smile/guarded smile; at least two different outfits or styling layers; at least two story-related backgrounds or work/life settings; at least one close-up of hand, behind-ear detail, scar, tattoo, accessory, or key prop.',
     'Within this candidate package, preserve one character identity: face shape, feature spacing, nose bridge, cheekbones, gaze, body type, height proportion, hair volume, and key body marks must stay stable. Wardrobe, emotion, background, and small makeup/styling changes may vary, but the person or character identity must not change.',
     'Image texture: inherit only the selected visual reference case medium, material, grain, lighting, and palette. Do not add realism, anime, comic, illustration, CG, cyberpunk, poster, or studio-shot styling that is not present in the selected reference case.',
     'Backgrounds: use the character’s story life/work/plot context from the screenplay, while obeying the selected visual reference visual language. Backgrounds must help judge role fit and must not become unrelated posters, finished film stills, or worldbuilding concept art.',
     'Composition priorities: clearly show face, hair, expression variation, height proportion, body posture, costume variation, shoes, side/back silhouette, and key details. Full-body views must show complete feet.',
-    'Strict bans: style injection from legacy project style, system style presets, user history, or fixed templates; mixed character identities, text labels, names, phone numbers, emails, height/waist data, watermark, Logo.',
+    'Strict bans: style injection from legacy project style, system style presets, user history, or fixed templates; mixed character identities, other people appearing, text labels, names, phone numbers, emails, height/waist data, watermark, Logo.',
     'If a paper casting-sheet feeling is needed, simulate only the photo collage and blank margins. Do not generate readable personal information.',
   ].filter(Boolean).join('\n')
 }

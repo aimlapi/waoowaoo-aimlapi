@@ -33,6 +33,9 @@ describe('character style test prompt modes', () => {
     expect(prompt).toContain('至少两种不同表情')
     expect(prompt).toContain('至少两套不同服装或穿搭层次')
     expect(prompt).toContain('至少两个故事相关背景或工作/生活场景')
+    expect(prompt).toContain('单人隔离规则')
+    expect(prompt).toContain('只能出现当前这一个角色本人')
+    expect(prompt).toContain('照片/镜子/屏幕里的人像或人形剪影')
     expect(prompt).toContain('候选差异硬约束')
     expect(prompt).toContain('姓名、电话、邮箱')
     expect(prompt).not.toContain('真人摄影 contact sheet')
@@ -78,6 +81,7 @@ describe('character style test prompt modes', () => {
     expect(prompt).toContain('候选 1 的硬差异选角方案：B 情绪裂痕路线')
     expect(prompt).toContain('脸型与年龄感：长脸、深眼窝、眼眶泛红。')
     expect(prompt).toContain('与其他候选拉开的硬锁定差异')
+    expect(prompt).toContain('整张候选图只能出现当前这一个角色本人')
     expect(prompt).toContain('本候选必须严格执行这套方案')
   })
 
