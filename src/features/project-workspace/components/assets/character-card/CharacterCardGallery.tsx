@@ -50,6 +50,11 @@ export default function CharacterCardGallery(props: CharacterCardGalleryProps) {
           const isThisTaskRunning = props.isImageTaskRunning(originalIndex) || props.isGroupTaskRunning
           const metadata = props.candidateMetadata?.[originalIndex] ?? null
           const castingScore = metadata?.castingNotes.score
+          const recommendation = metadata?.castingNotes.recommendation.trim() ?? ''
+          const strengths = metadata?.castingNotes.strengths.map((item) => item.trim()).filter(Boolean) ?? []
+          const risks = metadata?.castingNotes.risks.map((item) => item.trim()).filter(Boolean) ?? []
+          const fitTags = metadata?.castingNotes.fitTags.map((item) => item.trim()).filter(Boolean) ?? []
+          const hasCastingDetails = !!recommendation || strengths.length > 0 || risks.length > 0 || fitTags.length > 0
           const compactTraits = [
             metadata?.visualTraits.face,
             metadata?.visualTraits.body,
@@ -117,8 +122,8 @@ export default function CharacterCardGallery(props: CharacterCardGalleryProps) {
                       </span>
                     )}
                   </div>
-                  {metadata.castingNotes.recommendation && (
-                    <p className="line-clamp-2">{metadata.castingNotes.recommendation}</p>
+                  {recommendation && (
+                    <p className="line-clamp-2 break-words">{recommendation}</p>
                   )}
                   {compactTraits.length > 0 && (
                     <div className="mt-1 flex flex-wrap gap-1">
@@ -139,10 +144,57 @@ export default function CharacterCardGallery(props: CharacterCardGalleryProps) {
                       ))}
                     </div>
                   )}
-                  {metadata.castingNotes.risks[0] && (
-                    <p className="mt-1 truncate text-[var(--glass-tone-warning-fg)]">
-                      {t('casting.risk', { risk: metadata.castingNotes.risks[0] })}
+                  {risks[0] && (
+                    <p className="mt-1 line-clamp-2 break-words text-[var(--glass-tone-warning-fg)]">
+                      {t('casting.risk', { risk: risks[0] })}
                     </p>
+                  )}
+                  {hasCastingDetails && (
+                    <details className="mt-1 rounded border border-[var(--glass-stroke-base)] bg-[var(--glass-bg-muted)] px-1.5 py-1">
+                      <summary className="cursor-pointer select-none font-semibold text-[var(--glass-tone-info-fg)]">
+                        {t('casting.details')}
+                      </summary>
+                      <div className="mt-1 max-h-44 space-y-1.5 overflow-y-auto border-t border-[var(--glass-stroke-base)] pt-1.5">
+                        {recommendation && (
+                          <section>
+                            <p className="font-semibold text-[var(--glass-text-primary)]">{t('casting.recommendation')}</p>
+                            <p className="whitespace-pre-wrap break-words">{recommendation}</p>
+                          </section>
+                        )}
+                        {strengths.length > 0 && (
+                          <section>
+                            <p className="font-semibold text-[var(--glass-text-primary)]">{t('casting.strengths')}</p>
+                            <ul className="list-disc space-y-0.5 pl-3">
+                              {strengths.map((strength) => (
+                                <li key={strength} className="whitespace-pre-wrap break-words">{strength}</li>
+                              ))}
+                            </ul>
+                          </section>
+                        )}
+                        {risks.length > 0 && (
+                          <section>
+                            <p className="font-semibold text-[var(--glass-text-primary)]">{t('casting.risks')}</p>
+                            <ul className="list-disc space-y-0.5 pl-3 text-[var(--glass-tone-warning-fg)]">
+                              {risks.map((risk) => (
+                                <li key={risk} className="whitespace-pre-wrap break-words">{risk}</li>
+                              ))}
+                            </ul>
+                          </section>
+                        )}
+                        {fitTags.length > 0 && (
+                          <section>
+                            <p className="font-semibold text-[var(--glass-text-primary)]">{t('casting.criteria')}</p>
+                            <div className="mt-0.5 flex flex-wrap gap-1">
+                              {fitTags.map((tag) => (
+                                <span key={tag} className="max-w-full break-words rounded bg-[var(--glass-tone-info-bg)] px-1.5 py-0.5 text-[var(--glass-tone-info-fg)]">
+                                  {tag}
+                                </span>
+                              ))}
+                            </div>
+                          </section>
+                        )}
+                      </div>
+                    </details>
                   )}
                 </div>
               )}

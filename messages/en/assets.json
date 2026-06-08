@@ -136,6 +136,11 @@
     "casting": {
         "optionNotes": "Casting",
         "score": "{score}",
+        "details": "View scoring details",
+        "recommendation": "Recommendation",
+        "strengths": "Strengths",
+        "risks": "Risks",
+        "criteria": "Scoring criteria",
         "stills": "Stills:",
         "risk": "Risk: {risk}"
     },

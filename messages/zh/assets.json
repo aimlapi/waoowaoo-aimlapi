@@ -136,6 +136,11 @@
     "casting": {
         "optionNotes": "选角",
         "score": "{score}分",
+        "details": "查看评分详情",
+        "recommendation": "推荐理由",
+        "strengths": "优势",
+        "risks": "风险",
+        "criteria": "评分维度",
         "stills": "定妆：",
         "risk": "风险：{risk}"
     },
