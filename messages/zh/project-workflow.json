@@ -356,7 +356,6 @@
           "failed": "失败"
         },
         "styleSummary": "风格总结",
-        "rawUserStyle": "用户风格",
         "visualPolicy": "画面策略",
         "negativePrompt": "负向提示",
         "imageFilterPrompt": "画面滤镜",

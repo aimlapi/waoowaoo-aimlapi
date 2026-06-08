@@ -89,7 +89,6 @@ function buildSourceSnapshot() {
     },
     styleBible: {
       strategy: 'style_bible',
-      rawUserStyle: 'temple lesson',
       styleSummary: 'quiet temple style',
       stylePolicy: {
         visual: {

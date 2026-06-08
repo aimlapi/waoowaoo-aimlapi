@@ -1178,7 +1178,6 @@ function StyleBibleContent({
   return (
     <div className="space-y-2">
       {renderTextSection(labels('styleSummary'), details.styleSummary)}
-      {renderTextSection(labels('rawUserStyle'), details.rawUserStyle)}
       {renderStylePolicySection(labels('visualPolicy'), [
         { label: labels('negativePrompt'), value: details.visual.negativePrompt },
         { label: labels('imageFilterPrompt'), value: details.visual.imageFilterPrompt },

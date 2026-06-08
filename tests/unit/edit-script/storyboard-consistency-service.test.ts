@@ -5,7 +5,6 @@ import type { StoryboardConsistencySourceSnapshot } from '@/lib/edit-script/stor
 function buildStyleBible(): StoryboardConsistencySourceSnapshot['styleBible'] {
   return {
     strategy: 'style_bible',
-    rawUserStyle: 'temple lesson',
     styleSummary: 'Restrained naturalistic temple visual style.',
     stylePolicy: {
       visual: {

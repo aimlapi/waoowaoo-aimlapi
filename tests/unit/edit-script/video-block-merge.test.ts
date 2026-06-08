@@ -76,7 +76,6 @@ import { AI_PROMPT_IDS } from '@/lib/ai-prompts'
 function buildStyleBibleJson() {
   return {
     strategy: 'style_bible',
-    rawUserStyle: null,
     styleSummary: 'Cinematic realism.',
     stylePolicy: {
       visual: {

@@ -356,7 +356,6 @@
           "failed": "Failed"
         },
         "styleSummary": "Style Summary",
-        "rawUserStyle": "User Style",
         "visualPolicy": "Visual Policy",
         "negativePrompt": "Negative Prompt",
         "imageFilterPrompt": "Image Filter",

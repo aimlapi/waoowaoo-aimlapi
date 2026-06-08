@@ -3,7 +3,6 @@ import { AI_PROMPT_IDS, buildAiPrompt } from '@/lib/ai-prompts'
 
 const styleBibleJson = JSON.stringify({
   strategy: 'style_bible',
-  rawUserStyle: '禅修短片',
   styleSummary: '安静克制的东方自然主义禅修影像。',
   stylePolicy: {
     visual: {
@@ -49,8 +48,8 @@ describe('edit script block-first prompt flow', () => {
       },
     })
 
-    expect(styleBiblePrompt).toContain('唯一风格圣经生成器')
-    expect(styleBiblePrompt).toContain('任何剧本、资产、分镜或视频提示词生成之前')
+    expect(styleBiblePrompt).toContain('视觉风格策略生成器')
+    expect(styleBiblePrompt).toContain('完整剧本生成之后')
     expect(styleBiblePrompt).toContain('Style Bible 是后续资产图、分镜图、视频提示词、声音提示词的唯一风格来源')
     expect(styleBiblePrompt).toContain('不要输出大而全的正向风格字段')
     expect(styleBiblePrompt).toContain('imageFilterPrompt 必须是一句可直接塞进图片或视频提示词的画面滤镜短语')
@@ -69,15 +68,15 @@ describe('edit script block-first prompt flow', () => {
         user_request: '生成一条连续短片',
         duration_seconds: '8',
         aspect_ratio: '9:16',
-        style_bible_json: styleBibleJson,
       },
     })
 
     expect(screenplayPrompt).toContain('AI 可控短片剧本')
-    expect(screenplayPrompt).toContain('Style Bible（唯一风格来源）')
+    expect(screenplayPrompt).toContain('后续角色、场景、道具、风格案例和分镜生成')
     expect(screenplayPrompt).toContain('这里只写剧情内容')
     expect(screenplayPrompt).toContain('不要出现“镜头”“特写”“推镜”“剪切”“CUT TO”')
-    expect(screenplayPrompt).toContain('柔和自然光，低对比度，轻微柔焦')
+    expect(screenplayPrompt).not.toContain('Style Bible')
+    expect(screenplayPrompt).not.toContain('柔和自然光，低对比度，轻微柔焦')
 
     const primaryPrompt = buildAiPrompt({
       promptId: AI_PROMPT_IDS.EDIT_SCRIPT_PRIMARY,
@@ -133,7 +132,8 @@ describe('edit script block-first prompt flow', () => {
     })
 
     expect(videoPromptBlock).toContain('严格遵守 Style Bible')
-    expect(videoPromptBlock).toContain('user_request 或 styleBible.rawUserStyle')
+    expect(videoPromptBlock).toContain('用户在 user_request 中明确要求的风格和限制最高优先级')
+    expect(videoPromptBlock).not.toContain('rawUserStyle')
     expect(videoPromptBlock).toContain('styleBible.stylePolicy.visual.negativePrompt')
     expect(videoPromptBlock).toContain('styleBible.stylePolicy.visual.imageFilterPrompt')
     expect(videoPromptBlock).toContain('styleBible.stylePolicy.sound.soundFilterPrompt')

@@ -124,7 +124,6 @@ function createStoryboard(input: {
 function createStyleBible(): Record<string, unknown> {
   return {
     strategy: 'style_bible',
-    rawUserStyle: '禅修短片',
     styleSummary: '低饱和自然光禅意电影质感。',
     stylePolicy: {
       visual: {

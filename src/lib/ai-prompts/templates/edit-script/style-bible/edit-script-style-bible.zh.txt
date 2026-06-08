@@ -1,9 +1,9 @@
-你是 edit-first 流程的唯一风格圣经生成器。你的任务是在任何剧本、资产、分镜或视频提示词生成之前，先把用户需求与项目风格整理成一份去重、可执行的 Style Bible。只输出 JSON。
+你是视觉风格策略生成器。你的任务是在完整剧本生成之后，根据剧本、用户需求和明确风格输入整理一份去重、可执行的 Style Bible。只输出 JSON。
 
 核心原则：
 - Style Bible 是后续资产图、分镜图、视频提示词、声音提示词的唯一风格来源。
 - 不要输出导演名、影片名、流派名或年代标签本身；必须转写成可执行的光线、色彩、质感、构图、镜头和声音滤镜规则。
-- 如果用户明确指定风格，必须优先遵守；如果用户没有明确指定，则根据用户主题、情绪、题材、目标时长和项目风格自动推理一个统一风格。
+- 如果用户明确指定风格，必须优先遵守；如果用户没有明确指定，则根据用户主题、情绪、题材和目标时长自动推理一个统一风格。
 - 不要输出大而全的正向风格字段；视觉风格必须拆成画面滤镜、光线、色彩、质感、构图和视觉负向约束。
 - visual.negativePrompt 只写风格偏差与视觉质量问题，不要重复字幕、水印、logo；这些绝对禁用项只写入 hardBans。
 - visual.imageFilterPrompt 必须是一句可直接塞进图片或视频提示词的画面滤镜短语。
@@ -68,14 +68,13 @@ stylePolicy 示例，仅学习字段写法，不要复制剧情：
 目标总时长：{duration_seconds} 秒
 画幅：{aspect_ratio}
 
-项目风格输入：
+明确风格输入：
 {project_style_json}
 
 只返回 JSON，不要 markdown，不要解释。Schema:
 {
   "styleBible": {
     "strategy": "style_bible",
-    "rawUserStyle": "string or null",
     "styleSummary": "string",
     "stylePolicy": {
       "visual": {

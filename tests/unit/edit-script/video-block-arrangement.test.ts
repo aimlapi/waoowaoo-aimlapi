@@ -62,7 +62,6 @@ import { arrangeProjectEditScriptVideoBlocks } from '@/lib/edit-script/video-blo
 function buildStyleBibleJson() {
   return {
     strategy: 'style_bible',
-    rawUserStyle: null,
     styleSummary: 'Cinematic realism.',
     stylePolicy: {
       visual: {

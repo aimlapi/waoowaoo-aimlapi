@@ -40,7 +40,6 @@ function buildSourceSnapshot(): StoryboardConsistencySourceSnapshot {
     },
     styleBible: {
       strategy: 'style_bible',
-      rawUserStyle: 'temple lesson',
       styleSummary: 'Restrained naturalistic temple visual style.',
       stylePolicy: {
         visual: {

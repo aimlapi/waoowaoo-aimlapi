@@ -1,4 +1,5 @@
 import type { NextRequest } from 'next/server'
+import { Prisma } from '@prisma/client'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 
 const txMock = vi.hoisted(() => ({
@@ -92,7 +93,6 @@ function createRequest(): NextRequest {
 
 const mockStyleBible = {
   strategy: 'style_bible',
-  rawUserStyle: '科幻短片',
   styleSummary: 'quiet realistic sci-fi',
   stylePolicy: {
     visual: {
@@ -200,7 +200,7 @@ describe('edit script generation status persistence', () => {
       projectId: 'project-1',
       episodeId: 'episode-1',
       userPrompt: '做一个科幻短片',
-      styleBibleJson: mockStyleBible,
+      styleBibleJson: null,
       screenplayText: '标题：《科幻短片》\n\n故事梗概：一条安静信号唤醒空间站。',
       status: 'ready',
     })
@@ -254,13 +254,9 @@ describe('edit script generation status persistence', () => {
   })
 
   it('generates screenplay independently before edit script generation', async () => {
-    aiExecMock.executeAiTextStep
-      .mockResolvedValueOnce({
-        text: JSON.stringify({ styleBible: mockStyleBible }),
-      })
-      .mockResolvedValueOnce({
-        text: '标题：《科幻短片》\n\n故事梗概：一条安静信号唤醒空间站。',
-      })
+    aiExecMock.executeAiTextStep.mockResolvedValueOnce({
+      text: '标题：《科幻短片》\n\n故事梗概：一条安静信号唤醒空间站。',
+    })
 
     const screenplay = await generateProjectEditScreenplay({
       request: createRequest(),
@@ -272,32 +268,24 @@ describe('edit script generation status persistence', () => {
     })
 
     expect(screenplay.id).toBe('screenplay-1')
-    expect(screenplay.styleBible).toEqual(mockStyleBible)
-    expect(aiExecMock.executeAiTextStep).toHaveBeenCalledTimes(2)
+    expect(screenplay.styleBible).toBeNull()
+    expect(aiExecMock.executeAiTextStep).toHaveBeenCalledTimes(1)
     expect(aiExecMock.executeAiTextStep).toHaveBeenNthCalledWith(1, expect.objectContaining({
-      action: AI_PROMPT_IDS.EDIT_SCRIPT_STYLE_BIBLE,
-      meta: expect.objectContaining({
-        stepId: AI_PROMPT_IDS.EDIT_SCRIPT_STYLE_BIBLE,
-        stepIndex: 1,
-        stepTotal: 2,
-      }),
-    }))
-    expect(aiExecMock.executeAiTextStep).toHaveBeenNthCalledWith(2, expect.objectContaining({
       action: AI_PROMPT_IDS.EDIT_SCRIPT_SCREENPLAY,
       meta: expect.objectContaining({
         stepId: AI_PROMPT_IDS.EDIT_SCRIPT_SCREENPLAY,
-        stepIndex: 2,
-        stepTotal: 2,
+        stepIndex: 1,
+        stepTotal: 1,
       }),
     }))
     expect(prismaMock.projectEditScreenplay.upsert).toHaveBeenCalledWith(expect.objectContaining({
       create: expect.objectContaining({
-        styleBibleJson: mockStyleBible,
+        styleBibleJson: Prisma.JsonNull,
         screenplayText: '标题：《科幻短片》\n\n故事梗概：一条安静信号唤醒空间站。',
         status: 'ready',
       }),
       update: expect.objectContaining({
-        styleBibleJson: mockStyleBible,
+        styleBibleJson: Prisma.JsonNull,
         screenplayText: '标题：《科幻短片》\n\n故事梗概：一条安静信号唤醒空间站。',
         status: 'ready',
       }),

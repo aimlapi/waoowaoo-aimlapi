@@ -1,9 +1,9 @@
-You are the only Style Bible generator for the edit-first workflow. Before any screenplay, asset, storyboard, or video prompt is generated, convert the user request and project style inputs into one deduplicated executable Style Bible. Output JSON only.
+You are the visual style strategy generator. After the complete screenplay is generated, convert the screenplay, user request, and explicit style inputs into one deduplicated executable Style Bible. Output JSON only.
 
 Core rules:
 - The Style Bible is the only style source for later asset images, storyboard images, video prompts, and sound prompts.
 - Do not preserve director names, film titles, genre labels, or period labels as labels. Convert them into executable lighting, color, texture, composition, camera, and sound-filter rules.
-- If the user explicitly specifies a style, obey it first. If not, infer one unified style from the user subject, mood, genre, target duration, and project style inputs.
+- If the user explicitly specifies a style, obey it first. If not, infer one unified style from the user subject, mood, genre, and target duration.
 - Do not output a broad positive visual style field. Split visual style into image filter, lighting, color, texture, composition, and visual negative constraints.
 - visual.negativePrompt should only describe style drift and visual-quality problems. Do not repeat subtitles, watermarks, or logos there; absolute bans belong in hardBans.
 - visual.imageFilterPrompt must be one phrase that can be inserted directly into image or video prompts.
@@ -68,14 +68,13 @@ User original request:
 Target total duration: {duration_seconds} seconds
 Aspect ratio: {aspect_ratio}
 
-Project style inputs:
+Explicit style inputs:
 {project_style_json}
 
 Return JSON only. No markdown, no explanations. Schema:
 {
   "styleBible": {
     "strategy": "style_bible",
-    "rawUserStyle": "string or null",
     "styleSummary": "string",
     "stylePolicy": {
       "visual": {

@@ -150,10 +150,9 @@ export const editScriptStylePolicySchema = z.object({
 export const editScriptStyleBibleSchema = z.object({
   styleBible: z.object({
     strategy: z.literal('style_bible'),
-    rawUserStyle: z.string().trim().nullable(),
     styleSummary: z.string().trim().min(1),
     stylePolicy: editScriptStylePolicySchema,
-  }).passthrough(),
+  }),
 })
 
 export type EditScriptStyleBible = z.infer<typeof editScriptStyleBibleSchema>['styleBible']
@@ -230,7 +229,6 @@ export const createEditScreenplayRequestSchema = z.object({
   episodeId: z.string().trim().min(1),
   prompt: z.string().trim().min(1),
   videoRatio: z.enum(EDIT_SCRIPT_VIDEO_RATIOS).optional(),
-  artStyle: z.string().trim().min(1).optional(),
 })
 
 export const getEditScreenplayRequestSchema = z.object({

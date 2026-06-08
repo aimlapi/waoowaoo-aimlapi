@@ -327,7 +327,6 @@ export interface WorkspaceCanvasStyleBibleSoundPolicy {
 }
 
 export interface WorkspaceCanvasStyleBibleDetails {
-  readonly rawUserStyle?: string | null
   readonly styleSummary?: string | null
   readonly visual: WorkspaceCanvasStyleBibleVisualPolicy
   readonly camera: WorkspaceCanvasStyleBibleCameraPolicy

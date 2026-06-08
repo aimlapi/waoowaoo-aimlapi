@@ -1,5 +1,5 @@
 import type { NextRequest } from 'next/server'
-import type { Prisma } from '@prisma/client'
+import { Prisma } from '@prisma/client'
 import { prisma } from '@/lib/prisma'
 import { ApiError } from '@/lib/api-errors'
 import { executeAiTextStep } from '@/lib/ai-exec/engine'
@@ -55,7 +55,6 @@ interface GenerateEditScreenplayInput {
   readonly locale: Locale
   readonly prompt: string
   readonly videoRatio?: '9:16' | '16:9' | '21:9'
-  readonly artStyle?: string
 }
 
 interface GenerateEditScriptAssetsInput {
@@ -200,21 +199,6 @@ interface ExistingAssetRef {
 
 function stringifyForPrompt(value: unknown): string {
   return JSON.stringify(value, null, 2)
-}
-
-interface EditScriptProjectStyleInput {
-  readonly artStyle: string | null
-  readonly aspectRatio: string | null
-}
-
-function buildProjectStyleInput(input: {
-  readonly artStyle: string | null
-  readonly videoRatio: string | null
-}): EditScriptProjectStyleInput {
-  return {
-    artStyle: input.artStyle,
-    aspectRatio: input.videoRatio,
-  }
 }
 
 function parseOptionalStyleBibleJson(value: Prisma.JsonValue | null): EditScriptStyleBible | null {
@@ -458,35 +442,6 @@ async function runPromptTextStep(input: {
     throw new Error(`EDIT_SCRIPT_PROMPT_EMPTY:${input.promptId}`)
   }
   return text
-}
-
-async function generateEditScriptStyleBible(input: {
-  readonly userId: string
-  readonly projectId: string
-  readonly model: string
-  readonly locale: Locale
-  readonly userPrompt: string
-  readonly durationSeconds: number
-  readonly aspectRatio: string
-  readonly projectStyle: EditScriptProjectStyleInput
-}): Promise<EditScriptStyleBible> {
-  const raw = await runPromptStep({
-    userId: input.userId,
-    projectId: input.projectId,
-    model: input.model,
-    locale: input.locale,
-    promptId: AI_PROMPT_IDS.EDIT_SCRIPT_STYLE_BIBLE,
-    variables: {
-      user_request: input.userPrompt,
-      duration_seconds: String(input.durationSeconds),
-      aspect_ratio: input.aspectRatio,
-      project_style_json: stringifyForPrompt(input.projectStyle),
-    },
-    stepTitle: 'Edit style bible',
-    stepIndex: 1,
-    stepTotal: 2,
-  })
-  return editScriptStyleBibleSchema.parse(raw).styleBible
 }
 
 function readShotNumbers(value: Prisma.JsonValue): number[] {
@@ -949,7 +904,6 @@ export async function generateProjectEditScreenplay(input: GenerateEditScreenpla
       where: { id: input.projectId, userId: input.userId },
       select: {
         id: true,
-        artStyle: true,
         videoRatio: true,
       },
     }),
@@ -957,40 +911,17 @@ export async function generateProjectEditScreenplay(input: GenerateEditScreenpla
   ])
   if (!episode || !project) throw new ApiError('NOT_FOUND')
   const effectiveVideoRatio = input.videoRatio ?? project.videoRatio
-  const effectiveArtStyle = input.artStyle ?? project.artStyle
-  if (input.artStyle && !isArtStyleValue(input.artStyle)) {
-    throw new ApiError('INVALID_PARAMS', {
-      code: 'INVALID_ART_STYLE',
-      message: 'artStyle must be a supported value',
-    })
-  }
-  if ((input.videoRatio && input.videoRatio !== project.videoRatio)
-    || (input.artStyle && input.artStyle !== project.artStyle)) {
+  if (input.videoRatio && input.videoRatio !== project.videoRatio) {
     await prisma.project.update({
       where: { id: project.id },
       data: {
-        ...(input.videoRatio ? { videoRatio: input.videoRatio } : {}),
-        ...(input.artStyle ? { artStyle: input.artStyle } : {}),
+        videoRatio: input.videoRatio,
       },
     })
   }
 
   const model = resolveTextModel(config)
   const defaults = resolveEditScriptDefaults(input.prompt)
-  const projectStyle = buildProjectStyleInput({
-    artStyle: effectiveArtStyle,
-    videoRatio: effectiveVideoRatio,
-  })
-  const styleBible = await generateEditScriptStyleBible({
-    userId: input.userId,
-    projectId: input.projectId,
-    model,
-    locale,
-    userPrompt: input.prompt,
-    durationSeconds: defaults.durationSeconds,
-    aspectRatio: effectiveVideoRatio,
-    projectStyle,
-  })
   const screenplayText = await runPromptTextStep({
     userId: input.userId,
     projectId: input.projectId,
@@ -1001,11 +932,10 @@ export async function generateProjectEditScreenplay(input: GenerateEditScreenpla
       user_request: input.prompt,
       duration_seconds: String(defaults.durationSeconds),
       aspect_ratio: effectiveVideoRatio,
-      style_bible_json: stringifyForPrompt(styleBible),
     },
     stepTitle: 'Edit screenplay',
-    stepIndex: 2,
-    stepTotal: 2,
+    stepIndex: 1,
+    stepTotal: 1,
   })
   const saved = await prisma.projectEditScreenplay.upsert({
     where: { episodeId: input.episodeId },
@@ -1013,13 +943,13 @@ export async function generateProjectEditScreenplay(input: GenerateEditScreenpla
       projectId: input.projectId,
       episodeId: input.episodeId,
       userPrompt: input.prompt,
-      styleBibleJson: styleBibleToJsonValue(styleBible),
+      styleBibleJson: Prisma.JsonNull,
       screenplayText,
       status: 'ready',
     },
     update: {
       userPrompt: input.prompt,
-      styleBibleJson: styleBibleToJsonValue(styleBible),
+      styleBibleJson: Prisma.JsonNull,
       screenplayText,
       status: 'ready',
     },

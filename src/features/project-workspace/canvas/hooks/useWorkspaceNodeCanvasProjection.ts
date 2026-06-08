@@ -210,7 +210,6 @@ function styleBibleHasPolicyText(details: WorkspaceCanvasStyleBibleDetails): boo
   const cameraValues = Object.values(details.camera)
   const soundValues = Object.values(details.sound)
   return [
-    details.rawUserStyle,
     details.styleSummary,
     ...visualValues,
     ...cameraValues,
@@ -225,7 +224,6 @@ function buildStyleBibleDetails(value: unknown): WorkspaceCanvasStyleBibleDetail
   const camera = readJsonRecord(stylePolicy.camera)
   const sound = readJsonRecord(stylePolicy.sound)
   const details: WorkspaceCanvasStyleBibleDetails = {
-    rawUserStyle: stringValue(value.rawUserStyle),
     styleSummary: stringValue(value.styleSummary),
     visual: {
       negativePrompt: stringValue(visual.negativePrompt),

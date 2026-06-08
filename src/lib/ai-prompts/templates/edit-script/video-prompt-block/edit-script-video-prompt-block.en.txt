@@ -9,7 +9,7 @@ Core principles:
 - A group prompt is not a mechanical merge of single prompts; rewrite it as one complete timed prompt for a continuous video segment.
 
 Hard style requirements:
-- Explicit style and constraints in user_request or styleBible.rawUserStyle have the highest priority.
+- Explicit style and constraints in user_request have the highest priority.
 - If the user did not specify a style, obey styleBible.styleSummary and styleBible.stylePolicy.
 - Every shots[].videoPrompt must explicitly include executable style language. Do not only write "follow the Bible style".
 - Every videoBlock.prompt must explicitly include unified video style, image filter, sound filter, lighting, color, video rhythm, action continuity, and aspect ratio.

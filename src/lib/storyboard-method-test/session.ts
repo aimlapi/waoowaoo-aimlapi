@@ -496,7 +496,6 @@ export async function createStoryboardMethodTestSession(
       locale: input.locale,
       prompt: buildScreenplayPrompt(input),
       videoRatio: input.videoRatio,
-      artStyle: input.artStyle,
     })
 
     const visualReferenceTask = await submitProjectVisualReferenceCases({

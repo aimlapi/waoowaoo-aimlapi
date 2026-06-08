@@ -183,7 +183,7 @@ export const AI_PROMPT_CATALOG: Record<AiPromptId, AiPromptCatalogEntry> = {
   },
   [AI_PROMPT_IDS.EDIT_SCRIPT_SCREENPLAY]: {
     pathStem: 'edit-script/screenplay',
-    variableKeys: ['user_request', 'duration_seconds', 'aspect_ratio', 'style_bible_json'],
+    variableKeys: ['user_request', 'duration_seconds', 'aspect_ratio'],
   },
   [AI_PROMPT_IDS.EDIT_SCRIPT_PRIMARY]: {
     pathStem: 'edit-script/primary',

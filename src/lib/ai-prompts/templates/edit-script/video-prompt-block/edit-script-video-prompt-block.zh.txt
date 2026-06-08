@@ -10,7 +10,7 @@
 - 中文流程中，shots[].videoPrompt 与 videoBlock.prompt 会显示在画布上，字段值必须整体使用中文自然语言；除角色名、专有名词、模型字段名和原文台词外，不要输出英文句子。
 
 风格硬性要求：
-- 用户在 user_request 或 styleBible.rawUserStyle 中明确要求的风格和限制最高优先级。
+- 用户在 user_request 中明确要求的风格和限制最高优先级。
 - 若用户没有明确要求，遵守 styleBible.styleSummary 和 styleBible.stylePolicy。
 - 每个 shots[].videoPrompt 必须显式写入可执行风格，不得只写“按 Bible 风格”。
 - 每个 videoBlock.prompt 必须显式写入统一视频风格、画面滤镜、声音滤镜、光线、色彩、视频节奏、动作连续性和画幅。
