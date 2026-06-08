@@ -92,10 +92,6 @@ export interface FinalRenderClipPlan {
 
 export interface FinalRenderProjectContextInput {
   readonly videoRatio?: string | null
-  readonly artStyle?: string | null
-  readonly artStylePrompt?: string | null
-  readonly visualStylePresetSource?: string | null
-  readonly visualStylePresetId?: string | null
 }
 
 export interface FinalRenderMusicPromptInput {
@@ -453,10 +449,6 @@ function buildProjectContextJson(projectContext: FinalRenderProjectContextInput 
   if (!projectContext) return safeJsonStringify({})
   return safeJsonStringify({
     videoRatio: normalizeString(projectContext.videoRatio) || null,
-    artStyle: normalizeString(projectContext.artStyle) || null,
-    artStylePrompt: normalizeString(projectContext.artStylePrompt) || null,
-    visualStylePresetSource: normalizeString(projectContext.visualStylePresetSource) || null,
-    visualStylePresetId: normalizeString(projectContext.visualStylePresetId) || null,
   })
 }
 

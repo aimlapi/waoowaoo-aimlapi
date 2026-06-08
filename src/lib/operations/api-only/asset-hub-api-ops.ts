@@ -3,7 +3,7 @@ import sharp from 'sharp'
 import { ApiError } from '@/lib/api-errors'
 import { prisma } from '@/lib/prisma'
 import { decodeImageUrlsFromDb, encodeImageUrls } from '@/lib/contracts/image-urls-contract'
-import { PRIMARY_APPEARANCE_INDEX, isArtStyleValue } from '@/lib/constants'
+import { PRIMARY_APPEARANCE_INDEX } from '@/lib/constants'
 import { buildCharacterDescriptionFields } from '@/lib/assets/description-fields'
 import { generateUniqueKey, getSignedUrl, uploadObject } from '@/lib/storage'
 import type { ProjectAgentOperationRegistryDraft } from '@/lib/operations/types'
@@ -141,8 +141,6 @@ export function createAssetHubApiOperations(): ProjectAgentOperationRegistryDraf
       outputSchema: z.unknown(),
       execute: async (ctx, input) => {
         const description = normalizeString((input as unknown as Record<string, unknown>).description)
-        const inputArtStyle = normalizeString((input as unknown as Record<string, unknown>).artStyle)
-
         const character = await prisma.globalCharacter.findFirst({
           where: { id: input.characterId, userId: ctx.userId },
           include: { appearances: true },
@@ -151,26 +149,12 @@ export function createAssetHubApiOperations(): ProjectAgentOperationRegistryDraf
 
         const maxIndex = character.appearances.reduce((max, appearance) => Math.max(max, appearance.appearanceIndex), 0)
         const nextIndex = maxIndex + 1
-        const inheritedArtStyle = (() => {
-          if (inputArtStyle) return inputArtStyle
-          const primary = character.appearances.find((item) => item.appearanceIndex === PRIMARY_APPEARANCE_INDEX)
-            || character.appearances[0]
-          return normalizeString(primary?.artStyle)
-        })()
-        if (!isArtStyleValue(inheritedArtStyle)) {
-          throw new ApiError('INVALID_PARAMS', {
-            code: 'INVALID_ART_STYLE',
-            message: 'artStyle is required and must be a supported value',
-          })
-        }
-
         const trimmed = description ? description.trim() : ''
         const appearance = await prisma.globalCharacterAppearance.create({
           data: {
             characterId: input.characterId,
             appearanceIndex: nextIndex,
             changeReason: input.changeReason,
-            artStyle: inheritedArtStyle,
             description: trimmed || null,
             descriptions: trimmed ? JSON.stringify([trimmed]) : null,
             imageUrls: encodeImageUrls([]),
@@ -228,23 +212,6 @@ export function createAssetHubApiOperations(): ProjectAgentOperationRegistryDraf
         if (body.changeReason !== undefined) {
           updateData.changeReason = body.changeReason
         }
-        if (body.artStyle !== undefined) {
-          if (typeof body.artStyle !== 'string') {
-            throw new ApiError('INVALID_PARAMS', {
-              code: 'INVALID_ART_STYLE',
-              message: 'artStyle must be a supported value',
-            })
-          }
-          const normalizedArtStyle = body.artStyle.trim()
-          if (!isArtStyleValue(normalizedArtStyle)) {
-            throw new ApiError('INVALID_PARAMS', {
-              code: 'INVALID_ART_STYLE',
-              message: 'artStyle must be a supported value',
-            })
-          }
-          updateData.artStyle = normalizedArtStyle
-        }
-
         await prisma.globalCharacterAppearance.update({
           where: { id: appearance.id },
           data: updateData,

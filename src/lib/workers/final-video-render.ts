@@ -238,10 +238,6 @@ export async function handleFinalVideoRenderTask(job: Job<TaskJobData>) {
         where: { id: job.data.projectId },
         select: {
           videoRatio: true,
-          artStyle: true,
-          artStylePrompt: true,
-          visualStylePresetSource: true,
-          visualStylePresetId: true,
         },
       }),
       prisma.projectEpisode.findFirst({

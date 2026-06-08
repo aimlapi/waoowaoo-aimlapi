@@ -4,7 +4,6 @@ import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { apiFetch } from '@/lib/api-fetch'
 import { readProjectEditScriptJsonError } from '@/lib/query/project-edit-script-error'
 import type { EditScriptVideoRatio } from '@/lib/edit-script/types'
-import type { ArtStyleValue } from '@/lib/constants'
 import type { ProjectEditScreenplay, ProjectEditScript } from '@/types/project'
 import { queryKeys } from '../keys'
 
@@ -20,14 +19,12 @@ interface CreateEditScriptInput {
   episodeId: string
   screenplayId?: string
   videoRatio?: EditScriptVideoRatio
-  artStyle?: ArtStyleValue
 }
 
 interface CreateEditScreenplayInput {
   episodeId: string
   prompt: string
   videoRatio?: EditScriptVideoRatio
-  artStyle?: ArtStyleValue
 }
 
 interface GenerateEditScriptAssetsInput {

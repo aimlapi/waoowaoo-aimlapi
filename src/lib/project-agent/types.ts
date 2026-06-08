@@ -168,7 +168,6 @@ export interface ProjectAssistantContextSnapshot {
   editScript?: ProjectContextEditScriptSnapshot | null
   config: {
     analysisModel?: string | null
-    artStyle: string
     videoRatio: string
   }
 }

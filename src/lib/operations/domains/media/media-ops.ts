@@ -10,7 +10,6 @@ import { normalizeImageGenerationCount } from '@/lib/image-generation/count'
 import { ensureProjectLocationImageSlots } from '@/lib/image-generation/location-slots'
 import { hasCharacterAppearanceOutput, hasLocationImageOutput, hasPanelImageOutput } from '@/lib/task/has-output'
 import { sanitizeImageInputsForTaskPayload } from '@/lib/media/outbound-image'
-import { resolveProjectImageStyleSignatureForTask } from '@/lib/image-generation/style'
 import type { ProjectAgentOperationRegistryDraft } from '@/lib/operations/types'
 import { defineOperation } from '@/lib/operations/define-operation'
 import { submitOperationTask } from '@/lib/operations/submit-operation-task'
@@ -102,6 +101,9 @@ export function createMediaOperations(): ProjectAgentOperationRegistryDraft {
           ? projectModelConfig.characterModel
           : projectModelConfig.locationModel
 
+        const payloadBase = toObject(input)
+        delete payloadBase.artStyle
+
         let billingPayload: Record<string, unknown>
         try {
           billingPayload = await buildImageBillingPayload({
@@ -109,7 +111,7 @@ export function createMediaOperations(): ProjectAgentOperationRegistryDraft {
             userId: ctx.userId,
             imageModel,
             basePayload: {
-              ...(toObject(input)),
+              ...payloadBase,
               count,
             },
           })
@@ -119,14 +121,6 @@ export function createMediaOperations(): ProjectAgentOperationRegistryDraft {
         }
 
         const locale = resolveRequiredTaskLocale(ctx.request, billingPayload)
-        const styleSignature = await resolveProjectImageStyleSignatureForTask({
-          projectId: ctx.projectId,
-          userId: ctx.userId,
-          locale,
-          artStyleOverride: toObject(input).artStyle,
-          invalidOverrideMessage: 'Invalid artStyle in regenerate_group payload',
-        })
-
         return await submitOperationTask({
           request: ctx.request,
           userId: ctx.userId,
@@ -142,7 +136,7 @@ export function createMediaOperations(): ProjectAgentOperationRegistryDraft {
             intent: 'regenerate',
             hasOutputAtStart,
           }),
-          dedupeKey: `regenerate_group:${targetType}:${targetId}:${count}:${styleSignature}`,
+          dedupeKey: `regenerate_group:${targetType}:${targetId}:${count}`,
           billingInfo: buildDefaultTaskBillingInfo(TASK_TYPE.REGENERATE_GROUP, billingPayload),
           decoratePayload: false,
         })
@@ -202,13 +196,16 @@ export function createMediaOperations(): ProjectAgentOperationRegistryDraft {
           : projectModelConfig.locationModel
 
         let billingPayload: Record<string, unknown>
+        const payloadBase = toObject(input)
+        delete payloadBase.artStyle
+
         try {
           billingPayload = await buildImageBillingPayload({
             projectId: ctx.projectId,
             userId: ctx.userId,
             imageModel,
             basePayload: {
-              ...(toObject(input)),
+              ...payloadBase,
               imageIndex: parsedImageIndex,
             },
           })
@@ -218,14 +215,6 @@ export function createMediaOperations(): ProjectAgentOperationRegistryDraft {
         }
 
         const locale = resolveRequiredTaskLocale(ctx.request, billingPayload)
-        const styleSignature = await resolveProjectImageStyleSignatureForTask({
-          projectId: ctx.projectId,
-          userId: ctx.userId,
-          locale,
-          artStyleOverride: toObject(input).artStyle,
-          invalidOverrideMessage: 'Invalid artStyle in regenerate_single_image payload',
-        })
-
         return await submitOperationTask({
           request: ctx.request,
           userId: ctx.userId,
@@ -241,7 +230,7 @@ export function createMediaOperations(): ProjectAgentOperationRegistryDraft {
             intent: 'regenerate',
             hasOutputAtStart,
           }),
-          dedupeKey: `${taskType}:${targetId}:single:${parsedImageIndex}:${styleSignature}`,
+          dedupeKey: `${taskType}:${targetId}:single:${parsedImageIndex}`,
           billingInfo: buildDefaultTaskBillingInfo(taskType, billingPayload),
           decoratePayload: false,
         })

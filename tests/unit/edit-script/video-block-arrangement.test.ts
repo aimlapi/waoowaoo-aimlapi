@@ -145,7 +145,6 @@ describe('edit script video block arrangement', () => {
     prismaMock.task.findMany.mockResolvedValue([])
     prismaMock.project.findFirst.mockResolvedValue({
       id: 'project-1',
-      artStyle: 'cinematic',
       videoRatio: '16:9',
     })
     aiExecMock.executeAiTextStep.mockResolvedValue({

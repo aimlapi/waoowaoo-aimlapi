@@ -24,7 +24,6 @@ type CreateAssetHubCharacterVariables = {
   name: string
   description: string
   folderId?: string | null
-  artStyle: string
   generateFromReference?: boolean
   referenceImageUrls?: string[]
   customDescription?: string
@@ -104,7 +103,6 @@ export function useCreateAssetHubLocation() {
       name: string
       summary: string
       folderId: string | null
-      artStyle: string
       count?: number
       availableSlots?: LocationAvailableSlot[]
     }) => {

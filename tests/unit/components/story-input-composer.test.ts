@@ -9,7 +9,6 @@ vi.mock('@/components/selectors/RatioStyleSelectors', () => ({
     getUsage: _getUsage,
     ...props
   }: Record<string, unknown> & { getUsage?: unknown }) => createElement('div', props, 'RatioSelector'),
-  StyleSelector: (props: Record<string, unknown>) => createElement('div', props, 'StyleSelector'),
 }))
 
 describe('StoryInputComposer', () => {
@@ -25,9 +24,6 @@ describe('StoryInputComposer', () => {
         videoRatio: '9:16',
         onVideoRatioChange: () => undefined,
         ratioOptions: [{ value: '9:16', label: '9:16' }],
-        artStyle: 'realistic',
-        onArtStyleChange: () => undefined,
-        styleOptions: [{ value: 'realistic', label: '真人风格' }],
         topRight: createElement('span', null, '字数：4'),
         footer: createElement('p', null, '当前配置'),
         secondaryActions: createElement('button', { type: 'button' }, 'AI 帮我写'),
@@ -37,7 +33,7 @@ describe('StoryInputComposer', () => {
 
     expect(html).toContain('rows="8"')
     expect(html).toContain('RatioSelector')
-    expect(html).toContain('StyleSelector')
+    expect(html).not.toContain('StyleSelector')
     expect(html).toContain('字数：4')
     expect(html).toContain('当前配置')
     expect(html).toContain('AI 帮我写')

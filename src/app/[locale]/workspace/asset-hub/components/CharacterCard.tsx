@@ -128,7 +128,6 @@ export function CharacterCard({ character, onImageClick, onImageEdit, onVoiceDes
                 characterId: character.id,
                 appearanceId: appearance.id,
                 appearanceIndex: appearance.appearanceIndex,
-                artStyle: appearance.artStyle || undefined,
                 count,
             },
             { onError: (error) => alert(error.message || t('generateFailed')) }

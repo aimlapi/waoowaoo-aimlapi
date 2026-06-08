@@ -3,7 +3,7 @@ import { ApiError } from '@/lib/api-errors'
 import { prisma } from '@/lib/prisma'
 import { attachMediaFieldsToGlobalCharacter } from '@/lib/media/attach'
 import { resolveMediaRefFromLegacyValue } from '@/lib/media/service'
-import { PRIMARY_APPEARANCE_INDEX, isArtStyleValue } from '@/lib/constants'
+import { PRIMARY_APPEARANCE_INDEX } from '@/lib/constants'
 import { encodeImageUrls } from '@/lib/contracts/image-urls-contract'
 import { resolveTaskLocale } from '@/lib/task/resolve-locale'
 import { normalizeImageGenerationCount } from '@/lib/image-generation/count'
@@ -96,7 +96,6 @@ export function createAssetHubCharacterLibraryOperations(): ProjectAgentOperatio
       },
       inputSchema: z.object({
         name: z.string().min(1),
-        artStyle: z.string().min(1),
       }).passthrough(),
       outputSchema: z.unknown(),
       execute: async (ctx, input) => {
@@ -106,14 +105,6 @@ export function createAssetHubCharacterLibraryOperations(): ProjectAgentOperatio
 
         const name = normalizeString(body.name)
         if (!name) throw new ApiError('INVALID_PARAMS')
-
-        const normalizedArtStyle = normalizeString(body.artStyle)
-        if (!isArtStyleValue(normalizedArtStyle)) {
-          throw new ApiError('INVALID_PARAMS', {
-            code: 'INVALID_ART_STYLE',
-            message: 'artStyle is required and must be a supported value',
-          })
-        }
 
         const folderId = normalizeString(body.folderId) || null
         if (folderId) {
@@ -156,7 +147,6 @@ export function createAssetHubCharacterLibraryOperations(): ProjectAgentOperatio
             characterId: character.id,
             appearanceIndex: PRIMARY_APPEARANCE_INDEX,
             changeReason: '初始形象',
-            artStyle: normalizedArtStyle,
             description: descriptionText,
             descriptions: JSON.stringify([descriptionText]),
             imageUrl: initialImageUrl,
@@ -179,7 +169,6 @@ export function createAssetHubCharacterLibraryOperations(): ProjectAgentOperatio
             appearanceId: appearance.id,
             count,
             isBackgroundJob: true,
-            artStyle: normalizedArtStyle,
             ...(customDescription ? { customDescription } : {}),
             ...(taskLocale ? { locale: taskLocale } : {}),
             meta: {

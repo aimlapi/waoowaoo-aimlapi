@@ -14,7 +14,7 @@ import { resolveMediaRefFromLegacyValue, resolveStorageKeyFromMediaValue, resolv
 import { attachMediaFieldsToProject } from '@/lib/media/attach'
 import { encodeImageUrls, decodeImageUrlsFromDb } from '@/lib/contracts/image-urls-contract'
 import { deleteObject, uploadObject, generateUniqueKey, getSignedUrl } from '@/lib/storage'
-import { PRIMARY_APPEARANCE_INDEX, isArtStyleValue, type ArtStyleValue, removeLocationPromptSuffix } from '@/lib/constants'
+import { PRIMARY_APPEARANCE_INDEX, removeLocationPromptSuffix } from '@/lib/constants'
 import { normalizeImageGenerationCount } from '@/lib/image-generation/count'
 import {
   normalizeLocationAvailableSlots,
@@ -184,7 +184,6 @@ export function createGuiOperations(): ProjectAgentOperationRegistryDraft {
         generateFromReference: z.boolean().optional(),
         customDescription: z.string().optional(),
         count: z.number().int().positive().max(6).optional(),
-        artStyle: z.string().optional(),
         meta: z.record(z.unknown()).optional(),
       }).passthrough(),
       outputSchema: z.unknown(),
@@ -202,17 +201,6 @@ export function createGuiOperations(): ProjectAgentOperationRegistryDraft {
           ? normalizeImageGenerationCount('reference-to-character', input.count)
           : normalizeImageGenerationCount('character', input.count)
 
-        let artStyle: ArtStyleValue | undefined
-        if (Object.prototype.hasOwnProperty.call(input, 'artStyle')) {
-          const parsedArtStyle = normalizeString(input.artStyle)
-          if (!isArtStyleValue(parsedArtStyle)) {
-            throw new ApiError('INVALID_PARAMS', {
-              code: 'INVALID_ART_STYLE',
-              message: 'artStyle must be a supported value',
-            })
-          }
-          artStyle = parsedArtStyle
-        }
         const referenceImageUrls = Array.isArray(input.referenceImageUrls)
           ? input.referenceImageUrls.map((item: unknown) => normalizeString(item)).filter(Boolean)
           : []
@@ -267,7 +255,6 @@ export function createGuiOperations(): ProjectAgentOperationRegistryDraft {
               appearanceId: appearance.id,
               count,
               isBackgroundJob: true,
-              ...(artStyle ? { artStyle } : {}),
               customDescription: customDescription || undefined,
               locale: taskLocale || undefined,
               meta: {
@@ -713,7 +700,6 @@ export function createGuiOperations(): ProjectAgentOperationRegistryDraft {
 	        summary: z.string().optional(),
         availableSlots: z.unknown().optional(),
         count: z.number().int().positive().max(6).optional(),
-        artStyle: z.string().optional(),
       }).passthrough(),
       outputSchema: z.unknown(),
       execute: async (ctx, input) => {
@@ -724,16 +710,6 @@ export function createGuiOperations(): ProjectAgentOperationRegistryDraft {
         const count = Object.prototype.hasOwnProperty.call(input, 'count')
           ? normalizeImageGenerationCount('location', (input as Record<string, unknown>).count)
           : 1
-
-        if (Object.prototype.hasOwnProperty.call(input, 'artStyle')) {
-          const parsedArtStyle = normalizeString(input.artStyle)
-          if (parsedArtStyle && !isArtStyleValue(parsedArtStyle)) {
-            throw new ApiError('INVALID_PARAMS', {
-              code: 'INVALID_ART_STYLE',
-              message: 'artStyle must be a supported value',
-            })
-          }
-        }
 
         if (!name || !description) {
           throw new ApiError('INVALID_PARAMS')

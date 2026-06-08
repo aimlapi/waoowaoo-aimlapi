@@ -1,6 +1,5 @@
 import { type Job } from 'bullmq'
 import { prisma } from '@/lib/prisma'
-import { resolveProjectVisualStylePreset } from '@/lib/style-preset'
 import { createScopedLogger } from '@/lib/logging/core'
 import { type TaskJobData } from '@/lib/task/types'
 import { reportTaskProgress } from '../shared'
@@ -169,23 +168,16 @@ export async function handlePanelImageTask(job: Job<TaskJobData>) {
       referenceImagesMap,
       panelCharacters: panel.characters,
       panelLocation: panel.location,
-      artStyle: modelConfig.artStyle,
+      selectedVisualReferenceStyleId: selectedVisualReferenceStyle?.id ?? null,
     },
   })
 
-  const projectArtStyle = selectedVisualReferenceStyle
-    ? null
-    : await resolveProjectVisualStylePreset({
-      projectId: job.data.projectId,
-      userId: job.data.userId,
-      locale: job.data.locale,
-    })
-  const artStyle = selectedVisualReferenceStyle
+  const selectedStyleText = selectedVisualReferenceStyle
     ? renderSelectedVisualReferenceStylePromptBlock({
       style: selectedVisualReferenceStyle,
       locale: job.data.locale,
     })
-    : projectArtStyle?.prompt ?? ''
+    : ''
   if (!projectData.videoRatio) throw new Error('Project videoRatio not configured')
   const aspectRatio = projectData.videoRatio
   const storyboardPanels = await prisma.projectPanel.findMany({
@@ -233,14 +225,14 @@ export async function handlePanelImageTask(job: Job<TaskJobData>) {
   const visualDirectorPrompt = buildPanelVisualDirectorPrompt({
     promptContext,
     aspectRatio,
-    styleText: artStyle || '与参考图风格一致',
+    styleText: selectedStyleText || '与参考图风格一致',
     sourceText: panel.srtSegment || panel.description || '',
   })
   const compactReferenceContext = buildPanelCompactReferenceContext(promptContext)
   const promptBase = buildPanelPrompt({
     locale: job.data.locale,
     aspectRatio,
-    styleText: artStyle || '与参考图风格一致',
+    styleText: selectedStyleText || '与参考图风格一致',
     visualDirectorPrompt,
     compactReferenceContext,
   })

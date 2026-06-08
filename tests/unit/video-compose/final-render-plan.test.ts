@@ -162,10 +162,6 @@ describe('final render plan', () => {
       editScript,
       projectContext: {
         videoRatio: '9:16',
-        artStyle: 'neo-noir',
-        artStylePrompt: 'high contrast neon city with rain reflections',
-        visualStylePresetSource: 'system',
-        visualStylePresetId: 'neo-noir',
       },
       clips,
       totalDurationSeconds: 9,
@@ -176,7 +172,8 @@ describe('final render plan', () => {
     expect(prompt).toContain('Actual rendered media timeline JSON')
     expect(prompt).toContain('"kind": "group"')
     expect(prompt).toContain('Full-screen continuous rooftop chase')
-    expect(prompt).toContain('high contrast neon city with rain reflections')
+    expect(prompt).not.toContain('artStyle')
+    expect(prompt).not.toContain('visualStylePreset')
     expect(prompt).toContain('Instrumentation')
     expect(prompt).toContain('Tempo and rhythm')
     expect(prompt).toContain('quiet suspense, sparse piano, low synth pulse')

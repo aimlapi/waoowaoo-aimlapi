@@ -1,7 +1,6 @@
 import { type Job } from 'bullmq'
 import { prisma } from '@/lib/prisma'
 import { LOCATION_IMAGE_RATIO, PROP_IMAGE_RATIO, addLocationPromptSuffix, addPropPromptSuffix } from '@/lib/constants'
-import { resolveProjectImageStyleForTask } from '@/lib/image-generation/style'
 import { normalizeImageGenerationCount } from '@/lib/image-generation/count'
 import { type TaskJobData } from '@/lib/task/types'
 import { reportTaskProgress } from '../shared'
@@ -22,7 +21,6 @@ import {
 } from '@/lib/edit-script/style-bible-prompt'
 import {
   appendSelectedVisualReferenceStylePromptBlock,
-  renderSelectedVisualReferenceStylePromptBlock,
   resolveSelectedVisualReferenceStyle,
 } from '@/lib/visual-reference-cases/selected-style'
 import { normalizeOptionalReferenceImagesForGeneration } from '@/lib/media/outbound-image'
@@ -75,21 +73,6 @@ export async function handleLocationImageTask(job: Job<TaskJobData>) {
     projectId,
     episodeId: job.data.episodeId,
   })
-  const projectArtStyle = selectedVisualReferenceStyle
-    ? null
-    : await resolveProjectImageStyleForTask({
-      projectId,
-      userId,
-      locale: job.data.locale,
-      artStyleOverride: payload.artStyle,
-      invalidOverrideMessage: 'Invalid artStyle in IMAGE_LOCATION payload',
-    })
-  const artStyle = selectedVisualReferenceStyle
-    ? renderSelectedVisualReferenceStylePromptBlock({
-      style: selectedVisualReferenceStyle,
-      locale: job.data.locale,
-    })
-    : projectArtStyle?.prompt ?? ''
   const styleReferenceImages = await normalizeOptionalReferenceImagesForGeneration(
     selectedVisualReferenceStyle?.imageUrl ? [selectedVisualReferenceStyle.imageUrl] : [],
     {
@@ -160,7 +143,7 @@ export async function handleLocationImageTask(job: Job<TaskJobData>) {
     const promptWithSuffix = assetType === 'prop'
       ? addPropPromptSuffix(promptCore)
       : addLocationPromptSuffix(promptCore)
-    const promptBase = artStyle ? `${promptWithSuffix}，${artStyle}` : promptWithSuffix
+    const promptBase = promptWithSuffix
     const promptWithStyleBible = appendStyleBiblePromptBlock({
       prompt: promptBase,
       styleBible,

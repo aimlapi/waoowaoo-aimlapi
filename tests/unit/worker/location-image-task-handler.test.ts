@@ -1,12 +1,12 @@
 import type { Job } from 'bullmq'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
-import { LOCATION_IMAGE_RATIO, PROP_IMAGE_RATIO, getArtStylePrompt } from '@/lib/constants'
+import { LOCATION_IMAGE_RATIO, PROP_IMAGE_RATIO } from '@/lib/constants'
 import { TASK_TYPE, type TaskJobData } from '@/lib/task/types'
 import { buildZenStyleBibleFixture } from '../../fixtures/edit-script-style-bible'
 
 const utilsMock = vi.hoisted(() => ({
   assertTaskActive: vi.fn(async () => undefined),
-  getProjectModels: vi.fn(async () => ({ locationModel: 'location-model-1', analysisModel: 'analysis-model-1', artStyle: 'japanese-anime' })),
+  getProjectModels: vi.fn(async () => ({ locationModel: 'location-model-1', analysisModel: 'analysis-model-1' })),
 }))
 
 const prismaMock = vi.hoisted(() => ({
@@ -103,7 +103,6 @@ describe('worker location-image-task-handler behavior', () => {
     prismaMock.project.findUnique.mockResolvedValue({
       visualStylePresetSource: 'system',
       visualStylePresetId: 'japanese-anime',
-      artStyle: 'japanese-anime',
     })
     prismaMock.projectVisualReferenceCase.findFirst.mockResolvedValue(null)
     outboundMock.normalizeOptionalReferenceImagesForGeneration.mockResolvedValue([])
@@ -139,18 +138,17 @@ describe('worker location-image-task-handler behavior', () => {
   })
 
   it('locationModel missing -> explicit error', async () => {
-    utilsMock.getProjectModels.mockResolvedValueOnce({ locationModel: '', analysisModel: 'analysis-model-1', artStyle: 'japanese-anime' })
+    utilsMock.getProjectModels.mockResolvedValueOnce({ locationModel: '', analysisModel: 'analysis-model-1' })
     await expect(handleLocationImageTask(buildJob({}))).rejects.toThrow('Location model not configured')
   })
 
   it('analysis model missing for location -> explicit spatial profile error', async () => {
-    utilsMock.getProjectModels.mockResolvedValueOnce({ locationModel: 'location-model-1', analysisModel: '', artStyle: 'japanese-anime' })
+    utilsMock.getProjectModels.mockResolvedValueOnce({ locationModel: 'location-model-1', analysisModel: '' })
     await expect(handleLocationImageTask(buildJob({ imageIndex: 0 }))).rejects.toThrow('LOCATION_SPATIAL_PROFILE_MODEL_REQUIRED')
   })
 
   it('success path -> generates and persists concrete location image url', async () => {
     const result = await handleLocationImageTask(buildJob({ imageIndex: 0 }))
-    const animeStylePrompt = getArtStylePrompt('japanese-anime', 'zh')
 
     expect(result).toEqual({
       updated: 1,
@@ -184,7 +182,7 @@ describe('worker location-image-task-handler behavior', () => {
     if (!generationCall) throw new Error('expected generateCleanImageToStorage call')
     const generationInput = generationCall[0]
     expect(generationInput.prompt).not.toContain('可站位置：')
-    expect(generationInput.prompt.split(animeStylePrompt).length - 1).toBe(1)
+    expect(generationInput.prompt).not.toContain('现代日系动漫风格')
 
     expect(prismaMock.locationImage.update).toHaveBeenCalledWith({
       where: { id: 'location-image-1' },
@@ -203,12 +201,12 @@ describe('worker location-image-task-handler behavior', () => {
     })
   })
 
-  it('payload artStyle overrides project artStyle in prompt', async () => {
+  it('ignores legacy payload artStyle in prompt', async () => {
     await handleLocationImageTask(buildJob({ imageIndex: 0, artStyle: 'realistic' }))
 
     expect(sharedMock.generateCleanImageToStorage).toHaveBeenCalledWith(
       expect.objectContaining({
-        prompt: expect.stringContaining(getArtStylePrompt('realistic', 'zh')),
+        prompt: expect.not.stringContaining('真实电影级画面质感'),
       }),
     )
   })
@@ -234,7 +232,7 @@ describe('worker location-image-task-handler behavior', () => {
     expect(generationInput.prompt).toContain('选中的视觉风格案例（最高优先级）：')
     expect(generationInput.prompt).toContain('雨夜写实')
     expect(generationInput.prompt).toContain('禁止把写实风格转换成动漫、漫画或插画风')
-    expect(generationInput.prompt).not.toContain(getArtStylePrompt('japanese-anime', 'zh'))
+    expect(generationInput.prompt).not.toContain('现代日系动漫风格')
     expect(generationInput.options).toEqual({
       aspectRatio: LOCATION_IMAGE_RATIO,
       referenceImages: ['normalized-style-ref'],
@@ -265,10 +263,10 @@ describe('worker location-image-task-handler behavior', () => {
     )
   })
 
-  it('invalid payload artStyle -> explicit error', async () => {
-    await expect(handleLocationImageTask(buildJob({ imageIndex: 0, artStyle: 'anime' }))).rejects.toThrow(
-      'Invalid artStyle in IMAGE_LOCATION payload',
-    )
+  it('ignores invalid legacy payload artStyle', async () => {
+    await expect(handleLocationImageTask(buildJob({ imageIndex: 0, artStyle: 'anime' }))).resolves.toEqual(expect.objectContaining({
+      updated: 1,
+    }))
   })
 
   it('honors requested count when location already has more slots', async () => {

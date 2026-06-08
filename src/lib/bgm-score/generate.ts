@@ -231,10 +231,6 @@ export async function handleBgmScoreGenerateTask(job: Job<TaskJobData>) {
         select: {
           analysisModel: true,
           videoRatio: true,
-          artStyle: true,
-          artStylePrompt: true,
-          visualStylePresetSource: true,
-          visualStylePresetId: true,
         },
       }),
       prisma.projectEpisode.findFirst({
@@ -297,10 +293,6 @@ export async function handleBgmScoreGenerateTask(job: Job<TaskJobData>) {
           editScript,
           projectContext: {
             videoRatio: project.videoRatio,
-            artStyle: project.artStyle,
-            artStylePrompt: project.artStylePrompt,
-            visualStylePresetSource: project.visualStylePresetSource,
-            visualStylePresetId: project.visualStylePresetId,
           },
           clips,
           totalDurationSeconds: durationSeconds,

@@ -136,7 +136,6 @@ export function createAssetImageOperations(): ProjectAgentOperationRegistryDraft
         appearanceIndex: z.number().int().min(0).max(20).optional(),
         count: z.number().int().positive().max(6).optional(),
         imageIndex: z.number().int().min(0).max(20).optional(),
-        artStyle: z.string().optional(),
       }).refine((value) => Boolean(value.characterId || value.characterName), {
         message: 'characterId or characterName is required',
         path: ['characterId'],
@@ -197,7 +196,6 @@ export function createAssetImageOperations(): ProjectAgentOperationRegistryDraft
           ...(typeof input.appearanceIndex === 'number' ? { appearanceIndex: input.appearanceIndex } : {}),
           ...(typeof input.count === 'number' ? { count: input.count } : {}),
           ...(typeof input.imageIndex === 'number' ? { imageIndex: input.imageIndex } : {}),
-          ...(normalizeString(input.artStyle) ? { artStyle: normalizeString(input.artStyle) } : {}),
         }
 
         const result = await submitAssetGenerateTask({
@@ -275,7 +273,6 @@ export function createAssetImageOperations(): ProjectAgentOperationRegistryDraft
         locationName: z.string().min(1).optional(),
         count: z.number().int().positive().max(6).optional(),
         imageIndex: z.number().int().min(0).max(50).optional(),
-        artStyle: z.string().optional(),
       }).refine((value) => Boolean(value.locationId || value.locationName), {
         message: 'locationId or locationName is required',
         path: ['locationId'],
@@ -323,7 +320,6 @@ export function createAssetImageOperations(): ProjectAgentOperationRegistryDraft
           },
           ...(typeof input.count === 'number' ? { count: input.count } : {}),
           ...(typeof input.imageIndex === 'number' ? { imageIndex: input.imageIndex } : {}),
-          ...(normalizeString(input.artStyle) ? { artStyle: normalizeString(input.artStyle) } : {}),
         }
 
         const result = await submitAssetGenerateTask({

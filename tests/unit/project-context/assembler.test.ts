@@ -42,7 +42,6 @@ describe('assembleProjectContext', () => {
       id: 'project-1',
       name: 'p',
       videoRatio: '16:9',
-      artStyle: 'x',
       analysisModel: null,
     })
     prismaMock.projectEpisode.findUnique.mockResolvedValueOnce({

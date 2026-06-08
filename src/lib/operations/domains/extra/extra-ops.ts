@@ -13,7 +13,6 @@ import type { ProjectAgentOperationRegistryDraft } from '@/lib/operations/types'
 import { defineOperation } from '@/lib/operations/define-operation'
 import { submitOperationTask } from '@/lib/operations/submit-operation-task'
 import { resolveRequiredTaskLocale } from '@/lib/task/resolve-locale'
-import { resolveProjectImageStyleSignatureForTask } from '@/lib/image-generation/style'
 import { analyzeAndPersistProjectLocationImageSpatialProfile } from '@/lib/location-spatial-profile/service'
 import { submitCharacterStyleTestTask } from '@/lib/character-style-test/submit'
 import { normalizeCharacterStyleTestPromptMode } from '@/lib/character-style-test/prompt'
@@ -311,6 +310,7 @@ export function createExtraOperations(): ProjectAgentOperationRegistryDraft {
         }
         const count = normalizeImageGenerationCount('reference-to-character', body.count)
         body.count = count
+        delete body.artStyle
 
         const isBackgroundJob = body.isBackgroundJob === true || body.isBackgroundJob === 1 || body.isBackgroundJob === '1'
         const characterId = typeof body.characterId === 'string' ? body.characterId : ''
@@ -322,14 +322,6 @@ export function createExtraOperations(): ProjectAgentOperationRegistryDraft {
         const targetType = appearanceId ? 'CharacterAppearance' : 'Project'
         const targetId = appearanceId || characterId || ctx.projectId
         const locale = resolveRequiredTaskLocale(ctx.request, body)
-        const styleSignature = await resolveProjectImageStyleSignatureForTask({
-          projectId: ctx.projectId,
-          userId: ctx.userId,
-          locale,
-          artStyleOverride: body.artStyle,
-          invalidOverrideMessage: 'Invalid artStyle in reference_to_character payload',
-        })
-
         return await submitOperationTask({
           request: ctx.request,
           userId: ctx.userId,
@@ -341,7 +333,7 @@ export function createExtraOperations(): ProjectAgentOperationRegistryDraft {
           source: ctx.source,
           confirmed: body.confirmed === true,
           payload: body,
-          dedupeKey: `reference_to_character:${targetId}:${count}:${styleSignature}`,
+          dedupeKey: `reference_to_character:${targetId}:${count}`,
         })
       },
     }),

@@ -87,7 +87,6 @@ describe('submitStoryboardPanelTask', () => {
       audioModel: null,
       musicModel: null,
       videoRatio: null,
-      artStyle: null,
       capabilityDefaults: {},
       capabilityOverrides: {},
     }

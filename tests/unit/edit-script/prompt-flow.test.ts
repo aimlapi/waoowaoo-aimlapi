@@ -44,7 +44,7 @@ describe('edit script block-first prompt flow', () => {
         user_request: '生成一条禅修短片',
         duration_seconds: '8',
         aspect_ratio: '9:16',
-        project_style_json: JSON.stringify({ artStyle: 'realistic', aspectRatio: '9:16' }),
+        project_style_json: JSON.stringify({ explicitStyle: 'realistic', aspectRatio: '9:16' }),
       },
     })
 
@@ -92,7 +92,7 @@ describe('edit script block-first prompt flow', () => {
 
     expect(primaryPrompt).toContain('统一剪辑结构表 Agent')
     expect(primaryPrompt).toContain('Style Bible 是唯一风格来源')
-    expect(primaryPrompt).toContain('不要从项目 artStyle 或其他风格上下文另起一套风格')
+    expect(primaryPrompt).toContain('不要从旧项目风格配置或其他风格上下文另起一套风格')
     expect(primaryPrompt).toContain('videoBlocks 是视频生成主结构')
     expect(primaryPrompt).toContain('本阶段只生成结构、动作、摄影、声音和片段编排')
     expect(primaryPrompt).toContain('shots[].videoPrompt 和 videoBlocks[].prompt 会在资产提取与资产描述完成后由下一阶段生成')

@@ -1,6 +1,5 @@
 import { type Job } from 'bullmq'
 import { prisma } from '@/lib/prisma'
-import { resolveProjectVisualStylePreset } from '@/lib/style-preset'
 import {
   appendSelectedVisualReferenceStylePromptBlock,
   renderSelectedVisualReferenceStylePromptBlock,
@@ -290,19 +289,12 @@ export async function handlePanelVariantTask(job: Job<TaskJobData>) {
     context: { taskType: String(job.data.type), scope: 'panel-variant.refs' },
   })
 
-  const projectArtStyle = selectedVisualReferenceStyle
-    ? null
-    : await resolveProjectVisualStylePreset({
-      projectId: job.data.projectId,
-      userId: job.data.userId,
-      locale: job.data.locale,
-    })
-  const artStyle = selectedVisualReferenceStyle
+  const selectedStyleText = selectedVisualReferenceStyle
     ? renderSelectedVisualReferenceStylePromptBlock({
       style: selectedVisualReferenceStyle,
       locale: job.data.locale,
     })
-    : projectArtStyle?.prompt ?? ''
+    : ''
   const charactersInfo = buildCharactersInfo(newPanel, projectData)
   const characterAssetsDesc = includeCharacterAssets
     ? buildCharacterAssetsDescription(newPanel, projectData)
@@ -330,7 +322,7 @@ export async function handlePanelVariantTask(job: Job<TaskJobData>) {
     }),
     referenceImages: formatReferenceImagesMapForPrompt(referenceImagesMap, job.data.locale),
     aspectRatio,
-    style: artStyle,
+    style: selectedStyleText,
   })
   const prompt = appendSelectedVisualReferenceStylePromptBlock({
     prompt: promptBase,

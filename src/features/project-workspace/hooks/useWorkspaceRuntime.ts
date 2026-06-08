@@ -13,9 +13,6 @@ interface UseWorkspaceRuntimeParams {
   isConfirmingAssets: boolean
   isStartingPlan: boolean
   videoRatio: string | undefined
-  artStyle: string | undefined
-  visualStylePresetSource: string | undefined
-  visualStylePresetId: string | undefined
   videoModel: string | undefined
   singleShotVideoModel: string | undefined
   sequenceVideoModel: string | undefined
@@ -80,9 +77,6 @@ export function useWorkspaceRuntime({
   isConfirmingAssets,
   isStartingPlan,
   videoRatio,
-  artStyle,
-  visualStylePresetSource,
-  visualStylePresetId,
   videoModel,
   singleShotVideoModel,
   sequenceVideoModel,
@@ -127,9 +121,6 @@ export function useWorkspaceRuntime({
     isConfirmingAssets,
     isStartingPlan,
     videoRatio,
-    artStyle,
-    visualStylePresetSource,
-    visualStylePresetId,
     videoModel,
     singleShotVideoModel,
     sequenceVideoModel,
@@ -137,8 +128,6 @@ export function useWorkspaceRuntime({
     userVideoModels: resolvedUserVideoModels,
     onNovelTextChange: (value) => handleUpdateEpisode('novelText', value),
     onVideoRatioChange: (value) => handleUpdateConfig('videoRatio', value),
-    onArtStyleChange: (value) => handleUpdateConfig('artStyle', value),
-    onVisualStylePresetChange: (value) => handleUpdateConfig('visualStylePreset', value),
     onRequestAssistantPlan,
     onGenerateEditScreenplay: handleGenerateEditScreenplay,
     onGenerateEditScript: handleGenerateEditScript,
@@ -170,9 +159,6 @@ export function useWorkspaceRuntime({
     onUpdatePanelVideoModel: handleUpdatePanelVideoModel,
     onOpenAssetLibraryForCharacter: (characterId, refreshAssets) => openAssetLibrary(characterId, refreshAssets),
   }), [
-    artStyle,
-    visualStylePresetSource,
-    visualStylePresetId,
     assetsLoading,
     handleGenerateAllVideos,
     handleGenerateBgmScore,

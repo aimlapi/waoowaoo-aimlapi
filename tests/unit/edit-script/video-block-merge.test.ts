@@ -158,7 +158,6 @@ describe('edit script video block merge', () => {
     prismaMock.projectVideoGroup.updateMany.mockResolvedValue({ count: 0 })
     prismaMock.project.findFirst.mockResolvedValue({
       id: 'project-1',
-      artStyle: 'cinematic',
       videoRatio: '16:9',
     })
     prismaMock.projectCharacter.findFirst.mockResolvedValue(null)

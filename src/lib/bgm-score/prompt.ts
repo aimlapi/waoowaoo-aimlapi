@@ -45,10 +45,6 @@ function buildProjectContextPayload(projectContext: FinalRenderProjectContextInp
   if (!projectContext) return {}
   return {
     videoRatio: normalizeString(projectContext.videoRatio) || null,
-    artStyle: normalizeString(projectContext.artStyle) || null,
-    artStylePrompt: normalizeString(projectContext.artStylePrompt) || null,
-    visualStylePresetSource: normalizeString(projectContext.visualStylePresetSource) || null,
-    visualStylePresetId: normalizeString(projectContext.visualStylePresetId) || null,
   }
 }
 

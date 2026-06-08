@@ -1,7 +1,6 @@
 import { type Job } from 'bullmq'
 import { prisma } from '@/lib/prisma'
 import { CHARACTER_ASSET_IMAGE_RATIO, addCharacterPromptSuffix, PRIMARY_APPEARANCE_INDEX } from '@/lib/constants'
-import { resolveProjectImageStyleForTask } from '@/lib/image-generation/style'
 import { type TaskJobData } from '@/lib/task/types'
 import { encodeImageUrls } from '@/lib/contracts/image-urls-contract'
 import { normalizeImageGenerationCount } from '@/lib/image-generation/count'
@@ -18,7 +17,6 @@ import {
 } from '@/lib/edit-script/style-bible-prompt'
 import {
   appendSelectedVisualReferenceStylePromptBlock,
-  renderSelectedVisualReferenceStylePromptBlock,
   resolveSelectedVisualReferenceStyle,
 } from '@/lib/visual-reference-cases/selected-style'
 import {
@@ -148,21 +146,6 @@ export async function handleCharacterImageTask(job: Job<TaskJobData>) {
     projectId,
     episodeId: job.data.episodeId,
   })
-  const projectArtStyle = selectedVisualReferenceStyle
-    ? null
-    : await resolveProjectImageStyleForTask({
-      projectId,
-      userId,
-      locale: job.data.locale,
-      artStyleOverride: payload.artStyle,
-      invalidOverrideMessage: 'Invalid artStyle in IMAGE_CHARACTER payload',
-    })
-  const artStyle = selectedVisualReferenceStyle
-    ? renderSelectedVisualReferenceStylePromptBlock({
-      style: selectedVisualReferenceStyle,
-      locale: job.data.locale,
-    })
-    : projectArtStyle?.prompt ?? ''
   const styleBible = await resolveEditScriptStyleBibleForTask({
     projectId,
     episodeId: job.data.episodeId,
@@ -215,7 +198,7 @@ export async function handleCharacterImageTask(job: Job<TaskJobData>) {
     const raw = baseDescriptions[index] || baseDescriptions[0]
     const metadata = candidateMetadata[index] ?? candidateMetadata[0] ?? null
     const rawWithCastingStills = `${raw}${buildCastingStillPromptBlock(metadata, job.data.locale)}`
-    const promptBase = artStyle ? `${addCharacterPromptSuffix(rawWithCastingStills)}，${artStyle}` : addCharacterPromptSuffix(rawWithCastingStills)
+    const promptBase = addCharacterPromptSuffix(rawWithCastingStills)
     const promptWithStyleBible = appendStyleBiblePromptBlock({
       prompt: promptBase,
       styleBible,

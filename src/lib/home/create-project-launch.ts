@@ -1,5 +1,4 @@
 import { readApiErrorMessage } from '@/lib/api/read-error-message'
-import type { StylePresetRef } from '@/lib/style-preset/types'
 
 export const HOME_ASSISTANT_AUTOSTART_QUERY = 'assistantAutoStart' as const
 export const HOME_ASSISTANT_AUTOSTART_VALUE = 'home-input' as const
@@ -35,8 +34,6 @@ export interface CreateHomeProjectLaunchParams {
   projectName: string
   storyText: string
   videoRatio: string
-  artStyle?: string
-  visualStylePreset?: StylePresetRef
   episodeName: string
 }
 
@@ -127,8 +124,6 @@ export async function createHomeProjectLaunch({
   projectName,
   storyText,
   videoRatio,
-  artStyle,
-  visualStylePreset,
   episodeName,
 }: CreateHomeProjectLaunchParams): Promise<CreateHomeProjectLaunchResult> {
   if (!storyText.trim()) {
@@ -154,8 +149,6 @@ export async function createHomeProjectLaunch({
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({
       videoRatio,
-      ...(artStyle ? { artStyle } : {}),
-      ...(visualStylePreset ? { visualStylePreset } : {}),
     }),
   })
 

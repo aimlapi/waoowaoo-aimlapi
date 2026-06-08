@@ -2,7 +2,6 @@ import { NextRequest, NextResponse } from 'next/server'
 import { requireProjectAuthLight, isErrorResponse } from '@/lib/api-auth'
 import { apiHandler, ApiError } from '@/lib/api-errors'
 import { resolveTaskLocale } from '@/lib/task/resolve-locale'
-import { isArtStyleValue, type ArtStyleValue } from '@/lib/constants'
 import { normalizeImageGenerationCount } from '@/lib/image-generation/count'
 import { executeProjectAgentOperationFromApi } from '@/lib/adapters/api/execute-project-agent-operation'
 
@@ -31,18 +30,6 @@ export const POST = apiHandler(async (
   const appearanceId = normalizeString(body.appearanceId)
   const count = normalizeImageGenerationCount('character', body.count)
 
-  let artStyle: ArtStyleValue | undefined
-  if (Object.prototype.hasOwnProperty.call(body, 'artStyle')) {
-    const parsedArtStyle = normalizeString(body.artStyle)
-    if (!isArtStyleValue(parsedArtStyle)) {
-      throw new ApiError('INVALID_PARAMS', {
-        code: 'INVALID_ART_STYLE',
-        message: 'artStyle must be a supported value',
-      })
-    }
-    artStyle = parsedArtStyle
-  }
-
   if (!characterId) {
     throw new ApiError('INVALID_PARAMS')
   }
@@ -59,7 +46,6 @@ export const POST = apiHandler(async (
       characterId,
       ...(appearanceId ? { appearanceId } : {}),
       ...(count ? { count } : {}),
-      ...(artStyle ? { artStyle } : {}),
     },
     source: 'project-ui',
   })

@@ -127,7 +127,6 @@ export function LocationCard({ location, assetType = 'location', onImageClick, o
   const handleGenerate = (count = generationCount) => {
     generateImage.mutate({
       locationId: location.id,
-      artStyle: location.artStyle || undefined,
       count,
     }, {
       onError: (error) => alert(error.message || t('generateFailed'))

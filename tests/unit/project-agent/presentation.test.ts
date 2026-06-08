@@ -19,7 +19,6 @@ describe('project agent presentation', () => {
         projectId: 'project-1',
         episodeId: 'episode-1',
         videoRatio: '9:16',
-        artStyle: 'realistic',
         analysisModel: 'google::gemini-3.1-flash-lite-preview',
         overrides: {},
       },
@@ -27,7 +26,6 @@ describe('project agent presentation', () => {
 
     expect(snapshot.config).toEqual({
       analysisModel: 'google::gemini-3.1-flash-lite-preview',
-      artStyle: 'realistic',
       videoRatio: '9:16',
     })
     expect('workflow' in snapshot).toBe(false)
@@ -65,7 +63,6 @@ describe('project agent presentation', () => {
         projectId: 'project-1',
         episodeId: 'episode-1',
         videoRatio: '9:16',
-        artStyle: 'realistic',
         analysisModel: 'google::gemini-3.1-flash-lite-preview',
         overrides: {},
       },

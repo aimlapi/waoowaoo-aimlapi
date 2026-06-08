@@ -25,7 +25,6 @@ type GlobalLocationBackedAssetRow = {
   folderId: string | null
   name: string
   summary: string | null
-  artStyle: string | null
   assetKind: LocationBackedAssetKind
 }
 
@@ -215,7 +214,6 @@ export async function listGlobalLocationBackedAssets(input: {
       folderId,
       name,
       summary,
-      artStyle,
       assetKind
     FROM global_locations
     WHERE userId = ${input.userId}
@@ -277,7 +275,6 @@ export async function createGlobalLocationBackedAsset(input: {
   name: string
   summary: string
   initialDescription?: string
-  artStyle?: string | null
   kind: LocationBackedAssetKind
 }): Promise<{ id: string }> {
   const id = randomUUID()
@@ -288,7 +285,6 @@ export async function createGlobalLocationBackedAsset(input: {
       folderId,
       name,
       summary,
-      artStyle,
       assetKind,
       createdAt,
       updatedAt
@@ -298,7 +294,6 @@ export async function createGlobalLocationBackedAsset(input: {
       ${input.folderId ?? null},
       ${input.name},
       ${input.summary},
-      ${input.artStyle ?? null},
       ${input.kind},
       NOW(),
       NOW()

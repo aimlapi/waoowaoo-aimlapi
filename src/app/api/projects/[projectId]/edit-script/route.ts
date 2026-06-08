@@ -72,7 +72,6 @@ export const POST = apiHandler(async (
       episodeId: parsed.data.episodeId,
       ...(parsed.data.screenplayId ? { screenplayId: parsed.data.screenplayId } : {}),
       ...(parsed.data.videoRatio ? { videoRatio: parsed.data.videoRatio } : {}),
-      ...(parsed.data.artStyle ? { artStyle: parsed.data.artStyle } : {}),
       displayMode: 'detail',
     },
     dedupeKey: `edit_script_generate:${projectId}:${parsed.data.episodeId}`,
