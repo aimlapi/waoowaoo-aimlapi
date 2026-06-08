@@ -1,4 +1,5 @@
 import type { ProjectPanel } from '@prisma/client'
+import { createHash } from 'node:crypto'
 import { buildDefaultTaskBillingInfo } from '@/lib/billing'
 import {
   buildImageBillingPayload,
@@ -11,6 +12,10 @@ import { withTaskUiPayload } from '@/lib/task/ui-payload'
 import type { Locale } from '@/i18n/routing'
 import type { StoryboardBatchTaskRef } from './storyboard-project-batch'
 import type { StoryboardBatchSchemeId } from './storyboard-batch-prompts'
+
+function shortDedupeSignature(value: string): string {
+  return createHash('sha256').update(value).digest('hex').slice(0, 16)
+}
 
 export async function submitStoryboardPanelTask(input: {
   readonly userId: string
@@ -49,8 +54,9 @@ export async function submitStoryboardPanelTask(input: {
     basePayload: payload,
   })
   const referenceSignature = input.referencePanelImageUrls && input.referencePanelImageUrls.length > 0
-    ? `:refs:${input.referencePanelImageUrls.join('|')}`
+    ? `:refs:${shortDedupeSignature(input.referencePanelImageUrls.join('|'))}`
     : ''
+  const styleSignature = shortDedupeSignature(input.styleSignature)
   const task = await submitTask({
     userId: input.userId,
     locale: input.locale,
@@ -61,7 +67,7 @@ export async function submitStoryboardPanelTask(input: {
     targetType: 'ProjectPanel',
     targetId: input.panel.id,
     payload: withTaskUiPayload(billingPayload, { intent: 'generate', hasOutputAtStart: false }),
-    dedupeKey: `dev_storyboard_batch:${input.schemeId}:${input.panel.id}:1:${input.styleSignature}${referenceSignature}`,
+    dedupeKey: `dev_storyboard_batch:${input.schemeId}:${input.panel.id}:1:${styleSignature}${referenceSignature}`,
     billingInfo: buildDefaultTaskBillingInfo(TASK_TYPE.IMAGE_PANEL, billingPayload),
     operationId: 'dev_storyboard_batch',
     operationSource: 'dev-ab-test',
