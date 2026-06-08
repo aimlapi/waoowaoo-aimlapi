@@ -1,4 +1,8 @@
 import type { Locale } from '@/i18n/routing'
+import {
+  renderCharacterCastingPlanPromptBlock,
+  type CharacterCastingCandidatePlan,
+} from '@/lib/character-casting/casting-plan'
 import { CHARACTER_ASSET_IMAGE_RATIO } from '@/lib/constants'
 
 export const CHARACTER_STYLE_TEST_ASPECT_RATIO = CHARACTER_ASSET_IMAGE_RATIO
@@ -131,13 +135,18 @@ function buildEnglishCastingCandidateBrief(candidateIndex: number | undefined): 
   return briefs[candidateIndex] ?? ''
 }
 
-function buildChineseCastingPhotoPrompt(characterRequest: string, candidateIndex?: number): string {
+function buildChineseCastingPhotoPrompt(
+  characterRequest: string,
+  candidateIndex?: number,
+  candidatePlan?: CharacterCastingCandidatePlan,
+): string {
   const candidateBrief = buildChineseCastingCandidateBrief(candidateIndex)
   return [
     '生成一张用于选角、试镜与人物定妆判断的 contact sheet / look-test sheet。',
     '媒介和画风必须由已选视觉参考案例决定：真人案例就保持真人向摄影定妆；动画、定格、插画、CG 或其他媒介案例就保持对应媒介的角色定妆包。不要自行指定真人、动画、CG、插画或任何旧风格预设。',
     `人物定妆需求（来自剧本和角色需求）：${characterRequest}`,
     candidateBrief,
+    candidatePlan ? renderCharacterCastingPlanPromptBlock({ plan: candidatePlan, locale: 'zh' }) : '',
     '候选差异硬约束：本次如果生成 3 组候选，三组之间必须像三个真实可选角色定妆方案，而不是同一个生成结果的复刻。A/B/C 的脸型气质、发型轮廓、服装结构、表演状态和记忆点必须能被肉眼区分。',
     '画面目标：像剧组用于选角、试镜、定妆和服装试装的候选资料，用来判断这个角色形象与这套妆造是否适合剧本。',
     '这是一组完整候选形象包：整张图必须是一张拼版，包含同一角色身份的多张定妆参考；不是单纯白底三视图，也不是多个不同角色拼在一起。',
@@ -152,13 +161,18 @@ function buildChineseCastingPhotoPrompt(characterRequest: string, candidateIndex
   ].filter(Boolean).join('\n')
 }
 
-function buildEnglishCastingPhotoPrompt(characterRequest: string, candidateIndex?: number): string {
+function buildEnglishCastingPhotoPrompt(
+  characterRequest: string,
+  candidateIndex?: number,
+  candidatePlan?: CharacterCastingCandidatePlan,
+): string {
   const candidateBrief = buildEnglishCastingCandidateBrief(candidateIndex)
   return [
     'Generate one contact sheet / look-test sheet for casting, audition, and character look approval.',
     'The medium and rendering style must come from the selected visual reference case: keep live-action references live-action, and keep animation, stop-motion, illustration, CG, or any other selected medium in that same medium. Do not independently choose live-action, anime, CG, illustration, or any legacy style preset.',
     `Casting and look-test request from the screenplay and character requirements: ${characterRequest}`,
     candidateBrief,
+    candidatePlan ? renderCharacterCastingPlanPromptBlock({ plan: candidatePlan, locale: 'en' }) : '',
     'Candidate separation hard rule: when generating three candidates, they must read like three viable character look-test options, not replicas of the same generated result. A/B/C must be visibly distinguishable in face impression, hair silhouette, costume structure, performance state, and visual hook.',
     'Goal: make it feel like production material for casting, audition, look approval, and costume fitting, used to judge whether this character image and styling fit the screenplay.',
     'This is one complete candidate look package: the image must be one collage containing multiple look-test views of the same character identity. It is not a plain white-background turnaround only, and it must not mix multiple different characters.',
@@ -178,12 +192,13 @@ export function buildCharacterStyleTestPrompt(input: {
   readonly locale: Locale
   readonly promptMode?: CharacterStyleTestPromptMode
   readonly candidateIndex?: number
+  readonly candidatePlan?: CharacterCastingCandidatePlan
 }): string {
   const characterRequest = normalizeCharacterRequest(input.characterRequest)
   if (input.promptMode === 'casting_photo') {
     return input.locale === 'en'
-      ? buildEnglishCastingPhotoPrompt(characterRequest, input.candidateIndex)
-      : buildChineseCastingPhotoPrompt(characterRequest, input.candidateIndex)
+      ? buildEnglishCastingPhotoPrompt(characterRequest, input.candidateIndex, input.candidatePlan)
+      : buildChineseCastingPhotoPrompt(characterRequest, input.candidateIndex, input.candidatePlan)
   }
   return input.locale === 'en'
     ? buildEnglishBasePrompt(characterRequest)

@@ -39,6 +39,10 @@ const evaluatorMock = vi.hoisted(() => ({
   })),
 }))
 
+const aiExecMock = vi.hoisted(() => ({
+  executeAiTextStep: vi.fn(async () => ({ text: buildCastingPlanJson() })),
+}))
+
 const prismaMock = vi.hoisted(() => ({
   projectVisualReferenceCase: {
     findFirst: vi.fn(),
@@ -63,6 +67,7 @@ vi.mock('@/lib/storage', () => storageMock)
 vi.mock('@/lib/media/outbound-image', () => outboundMock)
 vi.mock('@/lib/workers/handlers/image-task-handler-shared', () => handlerSharedMock)
 vi.mock('@/lib/character-casting/evaluator', () => evaluatorMock)
+vi.mock('@/lib/ai-exec/engine', () => aiExecMock)
 vi.mock('@/lib/prisma', () => ({ prisma: prismaMock }))
 
 import { handleCharacterStyleTestTask } from '@/lib/workers/handlers/character-style-test-task-handler'
@@ -80,6 +85,55 @@ type GenerationInput = {
     quality?: string
     referenceImages?: string[]
   }
+}
+
+function buildCastingPlanJson(): string {
+  return JSON.stringify({
+    candidates: [
+      {
+        candidateIndex: 0,
+        label: 'A 生活真实路线',
+        castingPremise: '普通清瘦实习生，像真实办公室里会遇到的人。',
+        faceAndAge: '圆脸偏幼，眼距略宽，皮肤自然，有轻微黑眼圈。',
+        hairAndSilhouette: '低马尾，碎发压在耳后，整体轮廓低调。',
+        bodyAndPosture: '肩窄，站姿收着，手臂贴近身体。',
+        costumeAndMaterials: '旧针织开衫、洗旧衬衫、帆布包，材质柔软起毛。',
+        performanceState: '克制礼貌，眼神闪避但不慌张。',
+        storyContext: '茶水间和工位旁的低干扰生活背景。',
+        signatureDetails: ['磨旧帆布包', '袖口起球', '素色发圈'],
+        differenceLocks: ['不能使用候选 B 的湿润眼神', '不能使用候选 C 的短发强轮廓'],
+        promptDirective: '生成最普通、最生活化的一版，重点是低调可信。',
+      },
+      {
+        candidateIndex: 1,
+        label: 'B 情绪裂痕路线',
+        castingPremise: '同一角色但更显内在压力，像刚经历职场打击。',
+        faceAndAge: '长脸，颧骨更明显，眼下泛红，嘴唇干。',
+        hairAndSilhouette: '半散低束发，额前碎发凌乱，轮廓更疲惫。',
+        bodyAndPosture: '肩膀下沉，脖子前探，双手攥紧。',
+        costumeAndMaterials: '宽松外套、皱衬衫、旧围巾，布料更松垮。',
+        performanceState: '强忍眼泪，防备但仍保持礼貌。',
+        storyContext: '楼梯间或公司后门，背景压迫但不抢主体。',
+        signatureDetails: ['泛红眼眶', '攥紧的指节', '皱旧围巾'],
+        differenceLocks: ['不能沿用候选 A 的圆脸低马尾', '不能使用候选 C 的醒目配饰'],
+        promptDirective: '生成情绪压力最强的一版，脸和姿态必须明显区别于 A/C。',
+      },
+      {
+        candidateIndex: 2,
+        label: 'C 轮廓记忆路线',
+        castingPremise: '同一角色但有更强一眼记住的造型轮廓。',
+        faceAndAge: '窄脸短下巴，眉骨更利，表情更冷静。',
+        hairAndSilhouette: '齐耳短发，发尾外翘，头部轮廓清楚。',
+        bodyAndPosture: '背挺直，重心偏一侧，动作更利落。',
+        costumeAndMaterials: '短夹克、高领内搭、窄肩包，层次线条更硬。',
+        performanceState: '安静疏离，目光稳定但保持距离。',
+        storyContext: '电梯口或玻璃门边，几何线条衬托轮廓。',
+        signatureDetails: ['齐耳短发', '窄肩包', '硬挺短夹克'],
+        differenceLocks: ['不能使用候选 A 的低调针织开衫', '不能使用候选 B 的疲惫凌乱状态'],
+        promptDirective: '生成轮廓最强的一版，必须和 A/B 在脸型、发型、服装结构上拉开。',
+      },
+    ],
+  })
 }
 
 function buildJob(payload: Record<string, unknown>, projectId = 'system'): Job<TaskJobData> {
@@ -103,6 +157,7 @@ describe('worker character-style-test-task-handler', () => {
     handlerSharedMock.generateCleanImageToStorage.mockImplementation(async () => 'cos/character-style-test.jpg')
     prismaMock.projectVisualReferenceCase.findFirst.mockResolvedValue(null)
     outboundMock.normalizeOptionalReferenceImagesForGeneration.mockResolvedValue([])
+    aiExecMock.executeAiTextStep.mockResolvedValue({ text: buildCastingPlanJson() })
   })
 
   it('success path -> generates a stylized multi-view asset prompt from user input only', async () => {
@@ -222,6 +277,17 @@ describe('worker character-style-test-task-handler', () => {
     expect(handlerSharedMock.generateCleanImageToStorage.mock.calls[1]?.[0].prompt).toContain('候选 B 方向：情绪创伤与表演强度优先')
     expect(handlerSharedMock.generateCleanImageToStorage.mock.calls[2]?.[0].prompt).toContain('候选 C 方向：造型记忆点与轮廓识别优先')
     expect(handlerSharedMock.generateCleanImageToStorage.mock.calls[2]?.[0].prompt).toContain('候选差异硬约束')
+    expect(aiExecMock.executeAiTextStep).toHaveBeenCalledWith(expect.objectContaining({
+      action: 'character_casting_plan_generate',
+      model: 'analysis-model-1',
+      projectId: 'project-1',
+    }))
+    expect(handlerSharedMock.generateCleanImageToStorage.mock.calls[0]?.[0].prompt).toContain('候选 0 的硬差异选角方案：A 生活真实路线')
+    expect(handlerSharedMock.generateCleanImageToStorage.mock.calls[0]?.[0].prompt).toContain('圆脸偏幼，眼距略宽')
+    expect(handlerSharedMock.generateCleanImageToStorage.mock.calls[1]?.[0].prompt).toContain('候选 1 的硬差异选角方案：B 情绪裂痕路线')
+    expect(handlerSharedMock.generateCleanImageToStorage.mock.calls[1]?.[0].prompt).toContain('长脸，颧骨更明显')
+    expect(handlerSharedMock.generateCleanImageToStorage.mock.calls[2]?.[0].prompt).toContain('候选 2 的硬差异选角方案：C 轮廓记忆路线')
+    expect(handlerSharedMock.generateCleanImageToStorage.mock.calls[2]?.[0].prompt).toContain('齐耳短发')
     expect(evaluatorMock.evaluateCharacterCastingCandidates).toHaveBeenCalledWith(expect.objectContaining({
       userId: 'user-1',
       analysisModel: 'analysis-model-1',
@@ -256,6 +322,11 @@ describe('worker character-style-test-task-handler', () => {
       ],
       appearanceId: 'appearance-1',
       evaluation: expect.objectContaining({ winnerIndex: 1 }),
+      castingPlans: expect.arrayContaining([
+        expect.objectContaining({ label: 'A 生活真实路线' }),
+        expect.objectContaining({ label: 'B 情绪裂痕路线' }),
+        expect.objectContaining({ label: 'C 轮廓记忆路线' }),
+      ]),
     }))
   })
 

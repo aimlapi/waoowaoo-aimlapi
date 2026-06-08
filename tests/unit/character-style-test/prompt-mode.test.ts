@@ -53,6 +53,34 @@ describe('character style test prompt modes', () => {
     expect(prompt).toContain('同一候选包内必须保持同一角色身份')
   })
 
+  it('binds a concrete casting plan to the candidate prompt when provided', () => {
+    const prompt = buildCharacterStyleTestPrompt({
+      characterRequest: '五十多岁穷困潦倒的老光棍',
+      locale: 'zh',
+      promptMode: 'casting_photo',
+      candidateIndex: 1,
+      candidatePlan: {
+        candidateIndex: 1,
+        label: 'B 情绪裂痕路线',
+        castingPremise: '同一角色但更明显被生活压垮。',
+        faceAndAge: '长脸、深眼窝、眼眶泛红。',
+        hairAndSilhouette: '乱发贴额，鬓角灰白。',
+        bodyAndPosture: '脖子前探，手指攥紧。',
+        costumeAndMaterials: '松垮棉袄，皱旧内衫。',
+        performanceState: '强撑体面，快要崩溃。',
+        storyContext: '昏暗楼道。',
+        signatureDetails: ['攥紧手指', '泛红眼眶'],
+        differenceLocks: ['不能使用 A 的圆脸普通感', '不能使用 C 的油亮后梳头'],
+        promptDirective: '情绪压迫最强，脸和姿态必须不同。',
+      },
+    })
+
+    expect(prompt).toContain('候选 1 的硬差异选角方案：B 情绪裂痕路线')
+    expect(prompt).toContain('脸型与年龄感：长脸、深眼窝、眼眶泛红。')
+    expect(prompt).toContain('与其他候选拉开的硬锁定差异')
+    expect(prompt).toContain('本候选必须严格执行这套方案')
+  })
+
   it('summarizes casting mode without reusing style asset wording', () => {
     expect(buildCharacterStyleTestStyleSummary({
       characterRequest: 'cold hacker',

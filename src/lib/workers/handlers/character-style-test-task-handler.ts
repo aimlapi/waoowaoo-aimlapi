@@ -7,6 +7,11 @@ import { reportTaskProgress } from '@/lib/workers/shared'
 import { stringifyAppearanceCandidateMetadata } from '@/types/character-casting'
 import { evaluateCharacterCastingCandidates } from '@/lib/character-casting/evaluator'
 import type { CharacterCastingEvaluationResult } from '@/lib/character-casting/evaluation'
+import {
+  generateCharacterCastingPlans,
+  type CharacterCastingCandidatePlan,
+  type CharacterCastingPlanSet,
+} from '@/lib/character-casting/casting-plan'
 import { normalizeOptionalReferenceImagesForGeneration } from '@/lib/media/outbound-image'
 import {
   appendSelectedVisualReferenceStylePromptBlock,
@@ -51,7 +56,24 @@ function readCastingCandidateCount(value: unknown, promptMode: string): 1 | 3 {
   throw new Error('castingCandidateCount must be 3')
 }
 
-function buildCandidateDescription(characterRequest: string, candidateIndex: number): string {
+function buildCandidateDescription(
+  characterRequest: string,
+  candidateIndex: number,
+  candidatePlan?: CharacterCastingCandidatePlan,
+): string {
+  if (candidatePlan) {
+    return [
+      `${characterRequest}；${candidatePlan.label}`,
+      `选角前提：${candidatePlan.castingPremise}`,
+      `脸型与年龄感：${candidatePlan.faceAndAge}`,
+      `发型与轮廓：${candidatePlan.hairAndSilhouette}`,
+      `体型与姿态：${candidatePlan.bodyAndPosture}`,
+      `服装与材质：${candidatePlan.costumeAndMaterials}`,
+      `表演状态：${candidatePlan.performanceState}`,
+      `标志性细节：${candidatePlan.signatureDetails.join('；')}`,
+      `硬差异锁定：${candidatePlan.differenceLocks.join('；')}`,
+    ].join('\n')
+  }
   const directions = [
     '生活真实度优先的候选形象包',
     '情绪辨识度优先的候选形象包',
@@ -63,9 +85,14 @@ function buildCandidateDescription(characterRequest: string, candidateIndex: num
 function buildCandidateMetadata(
   characterRequest: string,
   evaluation: CharacterCastingEvaluationResult,
+  castingPlans?: CharacterCastingPlanSet,
 ) {
   return evaluation.candidates.map((candidate) => ({
-    description: buildCandidateDescription(characterRequest, candidate.candidateIndex),
+    description: buildCandidateDescription(
+      characterRequest,
+      candidate.candidateIndex,
+      castingPlans?.[candidate.candidateIndex],
+    ),
     visualTraits: {
       face: '',
       hair: '',
@@ -95,6 +122,7 @@ async function persistCastingWinner(input: {
   readonly characterRequest: string
   readonly imageKeys: readonly [string, string, string]
   readonly evaluation: CharacterCastingEvaluationResult
+  readonly castingPlans?: CharacterCastingPlanSet
 }) {
   const appearance = await prisma.characterAppearance.findUnique({
     where: { id: input.appearanceId },
@@ -106,7 +134,11 @@ async function persistCastingWinner(input: {
 
   const selectedImageKey = input.imageKeys[input.evaluation.winnerIndex]
   const candidateDescriptions = [0, 1, 2].map((candidateIndex) =>
-    buildCandidateDescription(input.characterRequest, candidateIndex),
+    buildCandidateDescription(
+      input.characterRequest,
+      candidateIndex,
+      input.castingPlans?.[candidateIndex],
+    ),
   )
 
   await prisma.characterAppearance.update({
@@ -115,7 +147,7 @@ async function persistCastingWinner(input: {
       description: candidateDescriptions[input.evaluation.winnerIndex],
       descriptions: JSON.stringify(candidateDescriptions),
       descriptionMetadata: stringifyAppearanceCandidateMetadata(
-        buildCandidateMetadata(input.characterRequest, input.evaluation),
+        buildCandidateMetadata(input.characterRequest, input.evaluation, input.castingPlans),
       ),
       previousImageUrl: appearance.imageUrl,
       previousImageUrls: appearance.imageUrls || encodeImageUrls([]),
@@ -175,14 +207,33 @@ export async function handleCharacterStyleTestTask(job: Job<TaskJobData>) {
     ...generationOptions,
   }
 
+  let castingPlans: CharacterCastingPlanSet | null = null
+  if (castingCandidateCount === 3) {
+    if (!analysisModel) throw new Error('analysisModel is required')
+    if (!selectedVisualReferenceStyle) throw new Error('SELECTED_VISUAL_REFERENCE_STYLE_REQUIRED')
+    castingPlans = await generateCharacterCastingPlans({
+      userId: job.data.userId,
+      projectId: job.data.projectId,
+      locale: job.data.locale,
+      analysisModel,
+      characterRequest,
+      selectedVisualReferenceStyle,
+    })
+  }
+
   const imageKeys: string[] = []
   const prompts: string[] = []
   for (let candidateIndex = 0; candidateIndex < castingCandidateCount; candidateIndex += 1) {
+    const candidatePlan = castingPlans?.[candidateIndex]
+    if (castingCandidateCount === 3 && !candidatePlan) {
+      throw new Error(`CHARACTER_CASTING_PLAN_MISSING:${candidateIndex}`)
+    }
     const basePrompt = buildCharacterStyleTestPrompt({
       characterRequest,
       locale: job.data.locale,
       promptMode,
       ...(castingCandidateCount === 3 ? { candidateIndex } : {}),
+      ...(candidatePlan ? { candidatePlan } : {}),
     })
     const prompt = appendSelectedVisualReferenceStylePromptBlock({
       prompt: basePrompt,
@@ -229,9 +280,9 @@ export async function handleCharacterStyleTestTask(job: Job<TaskJobData>) {
       displayMode: 'detail',
     })
     const candidates = [
-      { candidateIndex: 0, request: buildCandidateDescription(characterRequest, 0), imageUrl: imageUrls[0] },
-      { candidateIndex: 1, request: buildCandidateDescription(characterRequest, 1), imageUrl: imageUrls[1] },
-      { candidateIndex: 2, request: buildCandidateDescription(characterRequest, 2), imageUrl: imageUrls[2] },
+      { candidateIndex: 0, request: buildCandidateDescription(characterRequest, 0, castingPlans?.[0]), imageUrl: imageUrls[0] },
+      { candidateIndex: 1, request: buildCandidateDescription(characterRequest, 1, castingPlans?.[1]), imageUrl: imageUrls[1] },
+      { candidateIndex: 2, request: buildCandidateDescription(characterRequest, 2, castingPlans?.[2]), imageUrl: imageUrls[2] },
     ] as const
     if (!analysisModel) throw new Error('analysisModel is required')
     evaluation = await evaluateCharacterCastingCandidates({
@@ -249,6 +300,7 @@ export async function handleCharacterStyleTestTask(job: Job<TaskJobData>) {
         characterRequest,
         imageKeys: [imageKeys[0]!, imageKeys[1]!, imageKeys[2]!],
         evaluation,
+        ...(castingPlans ? { castingPlans } : {}),
       })
     }
   }
@@ -272,6 +324,7 @@ export async function handleCharacterStyleTestTask(job: Job<TaskJobData>) {
     imageKeys,
     prompt: prompts[0],
     prompts,
+    ...(castingPlans ? { castingPlans } : {}),
     aspectRatio: CHARACTER_STYLE_TEST_ASPECT_RATIO,
     styleSummary,
     ...(evaluation ? { evaluation } : {}),
