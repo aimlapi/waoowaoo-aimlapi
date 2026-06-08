@@ -44,7 +44,7 @@ describe('StoryInputComposer', () => {
     expect(html).toContain('开始创作')
   })
 
-  it('renders without footer or secondary actions', () => {
+  it('renders without style selector when style props are omitted', () => {
     Reflect.set(globalThis, 'React', React)
 
     const html = renderToStaticMarkup(
@@ -56,15 +56,12 @@ describe('StoryInputComposer', () => {
         videoRatio: '9:16',
         onVideoRatioChange: () => undefined,
         ratioOptions: [{ value: '9:16', label: '9:16' }],
-        artStyle: 'realistic',
-        onArtStyleChange: () => undefined,
-        styleOptions: [{ value: 'realistic', label: '真人风格' }],
         primaryAction: createElement('button', { type: 'button' }, '开始创作'),
       }),
     )
 
     expect(html).toContain('RatioSelector')
-    expect(html).toContain('StyleSelector')
+    expect(html).not.toContain('StyleSelector')
     expect(html).toContain('开始创作')
   })
 })

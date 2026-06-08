@@ -35,7 +35,7 @@ export interface CreateHomeProjectLaunchParams {
   projectName: string
   storyText: string
   videoRatio: string
-  artStyle: string
+  artStyle?: string
   visualStylePreset?: StylePresetRef
   episodeName: string
 }
@@ -154,7 +154,7 @@ export async function createHomeProjectLaunch({
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({
       videoRatio,
-      artStyle,
+      ...(artStyle ? { artStyle } : {}),
       ...(visualStylePreset ? { visualStylePreset } : {}),
     }),
   })

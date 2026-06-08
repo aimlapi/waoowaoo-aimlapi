@@ -26,9 +26,9 @@ interface StoryInputComposerProps {
   onVideoRatioChange: (value: string) => void
   ratioOptions: StoryInputComposerOption[]
   getRatioUsage?: (ratio: string) => string
-  artStyle: string
-  onArtStyleChange: (value: string) => void
-  styleOptions: StoryInputComposerOption[]
+  artStyle?: string
+  onArtStyleChange?: (value: string) => void
+  styleOptions?: StoryInputComposerOption[]
   onCompositionStart?: () => void
   onCompositionEnd?: (event: CompositionEvent<HTMLTextAreaElement>) => void
   textareaClassName?: string
@@ -122,6 +122,17 @@ export default function StoryInputComposer({
   const textareaBaseClassName = isPlain
     ? 'w-full resize-none text-[var(--glass-text-primary)] outline-none placeholder:text-[var(--glass-text-tertiary)] app-scrollbar'
     : 'w-full resize-none border-none bg-transparent text-base text-[var(--glass-text-primary)] outline-none placeholder:text-[var(--glass-text-tertiary)] app-scrollbar'
+  const styleSelector = artStyle && onArtStyleChange && styleOptions?.length
+    ? (
+        <div className="w-[132px] flex-shrink-0">
+          <StyleSelector
+            value={artStyle}
+            onChange={onArtStyleChange}
+            options={styleOptions}
+          />
+        </div>
+      )
+    : null
 
   return (
     <div className={containerClassName}>
@@ -155,13 +166,7 @@ export default function StoryInputComposer({
               getUsage={getRatioUsage}
             />
           </div>
-          <div className="w-[132px] flex-shrink-0">
-            <StyleSelector
-              value={artStyle}
-              onChange={onArtStyleChange}
-              options={styleOptions}
-            />
-          </div>
+          {styleSelector}
         </div>
         <div className="ml-auto flex min-w-max items-center gap-2">
           {secondaryActions}

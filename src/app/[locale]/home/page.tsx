@@ -11,9 +11,7 @@ import Navbar from '@/components/Navbar'
 import { AppIcon, IconGradientDefs } from '@/components/ui/icons'
 import StoryInputComposer from '@/components/story-input/StoryInputComposer'
 import TypewriterHero from '@/components/home/TypewriterHero'
-import { ART_STYLES, VIDEO_RATIOS } from '@/lib/constants'
-import { decodeStylePresetRef, encodeStylePresetRef } from '@/lib/style-preset/ref'
-import type { StylePresetRef, StylePresetView } from '@/lib/style-preset/types'
+import { VIDEO_RATIOS } from '@/lib/constants'
 import { Link, useRouter } from '@/i18n/navigation'
 import { apiFetch } from '@/lib/api-fetch'
 import { expandHomeStory } from '@/lib/home/ai-story-expand'
@@ -43,21 +41,6 @@ interface Project {
 }
 
 const RECENT_COUNT = 5
-const DEFAULT_VISUAL_STYLE_REF: StylePresetRef = { presetSource: 'system', presetId: 'american-comic' }
-
-function readStylePresetList(value: unknown): StylePresetView[] {
-  if (!value || typeof value !== 'object') return []
-  const presets = (value as { presets?: unknown }).presets
-  if (!Array.isArray(presets)) return []
-  return presets.filter((preset): preset is StylePresetView => {
-    if (!preset || typeof preset !== 'object') return false
-    const record = preset as { id?: unknown; kind?: unknown; name?: unknown }
-    return typeof record.id === 'string'
-      && record.kind === 'visual_style'
-      && typeof record.name === 'string'
-  })
-}
-
 export default function HomePage() {
   const { data: session, status } = useSession()
   const router = useRouter()
@@ -68,9 +51,6 @@ export default function HomePage() {
   const [loading, setLoading] = useState(true)
   const [inputValue, setInputValue] = useState('')
   const [videoRatio, setVideoRatio] = useState('9:16')
-  const [artStyle, setArtStyle] = useState('american-comic')
-  const [visualStyleValue, setVisualStyleValue] = useState(encodeStylePresetRef(DEFAULT_VISUAL_STYLE_REF))
-  const [userStylePresets, setUserStylePresets] = useState<StylePresetView[]>([])
   const [createLoading, setCreateLoading] = useState(false)
   const [createError, setCreateError] = useState<string | null>(null)
   const [aiWriteOpen, setAiWriteOpen] = useState(false)
@@ -110,19 +90,6 @@ export default function HomePage() {
     }
   }, [session, fetchRecentProjects])
 
-  const fetchUserStylePresets = useCallback(async () => {
-    const response = await apiFetch('/api/user/style-presets')
-    if (!response.ok) return
-    const data = await response.json() as unknown
-    setUserStylePresets(readStylePresetList(data))
-  }, [])
-
-  useEffect(() => {
-    if (session) {
-      void fetchUserStylePresets()
-    }
-  }, [session, fetchUserStylePresets])
-
   // 创建项目并跳转
   const handleCreate = async () => {
     if (!inputValue.trim() || createLoading) return
@@ -137,8 +104,6 @@ export default function HomePage() {
         }),
         storyText,
         videoRatio,
-        artStyle,
-        visualStylePreset: decodeStylePresetRef(visualStyleValue),
         episodeName: `${tc('episode')} 1`,
       })
 
@@ -182,23 +147,6 @@ export default function HomePage() {
     []
   )
 
-  // 风格选项（带推荐标签）
-  const styleOptions = useMemo(
-    () => [
-      ...ART_STYLES.map((s) => ({
-        value: encodeStylePresetRef({ presetSource: 'system', presetId: s.value }),
-        label: s.label,
-        recommended: s.value === 'realistic',
-      })),
-      ...userStylePresets
-        .filter((preset) => preset.kind === 'visual_style')
-        .map((preset) => ({
-          value: encodeStylePresetRef({ presetSource: 'user', presetId: preset.id }),
-          label: preset.name,
-        })),
-    ],
-    [userStylePresets]
-  )
   // 时间格式化
   const formatTimeAgo = (dateString: string): string => {
     const diffMs = Date.now() - new Date(dateString).getTime()
@@ -408,15 +356,6 @@ export default function HomePage() {
               videoRatio={videoRatio}
               onVideoRatioChange={setVideoRatio}
               ratioOptions={ratioOptions}
-              artStyle={visualStyleValue}
-              onArtStyleChange={(value) => {
-                setVisualStyleValue(value)
-                const ref = decodeStylePresetRef(value)
-                if (ref.presetSource === 'system') {
-                  setArtStyle(ref.presetId)
-                }
-              }}
-              styleOptions={styleOptions}
               primaryAction={(
                 <button
                   onClick={() => void handleCreate()}

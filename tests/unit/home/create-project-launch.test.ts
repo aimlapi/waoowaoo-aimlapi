@@ -100,6 +100,37 @@ describe('createHomeProjectLaunch', () => {
       episodeName: '第 1 集',
     })).rejects.toThrow('Episode creation response missing episode id')
   })
+
+  it('does not write an art style when homepage launch only provides ratio', async () => {
+    const apiFetch = vi
+      .fn<(
+        input: string,
+        init?: RequestInit,
+      ) => Promise<Response>>()
+      .mockResolvedValueOnce(buildJsonResponse({
+        project: { id: 'project-1' },
+      }, 201))
+      .mockResolvedValueOnce(buildJsonResponse({ success: true }, 200))
+      .mockResolvedValueOnce(buildJsonResponse({
+        episode: { id: 'episode-1' },
+      }, 201))
+
+    await createHomeProjectLaunch({
+      apiFetch,
+      projectName: '开场白',
+      storyText: '第一章内容',
+      videoRatio: '9:16',
+      episodeName: '第 1 集',
+    })
+
+    expect(apiFetch).toHaveBeenNthCalledWith(2, '/api/projects/project-1/config', {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        videoRatio: '9:16',
+      }),
+    })
+  })
 })
 
 describe('buildHomeWorkspaceLaunchTarget', () => {

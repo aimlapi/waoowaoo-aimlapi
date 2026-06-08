@@ -29,16 +29,21 @@ vi.mock('@/components/story-input/StoryInputComposer', () => ({
     textareaClassName,
     primaryAction,
     secondaryActions,
+    artStyle,
+    styleOptions,
   }: {
     minRows: number
     textareaClassName?: string
     primaryAction: React.ReactNode
     secondaryActions?: React.ReactNode
+    artStyle?: string
+    styleOptions?: readonly unknown[]
   }) => createElement(
     'section',
     {
       'data-min-rows': String(minRows),
       'data-textarea-class': textareaClassName,
+      'data-has-style-selector': String(Boolean(artStyle || styleOptions)),
     },
     secondaryActions,
     primaryAction,
@@ -110,6 +115,7 @@ describe('HomePage quick-start input', () => {
     expect(html).toContain('StoryInputComposer')
     expect(html).toContain('data-min-rows="3"')
     expect(html).toContain('data-textarea-class="px-0 pt-0 pb-3 align-top"')
+    expect(html).toContain('data-has-style-selector="false"')
   })
 
   it('keeps the title and all four frame corners on the same focus-rack timeline', () => {
