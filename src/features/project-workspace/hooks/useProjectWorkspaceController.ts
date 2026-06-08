@@ -214,7 +214,6 @@ export function useProjectWorkspaceController({
     userVideoModels: userModels.userVideoModels || [],
     handleUpdateEpisode: configActions.handleUpdateEpisode,
     handleUpdateConfig: configActions.handleUpdateConfig,
-    onRequestAssistantPlan: execution.requestAssistantPlan,
     handleGenerateEditScreenplay,
     handleGenerateEditScript,
     handleGenerateVisualReferenceCases,
@@ -269,7 +268,6 @@ export function useProjectWorkspaceController({
     transitionProgress: execution.transitionProgress,
     handleGenerateTTS: execution.handleGenerateTTS,
     handleAnalyzeAssets: execution.handleAnalyzeAssets,
-    requestAssistantPlan: execution.requestAssistantPlan,
     showCreatingToast: execution.showCreatingToast,
   }
 

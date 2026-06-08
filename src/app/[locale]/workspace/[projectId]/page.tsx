@@ -19,12 +19,6 @@ import { AppIcon } from '@/components/ui/icons'
 import { readConfiguredAnalysisModel, shouldGuideToModelSetup } from '@/lib/workspace/model-setup'
 import { useRouter } from '@/i18n/navigation'
 import { readApiErrorMessage } from '@/lib/api/read-error-message'
-import {
-  HOME_ASSISTANT_AUTOSTART_QUERY,
-  HOME_ASSISTANT_AUTOSTART_VALUE,
-  readHomeAssistantAutoStartMessage,
-  removeHomeAssistantAutoStartMessage,
-} from '@/lib/home/create-project-launch'
 
 interface Episode {
   id: string
@@ -56,7 +50,6 @@ export default function ProjectDetailPage() {
 
   // 从URL读取参数
   const urlEpisodeId = searchParams.get('episode') ?? null
-  const shouldAutoStartAssistant = searchParams.get(HOME_ASSISTANT_AUTOSTART_QUERY) === HOME_ASSISTANT_AUTOSTART_VALUE
 
   // 🔥 React Query 数据获取
   const queryClient = useQueryClient()
@@ -76,7 +69,6 @@ export default function ProjectDetailPage() {
 
   const updateUrlParams = useCallback((updates: {
     episode?: string | null
-    assistantAutoStart?: string | null
   }) => {
     const params = new URLSearchParams(searchParams.toString())
     if (updates.episode !== undefined) {
@@ -84,13 +76,6 @@ export default function ProjectDetailPage() {
         params.set('episode', updates.episode)
       } else {
         params.delete('episode')
-      }
-    }
-    if (updates.assistantAutoStart !== undefined) {
-      if (updates.assistantAutoStart) {
-        params.set(HOME_ASSISTANT_AUTOSTART_QUERY, updates.assistantAutoStart)
-      } else {
-        params.delete(HOME_ASSISTANT_AUTOSTART_QUERY)
       }
     }
     const query = Object.fromEntries(params.entries())
@@ -126,25 +111,6 @@ export default function ProjectDetailPage() {
     projectId,
     !isGlobalAssetsView ? selectedEpisodeId : null
   )
-  const assistantAutoStartMessage = useMemo(() => (
-    shouldAutoStartAssistant && selectedEpisodeId
-      ? readHomeAssistantAutoStartMessage(projectId, selectedEpisodeId)
-      : null
-  ), [projectId, selectedEpisodeId, shouldAutoStartAssistant])
-  const assistantAutoStartKey = shouldAutoStartAssistant && selectedEpisodeId
-    ? `${projectId}:${selectedEpisodeId}:home-input`
-    : null
-  const clearAssistantAutoStart = useCallback(() => {
-    if (selectedEpisodeId) {
-      removeHomeAssistantAutoStartMessage(projectId, selectedEpisodeId)
-    }
-    updateUrlParams({ assistantAutoStart: null })
-  }, [projectId, selectedEpisodeId, updateUrlParams])
-
-  useEffect(() => {
-    if (!shouldAutoStartAssistant || !selectedEpisodeId || assistantAutoStartMessage) return
-    clearAssistantAutoStart()
-  }, [assistantAutoStartMessage, clearAssistantAutoStart, selectedEpisodeId, shouldAutoStartAssistant])
 
   // 获取导入状态
   const importStatus = project?.importStatus
@@ -524,9 +490,6 @@ export default function ProjectDetailPage() {
               episode={currentEpisode}
               viewMode="episode"
               episodes={episodes}
-              assistantAutoStartMessage={assistantAutoStartMessage}
-              assistantAutoStartKey={assistantAutoStartKey}
-              onAssistantAutoStartConsumed={clearAssistantAutoStart}
               onEpisodeSelect={handleEpisodeSelect}
               onEpisodeCreate={() => handleCreateEpisode(`${t('episode')} ${episodes.length + 1}`)}
               onEpisodeRename={handleRenameEpisode}

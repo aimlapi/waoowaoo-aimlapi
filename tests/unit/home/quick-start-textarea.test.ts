@@ -80,7 +80,6 @@ vi.mock('@/lib/api-fetch', () => ({
 
 vi.mock('@/lib/home/create-project-launch', () => ({
   createHomeProjectLaunch: vi.fn(),
-  writeHomeAssistantAutoStartMessage: vi.fn(),
 }))
 
 vi.mock('@/lib/home/ai-story-expand', () => ({

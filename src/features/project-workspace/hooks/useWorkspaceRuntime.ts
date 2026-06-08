@@ -27,7 +27,6 @@ interface UseWorkspaceRuntimeParams {
   }> | undefined
   handleUpdateEpisode: (key: string, value: unknown) => Promise<void>
   handleUpdateConfig: (key: string, value: unknown) => Promise<void>
-  onRequestAssistantPlan: () => Promise<void>
   handleGenerateEditScreenplay: (prompt: string) => Promise<void>
   handleGenerateEditScript: (screenplayId?: string) => Promise<void>
   handleGenerateVisualReferenceCases: (count?: number) => Promise<void>
@@ -84,7 +83,6 @@ export function useWorkspaceRuntime({
   userVideoModels,
   handleUpdateEpisode,
   handleUpdateConfig,
-  onRequestAssistantPlan,
   handleGenerateEditScreenplay,
   handleGenerateEditScript,
   handleGenerateVisualReferenceCases,
@@ -128,7 +126,6 @@ export function useWorkspaceRuntime({
     userVideoModels: resolvedUserVideoModels,
     onNovelTextChange: (value) => handleUpdateEpisode('novelText', value),
     onVideoRatioChange: (value) => handleUpdateConfig('videoRatio', value),
-    onRequestAssistantPlan,
     onGenerateEditScreenplay: handleGenerateEditScreenplay,
     onGenerateEditScript: handleGenerateEditScript,
     onGenerateVisualReferenceCases: handleGenerateVisualReferenceCases,
@@ -189,7 +186,6 @@ export function useWorkspaceRuntime({
     isSubmittingTTS,
     isTransitioning,
     openAssetLibrary,
-    onRequestAssistantPlan,
     resolvedUserVideoModels,
     capabilityOverrides,
     singleShotVideoModel,

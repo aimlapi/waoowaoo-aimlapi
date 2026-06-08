@@ -72,7 +72,6 @@ interface BuildWorkspaceControllerViewModelParams {
     transitionProgress: { step?: string; total?: number; current?: number }
     handleGenerateTTS: () => Promise<void>
     handleAnalyzeAssets: () => Promise<void>
-    requestAssistantPlan: () => Promise<void>
     showCreatingToast: boolean
   }
   videoState: {

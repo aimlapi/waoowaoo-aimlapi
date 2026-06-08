@@ -44,7 +44,13 @@ import {
   syncWorkspaceResourceChangesFromWriteResult,
 } from '@/lib/query/resource-change-sync'
 import { useWorkspaceProvider } from '../WorkspaceProvider'
-import type { WorkspaceAssistantSelectionContext } from '../canvas/ProjectWorkspaceCanvas'
+
+interface WorkspaceAssistantSelectionContext {
+  selectedScopeRef?: string | null
+  selectedPanelId?: string | null
+  selectedClipId?: string | null
+  selectedAssetId?: string | null
+}
 
 interface ProjectAgentWaitFollowUp {
   waitId: string

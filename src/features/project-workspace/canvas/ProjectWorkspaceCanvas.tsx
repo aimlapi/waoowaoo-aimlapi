@@ -87,15 +87,7 @@ const CANVAS_FLOATING_PANEL_BOTTOM_OFFSET_PX = 56
 const OPTIMISTIC_NODE_RUNNING_TIMEOUT_MS = 15000
 const MEASURED_NODE_SIZE_EPSILON = 1
 
-export interface WorkspaceAssistantSelectionContext {
-  selectedScopeRef?: string | null
-  selectedPanelId?: string | null
-  selectedClipId?: string | null
-  selectedAssetId?: string | null
-}
-
 interface ProjectWorkspaceCanvasContentProps {
-  onAssistantSelectionChange?: (selection: WorkspaceAssistantSelectionContext) => void
   editScriptPending?: boolean
 }
 
@@ -168,7 +160,7 @@ function CanvasViewportControls({
   )
 }
 
-function ProjectWorkspaceCanvasContent({ onAssistantSelectionChange, editScriptPending = false }: ProjectWorkspaceCanvasContentProps) {
+function ProjectWorkspaceCanvasContent({ editScriptPending = false }: ProjectWorkspaceCanvasContentProps) {
   const t = useTranslations('projectWorkflow.canvas.workspace')
   const { projectId, episodeId } = useWorkspaceProvider()
   const runtime = useWorkspaceRuntime()
@@ -702,26 +694,6 @@ function ProjectWorkspaceCanvasContent({ onAssistantSelectionChange, editScriptP
   const zoomOut = useCallback(() => {
     void reactFlow.zoomOut({ duration: 160 })
   }, [reactFlow])
-  const selectedNode = useMemo(
-    () => sourceNodes.find((node) => node.id === selectedNodeId) ?? null,
-    [sourceNodes, selectedNodeId],
-  )
-  const assistantSelection = useMemo<WorkspaceAssistantSelectionContext>(() => {
-    if (!selectedNode) return {}
-    const targetType = selectedNode.data.targetType
-    const targetId = selectedNode.data.targetId
-    return {
-      selectedScopeRef: `${targetType}:${targetId}`,
-      selectedPanelId: targetType === 'panel' ? targetId : null,
-      selectedClipId: targetType === 'clip' ? targetId : null,
-      selectedAssetId: null,
-    }
-  }, [selectedNode])
-
-  useEffect(() => {
-    onAssistantSelectionChange?.(assistantSelection)
-  }, [assistantSelection, onAssistantSelectionChange])
-
   const handleArrangeVideoBlocks = useCallback(async (blocks: readonly { readonly shotNumbers: readonly number[] }[]) => {
     if (!projectedEditScript) throw new Error('EDIT_SCRIPT_REQUIRED')
     await runtime.onArrangeVideoBlocks(projectedEditScript.id, blocks)
@@ -805,15 +777,13 @@ function ProjectWorkspaceCanvasContent({ onAssistantSelectionChange, editScriptP
 }
 
 interface ProjectWorkspaceCanvasProps {
-  onAssistantSelectionChange?: (selection: WorkspaceAssistantSelectionContext) => void
   editScriptPending?: boolean
 }
 
-export default function ProjectWorkspaceCanvas({ onAssistantSelectionChange, editScriptPending = false }: ProjectWorkspaceCanvasProps) {
+export default function ProjectWorkspaceCanvas({ editScriptPending = false }: ProjectWorkspaceCanvasProps) {
   return (
     <ReactFlowProvider>
       <ProjectWorkspaceCanvasContent
-        onAssistantSelectionChange={onAssistantSelectionChange}
         editScriptPending={editScriptPending}
       />
     </ReactFlowProvider>

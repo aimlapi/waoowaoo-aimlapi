@@ -1,15 +1,12 @@
 'use client'
 
-import { useState } from 'react'
 import ProgressToast from '@/components/ProgressToast'
 import ConfirmDialog from '@/components/ConfirmDialog'
 import { AnimatedBackground } from '@/components/ui/SharedComponents'
 import { WorkspaceProvider } from './WorkspaceProvider'
 import WorkspaceAssetLibraryModal from './components/WorkspaceAssetLibraryModal'
-import WorkspaceAssistantPanel from './components/WorkspaceAssistantPanel'
 import WorkspaceHeaderShell from './components/WorkspaceHeaderShell'
 import ProjectWorkspaceCanvas from './canvas/ProjectWorkspaceCanvas'
-import type { WorkspaceAssistantSelectionContext } from './canvas/ProjectWorkspaceCanvas'
 import { WorkspaceRuntimeProvider } from './WorkspaceRuntimeContext'
 import { useProjectWorkspaceController } from './hooks/useProjectWorkspaceController'
 import type { ProjectWorkspaceProps } from './types'
@@ -17,9 +14,6 @@ import '@/styles/animations.css'
 
 function ProjectWorkspaceContent(props: ProjectWorkspaceProps) {
   const vm = useProjectWorkspaceController(props)
-  const [isAssistantPanelCollapsed, setIsAssistantPanelCollapsed] = useState(false)
-  const [assistantSelection, setAssistantSelection] = useState<WorkspaceAssistantSelectionContext>({})
-  const [editScriptPending, setEditScriptPending] = useState(false)
   const isEpisodeWorkspace = props.viewMode === 'episode'
 
   const {
@@ -79,24 +73,9 @@ function ProjectWorkspaceContent(props: ProjectWorkspaceProps) {
 
       <div className={isEpisodeWorkspace ? 'h-full min-h-0 overflow-hidden' : undefined}>
         <div className={isEpisodeWorkspace ? 'h-full min-h-0 overflow-hidden' : undefined}>
-          <WorkspaceAssistantPanel
-            projectId={projectId}
-            episodeId={episodeId}
-            selection={assistantSelection}
-            autoStartMessage={props.assistantAutoStartMessage ?? null}
-            autoStartKey={props.assistantAutoStartKey ?? null}
-            onAutoStartConsumed={props.onAssistantAutoStartConsumed}
-            isCollapsed={isAssistantPanelCollapsed}
-            onToggleCollapsed={() => setIsAssistantPanelCollapsed((current) => !current)}
-            onEditScriptPendingChange={setEditScriptPending}
-          />
-
           <div className={isEpisodeWorkspace ? 'h-full min-w-0 overflow-hidden' : 'min-w-0'}>
             <WorkspaceRuntimeProvider value={vm.runtime.workspaceRuntime}>
-              <ProjectWorkspaceCanvas
-                onAssistantSelectionChange={setAssistantSelection}
-                editScriptPending={editScriptPending}
-              />
+              <ProjectWorkspaceCanvas />
             </WorkspaceRuntimeProvider>
           </div>
         </div>

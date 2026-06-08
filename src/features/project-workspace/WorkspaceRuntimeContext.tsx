@@ -32,7 +32,6 @@ export interface WorkspaceRuntimeValue {
   userVideoModels: WorkspaceVideoModelOption[]
   onNovelTextChange: (value: string) => Promise<void>
   onVideoRatioChange: (value: string) => Promise<void>
-  onRequestAssistantPlan: () => Promise<void>
   onGenerateEditScreenplay: (prompt: string) => Promise<void>
   onGenerateEditScript: (screenplayId?: string) => Promise<void>
   onGenerateVisualReferenceCases: (count?: number) => Promise<void>

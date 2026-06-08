@@ -3,7 +3,6 @@
 import { useCallback, useMemo, useState } from 'react'
 import { logInfo as _ulogInfo } from '@/lib/logging/core'
 import { useAnalyzeProjectAssets } from '@/lib/query/hooks'
-import { dispatchWorkspaceAssistantMessage } from '../components/workspace-assistant/assistant-send-event'
 
 interface UseWorkspaceExecutionParams {
   projectId: string
@@ -65,13 +64,6 @@ export function useWorkspaceExecution({
     }
   }, [analyzeProjectAssetsMutation, episodeId, isAssetAnalysisRunning, onRefresh, t])
 
-  const requestAssistantPlan = useCallback(async () => {
-    dispatchWorkspaceAssistantMessage({
-      key: `assistant-plan-request:${projectId}:${episodeId || 'global'}:${Date.now().toString(36)}`,
-      message: t('execution.assistantPlanRequest'),
-    })
-  }, [episodeId, projectId, t])
-
   return {
     isSubmittingTTS,
     isAssetAnalysisRunning,
@@ -80,7 +72,6 @@ export function useWorkspaceExecution({
     transitionProgress,
     handleGenerateTTS,
     handleAnalyzeAssets,
-    requestAssistantPlan,
     showCreatingToast: false,
   }
 }
