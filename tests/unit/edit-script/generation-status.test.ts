@@ -486,6 +486,7 @@ describe('edit script generation status persistence', () => {
     }))
     expect(aiExecMock.executeAiTextStep).toHaveBeenNthCalledWith(2, expect.objectContaining({
       action: AI_PROMPT_IDS.EDIT_SCRIPT_SCREENPLAY,
+      reasoning: false,
       messages: [
         expect.objectContaining({
           content: expect.stringContaining('刘满仓'),
@@ -512,6 +513,34 @@ describe('edit script generation status persistence', () => {
       }),
     }))
     expect(prismaMock.projectEditScript.upsert).not.toHaveBeenCalled()
+  })
+
+  it('fails a slow story development step only at the extended development deadline', async () => {
+    vi.useFakeTimers()
+    aiExecMock.executeAiTextStep.mockImplementationOnce(() => new Promise(() => {}))
+
+    const resultPromise = generateProjectEditScreenplay({
+      request: createRequest(),
+      projectId: 'project-1',
+      episodeId: 'episode-1',
+      userId: 'user-1',
+      locale: 'zh',
+      prompt: '50多岁穷困潦倒的老光棍，一夜暴富求子。',
+    }).then(
+      () => null,
+      (error: unknown) => error,
+    )
+
+    await vi.advanceTimersByTimeAsync(359_999)
+    expect(aiExecMock.executeAiTextStep).toHaveBeenCalledTimes(1)
+    expect(prismaMock.projectEditScreenplay.upsert).not.toHaveBeenCalled()
+
+    await vi.advanceTimersByTimeAsync(2)
+    const error = await resultPromise
+
+    expect(error).toBeInstanceOf(Error)
+    expect((error as Error).message).toBe(`EDIT_SCRIPT_STEP_TIMEOUT:${AI_PROMPT_IDS.EDIT_SCRIPT_STORY_DEVELOPMENT}:360s`)
+    expect(prismaMock.projectEditScreenplay.upsert).not.toHaveBeenCalled()
   })
 
   it('reads legacy screenplay without story development as nullable storyDevelopment', async () => {

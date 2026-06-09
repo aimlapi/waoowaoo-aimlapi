@@ -92,8 +92,8 @@ type PromptStepId =
 type DeadlineStepId = PromptStepId | 'edit_script_asset_design'
 
 const STEP_TIMEOUT_MS: Record<DeadlineStepId, number> = {
-  [AI_PROMPT_IDS.EDIT_SCRIPT_STORY_DEVELOPMENT]: 180_000,
-  [AI_PROMPT_IDS.EDIT_SCRIPT_SCREENPLAY]: 180_000,
+  [AI_PROMPT_IDS.EDIT_SCRIPT_STORY_DEVELOPMENT]: 360_000,
+  [AI_PROMPT_IDS.EDIT_SCRIPT_SCREENPLAY]: 360_000,
   [AI_PROMPT_IDS.EDIT_SCRIPT_PRIMARY]: 180_000,
   [AI_PROMPT_IDS.EDIT_SCRIPT_ASSET_EXTRACT]: 90_000,
   [AI_PROMPT_IDS.EDIT_SCRIPT_VIDEO_PROMPT_BLOCK]: 90_000,
@@ -382,6 +382,8 @@ async function runPromptTextStep(input: {
   readonly stepTitle: string
   readonly stepIndex: number
   readonly stepTotal: number
+  readonly reasoning?: boolean
+  readonly reasoningEffort?: 'minimal' | 'low' | 'medium' | 'high'
 }): Promise<string> {
   const finalPrompt = buildAiPrompt({
     promptId: input.promptId,
@@ -395,6 +397,8 @@ async function runPromptTextStep(input: {
     model: input.model,
     messages: [{ role: 'user', content: finalPrompt }],
     temperature: 0.5,
+    reasoning: input.reasoning,
+    reasoningEffort: input.reasoningEffort,
     projectId: input.projectId,
     action,
     meta: {
@@ -942,6 +946,7 @@ export async function generateProjectEditScreenplay(input: GenerateEditScreenpla
     stepTitle: 'Edit screenplay',
     stepIndex: 2,
     stepTotal: 2,
+    reasoning: false,
   })
   const saved = await prisma.projectEditScreenplay.upsert({
     where: { episodeId: input.episodeId },
