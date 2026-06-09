@@ -336,6 +336,7 @@ describe('workspace node canvas projection', () => {
     expect(screenplayNode?.data.editScreenplayDetails).toEqual({
       screenplayText: editScreenplay.screenplayText,
       userPrompt: editScreenplay.userPrompt,
+      storyDevelopment: null,
       visualReferenceCases: [],
       visualReferenceRunning: false,
     })

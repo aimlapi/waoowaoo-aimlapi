@@ -26,10 +26,12 @@ import type {
   EditScriptPayload,
   EditScriptShot,
   EditScriptVideoBlock,
+  StoryDevelopmentPackage,
 } from './types'
 import type { LocationSpatialProfileStatus } from '@/lib/location-spatial-profile/types'
 import {
   editScriptVideoPromptBlockSchema,
+  storyDevelopmentPackageSchema,
 } from './types'
 import { designEditAssetRequirements } from './asset-design'
 
@@ -81,6 +83,7 @@ interface UpdateEditScriptAssetRequirementDescriptionInput {
 }
 
 type PromptStepId =
+  | typeof AI_PROMPT_IDS.EDIT_SCRIPT_STORY_DEVELOPMENT
   | typeof AI_PROMPT_IDS.EDIT_SCRIPT_SCREENPLAY
   | typeof AI_PROMPT_IDS.EDIT_SCRIPT_PRIMARY
   | typeof AI_PROMPT_IDS.EDIT_SCRIPT_ASSET_EXTRACT
@@ -89,6 +92,7 @@ type PromptStepId =
 type DeadlineStepId = PromptStepId | 'edit_script_asset_design'
 
 const STEP_TIMEOUT_MS: Record<DeadlineStepId, number> = {
+  [AI_PROMPT_IDS.EDIT_SCRIPT_STORY_DEVELOPMENT]: 180_000,
   [AI_PROMPT_IDS.EDIT_SCRIPT_SCREENPLAY]: 180_000,
   [AI_PROMPT_IDS.EDIT_SCRIPT_PRIMARY]: 180_000,
   [AI_PROMPT_IDS.EDIT_SCRIPT_ASSET_EXTRACT]: 90_000,
@@ -174,6 +178,7 @@ interface PersistedEditScreenplay {
   readonly episodeId: string
   readonly userPrompt: string
   readonly styleBibleJson: Prisma.JsonValue | null
+  readonly storyDevelopmentJson: Prisma.JsonValue | null
   readonly screenplayText: string
   readonly status: string
 }
@@ -625,9 +630,23 @@ function mapPersistedEditScreenplay(screenplay: PersistedEditScreenplay): EditSc
     episodeId: screenplay.episodeId,
     userPrompt: screenplay.userPrompt,
     styleBible: null,
+    storyDevelopment: parsePersistedStoryDevelopment(screenplay.storyDevelopmentJson),
     screenplayText: screenplay.screenplayText,
     status: screenplay.status,
   }
+}
+
+function parsePersistedStoryDevelopment(value: Prisma.JsonValue | null | undefined): StoryDevelopmentPackage | null {
+  if (value === null || value === undefined) return null
+  return normalizeStoryDevelopmentPackage(value)
+}
+
+function normalizeStoryDevelopmentPackage(value: unknown): StoryDevelopmentPackage {
+  const parsed = storyDevelopmentPackageSchema.safeParse(value)
+  if (!parsed.success) {
+    throw new Error('EDIT_SCREENPLAY_STORY_DEVELOPMENT_INVALID')
+  }
+  return parsed.data
 }
 
 async function getPersistedEditScript(projectId: string, episodeId: string, editScriptId?: string): Promise<PersistedEditScript | null> {
@@ -892,6 +911,22 @@ export async function generateProjectEditScreenplay(input: GenerateEditScreenpla
 
   const model = resolveTextModel(config)
   const defaults = resolveEditScriptDefaults(input.prompt)
+  const storyDevelopmentRaw = await runPromptStep({
+    userId: input.userId,
+    projectId: input.projectId,
+    model,
+    locale,
+    promptId: AI_PROMPT_IDS.EDIT_SCRIPT_STORY_DEVELOPMENT,
+    variables: {
+      user_request: input.prompt,
+      duration_seconds: String(defaults.durationSeconds),
+      aspect_ratio: effectiveVideoRatio,
+    },
+    stepTitle: 'Story development',
+    stepIndex: 1,
+    stepTotal: 2,
+  })
+  const storyDevelopment = normalizeStoryDevelopmentPackage(storyDevelopmentRaw)
   const screenplayText = await runPromptTextStep({
     userId: input.userId,
     projectId: input.projectId,
@@ -900,12 +935,13 @@ export async function generateProjectEditScreenplay(input: GenerateEditScreenpla
     promptId: AI_PROMPT_IDS.EDIT_SCRIPT_SCREENPLAY,
     variables: {
       user_request: input.prompt,
+      story_development_json: stringifyForPrompt(storyDevelopment),
       duration_seconds: String(defaults.durationSeconds),
       aspect_ratio: effectiveVideoRatio,
     },
     stepTitle: 'Edit screenplay',
-    stepIndex: 1,
-    stepTotal: 1,
+    stepIndex: 2,
+    stepTotal: 2,
   })
   const saved = await prisma.projectEditScreenplay.upsert({
     where: { episodeId: input.episodeId },
@@ -914,12 +950,14 @@ export async function generateProjectEditScreenplay(input: GenerateEditScreenpla
       episodeId: input.episodeId,
       userPrompt: input.prompt,
       styleBibleJson: Prisma.JsonNull,
+      storyDevelopmentJson: storyDevelopment as unknown as Prisma.InputJsonValue,
       screenplayText,
       status: 'ready',
     },
     update: {
       userPrompt: input.prompt,
       styleBibleJson: Prisma.JsonNull,
+      storyDevelopmentJson: storyDevelopment as unknown as Prisma.InputJsonValue,
       screenplayText,
       status: 'ready',
     },

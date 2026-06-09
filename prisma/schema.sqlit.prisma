@@ -158,6 +158,7 @@ model ProjectEditScreenplay {
   episodeId      String         @unique
   userPrompt     String
   styleBibleJson Json?
+  storyDevelopmentJson Json?
   screenplayText String
   status         String         @default("ready")
   createdAt      DateTime       @default(now())

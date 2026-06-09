@@ -48,6 +48,7 @@ export interface ProjectContextEditScreenplaySnapshot {
   status: string
   userPrompt: string
   textPreview: string
+  storyDevelopmentPreview: string | null
   updatedAt: string
 }
 

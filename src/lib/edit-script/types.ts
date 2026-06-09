@@ -10,12 +10,91 @@ export type EditAssetStatus = (typeof EDIT_ASSET_STATUSES)[number]
 export const EDIT_SCRIPT_VIDEO_RATIOS = ['9:16', '16:9', '21:9'] as const
 export type EditScriptVideoRatio = (typeof EDIT_SCRIPT_VIDEO_RATIOS)[number]
 
+export const storyDevelopmentCharacterFunctionSchema = z.enum([
+  'helper',
+  'obstacle',
+  'temptation',
+  'mirror',
+  'observer',
+  'contrast',
+  'pressure',
+])
+
+export const storyDevelopmentPackageSchema = z.object({
+  schemaVersion: z.literal(1),
+  premise: z.string().trim().min(1),
+  protagonist: z.object({
+    name: z.string().trim().min(1),
+    ageRange: z.string().trim().min(1),
+    socialPosition: z.string().trim().min(1),
+    externalState: z.string().trim().min(1),
+    innerWound: z.string().trim().min(1),
+    want: z.string().trim().min(1),
+    need: z.string().trim().min(1),
+  }),
+  world: z.object({
+    era: z.string().trim().min(1),
+    region: z.string().trim().min(1),
+    socialReality: z.string().trim().min(1),
+    conflictFunction: z.string().trim().min(1),
+  }),
+  characterNetwork: z.array(z.object({
+    name: z.string().trim().min(1),
+    ageRange: z.string().trim().min(1),
+    relationshipToProtagonist: z.string().trim().min(1),
+    dramaticFunction: storyDevelopmentCharacterFunctionSchema,
+    desireInStory: z.string().trim().min(1),
+    pressureApplied: z.string().trim().min(1),
+  })).min(2).max(6),
+  conflictSystem: z.object({
+    externalConflict: z.string().trim().min(1),
+    internalConflict: z.string().trim().min(1),
+    relationshipConflict: z.string().trim().min(1),
+    centralDramaticQuestion: z.string().trim().min(1),
+  }),
+  storyExpansion: z.object({
+    incitingIncident: z.string().trim().min(1),
+    firstAction: z.string().trim().min(1),
+    obstacle: z.string().trim().min(1),
+    cost: z.string().trim().min(1),
+    majorTurn: z.string().trim().min(1),
+    crisis: z.string().trim().min(1),
+    finalChoice: z.string().trim().min(1),
+    consequence: z.string().trim().min(1),
+  }),
+  narrativeStructure: z.object({
+    type: z.enum([
+      'classic_three_act',
+      'rashomon',
+      'multi_strand_polyphony',
+      'circular',
+      'stream_of_consciousness',
+      'fragmented_memory',
+    ]),
+    reason: z.string().trim().min(1),
+    mapping: z.object({
+      openingMovement: z.string().trim().min(1),
+      developmentMovement: z.string().trim().min(1),
+      endingMovement: z.string().trim().min(1),
+    }),
+  }),
+  theme: z.string().trim().min(1),
+  screenplayConstraints: z.object({
+    sceneCount: z.string().trim().min(1),
+    tone: z.string().trim().min(1),
+    endingState: z.string().trim().min(1),
+  }),
+})
+
+export type StoryDevelopmentPackage = z.infer<typeof storyDevelopmentPackageSchema>
+
 export interface EditScreenplayPayload {
   readonly id: string
   readonly projectId: string
   readonly episodeId: string
   readonly userPrompt: string
   readonly styleBible: EditScriptStyleBible | null
+  readonly storyDevelopment: StoryDevelopmentPackage | null
   readonly screenplayText: string
   readonly status: string
 }

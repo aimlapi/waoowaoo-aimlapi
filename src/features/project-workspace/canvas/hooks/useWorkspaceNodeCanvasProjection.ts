@@ -1149,6 +1149,7 @@ export function buildWorkspaceNodeCanvasProjection({
         editScreenplayDetails: {
           screenplayText: editScreenplay.screenplayText,
           userPrompt: editScreenplay.userPrompt,
+          storyDevelopment: editScreenplay.storyDevelopment ?? null,
           visualReferenceCases,
           visualReferenceRunning,
         },

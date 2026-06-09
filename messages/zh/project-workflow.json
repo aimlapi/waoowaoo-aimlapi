@@ -343,6 +343,7 @@
         "promptSaveFailed": "保存失败",
         "moreItems": "还有 {count} 项",
         "screenplay": "剧本",
+        "storyDevelopment": "剧作开发依据",
         "originalRequest": "原始需求",
         "visualReferenceCases": "视觉参考案例",
         "visualReferenceOnly": "仅供确认画面风格使用，不会自动写入分镜或视频生成。",

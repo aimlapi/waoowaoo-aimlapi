@@ -173,6 +173,7 @@ export async function assembleProjectContext(params: {
             id: true,
             status: true,
             userPrompt: true,
+            storyDevelopmentJson: true,
             screenplayText: true,
             updatedAt: true,
           },
@@ -325,6 +326,9 @@ export async function assembleProjectContext(params: {
             status: editScreenplay.status,
             userPrompt: editScreenplay.userPrompt,
             textPreview: compactPreview(editScreenplay.screenplayText, 600),
+            storyDevelopmentPreview: editScreenplay.storyDevelopmentJson
+              ? compactPreview(JSON.stringify(editScreenplay.storyDevelopmentJson), 600)
+              : null,
             updatedAt: editScreenplay.updatedAt.toISOString(),
           }
         : null,

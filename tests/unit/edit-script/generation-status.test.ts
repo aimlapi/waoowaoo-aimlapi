@@ -115,6 +115,75 @@ const mockStyleBible = {
   },
 }
 
+const mockStoryDevelopment = {
+  schemaVersion: 1,
+  premise: '50多岁穷困潦倒的老光棍，一夜暴富求子。',
+  protagonist: {
+    name: '刘满仓',
+    ageRange: '50多岁',
+    socialPosition: '北方县城边缘村庄里的老光棍',
+    externalState: '穷困潦倒后突然暴富',
+    innerWound: '害怕老去无人记得',
+    want: '娶一个能生孩子的女人并留下儿子',
+    need: '承认自己真正害怕的是孤独，而不是没有后代',
+  },
+  world: {
+    era: '当代',
+    region: '北方资源衰败县城下辖村庄',
+    socialReality: '村庄用儿子和香火衡量男人体面',
+    conflictFunction: '放大主角对生育和尊严的混淆',
+  },
+  characterNetwork: [
+    {
+      name: '李桂香',
+      ageRange: '40多岁',
+      relationshipToProtagonist: '准备结婚的寡妇',
+      dramaticFunction: 'mirror',
+      desireInStory: '找一个能把她当作人接纳的伴侣',
+      pressureApplied: '她不能生育的事实逼主角面对自己的执念',
+    },
+    {
+      name: '王媒婆',
+      ageRange: '60岁上下',
+      relationshipToProtagonist: '媒人',
+      dramaticFunction: 'pressure',
+      desireInStory: '促成婚事并从中获利',
+      pressureApplied: '不断用早生贵子和村庄眼光催促主角',
+    },
+  ],
+  conflictSystem: {
+    externalConflict: '主角急于结婚求子，但婚前发现女方不能生育',
+    internalConflict: '主角把人生意义误认为必须有儿子证明',
+    relationshipConflict: '女方希望被当作伴侣，主角却把她当作生育机会',
+    centralDramaticQuestion: '他到底要一个人，还是只要一个能生孩子的功能',
+  },
+  storyExpansion: {
+    incitingIncident: '主角一夜暴富后宣布要马上结婚求子',
+    firstAction: '他通过媒人找来四十多岁的寡妇准备办婚事',
+    obstacle: '临近结婚时发现女方不能生育',
+    cost: '他一句失控质问伤透对方，也暴露自己的轻贱',
+    majorTurn: '他意识到自己从被人轻贱的人变成了轻贱别人的人',
+    crisis: '婚宴将开，他必须决定悔婚还是面对自己的执念',
+    finalChoice: '他撕掉早生贵子的喜联，不再把婚姻只当作求子工具',
+    consequence: '婚事没有圆满落地，但他第一次承认自己需要的是陪伴',
+  },
+  narrativeStructure: {
+    type: 'classic_three_act',
+    reason: '线性三幕式能集中呈现暴富、求子幻觉和婚前真相的代价',
+    mapping: {
+      openingMovement: '暴富与求子欲望建立',
+      developmentMovement: '婚事推进，关系出现真实可能',
+      endingMovement: '不能生育的事实揭开，主角做出代价选择',
+    },
+  },
+  theme: '一个被羞辱过的人，可能把尊严误认为占有，把陪伴误认为血脉。',
+  screenplayConstraints: {
+    sceneCount: '2-4',
+    tone: '克制、尖锐、生活化',
+    endingState: '不突然圆满，留下关系是否还能继续的余味',
+  },
+}
+
 function mockSuccessfulAiSteps() {
   aiExecMock.executeAiTextStep
     .mockResolvedValueOnce({
@@ -175,6 +244,7 @@ describe('edit script generation status persistence', () => {
   beforeEach(() => {
     vi.clearAllMocks()
     vi.useRealTimers()
+    aiExecMock.executeAiTextStep.mockReset()
     assetDesignMock.designEditAssetRequirements.mockReset()
     assetDesignMock.designEditAssetRequirements.mockImplementation(async (input: { requirements: unknown }) => input.requirements)
     prismaMock.projectEpisode.findFirst.mockResolvedValue({ id: 'episode-1' })
@@ -192,6 +262,7 @@ describe('edit script generation status persistence', () => {
       episodeId: 'episode-1',
       userPrompt: '做一个科幻短片',
       styleBibleJson: mockStyleBible,
+      storyDevelopmentJson: mockStoryDevelopment,
       screenplayText: '标题：《科幻短片》\n\n故事梗概：一条安静信号唤醒空间站。',
       status: 'ready',
     })
@@ -199,9 +270,10 @@ describe('edit script generation status persistence', () => {
       id: 'screenplay-1',
       projectId: 'project-1',
       episodeId: 'episode-1',
-      userPrompt: '做一个科幻短片',
+      userPrompt: '50多岁穷困潦倒的老光棍，一夜暴富求子。',
       styleBibleJson: null,
-      screenplayText: '标题：《科幻短片》\n\n故事梗概：一条安静信号唤醒空间站。',
+      storyDevelopmentJson: mockStoryDevelopment,
+      screenplayText: '标题：《旧屋喜事》\n\n故事梗概：刘满仓一夜暴富后急着求子，却在婚前发现未婚妻不能生育。',
       status: 'ready',
     })
     prismaMock.task.findFirst.mockResolvedValue(null)
@@ -254,9 +326,13 @@ describe('edit script generation status persistence', () => {
   })
 
   it('generates screenplay independently before edit script generation', async () => {
-    aiExecMock.executeAiTextStep.mockResolvedValueOnce({
-      text: '标题：《科幻短片》\n\n故事梗概：一条安静信号唤醒空间站。',
-    })
+    aiExecMock.executeAiTextStep
+      .mockResolvedValueOnce({
+        text: JSON.stringify(mockStoryDevelopment),
+      })
+      .mockResolvedValueOnce({
+        text: '标题：《旧屋喜事》\n\n故事梗概：刘满仓一夜暴富后急着求子，却在婚前发现未婚妻不能生育。',
+      })
 
     const screenplay = await generateProjectEditScreenplay({
       request: createRequest(),
@@ -264,42 +340,59 @@ describe('edit script generation status persistence', () => {
       episodeId: 'episode-1',
       userId: 'user-1',
       locale: 'zh',
-      prompt: '做一个科幻短片',
+      prompt: '50多岁穷困潦倒的老光棍，一夜暴富求子。',
     })
 
     expect(screenplay.id).toBe('screenplay-1')
     expect(screenplay.styleBible).toBeNull()
-    expect(aiExecMock.executeAiTextStep).toHaveBeenCalledTimes(1)
+    expect(screenplay.storyDevelopment).toEqual(mockStoryDevelopment)
+    expect(aiExecMock.executeAiTextStep).toHaveBeenCalledTimes(2)
     expect(aiExecMock.executeAiTextStep).toHaveBeenNthCalledWith(1, expect.objectContaining({
+      action: AI_PROMPT_IDS.EDIT_SCRIPT_STORY_DEVELOPMENT,
+      meta: expect.objectContaining({
+        stepId: AI_PROMPT_IDS.EDIT_SCRIPT_STORY_DEVELOPMENT,
+        stepIndex: 1,
+        stepTotal: 2,
+      }),
+    }))
+    expect(aiExecMock.executeAiTextStep).toHaveBeenNthCalledWith(2, expect.objectContaining({
       action: AI_PROMPT_IDS.EDIT_SCRIPT_SCREENPLAY,
+      messages: [
+        expect.objectContaining({
+          content: expect.stringContaining('刘满仓'),
+        }),
+      ],
       meta: expect.objectContaining({
         stepId: AI_PROMPT_IDS.EDIT_SCRIPT_SCREENPLAY,
-        stepIndex: 1,
-        stepTotal: 1,
+        stepIndex: 2,
+        stepTotal: 2,
       }),
     }))
     expect(prismaMock.projectEditScreenplay.upsert).toHaveBeenCalledWith(expect.objectContaining({
       create: expect.objectContaining({
         styleBibleJson: Prisma.JsonNull,
-        screenplayText: '标题：《科幻短片》\n\n故事梗概：一条安静信号唤醒空间站。',
+        storyDevelopmentJson: mockStoryDevelopment,
+        screenplayText: '标题：《旧屋喜事》\n\n故事梗概：刘满仓一夜暴富后急着求子，却在婚前发现未婚妻不能生育。',
         status: 'ready',
       }),
       update: expect.objectContaining({
         styleBibleJson: Prisma.JsonNull,
-        screenplayText: '标题：《科幻短片》\n\n故事梗概：一条安静信号唤醒空间站。',
+        storyDevelopmentJson: mockStoryDevelopment,
+        screenplayText: '标题：《旧屋喜事》\n\n故事梗概：刘满仓一夜暴富后急着求子，却在婚前发现未婚妻不能生育。',
         status: 'ready',
       }),
     }))
     expect(prismaMock.projectEditScript.upsert).not.toHaveBeenCalled()
   })
 
-  it('reads legacy screenplay without Style Bible as nullable styleBible', async () => {
+  it('reads legacy screenplay without story development as nullable storyDevelopment', async () => {
     prismaMock.projectEditScreenplay.findFirst.mockResolvedValueOnce({
       id: 'legacy-screenplay-1',
       projectId: 'project-1',
       episodeId: 'episode-1',
       userPrompt: '旧剧本',
       styleBibleJson: null,
+      storyDevelopmentJson: null,
       screenplayText: '旧剧本文本',
       status: 'ready',
     })
@@ -315,6 +408,7 @@ describe('edit script generation status persistence', () => {
       episodeId: 'episode-1',
       userPrompt: '旧剧本',
       styleBible: null,
+      storyDevelopment: null,
       screenplayText: '旧剧本文本',
       status: 'ready',
     })
@@ -466,7 +560,7 @@ describe('edit script generation status persistence', () => {
       create: expect.objectContaining({
         status: 'generating',
         userPrompt: '做一个科幻短片',
-        styleBibleJson: mockStyleBible,
+        styleBibleJson: Prisma.JsonNull,
         screenplayText: expect.stringContaining('标题：《科幻短片》'),
         shotCount: 0,
         shotsJson: [],
@@ -475,7 +569,7 @@ describe('edit script generation status persistence', () => {
       update: expect.objectContaining({
         status: 'generating',
         userPrompt: '做一个科幻短片',
-        styleBibleJson: mockStyleBible,
+        styleBibleJson: Prisma.JsonNull,
         screenplayText: expect.stringContaining('标题：《科幻短片》'),
       }),
     }))
@@ -513,12 +607,12 @@ describe('edit script generation status persistence', () => {
     }))
     expect(txMock.projectEditScript.upsert).toHaveBeenCalledWith(expect.objectContaining({
       create: expect.objectContaining({
-        styleBibleJson: mockStyleBible,
+        styleBibleJson: Prisma.JsonNull,
         screenplayText: expect.stringContaining('标题：《科幻短片》'),
       }),
       update: expect.objectContaining({
         status: 'ready',
-        styleBibleJson: mockStyleBible,
+        styleBibleJson: Prisma.JsonNull,
         screenplayText: expect.stringContaining('标题：《科幻短片》'),
       }),
     }))
@@ -545,7 +639,7 @@ describe('edit script generation status persistence', () => {
     expect(prismaMock.projectEditScript.upsert).toHaveBeenCalledWith(expect.objectContaining({
       update: expect.objectContaining({
         status: 'generating',
-        styleBibleJson: mockStyleBible,
+        styleBibleJson: Prisma.JsonNull,
         shotsJson: [
           expect.objectContaining({
             shotNumber: 1,
@@ -574,7 +668,7 @@ describe('edit script generation status persistence', () => {
     expect(prismaMock.projectEditScript.upsert).toHaveBeenLastCalledWith(expect.objectContaining({
       update: expect.objectContaining({
         status: 'failed',
-        styleBibleJson: mockStyleBible,
+        styleBibleJson: Prisma.JsonNull,
         logline: 'LLM_DOWN',
       }),
     }))
@@ -603,7 +697,7 @@ describe('edit script generation status persistence', () => {
     expect(prismaMock.projectEditScript.upsert).toHaveBeenLastCalledWith(expect.objectContaining({
       update: expect.objectContaining({
         status: 'failed',
-        styleBibleJson: mockStyleBible,
+        styleBibleJson: Prisma.JsonNull,
         logline: `EDIT_SCRIPT_STEP_TIMEOUT:${AI_PROMPT_IDS.EDIT_SCRIPT_PRIMARY}:180s`,
       }),
     }))

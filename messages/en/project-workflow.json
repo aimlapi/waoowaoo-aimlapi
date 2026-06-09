@@ -343,6 +343,7 @@
         "promptSaveFailed": "Save failed",
         "moreItems": "{count} more",
         "screenplay": "Screenplay",
+        "storyDevelopment": "Story Development",
         "originalRequest": "Original Request",
         "visualReferenceCases": "Visual Reference Cases",
         "visualReferenceOnly": "For visual style review only. This selection is not written into storyboard or video generation.",

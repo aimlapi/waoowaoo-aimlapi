@@ -18,11 +18,17 @@ describe('edit script block-first prompt flow', () => {
       locale: 'zh',
       variables: {
         user_request: '生成一条连续短片',
+        story_development_json: JSON.stringify({
+          protagonist: { name: '人物', want: '寻找旧物', need: '面对失去' },
+          storyExpansion: { majorTurn: '发现旧物来自被回避的关系' },
+        }),
         duration_seconds: '8',
         aspect_ratio: '9:16',
       },
     })
 
+    expect(screenplayPrompt).toContain('Story Development Package')
+    expect(screenplayPrompt).toContain('禁止直接根据用户原始需求另起故事')
     expect(screenplayPrompt).toContain('AI 可控短片剧本')
     expect(screenplayPrompt).toContain('后续角色、场景、道具、风格案例和分镜生成')
     expect(screenplayPrompt).toContain('这里只写剧情内容')

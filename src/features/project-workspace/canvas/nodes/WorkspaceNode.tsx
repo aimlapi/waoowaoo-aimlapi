@@ -1147,6 +1147,9 @@ function EditScreenplayContent({
 
   if (!details) return <p className={`${SELECTABLE_TEXT_CLASS} text-sm leading-6 text-[var(--glass-text-secondary)]`}>{data.body}</p>
   const visualReferenceCases = details.visualReferenceCases
+  const storyDevelopmentText = details.storyDevelopment
+    ? JSON.stringify(details.storyDevelopment, null, 2)
+    : ''
 
   function toggleVisualReferenceDescription(caseId: string) {
     setExpandedVisualReferenceCaseIds((current) => {
@@ -1165,6 +1168,11 @@ function EditScreenplayContent({
       {renderSection(labels('screenplay'), expanded
         ? renderTextBlock(details.screenplayText)
         : renderSummaryText(details.screenplayText, 8))}
+      {storyDevelopmentText
+        ? renderSection(labels('storyDevelopment'), expanded
+          ? renderTextBlock(storyDevelopmentText)
+          : renderSummaryText(storyDevelopmentText, 6))
+        : null}
       {visualReferenceCases.length > 0 ? renderSection(labels('visualReferenceCases'), (
         <div className={nodeContentInteractionClass(data, 'space-y-2')}>
           <p className={`${SELECTABLE_TEXT_CLASS} text-xs leading-5 text-[var(--glass-text-tertiary)]`}>

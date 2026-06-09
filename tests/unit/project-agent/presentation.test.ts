@@ -80,6 +80,7 @@ describe('project agent presentation', () => {
           status: 'ready',
           userPrompt: 'make a short film',
           textPreview: 'INT. DOCK - NIGHT',
+          storyDevelopmentPreview: null,
           updatedAt: '2026-01-01T00:00:00.000Z',
         },
         editScript: {

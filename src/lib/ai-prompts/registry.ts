@@ -177,9 +177,13 @@ export const AI_PROMPT_CATALOG: Record<AiPromptId, AiPromptCatalogEntry> = {
       'timeline_map',
     ],
   },
+  [AI_PROMPT_IDS.EDIT_SCRIPT_STORY_DEVELOPMENT]: {
+    pathStem: 'edit-script/story-development',
+    variableKeys: ['user_request', 'duration_seconds', 'aspect_ratio'],
+  },
   [AI_PROMPT_IDS.EDIT_SCRIPT_SCREENPLAY]: {
     pathStem: 'edit-script/screenplay',
-    variableKeys: ['user_request', 'duration_seconds', 'aspect_ratio'],
+    variableKeys: ['user_request', 'story_development_json', 'duration_seconds', 'aspect_ratio'],
   },
   [AI_PROMPT_IDS.EDIT_SCRIPT_PRIMARY]: {
     pathStem: 'edit-script/primary',

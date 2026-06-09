@@ -294,6 +294,7 @@ export interface WorkspaceCanvasEditPipelineStepDetails {
 export interface WorkspaceCanvasEditScreenplayDetails {
   readonly screenplayText: string
   readonly userPrompt: string
+  readonly storyDevelopment?: unknown | null
   readonly visualReferenceCases: readonly {
     readonly id: string
     readonly title: string

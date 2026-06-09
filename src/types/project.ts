@@ -323,6 +323,7 @@ export interface ProjectEditScreenplay {
   episodeId: string
   userPrompt: string
   styleBible?: unknown
+  storyDevelopment?: unknown | null
   screenplayText: string
   status: string
 }
