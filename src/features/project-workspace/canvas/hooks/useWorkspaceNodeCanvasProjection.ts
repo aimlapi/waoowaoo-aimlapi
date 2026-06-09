@@ -1081,8 +1081,9 @@ export function buildWorkspaceNodeCanvasProjection({
 
   const storyBody = storyText.trim()
   const hasStory = storyBody.length > 0
+  const shouldShowAnalysisNode = hasStory && !editScreenplay
   const analysisNodeId = `analysis:${episodeId}`
-  if (hasStory) {
+  if (shouldShowAnalysisNode) {
     nodes.push(createNode({
       id: analysisNodeId,
       fallbackX: STORY_COLUMN_X,
@@ -1111,7 +1112,7 @@ export function buildWorkspaceNodeCanvasProjection({
   }
 
   const editScreenplayNodeId = editScreenplay ? `edit-screenplay:${editScreenplay.id}` : null
-  const editScreenplayFallbackY = hasStory ? 430 : 180
+  const editScreenplayFallbackY = shouldShowAnalysisNode ? 430 : 180
   const editScreenplayHeight = editScreenplay
     ? estimateEditScreenplayNodeHeight(editScreenplay, visualReferenceCases)
     : EDIT_SCREENPLAY_NODE_HEIGHT
@@ -1162,9 +1163,6 @@ export function buildWorkspaceNodeCanvasProjection({
         onAction,
       },
     }))
-    if (hasStory) {
-      edges.push(createEdge(`edge:analysis-edit-screenplay:${editScreenplay.id}`, analysisNodeId, `edit-screenplay:${editScreenplay.id}`))
-    }
   }
 
   const editStyleSourceBottomY = editScreenplay
@@ -1183,12 +1181,12 @@ export function buildWorkspaceNodeCanvasProjection({
       : 0
     const editPipelineBaseY = editStyleSourceBottomY !== null
       ? editStyleSourceBottomY + EDIT_PIPELINE_STEP_LAYER_GAP_Y
-      : hasStory ? 430 : 180
+      : shouldShowAnalysisNode ? 430 : 180
     const editScriptFallbackY = shouldShowPipelineSteps
       ? editPipelineBaseY + pipelineStepLayerHeight + EDIT_PIPELINE_TO_SCRIPT_GAP_Y
       : editStyleSourceBottomY !== null
         ? editStyleSourceBottomY + 170
-        : hasStory ? 430 : 180
+        : shouldShowAnalysisNode ? 430 : 180
     const editScriptHasRows = editScript.shots.length > 0
     const editScriptHeight = editScriptIsGenerating && !editScriptHasRows
       ? 520
@@ -1319,7 +1317,7 @@ export function buildWorkspaceNodeCanvasProjection({
       const firstPipelineNodeId = pipelineNodeIds[0]
       if (editScreenplayNodeId) {
         edges.push(createEdge(`edge:edit-screenplay-edit-pipeline:${editScript.id}`, editScreenplayNodeId, firstPipelineNodeId))
-      } else if (hasStory) {
+      } else if (shouldShowAnalysisNode) {
         edges.push(createEdge(`edge:analysis-edit-pipeline:${editScript.id}`, analysisNodeId, firstPipelineNodeId))
       }
       pipelineNodeIds.forEach((nodeId, index) => {
@@ -1329,7 +1327,7 @@ export function buildWorkspaceNodeCanvasProjection({
       edges.push(createEdge(`edge:edit-pipeline-edit-script:${editScript.id}`, pipelineNodeIds[pipelineNodeIds.length - 1], editScriptNodeId))
     } else if (editScreenplayNodeId) {
       edges.push(createEdge(`edge:edit-screenplay-edit-script:${editScript.id}`, editScreenplayNodeId, editScriptNodeId))
-    } else if (hasStory) {
+    } else if (shouldShowAnalysisNode) {
       edges.push(createEdge(`edge:analysis-edit-script:${editScript.id}`, analysisNodeId, editScriptNodeId))
     }
 
@@ -1416,7 +1414,7 @@ export function buildWorkspaceNodeCanvasProjection({
     nodes.push(createNode({
       id: pendingEditScriptNodeId,
       fallbackX: STORY_COLUMN_X,
-      fallbackY: hasStory ? 430 : 180,
+      fallbackY: shouldShowAnalysisNode ? 430 : 180,
       zIndex: zIndex++,
       savedLayoutByKey,
       ignoreSavedLayout: true,
@@ -1438,7 +1436,7 @@ export function buildWorkspaceNodeCanvasProjection({
         onAction,
       },
     }))
-    if (hasStory) {
+    if (shouldShowAnalysisNode) {
       edges.push(createEdge(`edge:analysis-edit-script-pending:${episodeId}`, analysisNodeId, pendingEditScriptNodeId))
     }
   }
@@ -1474,7 +1472,7 @@ export function buildWorkspaceNodeCanvasProjection({
         onAction,
       },
     }))
-    if (hasStory) {
+    if (shouldShowAnalysisNode) {
       edges.push(createEdge(`edge:analysis-clip:${clip.id}`, analysisNodeId, nodeId))
     }
   })
@@ -1702,7 +1700,7 @@ export function buildWorkspaceNodeCanvasProjection({
     }))
 
     const source = clipNodeIds.get(storyboard.clipId) ?? analysisNodeId
-    if (clipNodeIds.has(storyboard.clipId) || hasStory) {
+    if (clipNodeIds.has(storyboard.clipId) || shouldShowAnalysisNode) {
       edges.push(createEdge(`edge:clip-shot:${panel.id}`, source, nodeId))
     }
     if (firstPanelIdByStoryboardId.get(storyboard.id) === panel.id) {

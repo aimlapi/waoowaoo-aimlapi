@@ -359,6 +359,27 @@ describe('workspace node canvas projection', () => {
     ])
   })
 
+  it('does not project the legacy analysis card once edit screenplay exists', () => {
+    const editScreenplay = createEditScreenplay()
+    const projection = buildWorkspaceNodeCanvasProjection({
+      episodeId: 'episode-1',
+      storyText: '一个五六岁时爆火的童星，中年后靠短视频恶俗表演维持流量。',
+      clips: [],
+      storyboards: [],
+      editScreenplay,
+      savedLayouts: [],
+      translate: t,
+    })
+
+    expect(projection.nodes.map((node) => node.id)).toEqual([
+      'edit-screenplay:screenplay-1',
+    ])
+    expect(projection.edges).toEqual([])
+    const screenplayNode = projection.nodes[0]
+    expect(screenplayNode?.position.y).toBe(180)
+    expect(screenplayNode?.data.kind).toBe('editScreenplay')
+  })
+
   it('keeps visual reference generation as the direct action when a ready screenplay has no edit script yet', () => {
     const editScreenplay = createEditScreenplay()
     const projection = buildWorkspaceNodeCanvasProjection({
