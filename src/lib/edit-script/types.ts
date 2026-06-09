@@ -20,8 +20,12 @@ export const storyDevelopmentCharacterFunctionSchema = z.enum([
   'pressure',
 ])
 
+function normalizedComparableText(value: string): string {
+  return value.replace(/\s+/g, '').toLowerCase()
+}
+
 export const storyDevelopmentPackageSchema = z.object({
-  schemaVersion: z.literal(1),
+  schemaVersion: z.literal(2),
   premise: z.string().trim().min(1),
   protagonist: z.object({
     name: z.string().trim().min(1),
@@ -29,8 +33,15 @@ export const storyDevelopmentPackageSchema = z.object({
     socialPosition: z.string().trim().min(1),
     externalState: z.string().trim().min(1),
     innerWound: z.string().trim().min(1),
+    lie: z.string().trim().min(1),
     want: z.string().trim().min(1),
     need: z.string().trim().min(1),
+  }),
+  themeEngine: z.object({
+    valueA: z.string().trim().min(1),
+    valueB: z.string().trim().min(1),
+    centralDramaticQuestion: z.string().trim().min(1),
+    controllingIdea: z.string().trim().min(1),
   }),
   world: z.object({
     era: z.string().trim().min(1),
@@ -38,30 +49,67 @@ export const storyDevelopmentPackageSchema = z.object({
     socialReality: z.string().trim().min(1),
     conflictFunction: z.string().trim().min(1),
   }),
+  antagonistSystem: z.object({
+    embodiedAntagonist: z.object({
+      name: z.string().trim().min(1),
+      socialPosition: z.string().trim().min(1),
+      activeOpposition: z.string().trim().min(1),
+    }),
+    institutionalAntagonist: z.object({
+      name: z.string().trim().min(1),
+      rulesOrMechanism: z.string().trim().min(1),
+      activeOpposition: z.string().trim().min(1),
+    }),
+    abstractAntagonist: z.object({
+      name: z.string().trim().min(1),
+      existentialThreat: z.string().trim().min(1),
+      activeOpposition: z.string().trim().min(1),
+    }),
+  }),
   characterNetwork: z.array(z.object({
     name: z.string().trim().min(1),
     ageRange: z.string().trim().min(1),
     relationshipToProtagonist: z.string().trim().min(1),
     dramaticFunction: storyDevelopmentCharacterFunctionSchema,
+    themePosition: z.string().trim().min(1),
+    fateRepresentation: z.string().trim().min(1),
+    questionToProtagonist: z.string().trim().min(1),
     desireInStory: z.string().trim().min(1),
     pressureApplied: z.string().trim().min(1),
   })).min(2).max(6),
-  conflictSystem: z.object({
-    externalConflict: z.string().trim().min(1),
-    internalConflict: z.string().trim().min(1),
-    relationshipConflict: z.string().trim().min(1),
-    centralDramaticQuestion: z.string().trim().min(1),
-  }),
-  storyExpansion: z.object({
-    incitingIncident: z.string().trim().min(1),
-    firstAction: z.string().trim().min(1),
-    obstacle: z.string().trim().min(1),
+  fateNetwork: z.array(z.object({
+    label: z.enum(['Future A', 'Future B', 'Future C']),
+    characterName: z.string().trim().min(1),
+    lifePath: z.string().trim().min(1),
+    gain: z.string().trim().min(1),
+    ending: z.string().trim().min(1),
+  })).length(3),
+  pressureLadder: z.array(z.object({
+    level: z.number().int().min(1),
+    domain: z.enum(['career', 'relationship', 'identity', 'existence']),
+    pressure: z.string().trim().min(1),
+    escalation: z.string().trim().min(1),
+  })).min(4),
+  hardChoices: z.array(z.object({
+    valueA: z.string().trim().min(1),
+    valueB: z.string().trim().min(1),
+    decision: z.string().trim().min(1),
     cost: z.string().trim().min(1),
-    majorTurn: z.string().trim().min(1),
-    crisis: z.string().trim().min(1),
-    finalChoice: z.string().trim().min(1),
-    consequence: z.string().trim().min(1),
+  })).min(3),
+  valueArc: z.object({
+    openingBelief: z.string().trim().min(1),
+    closingBelief: z.string().trim().min(1),
+    openingValueState: z.string().trim().min(1),
+    closingValueState: z.string().trim().min(1),
   }),
+  storyExpansion: z.array(z.object({
+    act: z.string().trim().min(1),
+    goal: z.string().trim().min(1),
+    pressure: z.string().trim().min(1),
+    choice: z.string().trim().min(1),
+    cost: z.string().trim().min(1),
+    newValueState: z.string().trim().min(1),
+  })).min(3),
   narrativeStructure: z.object({
     type: z.enum([
       'classic_three_act',
@@ -78,12 +126,49 @@ export const storyDevelopmentPackageSchema = z.object({
       endingMovement: z.string().trim().min(1),
     }),
   }),
-  theme: z.string().trim().min(1),
   screenplayConstraints: z.object({
     sceneCount: z.string().trim().min(1),
     tone: z.string().trim().min(1),
     endingState: z.string().trim().min(1),
   }),
+}).superRefine((value, context) => {
+  if (normalizedComparableText(value.protagonist.want) === normalizedComparableText(value.protagonist.need)) {
+    context.addIssue({
+      code: z.ZodIssueCode.custom,
+      path: ['protagonist', 'want'],
+      message: 'Want and Need must be different.',
+    })
+  }
+  if (normalizedComparableText(value.themeEngine.valueA) === normalizedComparableText(value.themeEngine.valueB)) {
+    context.addIssue({
+      code: z.ZodIssueCode.custom,
+      path: ['themeEngine', 'valueA'],
+      message: 'Value A and Value B must be different.',
+    })
+  }
+  if (normalizedComparableText(value.valueArc.openingBelief) === normalizedComparableText(value.valueArc.closingBelief)) {
+    context.addIssue({
+      code: z.ZodIssueCode.custom,
+      path: ['valueArc', 'openingBelief'],
+      message: 'Opening Belief and Closing Belief must be different.',
+    })
+  }
+  if (normalizedComparableText(value.valueArc.openingValueState) === normalizedComparableText(value.valueArc.closingValueState)) {
+    context.addIssue({
+      code: z.ZodIssueCode.custom,
+      path: ['valueArc', 'openingValueState'],
+      message: 'Opening Value State and Closing Value State must be different.',
+    })
+  }
+  value.pressureLadder.forEach((step, index) => {
+    if (step.level !== index + 1) {
+      context.addIssue({
+        code: z.ZodIssueCode.custom,
+        path: ['pressureLadder', index, 'level'],
+        message: 'Pressure ladder levels must start at 1 and increase by 1.',
+      })
+    }
+  })
 })
 
 export type StoryDevelopmentPackage = z.infer<typeof storyDevelopmentPackageSchema>

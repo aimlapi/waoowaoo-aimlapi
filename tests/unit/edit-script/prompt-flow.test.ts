@@ -13,6 +13,26 @@ describe('edit script block-first prompt flow', () => {
       '动作：人物走入昏暗房间，沿着窗边的光线慢慢前行，在桌前停下。',
     ].join('\n')
 
+    const storyDevelopmentPrompt = buildAiPrompt({
+      promptId: AI_PROMPT_IDS.EDIT_SCRIPT_STORY_DEVELOPMENT,
+      locale: 'zh',
+      variables: {
+        user_request: '一个过气童星靠短视频博流量，童年作品突然翻红',
+        duration_seconds: '60',
+        aspect_ratio: '16:9',
+      },
+    })
+
+    expect(storyDevelopmentPrompt).toContain('Story Development Layer')
+    expect(storyDevelopmentPrompt).toContain('禁止从 Premise 直接生成故事大纲或剧本')
+    expect(storyDevelopmentPrompt).toContain('Protagonist Analysis -> Theme Engine -> Antagonist System')
+    expect(storyDevelopmentPrompt).toContain('"schemaVersion": 2')
+    expect(storyDevelopmentPrompt).toContain('"themeEngine"')
+    expect(storyDevelopmentPrompt).toContain('"antagonistSystem"')
+    expect(storyDevelopmentPrompt).toContain('"pressureLadder"')
+    expect(storyDevelopmentPrompt).toContain('"hardChoices"')
+    expect(storyDevelopmentPrompt).toContain('goal -> pressure -> choice -> cost -> newValueState')
+
     const screenplayPrompt = buildAiPrompt({
       promptId: AI_PROMPT_IDS.EDIT_SCRIPT_SCREENPLAY,
       locale: 'zh',

@@ -13,7 +13,9 @@ Aspect ratio: {{aspect_ratio}}
 
 Responsibility boundary:
 - Do not start a new story directly from the user's original request. The Story Development Package is the plot source of truth.
-- Do not reselect the protagonist, reset the world, rewrite the core want, deeper need, major character relationships, major turn, final choice, or ending state.
+- Do not reselect the protagonist, reset the world, rewrite the core want, deeper need, lie, value conflict, antagonist system, major character relationships, fate network, hard choices, value arc, or ending state.
+- Story events must obey the Story Development Package's Goal -> Pressure -> Choice -> Cost -> New Value State chain. Do not turn storyExpansion back into a plot-event list.
+- Preserve the themeEngine valueA/valueB conflict, and make the costs from hardChoices visible inside scenes.
 - If the Story Development Package contains a relationship-based turn, preserve that turn and its cost. Do not replace it with a scam, misunderstanding, or easy twist.
 - Only write story content here. Do not write camera language, shot size, composition, camera movement, editing rhythm, group/single structure, video prompts, sound effects, BGM, or post-production notes.
 - Downstream visual-reference cases, character assets, location assets, prop assets, and storyboards will use this screenplay as the only plot truth, so the screenplay must clearly express characters, scenes, causal events, action progression, and the ending beat.

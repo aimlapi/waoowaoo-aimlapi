@@ -13,7 +13,9 @@ Story Development Package：
 
 职责边界：
 - 禁止直接根据用户原始需求另起故事；必须以 Story Development Package 为剧情事实来源。
-- 禁止重选主角、重设世界、重写核心欲望、深层需求、主要角色关系、重大转折、最终选择或结局状态。
+- 禁止重选主角、重设世界、重写核心欲望、深层需求、谎言、价值冲突、反派系统、主要角色关系、命运网络、关键选择、价值弧光或结局状态。
+- 必须让剧本事件服从 Story Development Package 的 Goal -> Pressure -> Choice -> Cost -> New Value State，不要把 storyExpansion 改回事件流水账。
+- 必须保留 themeEngine 的 valueA/valueB 冲突，并让 hardChoices 的代价在场景中可见。
 - 如果 Story Development Package 已经设置了关系性转折，必须保留该转折及其代价，不要改成骗局、误会或轻巧反转。
 - 这里只写剧情内容，不写镜头语言、景别、构图、运镜、剪辑节奏、group/single、视频生成提示词、音效、BGM 或后期说明。
 - 后续风格案例、角色资产、场景资产、道具资产和分镜会以这份剧本作为唯一剧情事实，所以剧本必须清楚表达人物、场景、事件因果、动作推进和结尾落点。
