@@ -230,7 +230,7 @@ describe('worker character-style-test-task-handler', () => {
       id: 'style-case-1',
       title: '动画向｜冷白定格',
       description: '定格动画，粘土与布艺材质，低饱和冷白光。',
-      prompt: 'stop-motion clay and fabric character look-test, muted cool palette',
+      prompt: '维度组合：定格动画；粘土与布艺；低饱和冷白光。必须严格使用视觉方向里描述的共享场景，保留同一批人物、人物站位、道具摆法。',
       imageUrl: '/m/style-case-1',
       imageMedia: null,
     })
@@ -247,6 +247,9 @@ describe('worker character-style-test-task-handler', () => {
     expect(generationInput?.prompt).toContain('用于选角、试镜与人物定妆判断的 contact sheet')
     expect(generationInput?.prompt).toContain('媒介和画风必须由已选视觉参考案例决定')
     expect(generationInput?.prompt).toContain('动画向｜冷白定格')
+    expect(generationInput?.prompt).toContain('不要沿用案例提示词里的共享场景')
+    expect(generationInput?.prompt).not.toContain('可复用风格语言摘要')
+    expect(generationInput?.prompt).not.toContain('保留同一批人物、人物站位、道具摆法')
     expect(generationInput?.prompt).toContain('当前这张图是一位候选演员的完整形象包')
     expect(generationInput?.prompt).toContain('至少两种不同表情')
     expect(generationInput?.prompt).toContain('至少两套不同服装或穿搭层次')
@@ -255,7 +258,7 @@ describe('worker character-style-test-task-handler', () => {
     expect(generationInput?.prompt).not.toContain('真人摄影 contact sheet')
     expect(generationInput?.prompt).not.toContain('绝对禁止：概念艺术、插画、CG')
     expect(generationInput?.prompt).not.toContain('本次角色资产风格规范')
-    expect(generationInput?.options.referenceImages).toEqual(['normalized-style-ref'])
+    expect(generationInput?.options.referenceImages).toBeUndefined()
   })
 
   it('casting candidate mode -> generates three candidates, scores them, and persists the winner', async () => {
@@ -372,7 +375,7 @@ describe('worker character-style-test-task-handler', () => {
       expect(input.prompt).toContain('选中的视觉风格案例（最高优先级）：')
       expect(input.prompt).toContain('冷白写实')
       expect(input.prompt).toContain('选中案例的媒介类别具有约束力')
-      expect(input.options.referenceImages).toEqual(['normalized-style-ref'])
+      expect(input.options.referenceImages).toBeUndefined()
     }
   })
 })

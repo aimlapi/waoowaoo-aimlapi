@@ -739,6 +739,39 @@ describe('worker panel-image-task-handler behavior', () => {
     )
   })
 
+  it('prompt-only reference mode -> skips all reference image normalization', async () => {
+    const job = buildJob({
+      candidateCount: 1,
+      referenceMode: 'prompt_only',
+      referencePanelImageUrls: ['images/previous-panel.png'],
+      extraImageUrls: ['https://example.com/manual-ref.png'],
+      referenceImageNotes: [
+        'source=prompt_only; usage=Use panel prompt text only',
+      ],
+    })
+    await handlePanelImageTask(job)
+
+    expect(sharedMock.collectPanelReferenceImageItemsWithDiagnostics).not.toHaveBeenCalled()
+    expect(sharedMock.normalizeReferenceImageItemsForGeneration).toHaveBeenCalledWith(
+      [],
+      expect.objectContaining({
+        context: expect.objectContaining({
+          taskType: TASK_TYPE.IMAGE_PANEL,
+          scope: 'panel-image.refs',
+        }),
+      }),
+    )
+    expect(utilsMock.resolveImageSourceFromGeneration).toHaveBeenCalledWith(
+      expect.anything(),
+      expect.objectContaining({
+        options: expect.objectContaining({
+          referenceImages: [],
+          aspectRatio: '16:9',
+        }),
+      }),
+    )
+  })
+
   it('regeneration branch -> keeps old image in previousImageUrl and stores candidates only', async () => {
     utilsMock.resolveImageSourceFromGeneration.mockReset()
     utilsMock.uploadImageSourceToCos.mockReset()

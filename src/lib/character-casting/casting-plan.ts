@@ -122,7 +122,6 @@ function compactText(value: string, limit: number): string {
 function buildPlanPrompt(input: CharacterCastingPlanInput): string {
   const title = compactText(input.selectedVisualReferenceStyle.title, 80)
   const description = compactText(input.selectedVisualReferenceStyle.description, 240)
-  const stylePrompt = compactText(input.selectedVisualReferenceStyle.prompt, 900)
 
   if (input.locale === 'en') {
     return [
@@ -136,11 +135,11 @@ function buildPlanPrompt(input: CharacterCastingPlanInput): string {
       'Selected visual reference case, the only style source:',
       `Title: ${title}`,
       `Description: ${description}`,
-      `Prompt: ${stylePrompt}`,
       '',
       'Rules:',
       '- Keep all plans within the same role and the selected visual reference medium.',
       '- Do not copy the reference image composition, character positions, prop layout, or exact scene moment.',
+      '- Do not reuse scene-specific instructions from the reference-case prompt, including shared scene, character identity, character count, blocking, prop layout, or action moment.',
       '- Do not introduce project style config, legacy style presets, or user-history style.',
       '- Across A/B/C, the candidates must look like different people and different actors. They must not share the same face, head shape, facial proportions, or base model.',
       '- The three plans must be visibly different casting options: different face length/width, cheekbones, jaw, nose bridge, eye spacing, eye shape, mouth shape, hair silhouette, body/posture, costume structure, performance state, and signature detail.',
@@ -164,11 +163,11 @@ function buildPlanPrompt(input: CharacterCastingPlanInput): string {
     '已选视觉参考案例，唯一风格来源：',
     `标题：${title}`,
     `描述：${description}`,
-    `提示词：${stylePrompt}`,
     '',
     '规则：',
     '- 三套方案必须仍然是同一个剧本角色，并保持已选视觉参考案例的媒介类别。',
     '- 绝对不要复制视觉参考案例图的构图、人物站位、道具摆法或具体场景瞬间。',
+    '- 不要沿用案例提示词里的共享场景、角色身份、人物数量、人物站位、动作瞬间或道具布局；这些只属于案例图本身。',
     '- 不要引入项目风格配置、旧项目风格、系统风格预设或用户历史偏好。',
     '- A/B/C 必须达到陌生人/不同演员级别差异，不能像同一个人换衣服、换表情、换年龄滤镜或换发型；必须明显不是同一张脸、同一个头模或同一个底模。',
     '- 三套方案必须像真正可比较的选角方案：脸长脸宽、颧骨、下颌、鼻梁、眼距、眼型、嘴型、头颅轮廓、发型轮廓、体型姿态、服装结构、表演状态、记忆点细节都要肉眼可区分。',

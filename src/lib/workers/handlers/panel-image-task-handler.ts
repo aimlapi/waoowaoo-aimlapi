@@ -39,6 +39,14 @@ const EMPTY_PANEL_REFERENCE_COLLECTION = {
   expectedCharacterReferenceCount: 0,
 } satisfies Awaited<ReturnType<typeof collectPanelReferenceImageItemsWithDiagnostics>>
 
+type PanelReferenceMode = 'asset' | 'storyboard' | 'prompt_only'
+
+function normalizePanelReferenceMode(value: unknown): PanelReferenceMode {
+  if (value === 'storyboard') return 'storyboard'
+  if (value === 'prompt_only') return 'prompt_only'
+  return 'asset'
+}
+
 function buildPanelPrompt(params: {
   locale: TaskJobData['locale']
   aspectRatio: string
@@ -75,8 +83,8 @@ export async function handlePanelImageTask(job: Job<TaskJobData>) {
   if (!modelKey) throw new Error('Storyboard model not configured')
 
   const candidateCount = clampCount(payload.candidateCount ?? payload.count, 1, 4, 1)
-  const referenceMode = payload.referenceMode === 'storyboard' ? 'storyboard' : 'asset'
-  const refCollection = referenceMode === 'storyboard'
+  const referenceMode = normalizePanelReferenceMode(payload.referenceMode)
+  const refCollection = referenceMode === 'storyboard' || referenceMode === 'prompt_only'
     ? EMPTY_PANEL_REFERENCE_COLLECTION
     : await collectPanelReferenceImageItemsWithDiagnostics(projectData, panel, { strict: true })
   const selectedVisualReferenceStyle = await requireSelectedVisualReferenceStyle({
@@ -84,15 +92,17 @@ export async function handlePanelImageTask(job: Job<TaskJobData>) {
     episodeId: job.data.episodeId,
   })
   const referenceImageItems: ReferenceImageItem[] = []
-  if (selectedVisualReferenceStyle?.imageUrl) {
+  if (referenceMode !== 'prompt_only' && selectedVisualReferenceStyle?.imageUrl) {
     referenceImageItems.push({
       url: selectedVisualReferenceStyle.imageUrl,
       role: 'style_reference',
       name: selectedVisualReferenceStyle.title,
     })
   }
-  referenceImageItems.push(...refCollection.items)
-  if (Array.isArray(payload.referencePanelImageUrls)) {
+  if (referenceMode !== 'prompt_only') {
+    referenceImageItems.push(...refCollection.items)
+  }
+  if (referenceMode !== 'prompt_only' && Array.isArray(payload.referencePanelImageUrls)) {
     for (const [index, url] of payload.referencePanelImageUrls.entries()) {
       const signed = toSignedUrlIfCos(typeof url === 'string' ? url : null, 3600)
       if (signed) {
@@ -104,7 +114,7 @@ export async function handlePanelImageTask(job: Job<TaskJobData>) {
       }
     }
   }
-  if (Array.isArray(payload.extraImageUrls)) {
+  if (referenceMode !== 'prompt_only' && Array.isArray(payload.extraImageUrls)) {
     for (const [index, url] of payload.extraImageUrls.entries()) {
       if (typeof url === 'string' && url.trim()) {
         referenceImageItems.push({

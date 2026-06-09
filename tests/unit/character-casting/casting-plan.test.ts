@@ -87,7 +87,7 @@ describe('character casting plan', () => {
         id: 'style-1',
         title: '动画向｜定格巷口',
         description: '定格动画、粘土与布艺材质、冷色旧巷。',
-        prompt: 'stop-motion clay and fabric, muted alley, worn textures',
+        prompt: '维度组合：定格动画；粘土与布艺；冷色旧巷。必须严格使用视觉方向里描述的共享场景，保留同一批人物、人物站位、道具摆法。',
         imageUrl: '/m/style-1',
       },
     })
@@ -105,6 +105,9 @@ describe('character casting plan', () => {
       projectId: 'project-1',
     }))
     expect(call.messages[0]?.content).toContain('已选视觉参考案例，唯一风格来源')
+    expect(call.messages[0]?.content).toContain('不要沿用案例提示词里的共享场景')
+    expect(call.messages[0]?.content).not.toContain('可复用风格语言摘要')
+    expect(call.messages[0]?.content).not.toContain('保留同一批人物')
     expect(call.messages[0]?.content).toContain('三套方案必须像真正可比较的选角方案')
     expect(call.messages[0]?.content).toContain('不同演员/不同脸')
     expect(call.messages[0]?.content).toContain('必须明显不是同一张脸')

@@ -184,6 +184,7 @@ export async function handleCharacterStyleTestTask(job: Job<TaskJobData>) {
       context: { taskType: String(job.data.type), scope: 'characterStyleTest.visualStyleReference' },
     },
   )
+  const generationReferenceImages = promptMode === 'casting_photo' ? [] : styleReferenceImages
 
   const styleSummary = buildCharacterStyleTestStyleSummary({
     characterRequest,
@@ -254,7 +255,7 @@ export async function handleCharacterStyleTestTask(job: Job<TaskJobData>) {
       keyPrefix: 'character-style-test',
       options: {
         ...imageOptions,
-        ...(styleReferenceImages.length > 0 ? { referenceImages: styleReferenceImages } : {}),
+        ...(generationReferenceImages.length > 0 ? { referenceImages: generationReferenceImages } : {}),
       },
     })
     imageKeys.push(imageKey)
