@@ -66,9 +66,12 @@ Step 6 — Character Network：
 Step 7 — Character Voice Engine：
 - 生成 characterVoiceEngine。
 - 必须覆盖主角和 characterNetwork 中每个主要角色。
-- 每个角色必须定义 speechPattern、vocabulary、sentenceRhythm、regionalFlavor、emotionalDefense、forbiddenStyle。
+- 每个角色必须定义 speechPattern、vocabulary、sentenceRhythm、regionalFlavor、localSpeechMarkers、emotionalDefense、forbiddenStyle。
 - vocabulary 必须是角色常用的称呼、生活词、职业词、回避词或口头连接词，不得全员共用同一套。
 - regionalFlavor 主要通过称呼、生活细节、口语节奏、熟人社会互动和本地公共空间体现，不等于堆方言。
+- localSpeechMarkers 必须是可执行的本地语言标记，格式为“普通话表达 -> 当地/阶层/年龄口语表达 -> 使用场景 -> 强度”。必须包含代词、否定词、时间词、疑问词、称呼或语气词中的至少 3 类。
+- 如果 world.region 明确到温岭/台州等有明显本地说法的地区，localSpeechMarkers 必须给出具体可用表达，例如“你 -> 侬(nong)”“我 -> 吾(ngu)”“我们 -> 阿拉(ala)”“不要 -> 弗要”“今天 -> 今朝”“回家 -> 转屋”等；不要只写“带一点方言感”。
+- localSpeechMarkers 的使用要控制可读密度：主角和核心本地角色可用 light/medium，强地方人物可用 medium/strong；不要把整段对白改成难懂方言。
 - forbiddenStyle 必须明确禁止该角色说出的不属于他的语言，例如“禁止文艺总结关系”“禁止替作者说主题”“禁止心理学式自我剖白”。
 - 禁止所有角色共享同一种“克制、文艺、精准总结关系”的语言。
 - 尤其禁止配角说出过度概括主题的台词。
@@ -179,6 +182,14 @@ Step 13 — Final Story Development JSON：
       "vocabulary": ["string", "string", "string"],
       "sentenceRhythm": "string",
       "regionalFlavor": "string",
+      "localSpeechMarkers": [
+        {
+          "standardExpression": "string",
+          "localExpression": "string",
+          "usageContext": "string",
+          "intensity": "light|medium|strong"
+        }
+      ],
       "emotionalDefense": "string",
       "forbiddenStyle": "string"
     }
@@ -259,7 +270,7 @@ Step 13 — Final Story Development JSON：
 - want 必须由 lie 推动，need 必须反驳 lie。
 - themeEngine 的价值冲突必须渗透到角色网络、压力阶梯、关键选择和结局状态。
 - locationTexture 必须具体，禁止只写“南方小城”“北方县城”等泛化地点。
-- characterVoiceEngine 必须覆盖主角和每个主要角色，并且角色之间语言系统必须可区分。
+- characterVoiceEngine 必须覆盖主角和每个主要角色，并且角色之间语言系统必须可区分；每个角色必须包含至少 3 个可执行 localSpeechMarkers。
 - antagonistSystem 三层反派必须同时存在，并各自主动阻碍 want。
 - fateNetwork 必须给主角提供至少 3 种不同命运镜像。
 - hardChoices 必须让主角付出真实代价，禁止轻巧反转和无损胜利。

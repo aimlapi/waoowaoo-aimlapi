@@ -32,7 +32,9 @@ Screenplay Blueprint：
 - 每个 Beat 必须体现 Action -> Reaction -> New Situation，不要写连续解释或连续信息输出。
 - 对白必须遵循 Dialogue Layer，不要把 subtext 直接说出口。
 - 对白必须执行 characterVoiceEngine。删除角色名后，观众应能大致判断是谁在说话。
-- 地域感不等于堆方言，主要通过称呼、生活细节、场景物件、口语节奏、熟人社会互动、本地公共空间体现。
+- 地域感不等于堆方言，但本地语言不能缺席；必须执行 localSpeechMarkers，把代词、否定、时间、疑问、称呼、语气词等当地表达以可读密度写进关键对白。
+- 如果蓝图中的地区是温岭/台州，关键本地角色对白应自然出现“侬”“吾”“阿拉”“弗要”“今朝”“转屋”等标记中的一部分；不要整段普通话化。
+- 控制可读密度：按 localSpeechMarkers 的 light/medium/strong 执行，不要把所有句子都翻成难懂方言。
 - 禁止所有角色共享同一种“克制、文艺、精准总结关系”的语言。
 - 尤其禁止配角说出过度概括主题的台词。
 - 不得违反角色的 forbiddenStyle。

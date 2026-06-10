@@ -32,7 +32,9 @@ Execution rules:
 - Every beat must express Action -> Reaction -> New Situation. Do not write consecutive explanation or consecutive information delivery.
 - Dialogue must follow the Dialogue Layer. Do not state subtext directly.
 - Dialogue must execute characterVoiceEngine. If character names are removed, the audience should still roughly infer who is speaking.
-- Regional texture is not dialect stuffing. It should mainly come from address terms, daily details, scene objects, spoken rhythm, acquaintance-society interaction, and local public spaces.
+- Regional texture is not dialect stuffing, but local speech must not be absent. Execute localSpeechMarkers by placing local pronouns, negation, time words, question words, address terms, and particles into key dialogue at readable density.
+- If the blueprint region is Wenling/Taizhou, key local characters should naturally use some markers such as "nong", "ngu", "ala", "fu yao", "jin zhao", or "zhuan wu". Do not flatten every line into standard Mandarin.
+- Keep density readable according to localSpeechMarkers intensity: light/medium/strong. Do not translate every sentence into unreadable dialect.
 - Do not let all characters share the same restrained, literary, precisely summarizing voice.
 - Supporting characters especially must not speak over-generalized thematic lines.
 - Do not violate a character's forbiddenStyle.

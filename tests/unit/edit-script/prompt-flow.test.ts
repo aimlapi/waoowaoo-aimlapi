@@ -32,6 +32,7 @@ describe('edit script block-first prompt flow', () => {
     expect(storyDevelopmentPrompt).toContain('"locationTexture"')
     expect(storyDevelopmentPrompt).toContain('"antagonistSystem"')
     expect(storyDevelopmentPrompt).toContain('"characterVoiceEngine"')
+    expect(storyDevelopmentPrompt).toContain('"localSpeechMarkers"')
     expect(storyDevelopmentPrompt).toContain('"pressureLadder"')
     expect(storyDevelopmentPrompt).toContain('"hardChoices"')
     expect(storyDevelopmentPrompt).toContain('goal -> pressure -> choice -> cost -> newValueState')
@@ -39,6 +40,8 @@ describe('edit script block-first prompt flow', () => {
     expect(storyDevelopmentPrompt).toContain('被记住 VS 被爱')
     expect(storyDevelopmentPrompt).toContain('禁止只使用“南方小城”')
     expect(storyDevelopmentPrompt).toContain('删除角色名后，观众应能大致判断是谁在说话')
+    expect(storyDevelopmentPrompt).toContain('你 -> 侬(nong)')
+    expect(storyDevelopmentPrompt).toContain('不要只写“带一点方言感”')
 
     const sceneLayerPrompt = buildAiPrompt({
       promptId: AI_PROMPT_IDS.EDIT_SCRIPT_SCENE_LAYER,
@@ -103,6 +106,8 @@ describe('edit script block-first prompt flow', () => {
     expect(dialogueLayerPrompt).toContain('realConflict')
     expect(dialogueLayerPrompt).toContain('voiceExecution')
     expect(dialogueLayerPrompt).toContain('角色谈论 A，实际争夺 B')
+    expect(dialogueLayerPrompt).toContain('本地语言不能缺席')
+    expect(dialogueLayerPrompt).toContain('侬')
 
     const screenplayPrompt = buildAiPrompt({
       promptId: AI_PROMPT_IDS.EDIT_SCRIPT_SCREENPLAY,
@@ -127,6 +132,8 @@ describe('edit script block-first prompt flow', () => {
     expect(screenplayPrompt).toContain('Story Development Layer -> Scene Layer -> Beat Layer -> Dialogue Layer -> Screenplay')
     expect(screenplayPrompt).toContain('locationTexture')
     expect(screenplayPrompt).toContain('characterVoiceEngine')
+    expect(screenplayPrompt).toContain('localSpeechMarkers')
+    expect(screenplayPrompt).toContain('不要整段普通话化')
     expect(screenplayPrompt).toContain('AI 可控短片剧本')
     expect(screenplayPrompt).toContain('后续角色、场景、道具、风格案例和分镜生成')
     expect(screenplayPrompt).toContain('这里只写剧情内容')

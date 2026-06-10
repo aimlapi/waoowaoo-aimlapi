@@ -57,6 +57,12 @@ export const characterVoiceProfileSchema = z.object({
   vocabulary: z.array(z.string().trim().min(1)).min(3),
   sentenceRhythm: z.string().trim().min(1),
   regionalFlavor: z.string().trim().min(1),
+  localSpeechMarkers: z.array(z.object({
+    standardExpression: z.string().trim().min(1),
+    localExpression: z.string().trim().min(1),
+    usageContext: z.string().trim().min(1),
+    intensity: z.enum(['light', 'medium', 'strong']),
+  })).min(3).max(8),
   emotionalDefense: z.string().trim().min(1),
   forbiddenStyle: z.string().trim().min(1),
 })
