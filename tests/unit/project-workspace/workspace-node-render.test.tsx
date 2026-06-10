@@ -563,6 +563,41 @@ describe('workspace node rendering', () => {
     expect(html).not.toContain('overflow-y-auto')
   })
 
+  it('renders expanded edit screenplay text in a draggable internal scroll area', () => {
+    const html = renderNode({
+      kind: 'editScreenplay',
+      layoutNodeType: 'editScreenplay',
+      targetType: 'editScreenplay',
+      targetId: 'screenplay-1',
+      title: 'Edit screenplay node',
+      eyebrow: 'Screenplay',
+      body: 'screenplay body',
+      meta: 'ready',
+      statusLabel: 'Ready',
+      width: 420,
+      height: 560,
+      expanded: true,
+      editScreenplayDetails: {
+        screenplayText: '标题：《旧屋留灯》\n\n场景 1｜内景. 旧屋 - 夜\n\n动作：长文本内容。',
+        userPrompt: 'original idea',
+        storyDevelopment: {
+          protagonist: {
+            name: '周屿',
+          },
+        },
+        visualReferenceCases: [],
+        visualReferenceRunning: false,
+      },
+    })
+
+    expect(html).toContain('标题：《旧屋留灯》')
+    expect(html).toContain('protagonist')
+    expect(html).toContain('app-scrollbar')
+    expect(html).toContain('overflow-y-auto')
+    expect(html).toContain('max-h-[min(62vh,720px)]')
+    expect(html).toContain('nodrag nowheel')
+  })
+
   it('renders shot, image, video, and final summaries without internal scroll', () => {
     const shotHtml = renderNode({
       kind: 'shot',

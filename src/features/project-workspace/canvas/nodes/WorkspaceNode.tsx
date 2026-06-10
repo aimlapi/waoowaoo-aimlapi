@@ -98,6 +98,20 @@ function renderTextBlock(value: string | null | undefined) {
   return <p className={`${SELECTABLE_TEXT_CLASS} whitespace-pre-wrap break-words text-xs leading-5 text-[var(--glass-text-secondary)]`}>{value}</p>
 }
 
+function renderScrollableTextBlock(data: WorkspaceCanvasFlowNode['data'], value: string | null | undefined) {
+  const content = renderTextBlock(value)
+  if (!content) return null
+  return (
+    <div
+      className={nodeContentInteractionClass(data, 'app-scrollbar max-h-[min(62vh,720px)] overflow-y-auto pr-3')}
+      onPointerDownCapture={(event) => event.stopPropagation()}
+      onWheelCapture={(event) => event.stopPropagation()}
+    >
+      {content}
+    </div>
+  )
+}
+
 function renderJsonBlock(value: unknown) {
   if (value === null || value === undefined) return null
   return renderTextBlock(JSON.stringify(value, null, 2))
@@ -1166,11 +1180,11 @@ function EditScreenplayContent({
   return (
     <div className="space-y-2">
       {renderSection(labels('screenplay'), expanded
-        ? renderTextBlock(details.screenplayText)
+        ? renderScrollableTextBlock(data, details.screenplayText)
         : renderSummaryText(details.screenplayText, 8))}
       {storyDevelopmentText
         ? renderSection(labels('storyDevelopment'), expanded
-          ? renderTextBlock(storyDevelopmentText)
+          ? renderScrollableTextBlock(data, storyDevelopmentText)
           : renderSummaryText(storyDevelopmentText, 6))
         : null}
       {visualReferenceCases.length > 0 ? renderSection(labels('visualReferenceCases'), (
