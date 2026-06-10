@@ -1049,7 +1049,7 @@ describe('edit script generation status persistence', () => {
       (error: unknown) => error,
     )
 
-    await vi.advanceTimersByTimeAsync(359_999)
+    await vi.advanceTimersByTimeAsync(899_999)
     expect(aiExecMock.executeAiTextStep).toHaveBeenCalledTimes(1)
     expect(prismaMock.projectEditScreenplay.upsert).not.toHaveBeenCalled()
 
@@ -1057,7 +1057,7 @@ describe('edit script generation status persistence', () => {
     const error = await resultPromise
 
     expect(error).toBeInstanceOf(Error)
-    expect((error as Error).message).toBe(`EDIT_SCRIPT_STEP_TIMEOUT:${AI_PROMPT_IDS.EDIT_SCRIPT_STORY_DEVELOPMENT}:360s`)
+    expect((error as Error).message).toBe(`EDIT_SCRIPT_STEP_TIMEOUT:${AI_PROMPT_IDS.EDIT_SCRIPT_STORY_DEVELOPMENT}:900s`)
     expect(prismaMock.projectEditScreenplay.upsert).not.toHaveBeenCalled()
   })
 
@@ -1085,7 +1085,46 @@ describe('edit script generation status persistence', () => {
       userPrompt: '旧剧本',
       styleBible: null,
       storyDevelopment: null,
+      storyDevelopmentRaw: null,
+      storyDevelopmentError: null,
       screenplayText: '旧剧本文本',
+      status: 'ready',
+    })
+  })
+
+  it('keeps screenplay readable when persisted story development no longer matches the current schema', async () => {
+    prismaMock.projectEditScreenplay.findFirst.mockResolvedValueOnce({
+      id: 'schema-drift-screenplay-1',
+      projectId: 'project-1',
+      episodeId: 'episode-1',
+      userPrompt: '旧协议剧本',
+      styleBibleJson: null,
+      storyDevelopmentJson: {
+        schemaVersion: 2,
+        premise: '旧协议没有 dialectProfile',
+      },
+      screenplayText: '旧协议剧本文本',
+      status: 'ready',
+    })
+
+    const screenplay = await readProjectEditScreenplay({
+      projectId: 'project-1',
+      episodeId: 'episode-1',
+    })
+
+    expect(screenplay).toEqual({
+      id: 'schema-drift-screenplay-1',
+      projectId: 'project-1',
+      episodeId: 'episode-1',
+      userPrompt: '旧协议剧本',
+      styleBible: null,
+      storyDevelopment: null,
+      storyDevelopmentRaw: {
+        schemaVersion: 2,
+        premise: '旧协议没有 dialectProfile',
+      },
+      storyDevelopmentError: 'EDIT_SCREENPLAY_BLUEPRINT_INVALID',
+      screenplayText: '旧协议剧本文本',
       status: 'ready',
     })
   })

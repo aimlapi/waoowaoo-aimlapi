@@ -295,6 +295,8 @@ export interface WorkspaceCanvasEditScreenplayDetails {
   readonly screenplayText: string
   readonly userPrompt: string
   readonly storyDevelopment?: unknown | null
+  readonly storyDevelopmentRaw?: unknown | null
+  readonly storyDevelopmentError?: string | null
   readonly visualReferenceCases: readonly {
     readonly id: string
     readonly title: string

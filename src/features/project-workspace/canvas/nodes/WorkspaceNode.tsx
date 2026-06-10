@@ -1166,8 +1166,9 @@ function EditScreenplayContent({
 
   if (!details) return <p className={`${SELECTABLE_TEXT_CLASS} text-sm leading-6 text-[var(--glass-text-secondary)]`}>{data.body}</p>
   const visualReferenceCases = details.visualReferenceCases
-  const storyDevelopmentText = details.storyDevelopment
-    ? JSON.stringify(details.storyDevelopment, null, 2)
+  const storyDevelopmentSource = details.storyDevelopment ?? details.storyDevelopmentRaw
+  const storyDevelopmentText = storyDevelopmentSource
+    ? JSON.stringify(storyDevelopmentSource, null, 2)
     : ''
 
   function toggleVisualReferenceDescription(caseId: string) {
@@ -1191,6 +1192,9 @@ function EditScreenplayContent({
         ? renderSection(labels('storyDevelopment'), expanded
           ? renderScrollableTextBlock(data, storyDevelopmentText)
           : renderSummaryText(storyDevelopmentText, 6))
+        : null}
+      {details.storyDevelopmentError
+        ? renderSection(labels('storyDevelopmentError'), renderTextBlock(details.storyDevelopmentError))
         : null}
       {visualReferenceCases.length > 0 ? renderSection(labels('visualReferenceCases'), (
         <div className={nodeContentInteractionClass(data, 'space-y-2')}>

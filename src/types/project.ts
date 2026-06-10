@@ -324,6 +324,8 @@ export interface ProjectEditScreenplay {
   userPrompt: string
   styleBible?: unknown
   storyDevelopment?: unknown | null
+  storyDevelopmentRaw?: unknown | null
+  storyDevelopmentError?: string | null
   screenplayText: string
   status: string
 }

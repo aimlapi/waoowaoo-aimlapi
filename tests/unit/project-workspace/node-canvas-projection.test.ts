@@ -337,6 +337,8 @@ describe('workspace node canvas projection', () => {
       screenplayText: editScreenplay.screenplayText,
       userPrompt: editScreenplay.userPrompt,
       storyDevelopment: null,
+      storyDevelopmentRaw: null,
+      storyDevelopmentError: null,
       visualReferenceCases: [],
       visualReferenceRunning: false,
     })

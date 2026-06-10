@@ -103,11 +103,11 @@ type PromptStepId =
 type DeadlineStepId = PromptStepId | 'edit_script_asset_design'
 
 const STEP_TIMEOUT_MS: Record<DeadlineStepId, number> = {
-  [AI_PROMPT_IDS.EDIT_SCRIPT_STORY_DEVELOPMENT]: 360_000,
-  [AI_PROMPT_IDS.EDIT_SCRIPT_SCENE_LAYER]: 360_000,
-  [AI_PROMPT_IDS.EDIT_SCRIPT_BEAT_LAYER]: 360_000,
-  [AI_PROMPT_IDS.EDIT_SCRIPT_DIALOGUE_LAYER]: 360_000,
-  [AI_PROMPT_IDS.EDIT_SCRIPT_SCREENPLAY]: 360_000,
+  [AI_PROMPT_IDS.EDIT_SCRIPT_STORY_DEVELOPMENT]: 900_000,
+  [AI_PROMPT_IDS.EDIT_SCRIPT_SCENE_LAYER]: 900_000,
+  [AI_PROMPT_IDS.EDIT_SCRIPT_BEAT_LAYER]: 900_000,
+  [AI_PROMPT_IDS.EDIT_SCRIPT_DIALOGUE_LAYER]: 900_000,
+  [AI_PROMPT_IDS.EDIT_SCRIPT_SCREENPLAY]: 900_000,
   [AI_PROMPT_IDS.EDIT_SCRIPT_PRIMARY]: 180_000,
   [AI_PROMPT_IDS.EDIT_SCRIPT_ASSET_EXTRACT]: 90_000,
   [AI_PROMPT_IDS.EDIT_SCRIPT_VIDEO_PROMPT_BLOCK]: 90_000,
@@ -642,15 +642,46 @@ async function mapPersistedEditScript(script: PersistedEditScript): Promise<Edit
 }
 
 function mapPersistedEditScreenplay(screenplay: PersistedEditScreenplay): EditScreenplayPayload {
+  const parsedStoryDevelopment = parsePersistedStoryDevelopmentForRead(screenplay.storyDevelopmentJson)
   return {
     id: screenplay.id,
     projectId: screenplay.projectId,
     episodeId: screenplay.episodeId,
     userPrompt: screenplay.userPrompt,
     styleBible: null,
-    storyDevelopment: parsePersistedStoryDevelopment(screenplay.storyDevelopmentJson),
+    storyDevelopment: parsedStoryDevelopment.storyDevelopment,
+    storyDevelopmentRaw: parsedStoryDevelopment.raw,
+    storyDevelopmentError: parsedStoryDevelopment.error,
     screenplayText: screenplay.screenplayText,
     status: screenplay.status,
+  }
+}
+
+function parsePersistedStoryDevelopmentForRead(value: Prisma.JsonValue | null | undefined): {
+  readonly storyDevelopment: EditScreenplayDevelopmentPayload | null
+  readonly raw: Prisma.JsonValue | null
+  readonly error: string | null
+} {
+  if (value === null || value === undefined) {
+    return {
+      storyDevelopment: null,
+      raw: null,
+      error: null,
+    }
+  }
+
+  try {
+    return {
+      storyDevelopment: parsePersistedStoryDevelopment(value),
+      raw: null,
+      error: null,
+    }
+  } catch (error) {
+    return {
+      storyDevelopment: null,
+      raw: value,
+      error: error instanceof Error ? error.message : 'EDIT_SCREENPLAY_BLUEPRINT_INVALID',
+    }
   }
 }
 

@@ -525,6 +525,8 @@ export interface EditScreenplayPayload {
   readonly userPrompt: string
   readonly styleBible: EditScriptStyleBible | null
   readonly storyDevelopment: EditScreenplayDevelopmentPayload | null
+  readonly storyDevelopmentRaw: unknown | null
+  readonly storyDevelopmentError: string | null
   readonly screenplayText: string
   readonly status: string
 }
