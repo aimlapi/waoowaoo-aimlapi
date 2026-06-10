@@ -11,7 +11,7 @@
 核心原则：
 - 禁止从 Premise 直接生成故事大纲或剧本。
 - 必须先完成剧作开发，再生成 Story Expansion。
-- 输出顺序不可跳过：Protagonist Analysis -> Theme Engine -> World Builder -> Location Texture Engine -> Antagonist System -> Character Network -> Character Voice Engine -> Fate Network -> Pressure Ladder -> Hard Choices -> Value Arc -> Story Expansion -> Narrative Structure。
+- 输出顺序不可跳过：Protagonist Analysis -> Theme Engine -> World Builder -> Location Texture Engine -> Dialect Profile Engine -> Antagonist System -> Character Network -> Character Voice Engine -> Fate Network -> Pressure Ladder -> Hard Choices -> Value Arc -> Story Expansion -> Narrative Structure。
 - 每一步必须作为下一步的输入依据；后一层不得推翻前一层。
 - Story Expansion 只能在角色、价值冲突、反派系统、命运网络、压力阶梯、关键选择和价值弧光已经完成后生成。
 - 结构只负责组织已经开发完成的故事，不负责发明故事。
@@ -50,64 +50,74 @@ Step 4 — Location Texture Engine：
 - 丧葬场景纹理必须包含当地办事流程、空间物件、邻里观看方式或仪式压力，不能只写“殡仪馆”“旧屋”。
 - visualMotifs 至少 3 个，必须能被后续风格案例、资产和分镜使用。
 
-Step 5 — Antagonist System：
+Step 5 — Dialect Profile Engine：
+- 在 locationTexture 之后生成 dialectProfile。
+- dialectProfile 必须服务 world.region、locationTexture.city、cityDistrict 和人物社会阶层，不得借用其他地区的方言标记。
+- dialectProfile 必须包含 region、dialectFamily、speechRegister、pronounMarkers、negationMarkers、timeMarkers、questionMarkers、addressTerms、particles、usageRules、avoidMixingWith。
+- pronounMarkers、negationMarkers、timeMarkers、questionMarkers、addressTerms、particles 只写当地可直接进入对白的表达，不写普通话解释句。
+- usageRules 必须说明使用密度、哪些角色适合轻度/中度/强烈使用，以及如何保证观众可读。
+- avoidMixingWith 必须列出容易混入但不属于该地区的方言系统或口音类型，防止串味。
+- 如果地域无法精确到县域方言，也必须基于更大方言片区生成可信的本地口语层级，并明确不确定边界。
+
+Step 6 — Antagonist System：
 - 必须生成 embodiedAntagonist、institutionalAntagonist、abstractAntagonist。
 - embodiedAntagonist 是具体人物反派或具体人物压力源。
 - institutionalAntagonist 是制度反派，例如平台算法、公司制度、教育体系、法律体系、村庄伦理、行业规则。
 - abstractAntagonist 是抽象反派，例如时间、死亡、被遗忘、孤独、战争、衰老、贫穷。
 - 三类反派都必须主动阻碍主角 want，而不是只作为背景存在。
 
-Step 6 — Character Network：
+Step 7 — Character Network：
 - 每个主要角色必须生成 dramaticFunction、themePosition、fateRepresentation、questionToProtagonist。
 - 角色必须代表一种价值观或一种命运。
 - 禁止工具人角色。
 - 角色数量控制在 2 到 6 个之间，只保留推动价值冲突和压力升级所必需的人。
 
-Step 7 — Character Voice Engine：
+Step 8 — Character Voice Engine：
 - 生成 characterVoiceEngine。
 - 必须覆盖主角和 characterNetwork 中每个主要角色。
 - 每个角色必须定义 speechPattern、vocabulary、sentenceRhythm、regionalFlavor、localSpeechMarkers、emotionalDefense、forbiddenStyle。
 - vocabulary 必须是角色常用的称呼、生活词、职业词、回避词或口头连接词，不得全员共用同一套。
 - regionalFlavor 主要通过称呼、生活细节、口语节奏、熟人社会互动和本地公共空间体现，不等于堆方言。
-- localSpeechMarkers 必须是可执行的本地语言标记，格式为“普通话表达 -> 当地/阶层/年龄口语表达 -> 使用场景 -> 强度”。必须包含代词、否定词、时间词、疑问词、称呼或语气词中的至少 3 类。
-- 如果 world.region 明确到温岭/台州等有明显本地说法的地区，localSpeechMarkers 必须给出具体可用表达，例如“你 -> 侬(nong)”“我 -> 吾(ngu)”“我们 -> 阿拉(ala)”“不要 -> 弗要”“今天 -> 今朝”“回家 -> 转屋”等；不要只写“带一点方言感”。
+- localSpeechMarkers 必须从 dialectProfile 的 pronounMarkers、negationMarkers、timeMarkers、questionMarkers、addressTerms、particles 中选择，不得发明 profile 外的新方言标记。
+- localSpeechMarkers 必须是可执行的本地语言标记，格式为“普通话表达 -> dialectProfile 中的当地/阶层/年龄口语表达 -> 使用场景 -> 强度”。必须包含代词、否定词、时间词、疑问词、称呼或语气词中的至少 3 类。
+- 不同地域必须生成不同 dialectProfile；不要把某一地区示例迁移到其他地区；不要只写“带一点方言感”。
 - localSpeechMarkers 的使用要控制可读密度：主角和核心本地角色可用 light/medium，强地方人物可用 medium/strong；不要把整段对白改成难懂方言。
 - forbiddenStyle 必须明确禁止该角色说出的不属于他的语言，例如“禁止文艺总结关系”“禁止替作者说主题”“禁止心理学式自我剖白”。
 - 禁止所有角色共享同一种“克制、文艺、精准总结关系”的语言。
 - 尤其禁止配角说出过度概括主题的台词。
 - 删除角色名后，观众应能大致判断是谁在说话。
 
-Step 8 — Fate Network：
+Step 9 — Fate Network：
 - 必须生成 Future A、Future B、Future C。
 - 每个 Future 都必须绑定一个主要角色，回答“如果主角成为这个人，会获得什么结局？”。
 - 不同 Future 必须代表不同人生路径，不得只是同一结局换说法。
 
-Step 9 — Pressure Ladder：
+Step 10 — Pressure Ladder：
 - 至少生成 4 个压力等级。
 - Level N+1 必须明显大于 Level N。
 - 压力必须升级，禁止同等级重复压力。
 - 压力优先顺序：career -> relationship -> identity -> existence。
 
-Step 10 — Hard Choices：
+Step 11 — Hard Choices：
 - 至少生成 3 个关键选择。
 - 每个选择必须是 valueA VS valueB，并包含 decision 与 cost。
 - 选择必须是 Good vs Good 或 Bad vs Bad。
 - 禁止 Good vs Evil。
 - 每个选择必须产生真实代价。
 
-Step 11 — Value Arc：
+Step 12 — Value Arc：
 - 生成 openingBelief、closingBelief、openingValueState、closingValueState。
 - 人物必须发生变化。
 - 如果 opening 与 closing 相同，必须重新生成。
 
-Step 12 — Story Expansion：
+Step 13 — Story Expansion：
 - 每一幕必须采用 goal -> pressure -> choice -> cost -> newValueState。
 - 禁止事件流水账。
 - 必须体现压力 -> 选择 -> 代价 -> 变化。
 
-Step 13 — Final Story Development JSON：
+Step 14 — Final Story Development JSON：
 - 汇总所有步骤。
-- JSON 必须包含 protagonist、themeEngine、world、locationTexture、valueArc、antagonistSystem、characterNetwork、characterVoiceEngine、fateNetwork、pressureLadder、hardChoices、storyExpansion、narrativeStructure。
+- JSON 必须包含 protagonist、themeEngine、world、locationTexture、dialectProfile、valueArc、antagonistSystem、characterNetwork、characterVoiceEngine、fateNetwork、pressureLadder、hardChoices、storyExpansion、narrativeStructure。
 - 任何字段缺失均视为生成失败。
 
 输出 JSON Schema：
@@ -144,6 +154,19 @@ Step 13 — Final Story Development JSON：
     "acquaintanceSocietyTexture": "string",
     "funeralSceneTexture": "string",
     "visualMotifs": ["string", "string", "string"]
+  },
+  "dialectProfile": {
+    "region": "string",
+    "dialectFamily": "string",
+    "speechRegister": "string",
+    "pronounMarkers": ["string"],
+    "negationMarkers": ["string"],
+    "timeMarkers": ["string"],
+    "questionMarkers": ["string"],
+    "addressTerms": ["string"],
+    "particles": ["string"],
+    "usageRules": "string",
+    "avoidMixingWith": ["string"]
   },
   "antagonistSystem": {
     "embodiedAntagonist": {
@@ -270,7 +293,8 @@ Step 13 — Final Story Development JSON：
 - want 必须由 lie 推动，need 必须反驳 lie。
 - themeEngine 的价值冲突必须渗透到角色网络、压力阶梯、关键选择和结局状态。
 - locationTexture 必须具体，禁止只写“南方小城”“北方县城”等泛化地点。
-- characterVoiceEngine 必须覆盖主角和每个主要角色，并且角色之间语言系统必须可区分；每个角色必须包含至少 3 个可执行 localSpeechMarkers。
+- dialectProfile 必须与 world.region 和 locationTexture 匹配，禁止跨地域借用方言标记。
+- characterVoiceEngine 必须覆盖主角和每个主要角色，并且角色之间语言系统必须可区分；每个角色必须包含至少 3 个从 dialectProfile 派生的可执行 localSpeechMarkers。
 - antagonistSystem 三层反派必须同时存在，并各自主动阻碍 want。
 - fateNetwork 必须给主角提供至少 3 种不同命运镜像。
 - hardChoices 必须让主角付出真实代价，禁止轻巧反转和无损胜利。

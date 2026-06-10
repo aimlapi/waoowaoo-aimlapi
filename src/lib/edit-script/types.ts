@@ -41,6 +41,17 @@ function isGenericLocationText(value: string): boolean {
   return genericLocations.has(normalized)
 }
 
+function collectDialectProfileMarkers(value: z.infer<typeof dialectProfileSchema>): Set<string> {
+  return new Set([
+    ...value.pronounMarkers,
+    ...value.negationMarkers,
+    ...value.timeMarkers,
+    ...value.questionMarkers,
+    ...value.addressTerms,
+    ...value.particles,
+  ].map((marker) => normalizedComparableText(marker)))
+}
+
 export const locationTextureSchema = z.object({
   city: z.string().trim().min(1),
   cityDistrict: z.string().trim().min(1),
@@ -49,6 +60,20 @@ export const locationTextureSchema = z.object({
   acquaintanceSocietyTexture: z.string().trim().min(1),
   funeralSceneTexture: z.string().trim().min(1),
   visualMotifs: z.array(z.string().trim().min(1)).min(3),
+})
+
+export const dialectProfileSchema = z.object({
+  region: z.string().trim().min(1),
+  dialectFamily: z.string().trim().min(1),
+  speechRegister: z.string().trim().min(1),
+  pronounMarkers: z.array(z.string().trim().min(1)).min(1),
+  negationMarkers: z.array(z.string().trim().min(1)).min(1),
+  timeMarkers: z.array(z.string().trim().min(1)).min(1),
+  questionMarkers: z.array(z.string().trim().min(1)).min(1),
+  addressTerms: z.array(z.string().trim().min(1)).min(1),
+  particles: z.array(z.string().trim().min(1)).min(1),
+  usageRules: z.string().trim().min(1),
+  avoidMixingWith: z.array(z.string().trim().min(1)).min(1),
 })
 
 export const characterVoiceProfileSchema = z.object({
@@ -93,6 +118,7 @@ export const storyDevelopmentPackageSchema = z.object({
     conflictFunction: z.string().trim().min(1),
   }),
   locationTexture: locationTextureSchema,
+  dialectProfile: dialectProfileSchema,
   antagonistSystem: z.object({
     embodiedAntagonist: z.object({
       name: z.string().trim().min(1),
@@ -239,6 +265,18 @@ export const storyDevelopmentPackageSchema = z.object({
         message: 'Character voice engine must cover the protagonist and every characterNetwork character.',
       })
     }
+  })
+  const dialectMarkers = collectDialectProfileMarkers(value.dialectProfile)
+  value.characterVoiceEngine.forEach((profile, profileIndex) => {
+    profile.localSpeechMarkers.forEach((marker, markerIndex) => {
+      if (!dialectMarkers.has(normalizedComparableText(marker.localExpression))) {
+        context.addIssue({
+          code: z.ZodIssueCode.custom,
+          path: ['characterVoiceEngine', profileIndex, 'localSpeechMarkers', markerIndex, 'localExpression'],
+          message: 'Character local speech markers must be selected from dialectProfile marker pools.',
+        })
+      }
+    })
   })
   value.pressureLadder.forEach((step, index) => {
     if (step.level !== index + 1) {

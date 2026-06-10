@@ -25,11 +25,12 @@ describe('edit script block-first prompt flow', () => {
 
     expect(storyDevelopmentPrompt).toContain('Story Development Layer')
     expect(storyDevelopmentPrompt).toContain('禁止从 Premise 直接生成故事大纲或剧本')
-    expect(storyDevelopmentPrompt).toContain('Protagonist Analysis -> Theme Engine -> World Builder -> Location Texture Engine')
+    expect(storyDevelopmentPrompt).toContain('Protagonist Analysis -> Theme Engine -> World Builder -> Location Texture Engine -> Dialect Profile Engine')
     expect(storyDevelopmentPrompt).toContain('Character Voice Engine')
     expect(storyDevelopmentPrompt).toContain('"schemaVersion": 2')
     expect(storyDevelopmentPrompt).toContain('"themeEngine"')
     expect(storyDevelopmentPrompt).toContain('"locationTexture"')
+    expect(storyDevelopmentPrompt).toContain('"dialectProfile"')
     expect(storyDevelopmentPrompt).toContain('"antagonistSystem"')
     expect(storyDevelopmentPrompt).toContain('"characterVoiceEngine"')
     expect(storyDevelopmentPrompt).toContain('"localSpeechMarkers"')
@@ -40,8 +41,8 @@ describe('edit script block-first prompt flow', () => {
     expect(storyDevelopmentPrompt).toContain('被记住 VS 被爱')
     expect(storyDevelopmentPrompt).toContain('禁止只使用“南方小城”')
     expect(storyDevelopmentPrompt).toContain('删除角色名后，观众应能大致判断是谁在说话')
-    expect(storyDevelopmentPrompt).toContain('你 -> 侬(nong)')
-    expect(storyDevelopmentPrompt).toContain('不要只写“带一点方言感”')
+    expect(storyDevelopmentPrompt).toContain('不得借用其他地区的方言标记')
+    expect(storyDevelopmentPrompt).toContain('从 dialectProfile 派生')
 
     const sceneLayerPrompt = buildAiPrompt({
       promptId: AI_PROMPT_IDS.EDIT_SCRIPT_SCENE_LAYER,
@@ -106,8 +107,9 @@ describe('edit script block-first prompt flow', () => {
     expect(dialogueLayerPrompt).toContain('realConflict')
     expect(dialogueLayerPrompt).toContain('voiceExecution')
     expect(dialogueLayerPrompt).toContain('角色谈论 A，实际争夺 B')
+    expect(dialogueLayerPrompt).toContain('dialectProfile')
     expect(dialogueLayerPrompt).toContain('本地语言不能缺席')
-    expect(dialogueLayerPrompt).toContain('侬')
+    expect(dialogueLayerPrompt).toContain('不得借用其他地域方言')
 
     const screenplayPrompt = buildAiPrompt({
       promptId: AI_PROMPT_IDS.EDIT_SCRIPT_SCREENPLAY,
@@ -131,6 +133,7 @@ describe('edit script block-first prompt flow', () => {
     expect(screenplayPrompt).toContain('禁止直接根据 Story Development Layer 写剧本')
     expect(screenplayPrompt).toContain('Story Development Layer -> Scene Layer -> Beat Layer -> Dialogue Layer -> Screenplay')
     expect(screenplayPrompt).toContain('locationTexture')
+    expect(screenplayPrompt).toContain('dialectProfile')
     expect(screenplayPrompt).toContain('characterVoiceEngine')
     expect(screenplayPrompt).toContain('localSpeechMarkers')
     expect(screenplayPrompt).toContain('不要整段普通话化')

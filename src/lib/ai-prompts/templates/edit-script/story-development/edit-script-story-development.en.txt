@@ -11,7 +11,7 @@ Aspect ratio: {{aspect_ratio}}
 Core principle:
 - Never generate an outline or screenplay directly from the premise.
 - Complete Story Development first, then generate Story Expansion.
-- Do not skip the required order: Protagonist Analysis -> Theme Engine -> World Builder -> Location Texture Engine -> Antagonist System -> Character Network -> Character Voice Engine -> Fate Network -> Pressure Ladder -> Hard Choices -> Value Arc -> Story Expansion -> Narrative Structure.
+- Do not skip the required order: Protagonist Analysis -> Theme Engine -> World Builder -> Location Texture Engine -> Dialect Profile Engine -> Antagonist System -> Character Network -> Character Voice Engine -> Fate Network -> Pressure Ladder -> Hard Choices -> Value Arc -> Story Expansion -> Narrative Structure.
 - Each step must become the input basis for the next step. Later layers must not contradict earlier layers.
 - Story Expansion may only be created after character, value conflict, antagonist system, fate network, pressure ladder, hard choices, and value arc are complete.
 - Structure organizes an already developed story. It must not invent the story.
@@ -50,64 +50,74 @@ Step 4 — Location Texture Engine:
 - funeralSceneTexture must include local procedures, spatial objects, neighbor observation, or ritual pressure. Do not merely write "funeral home" or "old apartment".
 - visualMotifs must contain at least 3 concrete motifs usable by downstream visual-reference cases, assets, and storyboards.
 
-Step 5 — Antagonist System:
+Step 5 — Dialect Profile Engine:
+- Generate dialectProfile after locationTexture.
+- dialectProfile must serve world.region, locationTexture.city, cityDistrict, and character class background. Do not borrow dialect markers from unrelated regions.
+- dialectProfile must include region, dialectFamily, speechRegister, pronounMarkers, negationMarkers, timeMarkers, questionMarkers, addressTerms, particles, usageRules, and avoidMixingWith.
+- pronounMarkers, negationMarkers, timeMarkers, questionMarkers, addressTerms, and particles must contain local expressions that can directly enter dialogue, not standard-language explanations.
+- usageRules must define density, which characters should use light/medium/strong local speech, and how readability is preserved.
+- avoidMixingWith must list dialect systems or accent types that are easy to confuse with this region but do not belong here.
+- If the region cannot be pinned down to a county-level dialect, generate a credible larger dialect-family speech layer and state the uncertainty boundary.
+
+Step 6 — Antagonist System:
 - Generate embodiedAntagonist, institutionalAntagonist, and abstractAntagonist.
 - embodiedAntagonist is a concrete person or concrete human pressure source.
 - institutionalAntagonist is a system, such as platform algorithms, company rules, education systems, legal systems, village ethics, or industry rules.
 - abstractAntagonist is an abstract force, such as time, death, being forgotten, loneliness, war, aging, or poverty.
 - All three antagonist layers must actively block the protagonist's want, not merely decorate the background.
 
-Step 6 — Character Network:
+Step 7 — Character Network:
 - Every major character must include dramaticFunction, themePosition, fateRepresentation, and questionToProtagonist.
 - Every character must represent a value position or a possible fate.
 - Do not create utility-only characters.
 - Keep 2 to 6 characters, retaining only those needed to intensify value conflict and pressure.
 
-Step 7 — Character Voice Engine:
+Step 8 — Character Voice Engine:
 - Generate characterVoiceEngine.
 - It must cover the protagonist and every major character in characterNetwork.
 - Every character must define speechPattern, vocabulary, sentenceRhythm, regionalFlavor, localSpeechMarkers, emotionalDefense, and forbiddenStyle.
 - vocabulary must contain that character's forms of address, daily words, professional words, avoidance words, or connective phrases. Do not give every character the same set.
 - regionalFlavor should mainly come from address terms, daily details, spoken rhythm, acquaintance-society interaction, and local public spaces. It is not dialect stuffing.
-- localSpeechMarkers must be executable local language markers in the form "standard expression -> local/class/age speech expression -> usage context -> intensity". They must cover at least 3 categories among pronouns, negation, time words, question words, address terms, and particles.
-- If world.region is specific to a place with recognizable local speech, such as Wenling/Taizhou, localSpeechMarkers must include concrete usable expressions, for example "you -> nong", "I -> ngu", "we -> ala", "do not -> fu yao", "today -> jin zhao", or "go home -> zhuan wu". Do not merely write "slight dialect flavor".
+- localSpeechMarkers must be selected from dialectProfile pronounMarkers, negationMarkers, timeMarkers, questionMarkers, addressTerms, and particles. Do not invent new dialect markers outside the profile.
+- localSpeechMarkers must be executable local language markers in the form "standard expression -> local/class/age speech expression from dialectProfile -> usage context -> intensity". They must cover at least 3 categories among pronouns, negation, time words, question words, address terms, and particles.
+- Different regions must produce different dialectProfiles. Do not migrate examples from one region into another region. Do not merely write "slight dialect flavor".
 - Keep local speech readable: protagonist and core local characters may use light/medium intensity, strongly local characters may use medium/strong intensity, but do not turn whole dialogue blocks into unreadable dialect.
 - forbiddenStyle must clearly state what language does not belong to this character, such as "no literary relationship summaries", "no authorial theme statements", or "no therapeutic self-analysis".
 - Do not let every character share the same restrained, literary, precisely summarizing voice.
 - Supporting characters especially must not speak over-generalized thematic lines.
 - If character names are removed, the audience should still roughly infer who is speaking.
 
-Step 8 — Fate Network:
+Step 9 — Fate Network:
 - Generate Future A, Future B, and Future C.
 - Each Future must attach to one major character and answer: "If the protagonist becomes this person, what ending do they gain?"
 - Different Futures must represent different life paths, not paraphrases of the same ending.
 
-Step 9 — Pressure Ladder:
+Step 10 — Pressure Ladder:
 - Generate at least 4 pressure levels.
 - Level N+1 must be clearly greater than Level N.
 - Pressure must escalate. Do not repeat the same pressure at the same level.
 - Preferred pressure order: career -> relationship -> identity -> existence.
 
-Step 10 — Hard Choices:
+Step 11 — Hard Choices:
 - Generate at least 3 hard choices.
 - Each choice must be valueA VS valueB and include decision and cost.
 - Each choice must be Good vs Good or Bad vs Bad.
 - Forbidden: Good vs Evil.
 - Every choice must produce a real cost.
 
-Step 11 — Value Arc:
+Step 12 — Value Arc:
 - Generate openingBelief, closingBelief, openingValueState, and closingValueState.
 - The protagonist must change.
 - If opening and closing are identical, regenerate.
 
-Step 12 — Story Expansion:
+Step 13 — Story Expansion:
 - Every movement must use goal -> pressure -> choice -> cost -> newValueState.
 - Do not write a sequence of events.
 - The expansion must show pressure -> choice -> cost -> change.
 
-Step 13 — Final Story Development JSON:
+Step 14 — Final Story Development JSON:
 - Summarize all steps.
-- JSON must contain protagonist, themeEngine, world, locationTexture, valueArc, antagonistSystem, characterNetwork, characterVoiceEngine, fateNetwork, pressureLadder, hardChoices, storyExpansion, and narrativeStructure.
+- JSON must contain protagonist, themeEngine, world, locationTexture, dialectProfile, valueArc, antagonistSystem, characterNetwork, characterVoiceEngine, fateNetwork, pressureLadder, hardChoices, storyExpansion, and narrativeStructure.
 - Any missing field is a generation failure.
 
 Output JSON Schema:
@@ -144,6 +154,19 @@ Output JSON Schema:
     "acquaintanceSocietyTexture": "string",
     "funeralSceneTexture": "string",
     "visualMotifs": ["string", "string", "string"]
+  },
+  "dialectProfile": {
+    "region": "string",
+    "dialectFamily": "string",
+    "speechRegister": "string",
+    "pronounMarkers": ["string"],
+    "negationMarkers": ["string"],
+    "timeMarkers": ["string"],
+    "questionMarkers": ["string"],
+    "addressTerms": ["string"],
+    "particles": ["string"],
+    "usageRules": "string",
+    "avoidMixingWith": ["string"]
   },
   "antagonistSystem": {
     "embodiedAntagonist": {
@@ -270,7 +293,8 @@ Final quality requirements:
 - want must be caused by lie. need must refute lie.
 - themeEngine's value conflict must permeate the character network, pressure ladder, hard choices, and ending state.
 - locationTexture must be specific. Do not only write generic location labels such as "southern small town" or "northern county town".
-- characterVoiceEngine must cover the protagonist and every major character, character voices must be distinguishable, and every character must include at least 3 executable localSpeechMarkers.
+- dialectProfile must match world.region and locationTexture. Do not borrow dialect markers across regions.
+- characterVoiceEngine must cover the protagonist and every major character, character voices must be distinguishable, and every character must include at least 3 executable localSpeechMarkers derived from dialectProfile.
 - All three antagonist layers must exist and actively block want.
 - fateNetwork must offer at least 3 different fate mirrors for the protagonist.
 - hardChoices must force real costs. No easy reversals and no costless victories.

@@ -150,6 +150,19 @@ const mockStoryDevelopment = {
     funeralSceneTexture: '红白理事棚、纸扎铺、村口大喇叭和礼账簿让丧葬与婚事都变成可围观的体面审判',
     visualMotifs: ['煤灰喜棚', '礼账簿', '早生贵子红纸', '村口纸扎铺'],
   },
+  dialectProfile: {
+    region: '榆梁县西沟镇旧煤场家属区',
+    dialectFamily: '虚构矿县熟人社会口语',
+    speechRegister: '红白理事棚、媒人席面和旧煤场家属区之间的半熟人半交易口语',
+    pronounMarkers: ['侬', '吾', '阿拉'],
+    negationMarkers: ['弗要', '弗晓得'],
+    timeMarkers: ['今朝'],
+    questionMarkers: ['啥个', '咸横'],
+    addressTerms: ['满仓叔', '桂香姐', '王媒婆'],
+    particles: ['哩', '咧'],
+    usageRules: '每个角色只能从本 profile 取词；主角轻度使用，媒人可更密，关键冲突处用本地词强化熟人社会压力。',
+    avoidMixingWith: ['粤语', '川渝话', '东北话'],
+  },
   antagonistSystem: {
     embodiedAntagonist: {
       name: '王媒婆',
@@ -214,7 +227,7 @@ const mockStoryDevelopment = {
       regionalFlavor: '通过灶台、门口、席面和邻里眼光说话，不靠浓重方言',
       localSpeechMarkers: [
         { standardExpression: '今天', localExpression: '今朝', usageContext: '谈饭菜、婚宴或眼前安排时使用', intensity: 'light' },
-        { standardExpression: '回家', localExpression: '转屋', usageContext: '谈离开、回屋或生活归处时使用', intensity: 'medium' },
+        { standardExpression: '语气词了', localExpression: '咧', usageContext: '收住话头或留出停顿时使用', intensity: 'light' },
         { standardExpression: '什么', localExpression: '啥个', usageContext: '反问对方真实目的时使用', intensity: 'medium' },
       ],
       emotionalDefense: '用平静和日常安排保护尊严，不主动求解释',
@@ -646,6 +659,15 @@ function mockSuccessfulAiSteps() {
 }
 
 describe('edit script generation status persistence', () => {
+  it('accepts story development when local speech markers come from dialect profile pools', () => {
+    const parsed = storyDevelopmentPackageSchema.safeParse(mockStoryDevelopment)
+
+    expect(
+      parsed.success,
+      parsed.error?.issues.map((issue) => `${issue.path.join('.')}: ${issue.message}`).join('\n'),
+    ).toBe(true)
+  })
+
   it('rejects story development when want equals need', () => {
     const invalidStoryDevelopment = {
       ...mockStoryDevelopment,
@@ -683,6 +705,37 @@ describe('edit script generation status persistence', () => {
     const parsed = storyDevelopmentPackageSchema.safeParse(invalidStoryDevelopment)
 
     expect(parsed.success).toBe(false)
+  })
+
+  it('rejects character local speech markers outside the dialect profile pools', () => {
+    const invalidStoryDevelopment = {
+      ...mockStoryDevelopment,
+      characterVoiceEngine: mockStoryDevelopment.characterVoiceEngine.map((profile) => {
+        if (profile.characterName !== '刘满仓') {
+          return profile
+        }
+
+        return {
+          ...profile,
+          localSpeechMarkers: [
+            ...profile.localSpeechMarkers.slice(0, 2),
+            {
+              standardExpression: '谢谢',
+              localExpression: '唔该',
+              usageContext: '错误借用其他地域方言时使用',
+              intensity: 'medium',
+            },
+          ],
+        }
+      }),
+    }
+
+    const parsed = storyDevelopmentPackageSchema.safeParse(invalidStoryDevelopment)
+
+    expect(parsed.success).toBe(false)
+    expect(parsed.error?.issues.some((issue) => (
+      issue.message === 'Character local speech markers must be selected from dialectProfile marker pools.'
+    ))).toBe(true)
   })
 
   beforeEach(() => {

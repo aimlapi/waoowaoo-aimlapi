@@ -15,7 +15,7 @@ Screenplay Blueprint：
 - 禁止直接根据 Premise 写剧本。
 - 禁止直接根据 Story Development Layer 写剧本。
 - 必须按 Screenplay Blueprint 中的层级执行：Story Development Layer -> Scene Layer -> Beat Layer -> Dialogue Layer -> Screenplay。
-- Story Development 提供人物、主题、世界、locationTexture、characterVoiceEngine、反派、命运、压力、关键选择与价值弧光。
+- Story Development 提供人物、主题、世界、locationTexture、dialectProfile、characterVoiceEngine、反派、命运、压力、关键选择与价值弧光。
 - Scene Layer 决定每场戏的 sceneGoal、obstacle、tactic、outcome、valueShift。
 - Value Swing Layer 决定每场戏的价值摇摆方向与幅度。
 - Beat Layer 决定 Action -> Reaction -> New Situation 链条。
@@ -32,8 +32,8 @@ Screenplay Blueprint：
 - 每个 Beat 必须体现 Action -> Reaction -> New Situation，不要写连续解释或连续信息输出。
 - 对白必须遵循 Dialogue Layer，不要把 subtext 直接说出口。
 - 对白必须执行 characterVoiceEngine。删除角色名后，观众应能大致判断是谁在说话。
-- 地域感不等于堆方言，但本地语言不能缺席；必须执行 localSpeechMarkers，把代词、否定、时间、疑问、称呼、语气词等当地表达以可读密度写进关键对白。
-- 如果蓝图中的地区是温岭/台州，关键本地角色对白应自然出现“侬”“吾”“阿拉”“弗要”“今朝”“转屋”等标记中的一部分；不要整段普通话化。
+- 地域感不等于堆方言，但本地语言不能缺席；必须执行 dialectProfile 和 localSpeechMarkers，把代词、否定、时间、疑问、称呼、语气词等当地表达以可读密度写进关键对白。
+- 只能使用蓝图 dialectProfile 和角色 localSpeechMarkers 中已有的方言标记；不得临时发明 profile 外表达，不得借用其他地域方言；不要整段普通话化。
 - 控制可读密度：按 localSpeechMarkers 的 light/medium/strong 执行，不要把所有句子都翻成难懂方言。
 - 禁止所有角色共享同一种“克制、文艺、精准总结关系”的语言。
 - 尤其禁止配角说出过度概括主题的台词。

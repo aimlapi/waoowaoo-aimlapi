@@ -29,8 +29,9 @@ Character Voice Engine Execution:
 - You must execute characterVoiceEngine from the Story Development Layer.
 - Every key dialogue beat must express the speaker's speechPattern, vocabulary, sentenceRhythm, regionalFlavor, localSpeechMarkers, and emotionalDefense.
 - If character names are removed, the audience should still roughly infer who is speaking.
-- Regional texture is not dialect stuffing, but local speech must not be absent. Choose expressions from localSpeechMarkers that fit the character, intensity, and scene.
-- localSpeechMarkers should primarily appear through pronouns, negation, time words, question words, address terms, particles, and short connective phrases. For Wenling/Taizhou contexts, usable markers may include "nong", "ngu", "ala", "fu yao", "jin zhao", or "zhuan wu". Do not write standard Mandarin and merely claim it has regional texture.
+- Regional texture is not dialect stuffing, but local speech must not be absent. Execute dialectProfile and choose expressions from character localSpeechMarkers that fit the character, intensity, and scene.
+- localSpeechMarkers must come from the Story Development dialectProfile. Do not invent profile-external dialect words and do not borrow dialect from another region.
+- localSpeechMarkers should primarily appear through pronouns, negation, time words, question words, address terms, particles, and short connective phrases. Do not write standard-language dialogue and merely claim it has regional texture.
 - Keep density readable: light means 1 local marker per dialogue beat, medium means 2-3 markers, and strong may be denser. Do not translate every sentence into unreadable dialect.
 - Do not let all characters share the same restrained, literary, precisely summarizing voice.
 - Supporting characters especially must not speak over-generalized thematic lines.

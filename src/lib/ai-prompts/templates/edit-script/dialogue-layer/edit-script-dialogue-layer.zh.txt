@@ -29,8 +29,9 @@ Character Voice Engine Execution：
 - 必须执行 Story Development Layer 中的 characterVoiceEngine。
 - 每个关键对白必须体现说话者的 speechPattern、vocabulary、sentenceRhythm、regionalFlavor、localSpeechMarkers、emotionalDefense。
 - 删除角色名后，观众应能大致判断是谁在说话。
-- 地域感不等于堆方言，但本地语言不能缺席；必须从 localSpeechMarkers 中选择符合角色、强度和场景的表达进入关键对白。
-- localSpeechMarkers 优先进入代词、否定、时间、疑问、称呼、语气词和短连接词，例如温岭/台州语境下可出现“侬”“吾”“阿拉”“弗要”“今朝”“转屋”等；不要只写普通话再声称有地域感。
+- 地域感不等于堆方言，但本地语言不能缺席；必须执行 dialectProfile，并从角色 localSpeechMarkers 中选择符合角色、强度和场景的表达进入关键对白。
+- localSpeechMarkers 必须来自 Story Development 的 dialectProfile；不得临时发明 profile 外方言词，不得借用其他地域方言。
+- localSpeechMarkers 优先进入代词、否定、时间、疑问、称呼、语气词和短连接词；不要只写普通话再声称有地域感。
 - 控制可读密度：light 每段 1 个本地标记，medium 每段 2-3 个，strong 可以更密；不要把所有句子都翻成难懂方言。
 - 禁止所有角色共享同一种“克制、文艺、精准总结关系”的语言。
 - 尤其禁止配角说出过度概括主题的台词。
