@@ -19,6 +19,7 @@ Story Development Layer：
 - 如果某场戏与主题冲突无关，删除。
 - 如果某场戏结束前后价值状态相同，删除。
 - Story Development 中的 hardChoices 必须映射到具体 Scene，每个 Hard Choice 必须对应一个 Scene、多个 Beat 编号占位、一个明确代价。
+- 每场戏必须尽量执行 locationTexture，优先使用具体城区、本地公共空间、生活物件、熟人社会互动和丧葬场景纹理，禁止退回“南方小城”式泛化地点。
 
 Scene Engine 规则：
 - 每个 Scene 必须包含 sceneGoal、obstacle、tactic、outcome、valueShift。
@@ -27,6 +28,7 @@ Scene Engine 规则：
 - tactic 必须是角色为了目标采取的具体策略。
 - outcome 必须改变局面。
 - valueShift 必须写清楚价值从什么变成什么。
+- obstacle、tactic、outcome 必须落在 locationTexture 提供的具体世界里，而不是抽象房间或泛化城市。
 
 Theme Execution：
 - 每场戏必须回答：themeEngine.valueA VS themeEngine.valueB。

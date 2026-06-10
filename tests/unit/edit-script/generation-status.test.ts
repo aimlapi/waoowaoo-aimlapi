@@ -141,6 +141,15 @@ const mockStoryDevelopment = {
     socialReality: '村庄用儿子和香火衡量男人体面',
     conflictFunction: '放大主角对生育和尊严的混淆',
   },
+  locationTexture: {
+    city: '晋北虚构矿县榆梁县',
+    cityDistrict: '榆梁县西沟镇旧煤场家属区和村口红白理事棚',
+    climate: '冬春干冷多风，院墙和喜棚常挂着煤灰，夜里风把铁皮棚吹得响',
+    livingHabits: '熟人见面先问席面、彩礼、车和儿子，红白事都在镇口棚里互相记账',
+    acquaintanceSocietyTexture: '媒人、村干部和邻居会把私事当公共账本，谁家添丁、谁家绝后都会被饭桌重复',
+    funeralSceneTexture: '红白理事棚、纸扎铺、村口大喇叭和礼账簿让丧葬与婚事都变成可围观的体面审判',
+    visualMotifs: ['煤灰喜棚', '礼账簿', '早生贵子红纸', '村口纸扎铺'],
+  },
   antagonistSystem: {
     embodiedAntagonist: {
       name: '王媒婆',
@@ -180,6 +189,35 @@ const mockStoryDevelopment = {
       questionToProtagonist: '你花了钱，难道不该买一个有用的结果吗',
       desireInStory: '促成婚事并从中获利',
       pressureApplied: '不断用早生贵子和村庄眼光催促主角',
+    },
+  ],
+  characterVoiceEngine: [
+    {
+      characterName: '刘满仓',
+      speechPattern: '先用硬话和账目压人，句尾常收住，急了会把体面说成买卖',
+      vocabulary: ['酒席', '账', '香火', '人前', '准话'],
+      sentenceRhythm: '短句多，先堵后躲，真正软下去时会重复简单词',
+      regionalFlavor: '用村里席面、礼账和熟人称呼绕开情绪，不刻意堆方言',
+      emotionalDefense: '把害怕孤独伪装成讲规矩、讲花钱、讲香火',
+      forbiddenStyle: '禁止文艺总结关系，禁止心理学式自我剖白，禁止替作者说主题',
+    },
+    {
+      characterName: '李桂香',
+      speechPattern: '不抢话，常用反问拆穿对方，把生活细节放在前面',
+      vocabulary: ['日子', '肚子', '屋里', '饭热着', '别当买卖'],
+      sentenceRhythm: '句子比刘满仓长一点，慢而准，留下停顿',
+      regionalFlavor: '通过灶台、门口、席面和邻里眼光说话，不靠浓重方言',
+      emotionalDefense: '用平静和日常安排保护尊严，不主动求解释',
+      forbiddenStyle: '禁止说主题口号，禁止把自己写成圣母，禁止过度精准概括两性关系',
+    },
+    {
+      characterName: '王媒婆',
+      speechPattern: '热络、催促、会把难听话裹在吉利话里',
+      vocabulary: ['大喜', '添丁', '别误时辰', '人家都看着', '合适'],
+      sentenceRhythm: '连珠炮式短促，常夹着劝酒席面和吉利话',
+      regionalFlavor: '熟人社会的称呼和红白事流程感强，像在替全村开口',
+      emotionalDefense: '用热闹和规矩掩盖算计，不承认自己在逼人',
+      forbiddenStyle: '禁止文艺克制，禁止替主角总结人生，禁止突然变成温柔导师',
     },
   ],
   fateNetwork: [
@@ -449,10 +487,12 @@ const mockDialogueLayer = {
       dialogueBeats: [
         {
           beatNumber: 1,
+          speakerName: '刘满仓',
           characterWant: '刘满仓想确认求子目标不会落空',
           tactic: '用婚宴和村里眼光包装质问',
           subtext: '他害怕自己再次被证明没人要',
           dialogue: '刘满仓：酒席都订了，你总得给我一句准话。\\n李桂香：你问的是日子，还是问我的肚子？',
+          voiceExecution: '刘满仓用酒席和准话压人，李桂香用日子和肚子的反问拆穿功能化关系。',
           surfaceTopic: '婚宴安排',
           realConflict: '人是否被当作生育功能',
           dramaticPurpose: '揭露关系的真实冲突',
@@ -466,10 +506,12 @@ const mockDialogueLayer = {
       dialogueBeats: [
         {
           beatNumber: 2,
+          speakerName: '刘满仓',
           characterWant: '刘满仓想停止用求子证明体面',
           tactic: '不求原谅，只承认自己的软弱',
           subtext: '他第一次把孤独说成自己的问题',
           dialogue: '刘满仓：这喜字贴错了。\\n李桂香：错哪儿了？\\n刘满仓：错在我先看见的不是你。',
+          voiceExecution: '刘满仓仍从喜字和席面物件开口，句子变短变软；李桂香保持慢半拍反问。',
           surfaceTopic: '喜联',
           realConflict: '体面和陪伴的选择',
           dramaticPurpose: '迫使最终选择并呈现代价',
@@ -564,6 +606,31 @@ describe('edit script generation status persistence', () => {
         ...mockStoryDevelopment.protagonist,
         need: mockStoryDevelopment.protagonist.want,
       },
+    }
+
+    const parsed = storyDevelopmentPackageSchema.safeParse(invalidStoryDevelopment)
+
+    expect(parsed.success).toBe(false)
+  })
+
+  it('rejects story development with generic location texture', () => {
+    const invalidStoryDevelopment = {
+      ...mockStoryDevelopment,
+      locationTexture: {
+        ...mockStoryDevelopment.locationTexture,
+        city: '南方小城',
+      },
+    }
+
+    const parsed = storyDevelopmentPackageSchema.safeParse(invalidStoryDevelopment)
+
+    expect(parsed.success).toBe(false)
+  })
+
+  it('rejects story development when character voice engine misses a major character', () => {
+    const invalidStoryDevelopment = {
+      ...mockStoryDevelopment,
+      characterVoiceEngine: mockStoryDevelopment.characterVoiceEngine.filter((profile) => profile.characterName !== '王媒婆'),
     }
 
     const parsed = storyDevelopmentPackageSchema.safeParse(invalidStoryDevelopment)

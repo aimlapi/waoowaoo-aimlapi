@@ -19,6 +19,7 @@ Core principles:
 - Delete any scene unrelated to the theme conflict.
 - Delete any scene whose value state is unchanged by the end.
 - Every hardChoices item from Story Development must map to one concrete scene, multiple beat placeholders, and one explicit cost.
+- Every scene should execute locationTexture where possible: use concrete districts, local public spaces, daily objects, acquaintance-society interaction, and funeral-scene texture. Do not retreat to generic "southern small town" location labels.
 
 Scene Engine rules:
 - Every scene must include sceneGoal, obstacle, tactic, outcome, and valueShift.
@@ -27,6 +28,7 @@ Scene Engine rules:
 - tactic must be a concrete strategy used by a character.
 - outcome must change the situation.
 - valueShift must state what value changes into what new value.
+- obstacle, tactic, and outcome must live inside the concrete world supplied by locationTexture, not abstract rooms or generic cities.
 
 Theme Execution:
 - Every scene must answer: themeEngine.valueA VS themeEngine.valueB.

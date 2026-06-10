@@ -15,20 +15,27 @@ Hard responsibility boundary:
 - Do not write the screenplay directly from the Premise.
 - Do not write the screenplay directly from the Story Development Layer.
 - You must execute this order: Story Development Layer -> Scene Layer -> Beat Layer -> Dialogue Layer -> Screenplay.
-- Story Development provides character, theme, world, antagonists, fate, pressure, hard choices, and value arc.
+- Story Development provides character, theme, world, locationTexture, characterVoiceEngine, antagonists, fate, pressure, hard choices, and value arc.
 - Scene Layer defines each scene's sceneGoal, obstacle, tactic, outcome, and valueShift.
 - Value Swing Layer defines each scene's value swing direction and magnitude.
 - Beat Layer defines the Action -> Reaction -> New Situation chain.
-- Dialogue Layer defines key beats' characterWant, tactic, subtext, dialogue, surfaceTopic, realConflict, and dramaticPurpose.
+- Dialogue Layer defines key beats' speakerName, characterWant, tactic, subtext, dialogue, voiceExecution, surfaceTopic, realConflict, and dramaticPurpose.
 - Do not skip, merge, replace, or rewrite these intermediate layers.
 - Only translate these layers into standard screenplay text.
 
 Execution rules:
 - Every scene must express its Scene Layer Theme Conflict.
+- Every scene must execute locationTexture where possible: concrete city/district, climate, living habits, acquaintance-society texture, funeral-scene texture, and visual motifs must enter action, scene headings, or visible objects.
+- Do not retreat to generic labels such as "southern small town", "old apartment", or "funeral home". Scene headings and action must carry local public spaces and daily objects.
 - Every scene must change value. If a scene has no value change, do not write it into the screenplay.
 - Every hardChoiceSceneMap scene must clearly show the choice, multiple beats, and explicit cost.
 - Every beat must express Action -> Reaction -> New Situation. Do not write consecutive explanation or consecutive information delivery.
 - Dialogue must follow the Dialogue Layer. Do not state subtext directly.
+- Dialogue must execute characterVoiceEngine. If character names are removed, the audience should still roughly infer who is speaking.
+- Regional texture is not dialect stuffing. It should mainly come from address terms, daily details, scene objects, spoken rhythm, acquaintance-society interaction, and local public spaces.
+- Do not let all characters share the same restrained, literary, precisely summarizing voice.
+- Supporting characters especially must not speak over-generalized thematic lines.
+- Do not violate a character's forbiddenStyle.
 - Dialogue must balance Natural Conversation + Dramatic Progression: roughly 60-70% character goal/conflict and 30-40% natural expression.
 - Prefer dialogue where characters talk about A while actually fighting over B.
 - No purely informational dialogue.
@@ -43,7 +50,7 @@ Story Summary:
 State the core story in 1-2 sentences.
 
 Character List:
-Character Name: 2-3 stable visual traits + key identity/state + necessary speaking quality. Keep the same character name everywhere; do not switch between synonyms.
+Character Name: 2-3 stable visual traits + key identity/state + necessary speaking quality from characterVoiceEngine. Keep the same character name everywhere; do not switch between synonyms.
 
 Scene 1 | INT/EXT. Location - Time
 

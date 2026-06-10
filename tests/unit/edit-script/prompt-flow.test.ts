@@ -25,15 +25,20 @@ describe('edit script block-first prompt flow', () => {
 
     expect(storyDevelopmentPrompt).toContain('Story Development Layer')
     expect(storyDevelopmentPrompt).toContain('禁止从 Premise 直接生成故事大纲或剧本')
-    expect(storyDevelopmentPrompt).toContain('Protagonist Analysis -> Theme Engine -> Antagonist System')
+    expect(storyDevelopmentPrompt).toContain('Protagonist Analysis -> Theme Engine -> World Builder -> Location Texture Engine')
+    expect(storyDevelopmentPrompt).toContain('Character Voice Engine')
     expect(storyDevelopmentPrompt).toContain('"schemaVersion": 2')
     expect(storyDevelopmentPrompt).toContain('"themeEngine"')
+    expect(storyDevelopmentPrompt).toContain('"locationTexture"')
     expect(storyDevelopmentPrompt).toContain('"antagonistSystem"')
+    expect(storyDevelopmentPrompt).toContain('"characterVoiceEngine"')
     expect(storyDevelopmentPrompt).toContain('"pressureLadder"')
     expect(storyDevelopmentPrompt).toContain('"hardChoices"')
     expect(storyDevelopmentPrompt).toContain('goal -> pressure -> choice -> cost -> newValueState')
     expect(storyDevelopmentPrompt).toContain('必须具有互斥性')
     expect(storyDevelopmentPrompt).toContain('被记住 VS 被爱')
+    expect(storyDevelopmentPrompt).toContain('禁止只使用“南方小城”')
+    expect(storyDevelopmentPrompt).toContain('删除角色名后，观众应能大致判断是谁在说话')
 
     const sceneLayerPrompt = buildAiPrompt({
       promptId: AI_PROMPT_IDS.EDIT_SCRIPT_SCENE_LAYER,
@@ -54,6 +59,7 @@ describe('edit script block-first prompt flow', () => {
     expect(sceneLayerPrompt).toContain('Hard Choice Scene Map')
     expect(sceneLayerPrompt).toContain('每场戏都必须发生价值变化')
     expect(sceneLayerPrompt).toContain('Value A VS Value B')
+    expect(sceneLayerPrompt).toContain('每场戏必须尽量执行 locationTexture')
     expect(sceneLayerPrompt).toContain('"sceneLayer"')
     expect(sceneLayerPrompt).toContain('"valueSwingLayer"')
 
@@ -89,8 +95,10 @@ describe('edit script block-first prompt flow', () => {
 
     expect(dialogueLayerPrompt).toContain('Dialogue Engine')
     expect(dialogueLayerPrompt).toContain('Dialogue Balance Engine')
+    expect(dialogueLayerPrompt).toContain('Character Voice Engine Execution')
     expect(dialogueLayerPrompt).toContain('surfaceTopic')
     expect(dialogueLayerPrompt).toContain('realConflict')
+    expect(dialogueLayerPrompt).toContain('voiceExecution')
     expect(dialogueLayerPrompt).toContain('角色谈论 A，实际争夺 B')
 
     const screenplayPrompt = buildAiPrompt({
@@ -114,6 +122,8 @@ describe('edit script block-first prompt flow', () => {
     expect(screenplayPrompt).toContain('禁止直接根据 Premise 写剧本')
     expect(screenplayPrompt).toContain('禁止直接根据 Story Development Layer 写剧本')
     expect(screenplayPrompt).toContain('Story Development Layer -> Scene Layer -> Beat Layer -> Dialogue Layer -> Screenplay')
+    expect(screenplayPrompt).toContain('locationTexture')
+    expect(screenplayPrompt).toContain('characterVoiceEngine')
     expect(screenplayPrompt).toContain('AI 可控短片剧本')
     expect(screenplayPrompt).toContain('后续角色、场景、道具、风格案例和分镜生成')
     expect(screenplayPrompt).toContain('这里只写剧情内容')

@@ -24,6 +24,43 @@ function normalizedComparableText(value: string): string {
   return value.replace(/\s+/g, '').toLowerCase()
 }
 
+function isGenericLocationText(value: string): boolean {
+  const normalized = normalizedComparableText(value)
+  const genericLocations = new Set([
+    '南方小城',
+    '北方小城',
+    '某个小城',
+    '一个小城',
+    '小城市',
+    '县城',
+    '老城区',
+    '城市',
+    '乡村',
+    '村庄',
+  ])
+  return genericLocations.has(normalized)
+}
+
+export const locationTextureSchema = z.object({
+  city: z.string().trim().min(1),
+  cityDistrict: z.string().trim().min(1),
+  climate: z.string().trim().min(1),
+  livingHabits: z.string().trim().min(1),
+  acquaintanceSocietyTexture: z.string().trim().min(1),
+  funeralSceneTexture: z.string().trim().min(1),
+  visualMotifs: z.array(z.string().trim().min(1)).min(3),
+})
+
+export const characterVoiceProfileSchema = z.object({
+  characterName: z.string().trim().min(1),
+  speechPattern: z.string().trim().min(1),
+  vocabulary: z.array(z.string().trim().min(1)).min(3),
+  sentenceRhythm: z.string().trim().min(1),
+  regionalFlavor: z.string().trim().min(1),
+  emotionalDefense: z.string().trim().min(1),
+  forbiddenStyle: z.string().trim().min(1),
+})
+
 export const storyDevelopmentPackageSchema = z.object({
   schemaVersion: z.literal(2),
   premise: z.string().trim().min(1),
@@ -49,6 +86,7 @@ export const storyDevelopmentPackageSchema = z.object({
     socialReality: z.string().trim().min(1),
     conflictFunction: z.string().trim().min(1),
   }),
+  locationTexture: locationTextureSchema,
   antagonistSystem: z.object({
     embodiedAntagonist: z.object({
       name: z.string().trim().min(1),
@@ -77,6 +115,7 @@ export const storyDevelopmentPackageSchema = z.object({
     desireInStory: z.string().trim().min(1),
     pressureApplied: z.string().trim().min(1),
   })).min(2).max(6),
+  characterVoiceEngine: z.array(characterVoiceProfileSchema).min(2).max(7),
   fateNetwork: z.array(z.object({
     label: z.enum(['Future A', 'Future B', 'Future C']),
     characterName: z.string().trim().min(1),
@@ -160,6 +199,41 @@ export const storyDevelopmentPackageSchema = z.object({
       message: 'Opening Value State and Closing Value State must be different.',
     })
   }
+  if (isGenericLocationText(value.world.region)) {
+    context.addIssue({
+      code: z.ZodIssueCode.custom,
+      path: ['world', 'region'],
+      message: 'World region must be more specific than a generic location label.',
+    })
+  }
+  if (isGenericLocationText(value.locationTexture.city)) {
+    context.addIssue({
+      code: z.ZodIssueCode.custom,
+      path: ['locationTexture', 'city'],
+      message: 'Location texture city must be specific, not a generic city label.',
+    })
+  }
+  if (isGenericLocationText(value.locationTexture.cityDistrict)) {
+    context.addIssue({
+      code: z.ZodIssueCode.custom,
+      path: ['locationTexture', 'cityDistrict'],
+      message: 'Location texture district must be specific, not a generic district label.',
+    })
+  }
+  const requiredVoiceCharacters = new Set([
+    normalizedComparableText(value.protagonist.name),
+    ...value.characterNetwork.map((character) => normalizedComparableText(character.name)),
+  ])
+  const voiceCharacters = new Set(value.characterVoiceEngine.map((profile) => normalizedComparableText(profile.characterName)))
+  requiredVoiceCharacters.forEach((characterName) => {
+    if (!voiceCharacters.has(characterName)) {
+      context.addIssue({
+        code: z.ZodIssueCode.custom,
+        path: ['characterVoiceEngine'],
+        message: 'Character voice engine must cover the protagonist and every characterNetwork character.',
+      })
+    }
+  })
   value.pressureLadder.forEach((step, index) => {
     if (step.level !== index + 1) {
       context.addIssue({
@@ -286,10 +360,12 @@ export const beatLayerPackageSchema = z.object({
 
 export const dialogueBeatSchema = z.object({
   beatNumber: z.number().int().min(1),
+  speakerName: z.string().trim().min(1),
   characterWant: z.string().trim().min(1),
   tactic: z.string().trim().min(1),
   subtext: z.string().trim().min(1),
   dialogue: z.string().trim().min(1),
+  voiceExecution: z.string().trim().min(1),
   surfaceTopic: z.string().trim().min(1),
   realConflict: z.string().trim().min(1),
   dramaticPurpose: z.string().trim().min(1),

@@ -15,20 +15,27 @@ Screenplay Blueprint：
 - 禁止直接根据 Premise 写剧本。
 - 禁止直接根据 Story Development Layer 写剧本。
 - 必须按 Screenplay Blueprint 中的层级执行：Story Development Layer -> Scene Layer -> Beat Layer -> Dialogue Layer -> Screenplay。
-- Story Development 只提供人物、主题、世界、反派、命运、压力、关键选择与价值弧光。
+- Story Development 提供人物、主题、世界、locationTexture、characterVoiceEngine、反派、命运、压力、关键选择与价值弧光。
 - Scene Layer 决定每场戏的 sceneGoal、obstacle、tactic、outcome、valueShift。
 - Value Swing Layer 决定每场戏的价值摇摆方向与幅度。
 - Beat Layer 决定 Action -> Reaction -> New Situation 链条。
-- Dialogue Layer 决定关键 Beat 的 characterWant、tactic、subtext、dialogue、surfaceTopic、realConflict、dramaticPurpose。
+- Dialogue Layer 决定关键 Beat 的 speakerName、characterWant、tactic、subtext、dialogue、voiceExecution、surfaceTopic、realConflict、dramaticPurpose。
 - 你不能跳过、合并、替换或重写这些中间层。
 - 你只能把这些层翻译成标准剧本文本。
 
 执行规则：
 - 每场戏必须体现 Scene Layer 的 Theme Conflict。
+- 每场戏必须尽量执行 locationTexture：具体城市/城区、气候、生活习惯、熟人社会纹理、丧葬场景纹理和视觉母题必须进入动作、地点标题或可见物件。
+- 禁止把地点退回“南方小城”“旧屋”“殡仪馆”这种泛化标签；场景标题和动作要带出本地公共空间与生活物件。
 - 每场戏必须出现价值变化；如果场景没有价值变化，不要把它写进剧本。
 - 每个 hardChoiceSceneMap 对应的场景必须在剧本中清楚呈现选择、多个 Beat 和明确代价。
 - 每个 Beat 必须体现 Action -> Reaction -> New Situation，不要写连续解释或连续信息输出。
 - 对白必须遵循 Dialogue Layer，不要把 subtext 直接说出口。
+- 对白必须执行 characterVoiceEngine。删除角色名后，观众应能大致判断是谁在说话。
+- 地域感不等于堆方言，主要通过称呼、生活细节、场景物件、口语节奏、熟人社会互动、本地公共空间体现。
+- 禁止所有角色共享同一种“克制、文艺、精准总结关系”的语言。
+- 尤其禁止配角说出过度概括主题的台词。
+- 不得违反角色的 forbiddenStyle。
 - 对白必须平衡 Natural Conversation + Dramatic Progression：大约 60-70% 角色目标与冲突，30-40% 生活化表达。
 - 优先写“表面谈 A，实际争夺 B”的对白。
 - 禁止纯信息对白。
@@ -44,7 +51,7 @@ Screenplay Blueprint：
 用 1-2 句话说明故事核心。
 
 角色表：
-角色名：2-3 个稳定视觉特征 + 关键身份/状态 + 必要的说话气质。角色名后续必须保持一致，不要同义词来回切换。
+角色名：2-3 个稳定视觉特征 + 关键身份/状态 + 来源于 characterVoiceEngine 的必要说话气质。角色名后续必须保持一致，不要同义词来回切换。
 
 场景 1｜内景/外景. 地点 - 时间
 

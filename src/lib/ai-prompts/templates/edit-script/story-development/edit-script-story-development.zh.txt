@@ -11,7 +11,7 @@
 核心原则：
 - 禁止从 Premise 直接生成故事大纲或剧本。
 - 必须先完成剧作开发，再生成 Story Expansion。
-- 输出顺序不可跳过：Protagonist Analysis -> Theme Engine -> Antagonist System -> Character Network -> Fate Network -> Pressure Ladder -> Hard Choices -> Value Arc -> Story Expansion -> Narrative Structure。
+- 输出顺序不可跳过：Protagonist Analysis -> Theme Engine -> World Builder -> Location Texture Engine -> Antagonist System -> Character Network -> Character Voice Engine -> Fate Network -> Pressure Ladder -> Hard Choices -> Value Arc -> Story Expansion -> Narrative Structure。
 - 每一步必须作为下一步的输入依据；后一层不得推翻前一层。
 - Story Expansion 只能在角色、价值冲突、反派系统、命运网络、压力阶梯、关键选择和价值弧光已经完成后生成。
 - 结构只负责组织已经开发完成的故事，不负责发明故事。
@@ -36,50 +36,75 @@ Step 2 — Theme Engine：
 - 禁止可以同时获得的价值组合。
 - 正确方向示例：事业 VS 家庭、伟大 VS 幸福、被记住 VS 被爱、自由 VS 安全、尊严 VS 生存。
 
-Step 3 — Antagonist System：
+Step 3 — World Builder：
+- 生成 world。
+- 禁止只使用“南方小城”“北方县城”“某个村庄”这类泛化地点。
+- world.region 必须具体到可感知的城市或县域文化空间，可以使用虚构地名，但必须有明确地理、气候、公共空间和生活方式指向。
+- 世界不是装饰，必须放大人物的 want、need 和 themeEngine 价值冲突。
+
+Step 4 — Location Texture Engine：
+- 在 world 之后生成 locationTexture。
+- 必须具体到 city、cityDistrict、climate、livingHabits、acquaintanceSocietyTexture、funeralSceneTexture、visualMotifs。
+- 地域感不等于堆方言。
+- 地域感主要来自称呼、生活细节、场景物件、口语节奏、熟人社会互动、本地公共空间。
+- 丧葬场景纹理必须包含当地办事流程、空间物件、邻里观看方式或仪式压力，不能只写“殡仪馆”“旧屋”。
+- visualMotifs 至少 3 个，必须能被后续风格案例、资产和分镜使用。
+
+Step 5 — Antagonist System：
 - 必须生成 embodiedAntagonist、institutionalAntagonist、abstractAntagonist。
 - embodiedAntagonist 是具体人物反派或具体人物压力源。
 - institutionalAntagonist 是制度反派，例如平台算法、公司制度、教育体系、法律体系、村庄伦理、行业规则。
 - abstractAntagonist 是抽象反派，例如时间、死亡、被遗忘、孤独、战争、衰老、贫穷。
 - 三类反派都必须主动阻碍主角 want，而不是只作为背景存在。
 
-Step 4 — Character Network：
+Step 6 — Character Network：
 - 每个主要角色必须生成 dramaticFunction、themePosition、fateRepresentation、questionToProtagonist。
 - 角色必须代表一种价值观或一种命运。
 - 禁止工具人角色。
 - 角色数量控制在 2 到 6 个之间，只保留推动价值冲突和压力升级所必需的人。
 
-Step 5 — Fate Network：
+Step 7 — Character Voice Engine：
+- 生成 characterVoiceEngine。
+- 必须覆盖主角和 characterNetwork 中每个主要角色。
+- 每个角色必须定义 speechPattern、vocabulary、sentenceRhythm、regionalFlavor、emotionalDefense、forbiddenStyle。
+- vocabulary 必须是角色常用的称呼、生活词、职业词、回避词或口头连接词，不得全员共用同一套。
+- regionalFlavor 主要通过称呼、生活细节、口语节奏、熟人社会互动和本地公共空间体现，不等于堆方言。
+- forbiddenStyle 必须明确禁止该角色说出的不属于他的语言，例如“禁止文艺总结关系”“禁止替作者说主题”“禁止心理学式自我剖白”。
+- 禁止所有角色共享同一种“克制、文艺、精准总结关系”的语言。
+- 尤其禁止配角说出过度概括主题的台词。
+- 删除角色名后，观众应能大致判断是谁在说话。
+
+Step 8 — Fate Network：
 - 必须生成 Future A、Future B、Future C。
 - 每个 Future 都必须绑定一个主要角色，回答“如果主角成为这个人，会获得什么结局？”。
 - 不同 Future 必须代表不同人生路径，不得只是同一结局换说法。
 
-Step 6 — Pressure Ladder：
+Step 9 — Pressure Ladder：
 - 至少生成 4 个压力等级。
 - Level N+1 必须明显大于 Level N。
 - 压力必须升级，禁止同等级重复压力。
 - 压力优先顺序：career -> relationship -> identity -> existence。
 
-Step 7 — Hard Choices：
+Step 10 — Hard Choices：
 - 至少生成 3 个关键选择。
 - 每个选择必须是 valueA VS valueB，并包含 decision 与 cost。
 - 选择必须是 Good vs Good 或 Bad vs Bad。
 - 禁止 Good vs Evil。
 - 每个选择必须产生真实代价。
 
-Step 8 — Value Arc：
+Step 11 — Value Arc：
 - 生成 openingBelief、closingBelief、openingValueState、closingValueState。
 - 人物必须发生变化。
 - 如果 opening 与 closing 相同，必须重新生成。
 
-Step 9 — Story Expansion：
+Step 12 — Story Expansion：
 - 每一幕必须采用 goal -> pressure -> choice -> cost -> newValueState。
 - 禁止事件流水账。
 - 必须体现压力 -> 选择 -> 代价 -> 变化。
 
-Step 10 — Final Story Development JSON：
+Step 13 — Final Story Development JSON：
 - 汇总所有步骤。
-- JSON 必须包含 protagonist、themeEngine、valueArc、antagonistSystem、characterNetwork、fateNetwork、pressureLadder、hardChoices、storyExpansion、narrativeStructure。
+- JSON 必须包含 protagonist、themeEngine、world、locationTexture、valueArc、antagonistSystem、characterNetwork、characterVoiceEngine、fateNetwork、pressureLadder、hardChoices、storyExpansion、narrativeStructure。
 - 任何字段缺失均视为生成失败。
 
 输出 JSON Schema：
@@ -107,6 +132,15 @@ Step 10 — Final Story Development JSON：
     "region": "string",
     "socialReality": "string",
     "conflictFunction": "string"
+  },
+  "locationTexture": {
+    "city": "specific city or fictional city with concrete geographic identity",
+    "cityDistrict": "specific district, old street, estate, village, factory area, riverfront, or public-space cluster",
+    "climate": "string",
+    "livingHabits": "string",
+    "acquaintanceSocietyTexture": "string",
+    "funeralSceneTexture": "string",
+    "visualMotifs": ["string", "string", "string"]
   },
   "antagonistSystem": {
     "embodiedAntagonist": {
@@ -136,6 +170,17 @@ Step 10 — Final Story Development JSON：
       "questionToProtagonist": "string",
       "desireInStory": "string",
       "pressureApplied": "string"
+    }
+  ],
+  "characterVoiceEngine": [
+    {
+      "characterName": "string",
+      "speechPattern": "string",
+      "vocabulary": ["string", "string", "string"],
+      "sentenceRhythm": "string",
+      "regionalFlavor": "string",
+      "emotionalDefense": "string",
+      "forbiddenStyle": "string"
     }
   ],
   "fateNetwork": [
@@ -213,6 +258,8 @@ Step 10 — Final Story Development JSON：
 - protagonist 必须是一个具体的人，不是事件、群体或概念。
 - want 必须由 lie 推动，need 必须反驳 lie。
 - themeEngine 的价值冲突必须渗透到角色网络、压力阶梯、关键选择和结局状态。
+- locationTexture 必须具体，禁止只写“南方小城”“北方县城”等泛化地点。
+- characterVoiceEngine 必须覆盖主角和每个主要角色，并且角色之间语言系统必须可区分。
 - antagonistSystem 三层反派必须同时存在，并各自主动阻碍 want。
 - fateNetwork 必须给主角提供至少 3 种不同命运镜像。
 - hardChoices 必须让主角付出真实代价，禁止轻巧反转和无损胜利。

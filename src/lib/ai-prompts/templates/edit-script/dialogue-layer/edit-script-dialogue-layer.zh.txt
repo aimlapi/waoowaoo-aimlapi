@@ -18,12 +18,21 @@ Beat Layer：
 画幅：{{aspect_ratio}}
 
 Dialogue Engine 规则：
-- 每个关键 Beat 必须生成 characterWant、tactic、subtext、dialogue。
+- 每个关键 Beat 必须生成 speakerName、characterWant、tactic、subtext、dialogue、voiceExecution。
 - 对白必须同时推进剧情、暴露人物、体现主题、制造冲突。
 - 禁止纯信息对白。
 - 禁止角色直接说出真实想法。
 - 优先：角色谈论 A，实际争夺 B。
 - 高级原则：说的 ≠ 想的；想的 ≠ 做的；观众知道的 ≠ 角色说出来的。
+
+Character Voice Engine Execution：
+- 必须执行 Story Development Layer 中的 characterVoiceEngine。
+- 每个关键对白必须体现说话者的 speechPattern、vocabulary、sentenceRhythm、regionalFlavor、emotionalDefense。
+- 删除角色名后，观众应能大致判断是谁在说话。
+- 地域感不等于堆方言；主要通过称呼、生活细节、场景物件、口语节奏、熟人社会互动、本地公共空间体现。
+- 禁止所有角色共享同一种“克制、文艺、精准总结关系”的语言。
+- 尤其禁止配角说出过度概括主题的台词。
+- 不得违反任一角色的 forbiddenStyle。
 
 Dialogue Balance Engine：
 - 对白必须同时满足 Natural Conversation + Dramatic Progression。
@@ -54,10 +63,12 @@ Dialogue Balance Engine：
       "dialogueBeats": [
         {
           "beatNumber": 1,
+          "speakerName": "string",
           "characterWant": "string",
           "tactic": "string",
           "subtext": "string",
           "dialogue": "string",
+          "voiceExecution": "string",
           "surfaceTopic": "string",
           "realConflict": "string",
           "dramaticPurpose": "string",
@@ -72,5 +83,6 @@ Dialogue Balance Engine：
 质量要求：
 - naturalnessScore 与 conflictScore 使用 0-10 数字。
 - dialogue 可以包含多句短对白，但必须围绕同一 beat。
+- 如果 dialogue 含多名角色，speakerName 写主要推动者，voiceExecution 必须说明每个说话者如何执行各自语言系统。
 - 不要把所有 beat 都写满对白；只处理关键 beat。
 - 无对白 beat 可省略。

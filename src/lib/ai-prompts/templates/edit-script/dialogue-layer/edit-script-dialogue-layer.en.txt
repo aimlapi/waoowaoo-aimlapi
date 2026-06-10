@@ -18,12 +18,21 @@ Target total duration: {{duration_seconds}} seconds
 Aspect ratio: {{aspect_ratio}}
 
 Dialogue Engine rules:
-- Every key beat must include characterWant, tactic, subtext, and dialogue.
+- Every key beat must include speakerName, characterWant, tactic, subtext, dialogue, and voiceExecution.
 - Dialogue must advance plot, reveal character, express theme, and create conflict.
 - No purely informational dialogue.
 - Characters must not state their true thoughts directly.
 - Prefer: characters discuss A while actually fighting over B.
 - Advanced principle: what is said != what is wanted; what is wanted != what is done; what the audience knows != what characters say aloud.
+
+Character Voice Engine Execution:
+- You must execute characterVoiceEngine from the Story Development Layer.
+- Every key dialogue beat must express the speaker's speechPattern, vocabulary, sentenceRhythm, regionalFlavor, and emotionalDefense.
+- If character names are removed, the audience should still roughly infer who is speaking.
+- Regional texture is not dialect stuffing. It should mainly come from address terms, daily details, scene objects, spoken rhythm, acquaintance-society interaction, and local public spaces.
+- Do not let all characters share the same restrained, literary, precisely summarizing voice.
+- Supporting characters especially must not speak over-generalized thematic lines.
+- Do not violate any character's forbiddenStyle.
 
 Dialogue Balance Engine:
 - Dialogue must satisfy Natural Conversation + Dramatic Progression.
@@ -54,10 +63,12 @@ Output JSON Schema:
       "dialogueBeats": [
         {
           "beatNumber": 1,
+          "speakerName": "string",
           "characterWant": "string",
           "tactic": "string",
           "subtext": "string",
           "dialogue": "string",
+          "voiceExecution": "string",
           "surfaceTopic": "string",
           "realConflict": "string",
           "dramaticPurpose": "string",
@@ -72,5 +83,6 @@ Output JSON Schema:
 Quality requirements:
 - naturalnessScore and conflictScore are numbers from 0 to 10.
 - dialogue may contain several short spoken lines, but they must belong to the same beat.
+- If dialogue contains multiple speakers, speakerName is the primary mover, and voiceExecution must explain how each speaker follows their own voice system.
 - Do not fill every beat with dialogue. Only handle key beats.
 - Omit non-dialogue beats.
