@@ -103,8 +103,9 @@ const APPEARANCE_DESCRIPTOR_KEYS: readonly (keyof CharacterAppearanceDescriptor)
   'visualKeywords',
 ]
 
-const DIRECTION_KEYS: readonly (keyof Omit<CharacterCastingCandidatePlan, 'candidateIndex'>)[] = [
+const DIRECTION_KEYS: readonly (keyof CharacterCastingCandidatePlan)[] = [
   'id',
+  'candidateIndex',
   'directionName',
   'interpretationLogic',
   'faceFamily',

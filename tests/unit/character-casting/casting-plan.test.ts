@@ -201,6 +201,14 @@ describe('character casting plan', () => {
     expect(document.diversityCheck.passed).toBe(true)
   })
 
+  it('accepts an already-normalized shared casting plan document with derived candidateIndex fields', () => {
+    const firstPass = normalizeCharacterCastingPlanDocument(JSON.parse(buildValidPlanJson()))
+    const secondPass = normalizeCharacterCastingPlanDocument(firstPass)
+
+    expect(secondPass.castingDirections.map((direction) => direction.candidateIndex)).toEqual([0, 1, 2])
+    expect(secondPass.castingDirections[0].imagePrompt).toContain('This is casting alternative A for the same character.')
+  })
+
   it('rejects malformed plans instead of silently falling back to generic candidate briefs', () => {
     expect(() => normalizeCharacterCastingPlans({
       characterDNA: {
