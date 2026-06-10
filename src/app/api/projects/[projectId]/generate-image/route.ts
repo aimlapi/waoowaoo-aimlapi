@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { apiHandler, ApiError } from '@/lib/api-errors'
 import { isErrorResponse, requireProjectAuthLight } from '@/lib/api-auth'
 import { executeProjectAgentOperationFromApi } from '@/lib/adapters/api/execute-project-agent-operation'
+import { stripLegacyArtStyle } from '@/lib/media/strip-legacy-art-style'
 
 export const POST = apiHandler(async (
   request: NextRequest,
@@ -21,7 +22,8 @@ export const POST = apiHandler(async (
 
   const operationId = type === 'character' ? 'generate_character_image' : 'generate_location_image'
   const { type: _type, id: _id, ...restBody } = body
-  const input = type === 'character' ? { ...restBody, characterId: id } : { ...restBody, locationId: id }
+  const normalizedBody = stripLegacyArtStyle(restBody)
+  const input = type === 'character' ? { ...normalizedBody, characterId: id } : { ...normalizedBody, locationId: id }
 
   const result = await executeProjectAgentOperationFromApi({
     request,

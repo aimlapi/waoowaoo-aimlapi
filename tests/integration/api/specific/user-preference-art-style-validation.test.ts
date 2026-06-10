@@ -27,24 +27,24 @@ describe('api specific - user preference art style validation', () => {
     vi.clearAllMocks()
   })
 
-  it('accepts valid artStyle and persists normalized value', async () => {
+  it('accepts audioModel and persists normalized value', async () => {
     const mod = await import('@/app/api/user-preference/route')
     const req = buildMockRequest({
       path: '/api/user-preference',
       method: 'PATCH',
-      body: { artStyle: '  realistic  ' },
+      body: { audioModel: 'audio::tts' },
     })
 
     const res = await mod.PATCH(req, routeContext)
     expect(res.status).toBe(200)
     expect(prismaMock.userPreference.upsert).toHaveBeenCalledWith(
       expect.objectContaining({
-        update: expect.objectContaining({ artStyle: 'realistic' }),
+        update: expect.objectContaining({ audioModel: 'audio::tts' }),
       }),
     )
   })
 
-  it('rejects invalid artStyle with invalid params', async () => {
+  it('rejects legacy artStyle because it is no longer a writable preference field', async () => {
     const mod = await import('@/app/api/user-preference/route')
     const req = buildMockRequest({
       path: '/api/user-preference',

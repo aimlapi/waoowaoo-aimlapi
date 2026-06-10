@@ -68,6 +68,7 @@ vi.mock('@/lib/media/outbound-image', () => ({
   })),
 }))
 vi.mock('@/lib/ai-registry/capabilities-catalog', () => ({
+  registerBuiltinCapabilityCatalogEntries: vi.fn(),
   resolveBuiltinCapabilitiesByModelKey: vi.fn(() => ({ video: { firstlastframe: true } })),
   resolveBuiltinPricing: vi.fn(() => ({
     status: 'resolved',

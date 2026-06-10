@@ -76,7 +76,7 @@ describe('api specific - project config art style validation', () => {
     vi.clearAllMocks()
   })
 
-  it('accepts valid artStyle and keeps user preference unchanged', async () => {
+  it('ignores legacy artStyle and keeps user preference unchanged', async () => {
     const mod = await import('@/app/api/projects/[projectId]/config/route')
     const req = buildMockRequest({
       path: '/api/projects/project-1/config',
@@ -90,13 +90,13 @@ describe('api specific - project config art style validation', () => {
     expect(res.status).toBe(200)
     expect(prismaMock.project.update).toHaveBeenCalledWith(
       expect.objectContaining({
-        data: expect.objectContaining({ artStyle: 'realistic' }),
+        data: {},
       }),
     )
     expect(prismaMock.userPreference.upsert).not.toHaveBeenCalled()
   })
 
-  it('rejects invalid artStyle with invalid params', async () => {
+  it('ignores invalid legacy artStyle without treating it as config', async () => {
     const mod = await import('@/app/api/projects/[projectId]/config/route')
     const req = buildMockRequest({
       path: '/api/projects/project-1/config',
@@ -107,10 +107,12 @@ describe('api specific - project config art style validation', () => {
     })
 
     const res = await mod.PATCH(req, { params: Promise.resolve({ projectId: 'project-1' }) })
-    const body = await res.json()
-    expect(res.status).toBe(400)
-    expect(body.error.code).toBe('INVALID_PARAMS')
-    expect(prismaMock.project.update).not.toHaveBeenCalled()
+    expect(res.status).toBe(200)
+    expect(prismaMock.project.update).toHaveBeenCalledWith(
+      expect.objectContaining({
+        data: {},
+      }),
+    )
     expect(prismaMock.userPreference.upsert).not.toHaveBeenCalled()
   })
 
@@ -136,7 +138,7 @@ describe('api specific - project config art style validation', () => {
     expect(prismaMock.userPreference.upsert).not.toHaveBeenCalled()
   })
 
-  it('accepts system visual style preset refs and mirrors artStyle', async () => {
+  it('ignores legacy system visual style preset refs', async () => {
     const mod = await import('@/app/api/projects/[projectId]/config/route')
     const req = buildMockRequest({
       path: '/api/projects/project-1/config',
@@ -153,11 +155,7 @@ describe('api specific - project config art style validation', () => {
     expect(res.status).toBe(200)
     expect(prismaMock.project.update).toHaveBeenCalledWith(
       expect.objectContaining({
-        data: expect.objectContaining({
-          visualStylePresetSource: 'system',
-          visualStylePresetId: 'japanese-anime',
-          artStyle: 'japanese-anime',
-        }),
+        data: {},
       }),
     )
   })

@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { requireProjectAuth, requireProjectAuthLight, isErrorResponse } from '@/lib/api-auth'
 import { apiHandler, ApiError } from '@/lib/api-errors'
 import { executeProjectAgentOperationFromApi } from '@/lib/adapters/api/execute-project-agent-operation'
+import { stripLegacyArtStyle } from '@/lib/media/strip-legacy-art-style'
 
 // 更新角色信息（名字或介绍）
 export const PATCH = apiHandler(async (
@@ -90,7 +91,7 @@ export const POST = apiHandler(async (
     operationId: 'create_character',
     projectId,
     userId: authResult.session.user.id,
-    input: body,
+    input: stripLegacyArtStyle(body as Record<string, unknown>),
     source: 'project-ui',
   })
 

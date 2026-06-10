@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { requireProjectAuth, requireProjectAuthLight, isErrorResponse } from '@/lib/api-auth'
 import { apiHandler, ApiError } from '@/lib/api-errors'
 import { executeProjectAgentOperationFromApi } from '@/lib/adapters/api/execute-project-agent-operation'
+import { stripLegacyArtStyle } from '@/lib/media/strip-legacy-art-style'
 
 // 删除场景（级联删除关联的图片记录）
 export const DELETE = apiHandler(async (
@@ -51,7 +52,7 @@ export const POST = apiHandler(async (
     operationId: 'create_location',
     projectId,
     userId: authResult.session.user.id,
-    input: body,
+    input: stripLegacyArtStyle(body as Record<string, unknown>),
     source: 'project-ui',
   })
   return NextResponse.json(result)

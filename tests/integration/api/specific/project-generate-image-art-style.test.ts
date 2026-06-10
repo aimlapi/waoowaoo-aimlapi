@@ -8,14 +8,7 @@ const authMock = vi.hoisted(() => ({
   isErrorResponse: vi.fn((value: unknown) => value instanceof Response),
 }))
 
-const submitTaskMock = vi.hoisted(() => vi.fn<(input: unknown) => Promise<{
-  success: boolean
-  async: boolean
-  taskId: string
-  status: string
-  runId: string | null
-  deduped: boolean
-}>>(async () => ({
+const executeOperationMock = vi.hoisted(() => vi.fn(async () => ({
   success: true,
   async: true,
   taskId: 'task-1',
@@ -24,72 +17,17 @@ const submitTaskMock = vi.hoisted(() => vi.fn<(input: unknown) => Promise<{
   deduped: false,
 })))
 
-const configServiceMock = vi.hoisted(() => ({
-  getProjectModelConfig: vi.fn(async () => ({
-    analysisModel: null,
-    characterModel: 'img::character',
-    locationModel: 'img::location',
-    storyboardModel: null,
-    editModel: null,
-    videoModel: null,
-    videoRatio: '16:9',
-    artStyle: 'american-comic',
-    capabilityDefaults: {},
-    capabilityOverrides: {},
-  })),
-  buildImageBillingPayload: vi.fn(async (input: { basePayload: Record<string, unknown> }) => ({
-    ...input.basePayload,
-  })),
-}))
-
-const hasOutputMock = vi.hoisted(() => ({
-  hasCharacterAppearanceOutput: vi.fn(async () => false),
-  hasLocationImageOutput: vi.fn(async () => false),
-}))
-
-const billingMock = vi.hoisted(() => ({
-  buildDefaultTaskBillingInfo: vi.fn(() => ({ billable: false })),
-}))
-
-const mutationBatchMock = vi.hoisted(() => ({
-  createMutationBatch: vi.fn(async () => ({ id: 'mutation-batch-1' })),
-}))
-
-const prismaMock = vi.hoisted(() => ({
-  project: {
-    findUnique: vi.fn(async () => ({
-      visualStylePresetSource: 'system',
-      visualStylePresetId: 'japanese-anime',
-      artStyle: 'japanese-anime',
-    })),
-  },
-  characterAppearance: {
-    findUnique: vi.fn(async () => ({
-      id: 'appearance-1',
-      characterId: 'character-1',
-      character: { projectId: 'project-1' },
-      imageUrls: '[]',
-    })),
-  },
-}))
-
 vi.mock('@/lib/api-auth', () => authMock)
-vi.mock('@/lib/prisma', () => ({ prisma: prismaMock }))
-vi.mock('@/lib/task/submitter', () => ({ submitTask: submitTaskMock }))
-vi.mock('@/lib/config-service', () => configServiceMock)
-vi.mock('@/lib/task/has-output', () => hasOutputMock)
-vi.mock('@/lib/billing', () => billingMock)
-vi.mock('@/lib/mutation-batch/service', () => mutationBatchMock)
-vi.mock('@/lib/task/resolve-locale', () => ({
-  resolveRequiredTaskLocale: vi.fn(() => 'zh'),
+vi.mock('@/lib/adapters/api/execute-project-agent-operation', () => ({
+  executeProjectAgentOperationFromApi: executeOperationMock,
 }))
 
-describe('api specific - novel promotion generate image art style', () => {
+describe('api specific - novel promotion generate image legacy art style', () => {
   beforeEach(() => {
     vi.clearAllMocks()
   })
 
-  it('accepts valid artStyle and forwards it into task payload', async () => {
+  it('strips valid legacy artStyle before delegating character generation', async () => {
     const mod = await import('@/app/api/projects/[projectId]/generate-image/route')
     const req = buildMockRequest({
       path: '/api/projects/project-1/generate-image',
@@ -105,11 +43,19 @@ describe('api specific - novel promotion generate image art style', () => {
     const res = await mod.POST(req, { params: Promise.resolve({ projectId: 'project-1' }) })
     expect(res.status).toBe(200)
 
-    const submitArg = submitTaskMock.mock.calls[0]?.[0] as { payload?: Record<string, unknown> } | undefined
-    expect(submitArg?.payload?.artStyle).toBe('realistic')
+    const call = executeOperationMock.mock.calls[0]?.[0] as {
+      operationId?: unknown
+      input?: Record<string, unknown>
+    } | undefined
+    expect(call?.operationId).toBe('generate_character_image')
+    expect(call?.input).toEqual(expect.objectContaining({
+      characterId: 'character-1',
+      appearanceId: 'appearance-1',
+    }))
+    expect(call?.input).not.toHaveProperty('artStyle')
   })
 
-  it('does not inject american-comic when artStyle is omitted', async () => {
+  it('does not inject project artStyle when artStyle is omitted', async () => {
     const mod = await import('@/app/api/projects/[projectId]/generate-image/route')
     const req = buildMockRequest({
       path: '/api/projects/project-1/generate-image',
@@ -124,11 +70,13 @@ describe('api specific - novel promotion generate image art style', () => {
     const res = await mod.POST(req, { params: Promise.resolve({ projectId: 'project-1' }) })
     expect(res.status).toBe(200)
 
-    const submitArg = submitTaskMock.mock.calls[0]?.[0] as { payload?: Record<string, unknown> } | undefined
-    expect(submitArg?.payload).not.toHaveProperty('artStyle')
+    const call = executeOperationMock.mock.calls[0]?.[0] as {
+      input?: Record<string, unknown>
+    } | undefined
+    expect(call?.input).not.toHaveProperty('artStyle')
   })
 
-  it('rejects invalid artStyle with invalid params', async () => {
+  it('strips invalid legacy artStyle instead of treating it as route config', async () => {
     const mod = await import('@/app/api/projects/[projectId]/generate-image/route')
     const req = buildMockRequest({
       path: '/api/projects/project-1/generate-image',
@@ -142,13 +90,15 @@ describe('api specific - novel promotion generate image art style', () => {
     })
 
     const res = await mod.POST(req, { params: Promise.resolve({ projectId: 'project-1' }) })
-    const body = await res.json()
-    expect(res.status).toBe(400)
-    expect(body.error.code).toBe('INVALID_PARAMS')
-    expect(submitTaskMock).not.toHaveBeenCalled()
+    expect(res.status).toBe(200)
+
+    const call = executeOperationMock.mock.calls[0]?.[0] as {
+      input?: Record<string, unknown>
+    } | undefined
+    expect(call?.input).not.toHaveProperty('artStyle')
   })
 
-  it('forwards requested count into task payload and dedupe key', async () => {
+  it('forwards requested count into operation input', async () => {
     const mod = await import('@/app/api/projects/[projectId]/generate-image/route')
     const req = buildMockRequest({
       path: '/api/projects/project-1/generate-image',
@@ -164,11 +114,9 @@ describe('api specific - novel promotion generate image art style', () => {
     const res = await mod.POST(req, { params: Promise.resolve({ projectId: 'project-1' }) })
     expect(res.status).toBe(200)
 
-    const submitArg = submitTaskMock.mock.calls[0]?.[0] as {
-      payload?: Record<string, unknown>
-      dedupeKey?: string
+    const call = executeOperationMock.mock.calls[0]?.[0] as {
+      input?: Record<string, unknown>
     } | undefined
-    expect(submitArg?.payload?.count).toBe(6)
-    expect(submitArg?.dedupeKey).toBe('image_character:appearance-1:6:project:system:japanese-anime')
+    expect(call?.input?.count).toBe(6)
   })
 })

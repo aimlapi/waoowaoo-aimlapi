@@ -90,7 +90,7 @@ describe('api specific - novel promotion character style forwarding', () => {
     expect(body).not.toHaveProperty('artStyle')
   })
 
-  it('forwards explicit artStyle override when creating from reference', async () => {
+  it('strips explicit legacy artStyle override when creating from reference', async () => {
     const fetchMock = vi.fn<(input: RequestInfo | URL, init?: RequestInit) => Promise<Response>>(
       async () => new Response(JSON.stringify({ ok: true }), { status: 200 }),
     )
@@ -112,10 +112,10 @@ describe('api specific - novel promotion character style forwarding', () => {
     const res = await mod.POST(req, { params: Promise.resolve({ projectId: 'project-1' }) })
     expect(res.status).toBe(200)
     const body = JSON.parse(String(fetchMock.mock.calls[0]?.[1]?.body || '{}')) as Record<string, unknown>
-    expect(body.artStyle).toBe('realistic')
+    expect(body).not.toHaveProperty('artStyle')
   })
 
-  it('rejects invalid artStyle before creating character', async () => {
+  it('ignores invalid legacy artStyle when creating character', async () => {
     const fetchMock = vi.fn<(input: RequestInfo | URL, init?: RequestInit) => Promise<Response>>(
       async () => new Response(JSON.stringify({ ok: true }), { status: 200 }),
     )
@@ -133,10 +133,8 @@ describe('api specific - novel promotion character style forwarding', () => {
     })
 
     const res = await mod.POST(req, { params: Promise.resolve({ projectId: 'project-1' }) })
-    const body = await res.json()
-    expect(res.status).toBe(400)
-    expect(body.error.code).toBe('INVALID_PARAMS')
-    expect(prismaMock.projectCharacter.create).not.toHaveBeenCalled()
+    expect(res.status).toBe(200)
+    expect(prismaMock.projectCharacter.create).toHaveBeenCalled()
     expect(fetchMock).not.toHaveBeenCalled()
   })
 })

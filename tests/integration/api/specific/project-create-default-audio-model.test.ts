@@ -68,7 +68,6 @@ describe('api specific - project create default audio model', () => {
         videoModel: 'video::model',
         audioModel: 'audio::tts',
         videoRatio: '9:16',
-        artStyle: 'realistic',
       }),
     })
   })

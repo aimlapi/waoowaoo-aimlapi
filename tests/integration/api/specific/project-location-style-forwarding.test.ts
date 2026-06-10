@@ -62,7 +62,7 @@ describe('api specific - novel promotion location style forwarding', () => {
     expect(fetchMock).not.toHaveBeenCalled()
   })
 
-  it('rejects invalid artStyle before creating location', async () => {
+  it('ignores invalid legacy artStyle when creating location', async () => {
     const fetchMock = vi.fn<(input: RequestInfo | URL, init?: RequestInit) => Promise<Response>>(
       async () => new Response(JSON.stringify({ ok: true }), { status: 200 }),
     )
@@ -80,10 +80,8 @@ describe('api specific - novel promotion location style forwarding', () => {
     })
 
     const res = await mod.POST(req, { params: Promise.resolve({ projectId: 'project-1' }) })
-    const body = await res.json()
-    expect(res.status).toBe(400)
-    expect(body.error.code).toBe('INVALID_PARAMS')
-    expect(prismaMock.projectLocation.create).not.toHaveBeenCalled()
+    expect(res.status).toBe(200)
+    expect(prismaMock.projectLocation.create).toHaveBeenCalled()
     expect(fetchMock).not.toHaveBeenCalled()
   })
 
