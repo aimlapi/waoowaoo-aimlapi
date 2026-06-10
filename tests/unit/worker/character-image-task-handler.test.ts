@@ -27,6 +27,7 @@ const prismaMock = vi.hoisted(() => ({
     findUnique: vi.fn(),
     findFirst: vi.fn(),
     update: vi.fn(async () => ({})),
+    updateMany: vi.fn(async () => ({ count: 1 })),
   },
   projectCharacter: {
     findUnique: vi.fn(),
@@ -48,6 +49,16 @@ const sharedMock = vi.hoisted(() => ({
 
 const castingPlanMock = vi.hoisted(() => ({
   generateCharacterCastingPlanDocument: vi.fn(async () => buildCastingPlanDocument()),
+  normalizeCharacterCastingPlanDocument: vi.fn((value: unknown) => value),
+  buildCharacterCastingPlanRequest: vi.fn((input: {
+    readonly characterName: string
+    readonly baseDescriptions: readonly string[]
+    readonly screenplayText: string | null
+  }) => [
+    `角色名：${input.characterName}`,
+    input.baseDescriptions.join('\n'),
+    input.screenplayText ? `剧本文本：${input.screenplayText}` : '',
+  ].filter(Boolean).join('\n')),
 }))
 
 vi.mock('@/lib/workers/utils', () => utilsMock)
@@ -264,8 +275,8 @@ describe('worker character-image-task-handler behavior', () => {
       aspectRatio: CHARACTER_ASSET_IMAGE_RATIO,
     }))
 
-    expect(prismaMock.characterAppearance.update).toHaveBeenCalledWith({
-      where: { id: 'appearance-2' },
+    expect(prismaMock.characterAppearance.updateMany).toHaveBeenCalledWith({
+      where: { id: 'appearance-2', imageUrls: JSON.stringify([]) },
       data: {
         imageUrls: JSON.stringify(['cos/character-generated-0.png']),
         imageUrl: 'cos/character-generated-0.png',
@@ -476,8 +487,8 @@ describe('worker character-image-task-handler behavior', () => {
         expect.stringContaining('角色描述A'),
       ],
     })
-    expect(prismaMock.characterAppearance.update).toHaveBeenCalledWith({
-      where: { id: 'appearance-2' },
+    expect(prismaMock.characterAppearance.updateMany).toHaveBeenCalledWith({
+      where: { id: 'appearance-2', imageUrls: JSON.stringify([]) },
       data: {
         imageUrls: JSON.stringify([
           'cos/character-generated-0.png',
@@ -533,8 +544,8 @@ describe('worker character-image-task-handler behavior', () => {
     expect(sharedMock.generateCleanImageToStorage.mock.calls[0]?.[0].prompt).toContain('Character DNA -> Casting Directions -> Appearance Descriptors -> Image Prompts -> Diversity Judge')
     expect(sharedMock.generateCleanImageToStorage.mock.calls[1]?.[0].prompt).toContain('宽短脸')
     expect(sharedMock.generateCleanImageToStorage.mock.calls[2]?.[0].prompt).toContain('尖瘦高颧脸')
-    expect(prismaMock.characterAppearance.update).toHaveBeenCalledWith({
-      where: { id: 'appearance-1' },
+    expect(prismaMock.characterAppearance.updateMany).toHaveBeenCalledWith({
+      where: { id: 'appearance-1', imageUrls: JSON.stringify([]) },
       data: expect.objectContaining({
         imageUrls: JSON.stringify(['cos/laowang-a.png', 'cos/laowang-b.png', 'cos/laowang-c.png']),
         imageUrl: 'cos/laowang-a.png',
@@ -583,8 +594,8 @@ describe('worker character-image-task-handler behavior', () => {
     expect(sharedMock.generateCleanImageToStorage).toHaveBeenCalledTimes(1)
     expect(sharedMock.generateCleanImageToStorage.mock.calls[0]?.[0].prompt).toContain('This is casting alternative C for the same character.')
     expect(sharedMock.generateCleanImageToStorage.mock.calls[0]?.[0].prompt).toContain('尖瘦高颧脸')
-    expect(prismaMock.characterAppearance.update).toHaveBeenCalledWith({
-      where: { id: 'appearance-1' },
+    expect(prismaMock.characterAppearance.updateMany).toHaveBeenCalledWith({
+      where: { id: 'appearance-1', imageUrls: JSON.stringify([]) },
       data: expect.objectContaining({
         imageUrls: JSON.stringify(['', '', 'cos/laowang-c.png']),
         imageUrl: 'cos/laowang-c.png',
@@ -592,6 +603,83 @@ describe('worker character-image-task-handler behavior', () => {
         descriptionMetadata: expect.stringContaining('faceFamily:尖瘦高颧脸'),
       }),
     })
+  })
+
+  it('primary single-candidate task reuses submitted shared casting plan instead of regenerating it', async () => {
+    prismaMock.characterAppearance.findUnique.mockResolvedValueOnce({
+      id: 'appearance-1',
+      characterId: 'character-1',
+      appearanceIndex: 0,
+      descriptions: JSON.stringify(['老王：五十多岁穷困潦倒的老光棍']),
+      descriptionMetadata: null,
+      description: '老王：五十多岁穷困潦倒的老光棍',
+      imageUrls: JSON.stringify([]),
+      selectedIndex: 0,
+      imageUrl: null,
+      changeReason: '初始形象',
+      character: { name: '老王' },
+    })
+    sharedMock.generateCleanImageToStorage.mockResolvedValueOnce('cos/laowang-b.png')
+
+    await handleCharacterImageTask(buildJob({
+      imageIndex: 1,
+      characterCastingPlan: buildCastingPlanDocument(),
+    }, 'appearance-1', 'episode-1'))
+
+    expect(castingPlanMock.normalizeCharacterCastingPlanDocument).toHaveBeenCalledTimes(1)
+    expect(castingPlanMock.generateCharacterCastingPlanDocument).not.toHaveBeenCalled()
+    expect(sharedMock.generateCleanImageToStorage).toHaveBeenCalledTimes(1)
+    expect(sharedMock.generateCleanImageToStorage.mock.calls[0]?.[0].prompt).toContain('This is casting alternative B for the same character.')
+  })
+
+  it('single-image tasks merge imageUrls after a concurrent write instead of overwriting other alternatives', async () => {
+    prismaMock.characterAppearance.findUnique
+      .mockResolvedValueOnce({
+        id: 'appearance-2',
+        characterId: 'character-1',
+        appearanceIndex: 1,
+        descriptions: JSON.stringify(['角色描述A', '角色描述B']),
+        descriptionMetadata: null,
+        description: '角色描述A',
+        imageUrls: JSON.stringify([]),
+        selectedIndex: 0,
+        imageUrl: null,
+        changeReason: '战斗形态',
+        character: { name: 'Hero' },
+      })
+      .mockResolvedValueOnce({
+        id: 'appearance-2',
+        characterId: 'character-1',
+        appearanceIndex: 1,
+        descriptions: JSON.stringify(['角色描述A', '角色描述B']),
+        descriptionMetadata: null,
+        description: '角色描述A',
+        imageUrls: JSON.stringify(['cos/existing-0.png']),
+        selectedIndex: 0,
+        imageUrl: 'cos/existing-0.png',
+        changeReason: '战斗形态',
+      })
+    prismaMock.characterAppearance.updateMany
+      .mockResolvedValueOnce({ count: 0 })
+      .mockResolvedValueOnce({ count: 1 })
+    sharedMock.generateCleanImageToStorage.mockResolvedValueOnce('cos/generated-1.png')
+
+    const result = await handleCharacterImageTask(buildJob({ imageIndex: 1 }, 'appearance-2'))
+
+    expect(prismaMock.characterAppearance.updateMany).toHaveBeenNthCalledWith(1, expect.objectContaining({
+      where: { id: 'appearance-2', imageUrls: JSON.stringify([]) },
+    }))
+    expect(prismaMock.characterAppearance.updateMany).toHaveBeenNthCalledWith(2, {
+      where: { id: 'appearance-2', imageUrls: JSON.stringify(['cos/existing-0.png']) },
+      data: {
+        imageUrls: JSON.stringify(['cos/existing-0.png', 'cos/generated-1.png']),
+        imageUrl: 'cos/existing-0.png',
+      },
+    })
+    expect(result).toEqual(expect.objectContaining({
+      imageCount: 2,
+      imageUrl: 'cos/existing-0.png',
+    }))
   })
 
   it('primary appearance rejects indexes outside A/B/C instead of using legacy descriptions', async () => {

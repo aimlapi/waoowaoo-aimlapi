@@ -34,6 +34,13 @@ import {
   parseAppearanceCandidateMetadata,
   stringifyAppearanceCandidateMetadata,
 } from '@/types/character-casting'
+import {
+  buildCharacterCastingPlanRequest,
+  generateCharacterCastingPlanDocument,
+  type CharacterCastingPlanDocument,
+} from '@/lib/character-casting/casting-plan'
+import { requireSelectedVisualReferenceStyle } from '@/lib/visual-reference-cases/selected-style'
+import type { Locale } from '@/i18n/routing'
 
 type AssetWriteAccess = {
   scope: AssetScope
@@ -115,6 +122,17 @@ function toObject(value: unknown): Record<string, unknown> {
   return value as Record<string, unknown>
 }
 
+function parseJsonStringArray(value: string | null | undefined): string[] {
+  if (!value) return []
+  try {
+    const parsed = JSON.parse(value)
+    if (!Array.isArray(parsed)) return []
+    return parsed.filter((item): item is string => typeof item === 'string' && item.trim().length > 0)
+  } catch {
+    return []
+  }
+}
+
 function toNumber(value: unknown): number | null {
   const parsed = Number(value)
   return Number.isFinite(parsed) ? parsed : null
@@ -129,6 +147,160 @@ function requireLocationBackedKind(kind: AssetKind): LocationBackedAssetKind {
     throw new ApiError('INVALID_PARAMS')
   }
   return kind
+}
+
+type SubmittedTaskResult = Awaited<ReturnType<typeof submitTask>>
+
+type SubmittedTaskBatchResult = SubmittedTaskResult & {
+  readonly total: number
+  readonly taskIds: readonly string[]
+  readonly tasks: readonly SubmittedTaskResult[]
+  readonly results: readonly { readonly refId: string; readonly taskId: string }[]
+}
+
+type ProjectCharacterAppearanceForGenerate = {
+  readonly id: string
+  readonly appearanceIndex: number
+  readonly descriptions: string | null
+  readonly description: string | null
+  readonly character: {
+    readonly name: string
+  }
+}
+
+async function resolveProjectCharacterAppearanceForGenerate(input: {
+  readonly appearanceId: string
+  readonly characterId: string
+}): Promise<ProjectCharacterAppearanceForGenerate | null> {
+  const select = {
+    id: true,
+    appearanceIndex: true,
+    descriptions: true,
+    description: true,
+    character: {
+      select: { name: true },
+    },
+  } satisfies Prisma.CharacterAppearanceSelect
+  if (input.appearanceId) {
+    return await prisma.characterAppearance.findFirst({
+      where: {
+        id: input.appearanceId,
+        characterId: input.characterId,
+      },
+      select,
+    })
+  }
+  return await prisma.characterAppearance.findFirst({
+    where: { characterId: input.characterId },
+    orderBy: { appearanceIndex: 'asc' },
+    select,
+  })
+}
+
+async function readLatestScreenplayText(input: {
+  readonly projectId: string
+  readonly episodeId?: string | null
+}): Promise<string | null> {
+  const row = await prisma.projectEditScreenplay.findFirst({
+    where: {
+      projectId: input.projectId,
+      ...(input.episodeId ? { episodeId: input.episodeId } : {}),
+      status: 'ready',
+    },
+    orderBy: { updatedAt: 'desc' },
+    select: { screenplayText: true },
+  })
+  const text = row?.screenplayText?.trim()
+  return text || null
+}
+
+async function buildSharedProjectCharacterCastingPlan(input: {
+  readonly projectId: string
+  readonly episodeId?: string | null
+  readonly userId: string
+  readonly locale: Locale
+  readonly analysisModel: string | null
+  readonly appearance: ProjectCharacterAppearanceForGenerate
+}): Promise<CharacterCastingPlanDocument | null> {
+  if (input.appearance.appearanceIndex !== PRIMARY_APPEARANCE_INDEX) return null
+  if (!input.analysisModel) throw new ApiError('INVALID_PARAMS', {
+    code: 'ANALYSIS_MODEL_NOT_CONFIGURED',
+    message: 'Analysis model not configured',
+  })
+  const selectedVisualReferenceStyle = await requireSelectedVisualReferenceStyle({
+    projectId: input.projectId,
+    episodeId: input.episodeId,
+  })
+  const descriptions = parseJsonStringArray(input.appearance.descriptions)
+  const baseDescriptions = descriptions.length > 0 ? descriptions : [input.appearance.description || '']
+  const screenplayText = await readLatestScreenplayText({
+    projectId: input.projectId,
+    episodeId: input.episodeId,
+  })
+  return await generateCharacterCastingPlanDocument({
+    userId: input.userId,
+    projectId: input.projectId,
+    locale: input.locale,
+    analysisModel: input.analysisModel,
+    characterRequest: buildCharacterCastingPlanRequest({
+      characterName: input.appearance.character.name || (input.locale === 'en' ? 'Unnamed character' : '未命名角色'),
+      baseDescriptions,
+      screenplayText,
+      locale: input.locale,
+    }),
+    selectedVisualReferenceStyle,
+  })
+}
+
+async function submitProjectCharacterAlternativeImageTasks(input: {
+  readonly access: AssetWriteAccess
+  readonly request: NextRequest
+  readonly projectId: string
+  readonly episodeId?: string | null
+  readonly assetId: string
+  readonly locale: Locale
+  readonly targetType: 'CharacterAppearance'
+  readonly targetId: string
+  readonly billingPayload: Record<string, unknown>
+  readonly hasOutputAtStart: boolean
+  readonly castingPlan: CharacterCastingPlanDocument | null
+}): Promise<SubmittedTaskBatchResult> {
+  const tasks: SubmittedTaskResult[] = []
+  for (let imageIndex = 0; imageIndex < 3; imageIndex += 1) {
+    const payload = {
+      ...input.billingPayload,
+      count: 1,
+      imageIndex,
+      ...(input.castingPlan ? { characterCastingPlan: input.castingPlan } : {}),
+    }
+    const task = await submitTask({
+      userId: input.access.userId,
+      locale: input.locale,
+      requestId: getRequestId(input.request),
+      projectId: input.projectId,
+      episodeId: input.episodeId ?? null,
+      type: TASK_TYPE.IMAGE_CHARACTER,
+      targetType: input.targetType,
+      targetId: input.targetId,
+      payload: withTaskUiPayload(payload, { hasOutputAtStart: input.hasOutputAtStart }),
+      dedupeKey: `${TASK_TYPE.IMAGE_CHARACTER}:${input.targetId}:single:${imageIndex}`,
+      billingInfo: buildDefaultTaskBillingInfo(TASK_TYPE.IMAGE_CHARACTER, payload),
+    })
+    tasks.push(task)
+  }
+  const firstTask = tasks[0]
+  if (!firstTask) throw new ApiError('INTERNAL_ERROR')
+  const taskIds = tasks.map((task) => task.taskId)
+  return {
+    ...firstTask,
+    total: tasks.length,
+    taskIds,
+    tasks,
+    results: taskIds.map((taskId, index) => ({
+      refId: `${input.assetId}:${index}`,
+      taskId,
+    })),
+  }
 }
 
 export async function submitAssetGenerateTask(input: AssetGenerateInput) {
@@ -261,8 +433,18 @@ async function submitProjectAssetGenerateTask(input: AssetGenerateInput) {
   const count = normalizedKind === 'character'
     ? normalizeImageGenerationCount('character', input.body.count)
     : normalizeImageGenerationCount('location', input.body.count)
-  const appearanceId = normalizeString(input.body.appearanceId)
+  const requestedAppearanceId = normalizeString(input.body.appearanceId)
   const imageIndex = toNumber(input.body.imageIndex)
+  const projectCharacterAppearance = normalizedKind === 'character'
+    ? await resolveProjectCharacterAppearanceForGenerate({
+      appearanceId: requestedAppearanceId,
+      characterId: input.assetId,
+    })
+    : null
+  if (normalizedKind === 'character' && !projectCharacterAppearance) {
+    throw new ApiError('NOT_FOUND')
+  }
+  const appearanceId = projectCharacterAppearance?.id || requestedAppearanceId
 
   if (normalizedKind === 'location' && imageIndex === null) {
     const location = await prisma.projectLocation.findUnique({
@@ -328,6 +510,35 @@ async function submitProjectAssetGenerateTask(input: AssetGenerateInput) {
   } catch (error) {
     const message = error instanceof Error ? error.message : 'Image model capability not configured'
     throw new ApiError('INVALID_PARAMS', { code: 'IMAGE_MODEL_CAPABILITY_NOT_CONFIGURED', message })
+  }
+
+  if (
+    normalizedKind === 'character'
+    && imageIndex === null
+    && count === 3
+    && projectCharacterAppearance
+  ) {
+    const castingPlan = await buildSharedProjectCharacterCastingPlan({
+      projectId,
+      episodeId: input.episodeId,
+      userId: input.access.userId,
+      locale,
+      analysisModel: projectModelConfig.analysisModel,
+      appearance: projectCharacterAppearance,
+    })
+    return await submitProjectCharacterAlternativeImageTasks({
+      access: input.access,
+      request: input.request,
+      projectId,
+      episodeId: input.episodeId,
+      assetId: input.assetId,
+      locale,
+      targetType: 'CharacterAppearance',
+      targetId,
+      billingPayload,
+      hasOutputAtStart,
+      castingPlan,
+    })
   }
 
   return submitTask({

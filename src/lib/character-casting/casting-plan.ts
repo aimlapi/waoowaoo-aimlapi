@@ -334,6 +334,34 @@ function compactText(value: string, limit: number): string {
   return `${normalized.slice(0, limit).trim()}...`
 }
 
+export function buildCharacterCastingPlanRequest(input: {
+  readonly characterName: string
+  readonly baseDescriptions: readonly string[]
+  readonly screenplayText: string | null
+  readonly locale: Locale
+}): string {
+  const english = input.locale === 'en'
+  const descriptionText = input.baseDescriptions
+    .filter((item) => item.trim())
+    .map((item, index) => english
+      ? `Existing appearance/story requirement ${index + 1}: ${item.trim()}`
+      : `方案描述 ${index + 1}: ${item.trim()}`)
+    .join('\n')
+  return [
+    english ? `Character name: ${input.characterName}` : `角色名：${input.characterName}`,
+    descriptionText
+      ? english
+        ? `Existing character appearance / story requirement:\n${descriptionText}`
+        : `已有角色形象/剧情需求：\n${descriptionText}`
+      : '',
+    input.screenplayText
+      ? english
+        ? `Screenplay text:\n${compactText(input.screenplayText, 6000)}`
+        : `剧本文本：\n${compactText(input.screenplayText, 6000)}`
+      : '',
+  ].filter(Boolean).join('\n\n')
+}
+
 function buildPlanPrompt(input: CharacterCastingPlanInput, previousFailure?: string): string {
   const title = compactText(input.selectedVisualReferenceStyle.title, 80)
   const description = compactText(input.selectedVisualReferenceStyle.description, 240)

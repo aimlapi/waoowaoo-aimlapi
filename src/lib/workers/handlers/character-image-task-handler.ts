@@ -28,7 +28,9 @@ import {
   type CharacterAppearanceCandidateMetadata,
 } from '@/types/character-casting'
 import {
+  buildCharacterCastingPlanRequest,
   generateCharacterCastingPlanDocument,
+  normalizeCharacterCastingPlanDocument,
   type CharacterAppearanceDescriptor,
   type CharacterCastingCandidatePlan,
   type CharacterCastingPlanDocument,
@@ -84,8 +86,8 @@ function buildCastingStillPromptBlock(
   ].join('\n')
 }
 
-interface CharacterAppearanceWithCharacter extends CharacterAppearanceRecord {
-  character: {
+interface CharacterAppearanceFindUniqueResult extends CharacterAppearanceRecord {
+  character?: {
     name: string
   }
 }
@@ -108,9 +110,10 @@ interface ScreenplayTextRecord {
 
 interface CharacterImageDb {
   characterAppearance: {
-    findUnique(args: Record<string, unknown>): Promise<CharacterAppearanceWithCharacter | null>
+    findUnique(args: Record<string, unknown>): Promise<CharacterAppearanceFindUniqueResult | null>
     findFirst(args: Record<string, unknown>): Promise<PrimaryAppearanceRecord | null>
     update(args: Record<string, unknown>): Promise<unknown>
+    updateMany(args: Record<string, unknown>): Promise<{ count: number }>
   }
   projectCharacter: {
     findUnique(args: Record<string, unknown>): Promise<CharacterRecord | null>
@@ -122,40 +125,6 @@ interface CharacterImageDb {
 
 function isEnglishLocale(locale: string | null | undefined): boolean {
   return locale?.startsWith('en') === true
-}
-
-function compactText(value: string, limit: number): string {
-  const normalized = value.replace(/\s+/g, ' ').trim()
-  if (normalized.length <= limit) return normalized
-  return `${normalized.slice(0, limit).trim()}...`
-}
-
-function buildCharacterRequestForCastingPlan(input: {
-  readonly characterName: string
-  readonly baseDescriptions: readonly string[]
-  readonly screenplayText: string | null
-  readonly locale: string | null | undefined
-}): string {
-  const english = isEnglishLocale(input.locale)
-  const descriptionText = input.baseDescriptions
-    .filter((item) => item.trim())
-    .map((item, index) => english
-      ? `Existing appearance/story requirement ${index + 1}: ${item.trim()}`
-      : `方案描述 ${index + 1}: ${item.trim()}`)
-    .join('\n')
-  return [
-    english ? `Character name: ${input.characterName}` : `角色名：${input.characterName}`,
-    descriptionText
-      ? english
-        ? `Existing character appearance / story requirement:\n${descriptionText}`
-        : `已有角色形象/剧情需求：\n${descriptionText}`
-      : '',
-    input.screenplayText
-      ? english
-        ? `Screenplay text:\n${compactText(input.screenplayText, 6000)}`
-        : `剧本文本：\n${compactText(input.screenplayText, 6000)}`
-      : '',
-  ].filter(Boolean).join('\n\n')
 }
 
 function shouldUseCastingPlanForCharacterImages(input: {
@@ -284,6 +253,79 @@ async function readScreenplayText(input: {
   return text || null
 }
 
+function readPayloadCastingPlanDocument(value: unknown): CharacterCastingPlanDocument | null {
+  if (value === undefined || value === null) return null
+  return normalizeCharacterCastingPlanDocument(value)
+}
+
+async function persistGeneratedCharacterImages(input: {
+  readonly db: CharacterImageDb
+  readonly appearance: CharacterAppearanceRecord
+  readonly generatedEntries: readonly { readonly index: number; readonly imageKey: string }[]
+  readonly castingPlans: CharacterCastingPlanSet | null
+  readonly locale: string
+}) {
+  const maxAttempts = 5
+  let current: CharacterAppearanceFindUniqueResult | CharacterAppearanceRecord | null = input.appearance
+  for (let attempt = 0; attempt < maxAttempts; attempt += 1) {
+    if (!current) throw new Error('Character appearance not found while persisting generated images')
+    const currentImageUrlsRaw = current.imageUrls
+    const mergedImageUrls = parseImageUrls(currentImageUrlsRaw, 'characterAppearance.imageUrls')
+    for (const entry of input.generatedEntries) {
+      while (mergedImageUrls.length <= entry.index) {
+        mergedImageUrls.push('')
+      }
+      mergedImageUrls[entry.index] = entry.imageKey
+    }
+
+    const selectedIndex = current.selectedIndex
+    const fallbackMain = mergedImageUrls.find((url) => typeof url === 'string' && url) || current.imageUrl
+    const mainImage = selectedIndex !== null && selectedIndex !== undefined && mergedImageUrls[selectedIndex]
+      ? mergedImageUrls[selectedIndex]
+      : fallbackMain
+    const updateResult = await input.db.characterAppearance.updateMany({
+      where: {
+        id: input.appearance.id,
+        imageUrls: currentImageUrlsRaw,
+      },
+      data: {
+        imageUrls: encodeImageUrls(mergedImageUrls),
+        imageUrl: mainImage || null,
+        ...(input.castingPlans
+          ? {
+              description: buildCastingPlanDescription(input.castingPlans[selectedIndex ?? 0] ?? input.castingPlans[0], input.locale),
+              descriptions: JSON.stringify(input.castingPlans.map((plan) => buildCastingPlanDescription(plan, input.locale))),
+              descriptionMetadata: stringifyAppearanceCandidateMetadata(buildCastingPlanMetadata(input.castingPlans, input.locale)),
+              changeReason: isEnglishLocale(input.locale) ? 'Casting look' : '选角定妆',
+            }
+          : {}),
+      },
+    })
+    if (updateResult.count === 1) {
+      return {
+        imageUrls: mergedImageUrls,
+        imageUrl: mainImage || null,
+      }
+    }
+    current = await input.db.characterAppearance.findUnique({
+      where: { id: input.appearance.id },
+      select: {
+        id: true,
+        characterId: true,
+        appearanceIndex: true,
+        descriptions: true,
+        description: true,
+        descriptionMetadata: true,
+        imageUrls: true,
+        selectedIndex: true,
+        imageUrl: true,
+        changeReason: true,
+      },
+    })
+  }
+  throw new Error('Character appearance imageUrls changed too many times while persisting generated images')
+}
+
 export async function handleCharacterImageTask(job: Job<TaskJobData>) {
   const db = prisma as unknown as CharacterImageDb
   const payload = (job.data.payload || {}) as AnyObj
@@ -304,7 +346,7 @@ export async function handleCharacterImageTask(job: Job<TaskJobData>) {
     })
     if (appearanceWithCharacter) {
       appearance = appearanceWithCharacter
-      characterName = appearanceWithCharacter.character.name
+      characterName = appearanceWithCharacter.character?.name || ''
     }
   }
 
@@ -376,31 +418,33 @@ export async function handleCharacterImageTask(job: Job<TaskJobData>) {
     appearanceIndex: appearance.appearanceIndex,
     indexes,
   })) {
-    const analysisModel = models.analysisModel
-    if (!analysisModel) throw new Error('Analysis model not configured')
-    const screenplayText = await readScreenplayText({
-      db,
-      projectId,
-      episodeId: job.data.episodeId,
-    })
-    castingPlanDocument = await generateCharacterCastingPlanDocument({
-      userId,
-      projectId,
-      locale: job.data.locale,
-      analysisModel,
-      characterRequest: buildCharacterRequestForCastingPlan({
-        characterName: characterName || (isEnglishLocale(job.data.locale) ? 'Unnamed character' : '未命名角色'),
-        baseDescriptions,
-        screenplayText,
+    castingPlanDocument = readPayloadCastingPlanDocument(payload.characterCastingPlan)
+    if (!castingPlanDocument) {
+      const analysisModel = models.analysisModel
+      if (!analysisModel) throw new Error('Analysis model not configured')
+      const screenplayText = await readScreenplayText({
+        db,
+        projectId,
+        episodeId: job.data.episodeId,
+      })
+      castingPlanDocument = await generateCharacterCastingPlanDocument({
+        userId,
+        projectId,
         locale: job.data.locale,
-      }),
-      selectedVisualReferenceStyle,
-    })
+        analysisModel,
+        characterRequest: buildCharacterCastingPlanRequest({
+          characterName: characterName || (isEnglishLocale(job.data.locale) ? 'Unnamed character' : '未命名角色'),
+          baseDescriptions,
+          screenplayText,
+          locale: job.data.locale,
+        }),
+        selectedVisualReferenceStyle,
+      })
+    }
     castingPlans = castingPlanDocument.castingDirections
   }
 
-  const imageUrls = parseImageUrls(appearance.imageUrls, 'characterAppearance.imageUrls')
-  const nextImageUrls = [...imageUrls]
+  const generatedEntries: Array<{ index: number; imageKey: string }> = []
 
   for (let i = 0; i < indexes.length; i++) {
     const index = indexes[i]
@@ -453,39 +497,22 @@ export async function handleCharacterImageTask(job: Job<TaskJobData>) {
       options,
     })
 
-    while (nextImageUrls.length <= index) {
-      nextImageUrls.push('')
-    }
-    nextImageUrls[index] = imageKey
+    generatedEntries.push({ index, imageKey })
   }
 
-  const selectedIndex = appearance.selectedIndex
-  const fallbackMain = nextImageUrls.find((url) => typeof url === 'string' && url) || appearance.imageUrl
-  const mainImage = selectedIndex !== null && selectedIndex !== undefined && nextImageUrls[selectedIndex]
-    ? nextImageUrls[selectedIndex]
-    : fallbackMain
-
   await assertTaskActive(job, 'persist_character_image')
-  await db.characterAppearance.update({
-    where: { id: appearance.id },
-    data: {
-      imageUrls: encodeImageUrls(nextImageUrls),
-      imageUrl: mainImage || null,
-      ...(castingPlans
-        ? {
-            description: buildCastingPlanDescription(castingPlans[selectedIndex ?? 0] ?? castingPlans[0], job.data.locale),
-            descriptions: JSON.stringify(castingPlans.map((plan) => buildCastingPlanDescription(plan, job.data.locale))),
-            descriptionMetadata: stringifyAppearanceCandidateMetadata(buildCastingPlanMetadata(castingPlans, job.data.locale)),
-            changeReason: isEnglishLocale(job.data.locale) ? 'Casting look' : '选角定妆',
-          }
-        : {}),
-    },
+  const persisted = await persistGeneratedCharacterImages({
+    db,
+    appearance,
+    generatedEntries,
+    castingPlans,
+    locale: job.data.locale,
   })
 
   return {
     appearanceId: appearance.id,
-    imageCount: nextImageUrls.filter(Boolean).length,
-    imageUrl: mainImage || null,
+    imageCount: persisted.imageUrls.filter(Boolean).length,
+    imageUrl: persisted.imageUrl,
     finalImagePrompts: generatedPrompts,
     ...(castingPlanDocument ? { castingPlan: castingPlanDocument } : {}),
   }

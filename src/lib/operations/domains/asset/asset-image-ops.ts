@@ -2,7 +2,7 @@ import { z } from 'zod'
 import { prisma } from '@/lib/prisma'
 import { submitAssetGenerateTask, submitAssetModifyTask } from '@/lib/assets/services/asset-actions'
 import { createMutationBatch } from '@/lib/mutation-batch/service'
-import type { TaskSubmittedPartData } from '@/lib/project-agent/types'
+import type { TaskBatchSubmittedPartData, TaskSubmittedPartData } from '@/lib/project-agent/types'
 import type { ProjectAgentOperationContext, ProjectAgentOperationRegistryDraft } from '@/lib/operations/types'
 import { writeOperationDataPart } from '@/lib/operations/types'
 import { defineOperation } from '@/lib/operations/define-operation'
@@ -13,6 +13,13 @@ import {
 
 function normalizeString(value: unknown): string {
   return typeof value === 'string' ? value.trim() : ''
+}
+
+function readTaskIds(value: unknown): string[] {
+  if (!value || typeof value !== 'object' || Array.isArray(value)) return []
+  const taskIds = (value as { readonly taskIds?: unknown }).taskIds
+  if (!Array.isArray(taskIds)) return []
+  return taskIds.filter((taskId): taskId is string => typeof taskId === 'string' && taskId.trim().length > 0)
 }
 
 function resolveLocaleFromContext(locale?: unknown): string {
@@ -231,14 +238,25 @@ export function createAssetImageOperations(): ProjectAgentOperationRegistryDraft
           ],
         })
 
-        writeOperationDataPart<TaskSubmittedPartData>(ctx.writer, 'data-task-submitted', {
-          operationId: 'generate_character_image',
-          taskId: result.taskId,
-          status: result.status,
-          runId: result.runId || null,
-          deduped: result.deduped,
-          mutationBatchId: mutationBatch.id,
-        })
+        const taskIds = readTaskIds(result)
+        if (taskIds.length > 1) {
+          writeOperationDataPart<TaskBatchSubmittedPartData>(ctx.writer, 'data-task-batch-submitted', {
+            operationId: 'generate_character_image',
+            total: taskIds.length,
+            taskIds,
+            results: taskIds.map((taskId, index) => ({ refId: `${appearanceId || characterId}:${index}`, taskId })),
+            mutationBatchId: mutationBatch.id,
+          })
+        } else {
+          writeOperationDataPart<TaskSubmittedPartData>(ctx.writer, 'data-task-submitted', {
+            operationId: 'generate_character_image',
+            taskId: result.taskId,
+            status: result.status,
+            runId: result.runId || null,
+            deduped: result.deduped,
+            mutationBatchId: mutationBatch.id,
+          })
+        }
 
         return {
           ...result,
