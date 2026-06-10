@@ -1,5 +1,16 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest'
+import type { executeProjectAgentOperationFromApi } from '@/lib/adapters/api/execute-project-agent-operation'
 import { buildMockRequest } from '../../../helpers/request'
+
+type ExecuteOperationInput = Parameters<typeof executeProjectAgentOperationFromApi>[0]
+type QueuedOperationResult = {
+  success: true
+  async: true
+  taskId: string
+  status: 'queued'
+  runId: null
+  deduped: false
+}
 
 const authMock = vi.hoisted(() => ({
   requireProjectAuthLight: vi.fn(async () => ({
@@ -8,14 +19,16 @@ const authMock = vi.hoisted(() => ({
   isErrorResponse: vi.fn((value: unknown) => value instanceof Response),
 }))
 
-const executeOperationMock = vi.hoisted(() => vi.fn(async () => ({
-  success: true,
-  async: true,
-  taskId: 'task-1',
-  status: 'queued',
-  runId: null,
-  deduped: false,
-})))
+const executeOperationMock = vi.hoisted(() => vi.fn<(params: ExecuteOperationInput) => Promise<QueuedOperationResult>>(
+  async () => ({
+    success: true,
+    async: true,
+    taskId: 'task-1',
+    status: 'queued',
+    runId: null,
+    deduped: false,
+  }),
+))
 
 vi.mock('@/lib/api-auth', () => authMock)
 vi.mock('@/lib/adapters/api/execute-project-agent-operation', () => ({
