@@ -29,10 +29,12 @@ Step 1 — Protagonist Analysis：
 Step 2 — Theme Engine：
 - 生成 valueA、valueB、centralDramaticQuestion、controllingIdea。
 - valueA 与 valueB 必须发生冲突，整个故事围绕该冲突展开。
+- valueA 与 valueB 必须具有互斥性，主角在关键选择中不能同时完整获得两者。
 - centralDramaticQuestion 必须是一个能被最终选择回答的问题。
 - controllingIdea 必须回答 centralDramaticQuestion。
 - 禁止抽象空话，例如“爱很重要”“人要勇敢”。
-- 正确方向示例：真实 VS 被看见、尊严 VS 流量、自由 VS 安全。
+- 禁止可以同时获得的价值组合。
+- 正确方向示例：事业 VS 家庭、伟大 VS 幸福、被记住 VS 被爱、自由 VS 安全、尊严 VS 生存。
 
 Step 3 — Antagonist System：
 - 必须生成 embodiedAntagonist、institutionalAntagonist、abstractAntagonist。

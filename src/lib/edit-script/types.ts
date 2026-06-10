@@ -173,13 +173,182 @@ export const storyDevelopmentPackageSchema = z.object({
 
 export type StoryDevelopmentPackage = z.infer<typeof storyDevelopmentPackageSchema>
 
+export const sceneLayerSceneSchema = z.object({
+  sceneNumber: z.number().int().min(1),
+  sceneGoal: z.string().trim().min(1),
+  obstacle: z.string().trim().min(1),
+  tactic: z.string().trim().min(1),
+  outcome: z.string().trim().min(1),
+  valueShift: z.string().trim().min(1),
+  themeConflict: z.object({
+    valueA: z.string().trim().min(1),
+    valueB: z.string().trim().min(1),
+  }),
+  sourceHardChoiceIndexes: z.array(z.number().int().min(1)).default([]),
+})
+
+export const valueSwingSchema = z.object({
+  sceneNumber: z.number().int().min(1),
+  currentValue: z.string().trim().min(1),
+  swingDirection: z.string().trim().min(1),
+  newValue: z.string().trim().min(1),
+  magnitude: z.string().trim().min(1),
+})
+
+export const hardChoiceSceneMapSchema = z.object({
+  hardChoiceIndex: z.number().int().min(1),
+  sceneNumber: z.number().int().min(1),
+  beatNumbers: z.array(z.number().int().min(1)).min(1),
+  explicitCost: z.string().trim().min(1),
+})
+
+export const sceneLayerPackageSchema = z.object({
+  sceneLayer: z.array(sceneLayerSceneSchema).min(1).max(24),
+  valueSwingLayer: z.array(valueSwingSchema).min(1).max(24),
+  hardChoiceSceneMap: z.array(hardChoiceSceneMapSchema).min(1),
+}).superRefine((value, context) => {
+  value.sceneLayer.forEach((scene, index) => {
+    if (scene.sceneNumber !== index + 1) {
+      context.addIssue({
+        code: z.ZodIssueCode.custom,
+        path: ['sceneLayer', index, 'sceneNumber'],
+        message: 'Scene numbers must start at 1 and increase by 1.',
+      })
+    }
+    if (normalizedComparableText(scene.themeConflict.valueA) === normalizedComparableText(scene.themeConflict.valueB)) {
+      context.addIssue({
+        code: z.ZodIssueCode.custom,
+        path: ['sceneLayer', index, 'themeConflict', 'valueA'],
+        message: 'Scene theme conflict values must be mutually different.',
+      })
+    }
+  })
+
+  const sceneNumbers = new Set(value.sceneLayer.map((scene) => scene.sceneNumber))
+  value.valueSwingLayer.forEach((swing, index) => {
+    if (!sceneNumbers.has(swing.sceneNumber)) {
+      context.addIssue({
+        code: z.ZodIssueCode.custom,
+        path: ['valueSwingLayer', index, 'sceneNumber'],
+        message: 'Value swing must reference an existing scene.',
+      })
+    }
+  })
+
+  value.hardChoiceSceneMap.forEach((mapping, index) => {
+    if (!sceneNumbers.has(mapping.sceneNumber)) {
+      context.addIssue({
+        code: z.ZodIssueCode.custom,
+        path: ['hardChoiceSceneMap', index, 'sceneNumber'],
+        message: 'Hard choice mapping must reference an existing scene.',
+      })
+    }
+  })
+
+  const firstMagnitude = value.valueSwingLayer[0]?.magnitude.length ?? 0
+  const lastMagnitude = value.valueSwingLayer[value.valueSwingLayer.length - 1]?.magnitude.length ?? 0
+  if (value.valueSwingLayer.length > 1 && lastMagnitude <= firstMagnitude) {
+    context.addIssue({
+      code: z.ZodIssueCode.custom,
+      path: ['valueSwingLayer', value.valueSwingLayer.length - 1, 'magnitude'],
+      message: 'Later value swings must have greater magnitude than early value swings.',
+    })
+  }
+})
+
+export const beatSchema = z.object({
+  beatNumber: z.number().int().min(1),
+  action: z.string().trim().min(1),
+  reaction: z.string().trim().min(1),
+  newSituation: z.string().trim().min(1),
+})
+
+export const beatLayerSceneSchema = z.object({
+  sceneNumber: z.number().int().min(1),
+  beats: z.array(beatSchema).min(2).max(16),
+})
+
+export const beatLayerPackageSchema = z.object({
+  beatLayer: z.array(beatLayerSceneSchema).min(1).max(24),
+}).superRefine((value, context) => {
+  value.beatLayer.forEach((scene, sceneIndex) => {
+    scene.beats.forEach((beat, beatIndex) => {
+      if (beat.beatNumber !== beatIndex + 1) {
+        context.addIssue({
+          code: z.ZodIssueCode.custom,
+          path: ['beatLayer', sceneIndex, 'beats', beatIndex, 'beatNumber'],
+          message: 'Beat numbers must start at 1 inside each scene and increase by 1.',
+        })
+      }
+    })
+  })
+})
+
+export const dialogueBeatSchema = z.object({
+  beatNumber: z.number().int().min(1),
+  characterWant: z.string().trim().min(1),
+  tactic: z.string().trim().min(1),
+  subtext: z.string().trim().min(1),
+  dialogue: z.string().trim().min(1),
+  surfaceTopic: z.string().trim().min(1),
+  realConflict: z.string().trim().min(1),
+  dramaticPurpose: z.string().trim().min(1),
+  naturalnessScore: z.number().min(0).max(10),
+  conflictScore: z.number().min(0).max(10),
+})
+
+export const dialogueLayerSceneSchema = z.object({
+  sceneNumber: z.number().int().min(1),
+  dialogueBeats: z.array(dialogueBeatSchema).min(1).max(16),
+})
+
+export const dialogueLayerPackageSchema = z.object({
+  dialogueLayer: z.array(dialogueLayerSceneSchema).min(1).max(24),
+})
+
+export const screenplayDevelopmentPackageSchema = z.object({
+  schemaVersion: z.literal(3),
+  storyDevelopment: storyDevelopmentPackageSchema,
+  sceneLayer: z.array(sceneLayerSceneSchema).min(1).max(24),
+  valueSwingLayer: z.array(valueSwingSchema).min(1).max(24),
+  hardChoiceSceneMap: z.array(hardChoiceSceneMapSchema).min(1),
+  beatLayer: z.array(beatLayerSceneSchema).min(1).max(24),
+  dialogueLayer: z.array(dialogueLayerSceneSchema).min(1).max(24),
+}).superRefine((value, context) => {
+  const sceneNumbers = new Set(value.sceneLayer.map((scene) => scene.sceneNumber))
+  value.beatLayer.forEach((scene, index) => {
+    if (!sceneNumbers.has(scene.sceneNumber)) {
+      context.addIssue({
+        code: z.ZodIssueCode.custom,
+        path: ['beatLayer', index, 'sceneNumber'],
+        message: 'Beat layer must reference an existing scene.',
+      })
+    }
+  })
+  value.dialogueLayer.forEach((scene, index) => {
+    if (!sceneNumbers.has(scene.sceneNumber)) {
+      context.addIssue({
+        code: z.ZodIssueCode.custom,
+        path: ['dialogueLayer', index, 'sceneNumber'],
+        message: 'Dialogue layer must reference an existing scene.',
+      })
+    }
+  })
+})
+
+export type SceneLayerPackage = z.infer<typeof sceneLayerPackageSchema>
+export type BeatLayerPackage = z.infer<typeof beatLayerPackageSchema>
+export type DialogueLayerPackage = z.infer<typeof dialogueLayerPackageSchema>
+export type ScreenplayDevelopmentPackage = z.infer<typeof screenplayDevelopmentPackageSchema>
+export type EditScreenplayDevelopmentPayload = ScreenplayDevelopmentPackage | StoryDevelopmentPackage
+
 export interface EditScreenplayPayload {
   readonly id: string
   readonly projectId: string
   readonly episodeId: string
   readonly userPrompt: string
   readonly styleBible: EditScriptStyleBible | null
-  readonly storyDevelopment: StoryDevelopmentPackage | null
+  readonly storyDevelopment: EditScreenplayDevelopmentPayload | null
   readonly screenplayText: string
   readonly status: string
 }

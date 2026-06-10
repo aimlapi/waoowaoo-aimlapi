@@ -181,9 +181,21 @@ export const AI_PROMPT_CATALOG: Record<AiPromptId, AiPromptCatalogEntry> = {
     pathStem: 'edit-script/story-development',
     variableKeys: ['user_request', 'duration_seconds', 'aspect_ratio'],
   },
+  [AI_PROMPT_IDS.EDIT_SCRIPT_SCENE_LAYER]: {
+    pathStem: 'edit-script/scene-layer',
+    variableKeys: ['user_request', 'story_development_json', 'duration_seconds', 'aspect_ratio'],
+  },
+  [AI_PROMPT_IDS.EDIT_SCRIPT_BEAT_LAYER]: {
+    pathStem: 'edit-script/beat-layer',
+    variableKeys: ['user_request', 'story_development_json', 'scene_layer_json', 'duration_seconds', 'aspect_ratio'],
+  },
+  [AI_PROMPT_IDS.EDIT_SCRIPT_DIALOGUE_LAYER]: {
+    pathStem: 'edit-script/dialogue-layer',
+    variableKeys: ['user_request', 'story_development_json', 'scene_layer_json', 'beat_layer_json', 'duration_seconds', 'aspect_ratio'],
+  },
   [AI_PROMPT_IDS.EDIT_SCRIPT_SCREENPLAY]: {
     pathStem: 'edit-script/screenplay',
-    variableKeys: ['user_request', 'story_development_json', 'duration_seconds', 'aspect_ratio'],
+    variableKeys: ['user_request', 'screenplay_blueprint_json', 'duration_seconds', 'aspect_ratio'],
   },
   [AI_PROMPT_IDS.EDIT_SCRIPT_PRIMARY]: {
     pathStem: 'edit-script/primary',

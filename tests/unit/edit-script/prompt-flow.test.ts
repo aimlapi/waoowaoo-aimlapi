@@ -32,23 +32,88 @@ describe('edit script block-first prompt flow', () => {
     expect(storyDevelopmentPrompt).toContain('"pressureLadder"')
     expect(storyDevelopmentPrompt).toContain('"hardChoices"')
     expect(storyDevelopmentPrompt).toContain('goal -> pressure -> choice -> cost -> newValueState')
+    expect(storyDevelopmentPrompt).toContain('必须具有互斥性')
+    expect(storyDevelopmentPrompt).toContain('被记住 VS 被爱')
 
-    const screenplayPrompt = buildAiPrompt({
-      promptId: AI_PROMPT_IDS.EDIT_SCRIPT_SCREENPLAY,
+    const sceneLayerPrompt = buildAiPrompt({
+      promptId: AI_PROMPT_IDS.EDIT_SCRIPT_SCENE_LAYER,
       locale: 'zh',
       variables: {
         user_request: '生成一条连续短片',
         story_development_json: JSON.stringify({
-          protagonist: { name: '人物', want: '寻找旧物', need: '面对失去' },
-          storyExpansion: { majorTurn: '发现旧物来自被回避的关系' },
+          themeEngine: { valueA: '尊严', valueB: '生存' },
+          hardChoices: [{ decision: '拒绝低俗爆款', cost: '失去流量' }],
         }),
         duration_seconds: '8',
         aspect_ratio: '9:16',
       },
     })
 
-    expect(screenplayPrompt).toContain('Story Development Package')
-    expect(screenplayPrompt).toContain('禁止直接根据用户原始需求另起故事')
+    expect(sceneLayerPrompt).toContain('Scene Engine')
+    expect(sceneLayerPrompt).toContain('Value Swing Layer')
+    expect(sceneLayerPrompt).toContain('Hard Choice Scene Map')
+    expect(sceneLayerPrompt).toContain('每场戏都必须发生价值变化')
+    expect(sceneLayerPrompt).toContain('Value A VS Value B')
+    expect(sceneLayerPrompt).toContain('"sceneLayer"')
+    expect(sceneLayerPrompt).toContain('"valueSwingLayer"')
+
+    const beatLayerPrompt = buildAiPrompt({
+      promptId: AI_PROMPT_IDS.EDIT_SCRIPT_BEAT_LAYER,
+      locale: 'zh',
+      variables: {
+        user_request: '生成一条连续短片',
+        story_development_json: JSON.stringify({ protagonist: { name: '人物' } }),
+        scene_layer_json: JSON.stringify({ sceneLayer: [{ sceneNumber: 1 }] }),
+        duration_seconds: '8',
+        aspect_ratio: '9:16',
+      },
+    })
+
+    expect(beatLayerPrompt).toContain('Beat Engine')
+    expect(beatLayerPrompt).toContain('Action -> Reaction -> New Situation')
+    expect(beatLayerPrompt).toContain('禁止连续解释')
+    expect(beatLayerPrompt).toContain('"beatLayer"')
+
+    const dialogueLayerPrompt = buildAiPrompt({
+      promptId: AI_PROMPT_IDS.EDIT_SCRIPT_DIALOGUE_LAYER,
+      locale: 'zh',
+      variables: {
+        user_request: '生成一条连续短片',
+        story_development_json: JSON.stringify({ protagonist: { name: '人物' } }),
+        scene_layer_json: JSON.stringify({ sceneLayer: [{ sceneNumber: 1 }] }),
+        beat_layer_json: JSON.stringify({ beatLayer: [{ sceneNumber: 1, beats: [] }] }),
+        duration_seconds: '8',
+        aspect_ratio: '9:16',
+      },
+    })
+
+    expect(dialogueLayerPrompt).toContain('Dialogue Engine')
+    expect(dialogueLayerPrompt).toContain('Dialogue Balance Engine')
+    expect(dialogueLayerPrompt).toContain('surfaceTopic')
+    expect(dialogueLayerPrompt).toContain('realConflict')
+    expect(dialogueLayerPrompt).toContain('角色谈论 A，实际争夺 B')
+
+    const screenplayPrompt = buildAiPrompt({
+      promptId: AI_PROMPT_IDS.EDIT_SCRIPT_SCREENPLAY,
+      locale: 'zh',
+      variables: {
+        user_request: '生成一条连续短片',
+        screenplay_blueprint_json: JSON.stringify({
+          schemaVersion: 3,
+          storyDevelopment: { protagonist: { name: '人物', want: '寻找旧物', need: '面对失去' } },
+          sceneLayer: [{ sceneNumber: 1, sceneGoal: '寻找旧物' }],
+          beatLayer: [{ sceneNumber: 1, beats: [{ beatNumber: 1 }] }],
+          dialogueLayer: [{ sceneNumber: 1, dialogueBeats: [{ beatNumber: 1 }] }],
+        }),
+        duration_seconds: '8',
+        aspect_ratio: '9:16',
+      },
+    })
+
+    expect(screenplayPrompt).toContain('Screenplay Blueprint')
+    expect(screenplayPrompt).toContain('禁止直接根据 Premise 写剧本')
+    expect(screenplayPrompt).toContain('禁止直接根据 Story Development Layer 写剧本')
+    expect(screenplayPrompt).toContain('Story Development Layer -> Scene Layer -> Beat Layer -> Dialogue Layer -> Screenplay')
     expect(screenplayPrompt).toContain('AI 可控短片剧本')
     expect(screenplayPrompt).toContain('后续角色、场景、道具、风格案例和分镜生成')
     expect(screenplayPrompt).toContain('这里只写剧情内容')

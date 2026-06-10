@@ -299,6 +299,198 @@ const mockStoryDevelopment = {
   },
 }
 
+const mockSceneLayer = {
+  sceneLayer: [
+    {
+      sceneNumber: 1,
+      sceneGoal: '刘满仓宣布要办婚事证明自己翻身',
+      obstacle: '村庄眼光和媒人把婚事压成求子的交易',
+      tactic: '他用钱催媒人把婚事快速定下来',
+      outcome: '李桂香进入婚事，但关系从一开始被功能化',
+      valueShift: '从孤独羞耻转向用求子购买体面',
+      themeConflict: {
+        valueA: '传宗接代的体面',
+        valueB: '把人当人看的陪伴',
+      },
+      sourceHardChoiceIndexes: [1],
+    },
+    {
+      sceneNumber: 2,
+      sceneGoal: '刘满仓要求李桂香确认婚后能生孩子',
+      obstacle: '李桂香拒绝把自己变成生育承诺',
+      tactic: '他用婚宴和村里闲话逼她表态',
+      outcome: '不能生育的真相公开，婚事变成价值审判',
+      valueShift: '从求子体面转向关系破裂',
+      themeConflict: {
+        valueA: '传宗接代的体面',
+        valueB: '把人当人看的陪伴',
+      },
+      sourceHardChoiceIndexes: [2],
+    },
+    {
+      sceneNumber: 3,
+      sceneGoal: '刘满仓决定婚宴是否继续',
+      obstacle: '村里人等着看笑话，李桂香准备离开',
+      tactic: '他撕下早生贵子的喜联，说出自己害怕孤独',
+      outcome: '婚事不再服务求子，关系留下不确定入口',
+      valueShift: '从血脉证明转向承认陪伴需求',
+      themeConflict: {
+        valueA: '传宗接代的体面',
+        valueB: '把人当人看的陪伴',
+      },
+      sourceHardChoiceIndexes: [3],
+    },
+  ],
+  valueSwingLayer: [
+    {
+      sceneNumber: 1,
+      currentValue: '被轻贱',
+      swingDirection: '+',
+      newValue: '短暂体面',
+      magnitude: '+',
+    },
+    {
+      sceneNumber: 2,
+      currentValue: '短暂体面',
+      swingDirection: '--',
+      newValue: '当众破裂',
+      magnitude: '--',
+    },
+    {
+      sceneNumber: 3,
+      currentValue: '当众破裂',
+      swingDirection: '+++',
+      newValue: '真实承认',
+      magnitude: '+++',
+    },
+  ],
+  hardChoiceSceneMap: [
+    {
+      hardChoiceIndex: 1,
+      sceneNumber: 1,
+      beatNumbers: [1, 2],
+      explicitCost: '他把未来伴侣先看成生育机会',
+    },
+    {
+      hardChoiceIndex: 2,
+      sceneNumber: 2,
+      beatNumbers: [1, 2],
+      explicitCost: '他伤透李桂香并丢掉暴富后的面子',
+    },
+    {
+      hardChoiceIndex: 3,
+      sceneNumber: 3,
+      beatNumbers: [1, 2],
+      explicitCost: '他失去最省事的体面证明',
+    },
+  ],
+}
+
+const mockBeatLayer = {
+  beatLayer: [
+    {
+      sceneNumber: 1,
+      beats: [
+        {
+          beatNumber: 1,
+          action: '刘满仓把彩礼钱摊在媒人桌上',
+          reaction: '王媒婆立刻把婚事说成早生贵子的买卖',
+          newSituation: '婚事被定义为求子交易',
+        },
+        {
+          beatNumber: 2,
+          action: '刘满仓接受这个说法并催着定日子',
+          reaction: '李桂香被安排进一场不属于她的婚事',
+          newSituation: '关系还没开始就被功能化',
+        },
+      ],
+    },
+    {
+      sceneNumber: 2,
+      beats: [
+        {
+          beatNumber: 1,
+          action: '刘满仓追问李桂香能不能生',
+          reaction: '李桂香反问他要人还是要肚子',
+          newSituation: '不能生育的真相逼近',
+        },
+        {
+          beatNumber: 2,
+          action: '刘满仓失控把婚宴脸面压到她身上',
+          reaction: '李桂香决定离开',
+          newSituation: '婚事当众破裂',
+        },
+      ],
+    },
+    {
+      sceneNumber: 3,
+      beats: [
+        {
+          beatNumber: 1,
+          action: '刘满仓看见早生贵子的喜联',
+          reaction: '村里人催他给个说法',
+          newSituation: '他必须选体面还是承认伤害',
+        },
+        {
+          beatNumber: 2,
+          action: '刘满仓撕下喜联并让李桂香先走',
+          reaction: '李桂香停住脚步但没有原谅',
+          newSituation: '关系留下不确定入口',
+        },
+      ],
+    },
+  ],
+}
+
+const mockDialogueLayer = {
+  dialogueLayer: [
+    {
+      sceneNumber: 2,
+      dialogueBeats: [
+        {
+          beatNumber: 1,
+          characterWant: '刘满仓想确认求子目标不会落空',
+          tactic: '用婚宴和村里眼光包装质问',
+          subtext: '他害怕自己再次被证明没人要',
+          dialogue: '刘满仓：酒席都订了，你总得给我一句准话。\\n李桂香：你问的是日子，还是问我的肚子？',
+          surfaceTopic: '婚宴安排',
+          realConflict: '人是否被当作生育功能',
+          dramaticPurpose: '揭露关系的真实冲突',
+          naturalnessScore: 7,
+          conflictScore: 9,
+        },
+      ],
+    },
+    {
+      sceneNumber: 3,
+      dialogueBeats: [
+        {
+          beatNumber: 2,
+          characterWant: '刘满仓想停止用求子证明体面',
+          tactic: '不求原谅，只承认自己的软弱',
+          subtext: '他第一次把孤独说成自己的问题',
+          dialogue: '刘满仓：这喜字贴错了。\\n李桂香：错哪儿了？\\n刘满仓：错在我先看见的不是你。',
+          surfaceTopic: '喜联',
+          realConflict: '体面和陪伴的选择',
+          dramaticPurpose: '迫使最终选择并呈现代价',
+          naturalnessScore: 8,
+          conflictScore: 8,
+        },
+      ],
+    },
+  ],
+}
+
+const mockScreenplayDevelopment = {
+  schemaVersion: 3,
+  storyDevelopment: mockStoryDevelopment,
+  sceneLayer: mockSceneLayer.sceneLayer,
+  valueSwingLayer: mockSceneLayer.valueSwingLayer,
+  hardChoiceSceneMap: mockSceneLayer.hardChoiceSceneMap,
+  beatLayer: mockBeatLayer.beatLayer,
+  dialogueLayer: mockDialogueLayer.dialogueLayer,
+}
+
 function mockSuccessfulAiSteps() {
   aiExecMock.executeAiTextStep
     .mockResolvedValueOnce({
@@ -391,7 +583,7 @@ describe('edit script generation status persistence', () => {
       episodeId: 'episode-1',
       userPrompt: '做一个科幻短片',
       styleBibleJson: mockStyleBible,
-      storyDevelopmentJson: mockStoryDevelopment,
+      storyDevelopmentJson: mockScreenplayDevelopment,
       screenplayText: '标题：《科幻短片》\n\n故事梗概：一条安静信号唤醒空间站。',
       status: 'ready',
     })
@@ -401,7 +593,7 @@ describe('edit script generation status persistence', () => {
       episodeId: 'episode-1',
       userPrompt: '50多岁穷困潦倒的老光棍，一夜暴富求子。',
       styleBibleJson: null,
-      storyDevelopmentJson: mockStoryDevelopment,
+      storyDevelopmentJson: mockScreenplayDevelopment,
       screenplayText: '标题：《旧屋喜事》\n\n故事梗概：刘满仓一夜暴富后急着求子，却在婚前发现未婚妻不能生育。',
       status: 'ready',
     })
@@ -460,6 +652,15 @@ describe('edit script generation status persistence', () => {
         text: JSON.stringify(mockStoryDevelopment),
       })
       .mockResolvedValueOnce({
+        text: JSON.stringify(mockSceneLayer),
+      })
+      .mockResolvedValueOnce({
+        text: JSON.stringify(mockBeatLayer),
+      })
+      .mockResolvedValueOnce({
+        text: JSON.stringify(mockDialogueLayer),
+      })
+      .mockResolvedValueOnce({
         text: '标题：《旧屋喜事》\n\n故事梗概：刘满仓一夜暴富后急着求子，却在婚前发现未婚妻不能生育。',
       })
 
@@ -474,40 +675,79 @@ describe('edit script generation status persistence', () => {
 
     expect(screenplay.id).toBe('screenplay-1')
     expect(screenplay.styleBible).toBeNull()
-    expect(screenplay.storyDevelopment).toEqual(mockStoryDevelopment)
-    expect(aiExecMock.executeAiTextStep).toHaveBeenCalledTimes(2)
+    expect(screenplay.storyDevelopment).toEqual(mockScreenplayDevelopment)
+    expect(aiExecMock.executeAiTextStep).toHaveBeenCalledTimes(5)
     expect(aiExecMock.executeAiTextStep).toHaveBeenNthCalledWith(1, expect.objectContaining({
       action: AI_PROMPT_IDS.EDIT_SCRIPT_STORY_DEVELOPMENT,
       meta: expect.objectContaining({
         stepId: AI_PROMPT_IDS.EDIT_SCRIPT_STORY_DEVELOPMENT,
         stepIndex: 1,
-        stepTotal: 2,
+        stepTotal: 5,
       }),
     }))
     expect(aiExecMock.executeAiTextStep).toHaveBeenNthCalledWith(2, expect.objectContaining({
+      action: AI_PROMPT_IDS.EDIT_SCRIPT_SCENE_LAYER,
+      messages: [
+        expect.objectContaining({
+          content: expect.stringContaining('Story Development Layer'),
+        }),
+      ],
+      meta: expect.objectContaining({
+        stepId: AI_PROMPT_IDS.EDIT_SCRIPT_SCENE_LAYER,
+        stepIndex: 2,
+        stepTotal: 5,
+      }),
+    }))
+    expect(aiExecMock.executeAiTextStep).toHaveBeenNthCalledWith(3, expect.objectContaining({
+      action: AI_PROMPT_IDS.EDIT_SCRIPT_BEAT_LAYER,
+      messages: [
+        expect.objectContaining({
+          content: expect.stringContaining('Scene Layer'),
+        }),
+      ],
+      meta: expect.objectContaining({
+        stepId: AI_PROMPT_IDS.EDIT_SCRIPT_BEAT_LAYER,
+        stepIndex: 3,
+        stepTotal: 5,
+      }),
+    }))
+    expect(aiExecMock.executeAiTextStep).toHaveBeenNthCalledWith(4, expect.objectContaining({
+      action: AI_PROMPT_IDS.EDIT_SCRIPT_DIALOGUE_LAYER,
+      messages: [
+        expect.objectContaining({
+          content: expect.stringContaining('Beat Layer'),
+        }),
+      ],
+      meta: expect.objectContaining({
+        stepId: AI_PROMPT_IDS.EDIT_SCRIPT_DIALOGUE_LAYER,
+        stepIndex: 4,
+        stepTotal: 5,
+      }),
+    }))
+    expect(aiExecMock.executeAiTextStep).toHaveBeenNthCalledWith(5, expect.objectContaining({
       action: AI_PROMPT_IDS.EDIT_SCRIPT_SCREENPLAY,
       reasoning: false,
       messages: [
         expect.objectContaining({
-          content: expect.stringContaining('刘满仓'),
+          content: expect.stringContaining('Screenplay Blueprint'),
         }),
       ],
       meta: expect.objectContaining({
         stepId: AI_PROMPT_IDS.EDIT_SCRIPT_SCREENPLAY,
-        stepIndex: 2,
-        stepTotal: 2,
+        stepIndex: 5,
+        stepTotal: 5,
       }),
     }))
     expect(prismaMock.projectEditScreenplay.upsert).toHaveBeenCalledWith(expect.objectContaining({
       create: expect.objectContaining({
         styleBibleJson: Prisma.JsonNull,
-        storyDevelopmentJson: mockStoryDevelopment,
+        storyDevelopmentJson: mockScreenplayDevelopment,
         screenplayText: '标题：《旧屋喜事》\n\n故事梗概：刘满仓一夜暴富后急着求子，却在婚前发现未婚妻不能生育。',
         status: 'ready',
       }),
       update: expect.objectContaining({
         styleBibleJson: Prisma.JsonNull,
-        storyDevelopmentJson: mockStoryDevelopment,
+        storyDevelopmentJson: mockScreenplayDevelopment,
         screenplayText: '标题：《旧屋喜事》\n\n故事梗概：刘满仓一夜暴富后急着求子，却在婚前发现未婚妻不能生育。',
         status: 'ready',
       }),

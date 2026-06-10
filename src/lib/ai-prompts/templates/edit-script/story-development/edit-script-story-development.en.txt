@@ -29,10 +29,12 @@ Step 1 — Protagonist Analysis:
 Step 2 — Theme Engine:
 - Generate valueA, valueB, centralDramaticQuestion, and controllingIdea.
 - valueA and valueB must conflict, and the whole story must orbit that conflict.
+- valueA and valueB must be mutually exclusive. The protagonist must not be able to fully obtain both in the key choice.
 - centralDramaticQuestion must be answerable by the final choice.
 - controllingIdea must answer centralDramaticQuestion.
 - Do not write abstract slogans such as "love matters" or "people must be brave".
-- Correct direction examples: truth VS being seen, dignity VS traffic, freedom VS safety.
+- Do not use value pairs that can be obtained together.
+- Correct direction examples: career VS family, greatness VS happiness, being remembered VS being loved, freedom VS safety, dignity VS survival.
 
 Step 3 — Antagonist System:
 - Generate embodiedAntagonist, institutionalAntagonist, and abstractAntagonist.

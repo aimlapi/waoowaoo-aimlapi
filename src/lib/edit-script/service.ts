@@ -23,14 +23,20 @@ import type {
   EditAssetRequirement,
   EditAssetStatus,
   EditScreenplayPayload,
+  EditScreenplayDevelopmentPayload,
   EditScriptPayload,
   EditScriptShot,
   EditScriptVideoBlock,
+  ScreenplayDevelopmentPackage,
   StoryDevelopmentPackage,
 } from './types'
 import type { LocationSpatialProfileStatus } from '@/lib/location-spatial-profile/types'
 import {
   editScriptVideoPromptBlockSchema,
+  beatLayerPackageSchema,
+  dialogueLayerPackageSchema,
+  sceneLayerPackageSchema,
+  screenplayDevelopmentPackageSchema,
   storyDevelopmentPackageSchema,
 } from './types'
 import { designEditAssetRequirements } from './asset-design'
@@ -84,6 +90,9 @@ interface UpdateEditScriptAssetRequirementDescriptionInput {
 
 type PromptStepId =
   | typeof AI_PROMPT_IDS.EDIT_SCRIPT_STORY_DEVELOPMENT
+  | typeof AI_PROMPT_IDS.EDIT_SCRIPT_SCENE_LAYER
+  | typeof AI_PROMPT_IDS.EDIT_SCRIPT_BEAT_LAYER
+  | typeof AI_PROMPT_IDS.EDIT_SCRIPT_DIALOGUE_LAYER
   | typeof AI_PROMPT_IDS.EDIT_SCRIPT_SCREENPLAY
   | typeof AI_PROMPT_IDS.EDIT_SCRIPT_PRIMARY
   | typeof AI_PROMPT_IDS.EDIT_SCRIPT_ASSET_EXTRACT
@@ -93,6 +102,9 @@ type DeadlineStepId = PromptStepId | 'edit_script_asset_design'
 
 const STEP_TIMEOUT_MS: Record<DeadlineStepId, number> = {
   [AI_PROMPT_IDS.EDIT_SCRIPT_STORY_DEVELOPMENT]: 360_000,
+  [AI_PROMPT_IDS.EDIT_SCRIPT_SCENE_LAYER]: 360_000,
+  [AI_PROMPT_IDS.EDIT_SCRIPT_BEAT_LAYER]: 360_000,
+  [AI_PROMPT_IDS.EDIT_SCRIPT_DIALOGUE_LAYER]: 360_000,
   [AI_PROMPT_IDS.EDIT_SCRIPT_SCREENPLAY]: 360_000,
   [AI_PROMPT_IDS.EDIT_SCRIPT_PRIMARY]: 180_000,
   [AI_PROMPT_IDS.EDIT_SCRIPT_ASSET_EXTRACT]: 90_000,
@@ -640,15 +652,53 @@ function mapPersistedEditScreenplay(screenplay: PersistedEditScreenplay): EditSc
   }
 }
 
-function parsePersistedStoryDevelopment(value: Prisma.JsonValue | null | undefined): StoryDevelopmentPackage | null {
+function parsePersistedStoryDevelopment(value: Prisma.JsonValue | null | undefined): EditScreenplayDevelopmentPayload | null {
   if (value === null || value === undefined) return null
-  return normalizeStoryDevelopmentPackage(value)
+  const screenplayDevelopment = screenplayDevelopmentPackageSchema.safeParse(value)
+  if (screenplayDevelopment.success) return screenplayDevelopment.data
+
+  const storyDevelopment = storyDevelopmentPackageSchema.safeParse(value)
+  if (storyDevelopment.success) return storyDevelopment.data
+
+  throw new Error('EDIT_SCREENPLAY_BLUEPRINT_INVALID')
 }
 
 function normalizeStoryDevelopmentPackage(value: unknown): StoryDevelopmentPackage {
   const parsed = storyDevelopmentPackageSchema.safeParse(value)
   if (!parsed.success) {
     throw new Error('EDIT_SCREENPLAY_STORY_DEVELOPMENT_INVALID')
+  }
+  return parsed.data
+}
+
+function normalizeSceneLayerPackage(value: unknown) {
+  const parsed = sceneLayerPackageSchema.safeParse(value)
+  if (!parsed.success) {
+    throw new Error('EDIT_SCREENPLAY_SCENE_LAYER_INVALID')
+  }
+  return parsed.data
+}
+
+function normalizeBeatLayerPackage(value: unknown) {
+  const parsed = beatLayerPackageSchema.safeParse(value)
+  if (!parsed.success) {
+    throw new Error('EDIT_SCREENPLAY_BEAT_LAYER_INVALID')
+  }
+  return parsed.data
+}
+
+function normalizeDialogueLayerPackage(value: unknown) {
+  const parsed = dialogueLayerPackageSchema.safeParse(value)
+  if (!parsed.success) {
+    throw new Error('EDIT_SCREENPLAY_DIALOGUE_LAYER_INVALID')
+  }
+  return parsed.data
+}
+
+function normalizeScreenplayDevelopmentPackage(value: unknown): ScreenplayDevelopmentPackage {
+  const parsed = screenplayDevelopmentPackageSchema.safeParse(value)
+  if (!parsed.success) {
+    throw new Error('EDIT_SCREENPLAY_BLUEPRINT_INVALID')
   }
   return parsed.data
 }
@@ -928,9 +978,72 @@ export async function generateProjectEditScreenplay(input: GenerateEditScreenpla
     },
     stepTitle: 'Story development',
     stepIndex: 1,
-    stepTotal: 2,
+    stepTotal: 5,
   })
   const storyDevelopment = normalizeStoryDevelopmentPackage(storyDevelopmentRaw)
+  const sceneLayerRaw = await runPromptStep({
+    userId: input.userId,
+    projectId: input.projectId,
+    model,
+    locale,
+    promptId: AI_PROMPT_IDS.EDIT_SCRIPT_SCENE_LAYER,
+    variables: {
+      user_request: input.prompt,
+      story_development_json: stringifyForPrompt(storyDevelopment),
+      duration_seconds: String(defaults.durationSeconds),
+      aspect_ratio: effectiveVideoRatio,
+    },
+    stepTitle: 'Scene layer',
+    stepIndex: 2,
+    stepTotal: 5,
+  })
+  const sceneLayerPackage = normalizeSceneLayerPackage(sceneLayerRaw)
+  const beatLayerRaw = await runPromptStep({
+    userId: input.userId,
+    projectId: input.projectId,
+    model,
+    locale,
+    promptId: AI_PROMPT_IDS.EDIT_SCRIPT_BEAT_LAYER,
+    variables: {
+      user_request: input.prompt,
+      story_development_json: stringifyForPrompt(storyDevelopment),
+      scene_layer_json: stringifyForPrompt(sceneLayerPackage),
+      duration_seconds: String(defaults.durationSeconds),
+      aspect_ratio: effectiveVideoRatio,
+    },
+    stepTitle: 'Beat layer',
+    stepIndex: 3,
+    stepTotal: 5,
+  })
+  const beatLayerPackage = normalizeBeatLayerPackage(beatLayerRaw)
+  const dialogueLayerRaw = await runPromptStep({
+    userId: input.userId,
+    projectId: input.projectId,
+    model,
+    locale,
+    promptId: AI_PROMPT_IDS.EDIT_SCRIPT_DIALOGUE_LAYER,
+    variables: {
+      user_request: input.prompt,
+      story_development_json: stringifyForPrompt(storyDevelopment),
+      scene_layer_json: stringifyForPrompt(sceneLayerPackage),
+      beat_layer_json: stringifyForPrompt(beatLayerPackage),
+      duration_seconds: String(defaults.durationSeconds),
+      aspect_ratio: effectiveVideoRatio,
+    },
+    stepTitle: 'Dialogue layer',
+    stepIndex: 4,
+    stepTotal: 5,
+  })
+  const dialogueLayerPackage = normalizeDialogueLayerPackage(dialogueLayerRaw)
+  const screenplayDevelopment = normalizeScreenplayDevelopmentPackage({
+    schemaVersion: 3,
+    storyDevelopment,
+    sceneLayer: sceneLayerPackage.sceneLayer,
+    valueSwingLayer: sceneLayerPackage.valueSwingLayer,
+    hardChoiceSceneMap: sceneLayerPackage.hardChoiceSceneMap,
+    beatLayer: beatLayerPackage.beatLayer,
+    dialogueLayer: dialogueLayerPackage.dialogueLayer,
+  })
   const screenplayText = await runPromptTextStep({
     userId: input.userId,
     projectId: input.projectId,
@@ -939,13 +1052,13 @@ export async function generateProjectEditScreenplay(input: GenerateEditScreenpla
     promptId: AI_PROMPT_IDS.EDIT_SCRIPT_SCREENPLAY,
     variables: {
       user_request: input.prompt,
-      story_development_json: stringifyForPrompt(storyDevelopment),
+      screenplay_blueprint_json: stringifyForPrompt(screenplayDevelopment),
       duration_seconds: String(defaults.durationSeconds),
       aspect_ratio: effectiveVideoRatio,
     },
     stepTitle: 'Edit screenplay',
-    stepIndex: 2,
-    stepTotal: 2,
+    stepIndex: 5,
+    stepTotal: 5,
     reasoning: false,
   })
   const saved = await prisma.projectEditScreenplay.upsert({
@@ -955,14 +1068,14 @@ export async function generateProjectEditScreenplay(input: GenerateEditScreenpla
       episodeId: input.episodeId,
       userPrompt: input.prompt,
       styleBibleJson: Prisma.JsonNull,
-      storyDevelopmentJson: storyDevelopment as unknown as Prisma.InputJsonValue,
+      storyDevelopmentJson: screenplayDevelopment as unknown as Prisma.InputJsonValue,
       screenplayText,
       status: 'ready',
     },
     update: {
       userPrompt: input.prompt,
       styleBibleJson: Prisma.JsonNull,
-      storyDevelopmentJson: storyDevelopment as unknown as Prisma.InputJsonValue,
+      storyDevelopmentJson: screenplayDevelopment as unknown as Prisma.InputJsonValue,
       screenplayText,
       status: 'ready',
     },
