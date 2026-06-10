@@ -98,12 +98,17 @@ function renderTextBlock(value: string | null | undefined) {
   return <p className={`${SELECTABLE_TEXT_CLASS} whitespace-pre-wrap break-words text-xs leading-5 text-[var(--glass-text-secondary)]`}>{value}</p>
 }
 
+function renderSelectableTextBlock(value: string | null | undefined) {
+  if (!hasText(value)) return null
+  return <p className="select-text whitespace-pre-wrap break-words text-xs leading-5 text-[var(--glass-text-secondary)]">{value}</p>
+}
+
 function renderScrollableTextBlock(data: WorkspaceCanvasFlowNode['data'], value: string | null | undefined) {
-  const content = renderTextBlock(value)
+  const content = renderSelectableTextBlock(value)
   if (!content) return null
   return (
     <div
-      className={nodeContentInteractionClass(data, 'app-scrollbar max-h-[min(62vh,720px)] overflow-y-auto pr-3')}
+      className={nodeContentInteractionClass(data, 'app-scrollbar max-h-[min(62vh,720px)] select-text overflow-y-auto pr-3')}
       onPointerDownCapture={(event) => event.stopPropagation()}
       onWheelCapture={(event) => event.stopPropagation()}
     >

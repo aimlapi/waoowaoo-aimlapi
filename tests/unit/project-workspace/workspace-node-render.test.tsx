@@ -595,6 +595,8 @@ describe('workspace node rendering', () => {
     expect(html).toContain('app-scrollbar')
     expect(html).toContain('overflow-y-auto')
     expect(html).toContain('max-h-[min(62vh,720px)]')
+    expect(html).toContain('select-text')
+    expect(html).toMatch(/select-text[^"]*">标题：《旧屋留灯》/)
     expect(html).toContain('nodrag nowheel')
   })
 
