@@ -491,6 +491,15 @@ const mockScreenplayDevelopment = {
   dialogueLayer: mockDialogueLayer.dialogueLayer,
 }
 
+const mockSceneLayerDevelopmentDraft = {
+  schemaVersion: 3,
+  developmentStage: 'sceneLayer',
+  storyDevelopment: mockStoryDevelopment,
+  sceneLayer: mockSceneLayer.sceneLayer,
+  valueSwingLayer: mockSceneLayer.valueSwingLayer,
+  hardChoiceSceneMap: mockSceneLayer.hardChoiceSceneMap,
+}
+
 function mockSuccessfulAiSteps() {
   aiExecMock.executeAiTextStep
     .mockResolvedValueOnce({
@@ -677,6 +686,7 @@ describe('edit script generation status persistence', () => {
     expect(screenplay.styleBible).toBeNull()
     expect(screenplay.storyDevelopment).toEqual(mockScreenplayDevelopment)
     expect(aiExecMock.executeAiTextStep).toHaveBeenCalledTimes(5)
+    expect(prismaMock.projectEditScreenplay.upsert).toHaveBeenCalledTimes(5)
     expect(aiExecMock.executeAiTextStep).toHaveBeenNthCalledWith(1, expect.objectContaining({
       action: AI_PROMPT_IDS.EDIT_SCRIPT_STORY_DEVELOPMENT,
       meta: expect.objectContaining({
@@ -738,7 +748,49 @@ describe('edit script generation status persistence', () => {
         stepTotal: 5,
       }),
     }))
-    expect(prismaMock.projectEditScreenplay.upsert).toHaveBeenCalledWith(expect.objectContaining({
+    expect(prismaMock.projectEditScreenplay.upsert).toHaveBeenNthCalledWith(1, expect.objectContaining({
+      create: expect.objectContaining({
+        storyDevelopmentJson: expect.objectContaining({
+          developmentStage: 'storyDevelopment',
+          storyDevelopment: mockStoryDevelopment,
+        }),
+        screenplayText: '',
+        status: 'generating',
+      }),
+    }))
+    expect(prismaMock.projectEditScreenplay.upsert).toHaveBeenNthCalledWith(2, expect.objectContaining({
+      create: expect.objectContaining({
+        storyDevelopmentJson: expect.objectContaining({
+          developmentStage: 'sceneLayer',
+          sceneLayer: mockSceneLayer.sceneLayer,
+          valueSwingLayer: mockSceneLayer.valueSwingLayer,
+          hardChoiceSceneMap: mockSceneLayer.hardChoiceSceneMap,
+        }),
+        screenplayText: '',
+        status: 'generating',
+      }),
+    }))
+    expect(prismaMock.projectEditScreenplay.upsert).toHaveBeenNthCalledWith(3, expect.objectContaining({
+      create: expect.objectContaining({
+        storyDevelopmentJson: expect.objectContaining({
+          developmentStage: 'beatLayer',
+          beatLayer: mockBeatLayer.beatLayer,
+        }),
+        screenplayText: '',
+        status: 'generating',
+      }),
+    }))
+    expect(prismaMock.projectEditScreenplay.upsert).toHaveBeenNthCalledWith(4, expect.objectContaining({
+      create: expect.objectContaining({
+        storyDevelopmentJson: expect.objectContaining({
+          developmentStage: 'dialogueLayer',
+          dialogueLayer: mockDialogueLayer.dialogueLayer,
+        }),
+        screenplayText: '',
+        status: 'generating',
+      }),
+    }))
+    expect(prismaMock.projectEditScreenplay.upsert).toHaveBeenNthCalledWith(5, expect.objectContaining({
       create: expect.objectContaining({
         styleBibleJson: Prisma.JsonNull,
         storyDevelopmentJson: mockScreenplayDevelopment,
@@ -753,6 +805,65 @@ describe('edit script generation status persistence', () => {
       }),
     }))
     expect(prismaMock.projectEditScript.upsert).not.toHaveBeenCalled()
+  })
+
+  it('resumes screenplay generation from the first missing development layer', async () => {
+    prismaMock.projectEditScreenplay.findFirst.mockResolvedValueOnce({
+      id: 'screenplay-1',
+      projectId: 'project-1',
+      episodeId: 'episode-1',
+      userPrompt: '50多岁穷困潦倒的老光棍，一夜暴富求子。',
+      styleBibleJson: null,
+      storyDevelopmentJson: mockSceneLayerDevelopmentDraft,
+      screenplayText: '',
+      status: 'generating',
+    })
+    aiExecMock.executeAiTextStep
+      .mockResolvedValueOnce({
+        text: JSON.stringify(mockBeatLayer),
+      })
+      .mockResolvedValueOnce({
+        text: JSON.stringify(mockDialogueLayer),
+      })
+      .mockResolvedValueOnce({
+        text: '标题：《旧屋喜事》\n\n故事梗概：刘满仓一夜暴富后急着求子，却在婚前发现未婚妻不能生育。',
+      })
+
+    await generateProjectEditScreenplay({
+      request: createRequest(),
+      projectId: 'project-1',
+      episodeId: 'episode-1',
+      userId: 'user-1',
+      locale: 'zh',
+      prompt: '50多岁穷困潦倒的老光棍，一夜暴富求子。',
+    })
+
+    expect(aiExecMock.executeAiTextStep).toHaveBeenCalledTimes(3)
+    expect(aiExecMock.executeAiTextStep).toHaveBeenNthCalledWith(1, expect.objectContaining({
+      action: AI_PROMPT_IDS.EDIT_SCRIPT_BEAT_LAYER,
+    }))
+    expect(aiExecMock.executeAiTextStep).toHaveBeenNthCalledWith(2, expect.objectContaining({
+      action: AI_PROMPT_IDS.EDIT_SCRIPT_DIALOGUE_LAYER,
+    }))
+    expect(aiExecMock.executeAiTextStep).toHaveBeenNthCalledWith(3, expect.objectContaining({
+      action: AI_PROMPT_IDS.EDIT_SCRIPT_SCREENPLAY,
+    }))
+    expect(prismaMock.projectEditScreenplay.upsert).toHaveBeenCalledTimes(3)
+    expect(prismaMock.projectEditScreenplay.upsert).toHaveBeenNthCalledWith(1, expect.objectContaining({
+      create: expect.objectContaining({
+        storyDevelopmentJson: expect.objectContaining({
+          developmentStage: 'beatLayer',
+          beatLayer: mockBeatLayer.beatLayer,
+        }),
+        status: 'generating',
+      }),
+    }))
+    expect(prismaMock.projectEditScreenplay.upsert).toHaveBeenNthCalledWith(3, expect.objectContaining({
+      create: expect.objectContaining({
+        storyDevelopmentJson: mockScreenplayDevelopment,
+        status: 'ready',
+      }),
+    }))
   })
 
   it('fails a slow story development step only at the extended development deadline', async () => {

@@ -336,11 +336,65 @@ export const screenplayDevelopmentPackageSchema = z.object({
   })
 })
 
+export const screenplayDevelopmentDraftPackageSchema = z.object({
+  schemaVersion: z.literal(3),
+  developmentStage: z.enum(['storyDevelopment', 'sceneLayer', 'beatLayer', 'dialogueLayer']),
+  storyDevelopment: storyDevelopmentPackageSchema,
+  sceneLayer: z.array(sceneLayerSceneSchema).min(1).max(24).optional(),
+  valueSwingLayer: z.array(valueSwingSchema).min(1).max(24).optional(),
+  hardChoiceSceneMap: z.array(hardChoiceSceneMapSchema).min(1).optional(),
+  beatLayer: z.array(beatLayerSceneSchema).min(1).max(24).optional(),
+  dialogueLayer: z.array(dialogueLayerSceneSchema).min(1).max(24).optional(),
+}).superRefine((value, context) => {
+  if (value.developmentStage === 'sceneLayer' && (!value.sceneLayer || !value.valueSwingLayer || !value.hardChoiceSceneMap)) {
+    context.addIssue({
+      code: z.ZodIssueCode.custom,
+      path: ['developmentStage'],
+      message: 'Scene layer draft must include sceneLayer, valueSwingLayer, and hardChoiceSceneMap.',
+    })
+  }
+  if (value.developmentStage === 'beatLayer' && (!value.sceneLayer || !value.valueSwingLayer || !value.hardChoiceSceneMap || !value.beatLayer)) {
+    context.addIssue({
+      code: z.ZodIssueCode.custom,
+      path: ['developmentStage'],
+      message: 'Beat layer draft must include story, scene, value swing, hard choice map, and beat layers.',
+    })
+  }
+  if (value.developmentStage === 'dialogueLayer' && (!value.sceneLayer || !value.valueSwingLayer || !value.hardChoiceSceneMap || !value.beatLayer || !value.dialogueLayer)) {
+    context.addIssue({
+      code: z.ZodIssueCode.custom,
+      path: ['developmentStage'],
+      message: 'Dialogue layer draft must include story, scene, value swing, hard choice map, beat, and dialogue layers.',
+    })
+  }
+
+  const sceneNumbers = new Set(value.sceneLayer?.map((scene) => scene.sceneNumber) ?? [])
+  value.beatLayer?.forEach((scene, index) => {
+    if (!sceneNumbers.has(scene.sceneNumber)) {
+      context.addIssue({
+        code: z.ZodIssueCode.custom,
+        path: ['beatLayer', index, 'sceneNumber'],
+        message: 'Beat layer must reference an existing scene.',
+      })
+    }
+  })
+  value.dialogueLayer?.forEach((scene, index) => {
+    if (!sceneNumbers.has(scene.sceneNumber)) {
+      context.addIssue({
+        code: z.ZodIssueCode.custom,
+        path: ['dialogueLayer', index, 'sceneNumber'],
+        message: 'Dialogue layer must reference an existing scene.',
+      })
+    }
+  })
+})
+
 export type SceneLayerPackage = z.infer<typeof sceneLayerPackageSchema>
 export type BeatLayerPackage = z.infer<typeof beatLayerPackageSchema>
 export type DialogueLayerPackage = z.infer<typeof dialogueLayerPackageSchema>
 export type ScreenplayDevelopmentPackage = z.infer<typeof screenplayDevelopmentPackageSchema>
-export type EditScreenplayDevelopmentPayload = ScreenplayDevelopmentPackage | StoryDevelopmentPackage
+export type ScreenplayDevelopmentDraftPackage = z.infer<typeof screenplayDevelopmentDraftPackageSchema>
+export type EditScreenplayDevelopmentPayload = ScreenplayDevelopmentPackage | ScreenplayDevelopmentDraftPackage | StoryDevelopmentPackage
 
 export interface EditScreenplayPayload {
   readonly id: string
