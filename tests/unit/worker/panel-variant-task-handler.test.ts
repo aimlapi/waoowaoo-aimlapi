@@ -6,6 +6,9 @@ const prismaMock = vi.hoisted(() => ({
   project: {
     findUnique: vi.fn(),
   },
+  projectVisualReferenceCase: {
+    findFirst: vi.fn(),
+  },
   projectPanel: {
     findUnique: vi.fn(),
     update: vi.fn(async () => ({})),
@@ -123,6 +126,14 @@ describe('worker panel-variant-task-handler behavior', () => {
       visualStylePresetId: 'realistic',
       artStyle: 'realistic',
     })
+    prismaMock.projectVisualReferenceCase.findFirst.mockResolvedValue({
+      id: 'style-case-default',
+      title: '真人向｜冷调雨夜',
+      description: '真人写实，冷调低饱和，雨夜街区质感。',
+      prompt: 'Use the selected cold rainy live-action visual reference style.',
+      imageUrl: '/m/style-case-default',
+      imageMedia: null,
+    })
 
     prismaMock.projectPanel.findUnique.mockImplementation(async (args: { where: { id: string } }) => {
       if (args.where.id === 'panel-new') {
@@ -177,10 +188,11 @@ describe('worker panel-variant-task-handler behavior', () => {
       expect.anything(),
       expect.objectContaining({
         modelId: 'storyboard-model-1',
-        prompt: 'panel-variant-prompt',
+        prompt: expect.stringContaining('选中的视觉风格案例'),
         options: expect.objectContaining({
           aspectRatio: '16:9',
           referenceImages: [
+            'normalized:/m/style-case-default',
             'normalized:https://signed.example/cos/panel-source.png',
             'normalized:https://signed.example/cos/hero-default.png',
             'normalized:https://signed.example/cos/old-town.png',
@@ -190,6 +202,7 @@ describe('worker panel-variant-task-handler behavior', () => {
     )
     expect(sharedMock.normalizeReferenceImageItemsForGeneration).toHaveBeenCalledWith(
       [
+        expect.objectContaining({ role: 'style_reference', name: '真人向｜冷调雨夜' }),
         expect.objectContaining({ role: 'source_panel', name: 'source panel' }),
         expect.objectContaining({ role: 'character', name: 'Hero', appearance: 'default' }),
         expect.objectContaining({ role: 'location', name: 'Old Town' }),
@@ -205,17 +218,22 @@ describe('worker panel-variant-task-handler behavior', () => {
       variables: expect.objectContaining({
         characters_info: expect.stringContaining('固定位置：街道左侧靠墙的留白位置'),
         location_asset: expect.stringContaining('街道左侧靠墙的留白位置'),
-        reference_images: expect.stringContaining('图 1 = 原始镜头「原始镜头」'),
+        reference_images: expect.stringContaining('图 1 = 视觉风格参考图「真人向｜冷调雨夜」'),
       }),
     }))
     expect(promptMock.buildPrompt).toHaveBeenCalledWith(expect.objectContaining({
       variables: expect.objectContaining({
-        reference_images: expect.stringContaining('图 2 = 角色「Hero」，形象「default」'),
+        reference_images: expect.stringContaining('图 2 = 原始镜头「原始镜头」'),
       }),
     }))
     expect(promptMock.buildPrompt).toHaveBeenCalledWith(expect.objectContaining({
       variables: expect.objectContaining({
-        reference_images: expect.stringContaining('图 3 = 场景「Old Town」'),
+        reference_images: expect.stringContaining('图 3 = 角色「Hero」，形象「default」'),
+      }),
+    }))
+    expect(promptMock.buildPrompt).toHaveBeenCalledWith(expect.objectContaining({
+      variables: expect.objectContaining({
+        reference_images: expect.stringContaining('图 4 = 场景「Old Town」'),
       }),
     }))
     expect(result).toEqual({
@@ -241,7 +259,10 @@ describe('worker panel-variant-task-handler behavior', () => {
     await handlePanelVariantTask(buildJob(payload))
 
     expect(sharedMock.normalizeReferenceImageItemsForGeneration).toHaveBeenCalledWith(
-      [expect.objectContaining({ role: 'source_panel' })],
+      [
+        expect.objectContaining({ role: 'style_reference' }),
+        expect.objectContaining({ role: 'source_panel' }),
+      ],
       expect.objectContaining({
         context: expect.objectContaining({ scope: 'panel-variant.refs' }),
       }),

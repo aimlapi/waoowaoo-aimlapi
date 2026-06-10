@@ -87,6 +87,13 @@ function buildSourceSnapshot() {
     project: {
       videoRatio: '16:9',
     },
+    visualReferenceStyle: {
+      id: 'style-case-1',
+      title: '动画向｜冷调寺院',
+      description: '冷调低饱和定格动画寺院风格。',
+      prompt: 'Use cold low-saturation stop-motion temple visual style.',
+      imageUrl: '/m/style-case-1',
+    },
     styleBible: {
       strategy: 'style_bible',
       styleSummary: 'quiet temple style',

@@ -76,8 +76,10 @@ describe('worker edit-script-generate behavior', () => {
       locale: 'zh',
       screenplayId: 'screenplay-1',
       videoRatio: '9:16',
-      artStyle: 'american-comic',
       onGenerationStepPersisted: expect.any(Function),
+    }))
+    expect(serviceMock.generateProjectEditScript).toHaveBeenCalledWith(expect.not.objectContaining({
+      artStyle: expect.anything(),
     }))
     expect(serviceMock.generateProjectEditScript).toHaveBeenCalledWith(expect.not.objectContaining({
       prompt: expect.anything(),

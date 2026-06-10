@@ -236,10 +236,7 @@ describe('worker analyze-novel behavior', () => {
       ],
     })
 
-    expect(prismaMock.project.update).toHaveBeenCalledWith({
-      where: { id: 'project-1' },
-      data: { artStylePrompt: 'cinematic style' },
-    })
+    expect(prismaMock.project.update).not.toHaveBeenCalled()
 
     expect(workerMock.reportTaskProgress).toHaveBeenCalledWith(
       expect.anything(),
