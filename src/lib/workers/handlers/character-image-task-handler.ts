@@ -24,8 +24,16 @@ import {
 } from './image-task-handler-shared'
 import {
   parseAppearanceCandidateMetadata,
+  stringifyAppearanceCandidateMetadata,
   type CharacterAppearanceCandidateMetadata,
 } from '@/types/character-casting'
+import {
+  generateCharacterCastingPlanDocument,
+  type CharacterAppearanceDescriptor,
+  type CharacterCastingCandidatePlan,
+  type CharacterCastingPlanDocument,
+  type CharacterCastingPlanSet,
+} from '@/lib/character-casting/casting-plan'
 
 interface CharacterAppearanceRecord {
   id: string
@@ -94,6 +102,10 @@ interface PrimaryAppearanceRecord {
   selectedIndex: number | null
 }
 
+interface ScreenplayTextRecord {
+  screenplayText: string | null
+}
+
 interface CharacterImageDb {
   characterAppearance: {
     findUnique(args: Record<string, unknown>): Promise<CharacterAppearanceWithCharacter | null>
@@ -103,6 +115,163 @@ interface CharacterImageDb {
   projectCharacter: {
     findUnique(args: Record<string, unknown>): Promise<CharacterRecord | null>
   }
+  projectEditScreenplay: {
+    findFirst(args: Record<string, unknown>): Promise<ScreenplayTextRecord | null>
+  }
+}
+
+function isEnglishLocale(locale: string | null | undefined): boolean {
+  return locale?.startsWith('en') === true
+}
+
+function compactText(value: string, limit: number): string {
+  const normalized = value.replace(/\s+/g, ' ').trim()
+  if (normalized.length <= limit) return normalized
+  return `${normalized.slice(0, limit).trim()}...`
+}
+
+function buildCharacterRequestForCastingPlan(input: {
+  readonly characterName: string
+  readonly baseDescriptions: readonly string[]
+  readonly screenplayText: string | null
+  readonly locale: string | null | undefined
+}): string {
+  const english = isEnglishLocale(input.locale)
+  const descriptionText = input.baseDescriptions
+    .filter((item) => item.trim())
+    .map((item, index) => english
+      ? `Existing appearance/story requirement ${index + 1}: ${item.trim()}`
+      : `方案描述 ${index + 1}: ${item.trim()}`)
+    .join('\n')
+  return [
+    english ? `Character name: ${input.characterName}` : `角色名：${input.characterName}`,
+    descriptionText
+      ? english
+        ? `Existing character appearance / story requirement:\n${descriptionText}`
+        : `已有角色形象/剧情需求：\n${descriptionText}`
+      : '',
+    input.screenplayText
+      ? english
+        ? `Screenplay text:\n${compactText(input.screenplayText, 6000)}`
+        : `剧本文本：\n${compactText(input.screenplayText, 6000)}`
+      : '',
+  ].filter(Boolean).join('\n\n')
+}
+
+function shouldUseCastingPlanForCharacterImages(input: {
+  readonly appearanceIndex: number
+  readonly indexes: readonly number[]
+}): boolean {
+  return input.appearanceIndex === PRIMARY_APPEARANCE_INDEX
+    && input.indexes.length > 0
+    && input.indexes.every((index) => Number.isInteger(index) && index >= 0 && index < 3)
+}
+
+function describeAppearanceDescriptor(descriptor: CharacterAppearanceDescriptor): string {
+  return [
+    `faceShape: ${descriptor.faceShape}`,
+    `boneStructure: ${descriptor.boneStructure}`,
+    `eyes: ${descriptor.eyes}`,
+    `nose: ${descriptor.nose}`,
+    `lips: ${descriptor.lips}`,
+    `skinTexture: ${descriptor.skinTexture}`,
+    `hairstyle: ${descriptor.hairstyle}`,
+    `bodyType: ${descriptor.bodyType}`,
+    `posture: ${descriptor.posture}`,
+    `wardrobe: ${descriptor.wardrobe}`,
+    `visualKeywords: ${descriptor.visualKeywords.join('；')}`,
+  ].join('\n')
+}
+
+function buildCastingPlanDescription(
+  plan: CharacterCastingCandidatePlan,
+  locale: string | null | undefined,
+): string {
+  if (isEnglishLocale(locale)) {
+    return [
+      `Casting direction ${plan.id}: ${plan.directionName}`,
+      `Interpretation logic: ${plan.interpretationLogic}`,
+      `Face family: ${plan.faceFamily}`,
+      `Body direction: ${plan.bodyType}`,
+      `Emotional temperature: ${plan.emotionalTemperature}`,
+      `Screen presence: ${plan.screenPresence}`,
+      describeAppearanceDescriptor(plan.appearanceDescriptor),
+    ].join('\n')
+  }
+
+  return [
+    `选角方向 ${plan.id}: ${plan.directionName}`,
+    `解释逻辑：${plan.interpretationLogic}`,
+    `脸部家族：${plan.faceFamily}`,
+    `体型方向：${plan.bodyType}`,
+    `情绪温度：${plan.emotionalTemperature}`,
+    `银幕存在感：${plan.screenPresence}`,
+    describeAppearanceDescriptor(plan.appearanceDescriptor),
+  ].join('\n')
+}
+
+function buildCastingPlanMetadata(
+  plans: CharacterCastingPlanSet,
+  locale: string | null | undefined,
+): CharacterAppearanceCandidateMetadata[] {
+  return plans.map((plan) => {
+    const descriptor = plan.appearanceDescriptor
+    return {
+      description: buildCastingPlanDescription(plan, locale),
+      visualTraits: {
+        face: [
+          descriptor.faceShape,
+          descriptor.boneStructure,
+          descriptor.eyes,
+          descriptor.nose,
+          descriptor.lips,
+        ].join('；'),
+        hair: descriptor.hairstyle,
+        body: [descriptor.bodyType, descriptor.posture].join('；'),
+        costume: descriptor.wardrobe,
+        makeupAndAccessories: descriptor.visualKeywords.join('；'),
+        skin: descriptor.skinTexture,
+        visibleState: [plan.emotionalTemperature, plan.screenPresence].join('；'),
+        accessibility: '',
+        tattoosAndMarks: '',
+        scars: '',
+      },
+      castingNotes: {
+        score: null,
+        strengths: [
+          isEnglishLocale(locale)
+            ? `Character DNA stays fixed; direction ${plan.id} uses distinct face family / body type / screen presence.`
+            : `Character DNA 保持一致，方案 ${plan.id} 使用独立 face family / body type / screen presence。`,
+        ],
+        risks: [],
+        recommendation: plan.interpretationLogic,
+        fitTags: [
+          `direction:${plan.id}`,
+          `faceFamily:${plan.faceFamily}`,
+          `screenPresence:${plan.screenPresence}`,
+        ],
+      },
+      castingStills: [],
+    }
+  })
+}
+
+async function readScreenplayText(input: {
+  readonly db: CharacterImageDb
+  readonly projectId: string
+  readonly episodeId?: string | null
+}): Promise<string | null> {
+  const row = await input.db.projectEditScreenplay.findFirst({
+    where: {
+      projectId: input.projectId,
+      ...(input.episodeId ? { episodeId: input.episodeId } : {}),
+      status: 'ready',
+    },
+    orderBy: { updatedAt: 'desc' },
+    select: { screenplayText: true },
+  })
+  const text = row?.screenplayText?.trim()
+  return text || null
 }
 
 export async function handleCharacterImageTask(job: Job<TaskJobData>) {
@@ -116,6 +285,7 @@ export async function handleCharacterImageTask(job: Job<TaskJobData>) {
 
   const appearanceId = pickFirstString(job.data.targetId, payload.appearanceId)
   let appearance: CharacterAppearanceRecord | null = null
+  let characterName = ''
 
   if (appearanceId) {
     const appearanceWithCharacter = await db.characterAppearance.findUnique({
@@ -124,6 +294,7 @@ export async function handleCharacterImageTask(job: Job<TaskJobData>) {
     })
     if (appearanceWithCharacter) {
       appearance = appearanceWithCharacter
+      characterName = appearanceWithCharacter.character.name
     }
   }
 
@@ -134,6 +305,7 @@ export async function handleCharacterImageTask(job: Job<TaskJobData>) {
       include: { appearances: { orderBy: { appearanceIndex: 'asc' } } },
     })
     appearance = character?.appearances?.[0] || null
+    characterName = character?.name || characterName
   }
 
   if (!appearance) throw new Error('Character appearance not found')
@@ -182,14 +354,53 @@ export async function handleCharacterImageTask(job: Job<TaskJobData>) {
     ? [Number(singleIndex)]
     : Array.from({ length: count }, (_value, index) => index)
 
+  let castingPlanDocument: CharacterCastingPlanDocument | null = null
+  let castingPlans: CharacterCastingPlanSet | null = null
+  if (shouldUseCastingPlanForCharacterImages({
+    appearanceIndex: appearance.appearanceIndex,
+    indexes,
+  })) {
+    const analysisModel = models.analysisModel
+    if (!analysisModel) throw new Error('Analysis model not configured')
+    const screenplayText = await readScreenplayText({
+      db,
+      projectId,
+      episodeId: job.data.episodeId,
+    })
+    castingPlanDocument = await generateCharacterCastingPlanDocument({
+      userId,
+      projectId,
+      locale: job.data.locale,
+      analysisModel,
+      characterRequest: buildCharacterRequestForCastingPlan({
+        characterName: characterName || (isEnglishLocale(job.data.locale) ? 'Unnamed character' : '未命名角色'),
+        baseDescriptions,
+        screenplayText,
+        locale: job.data.locale,
+      }),
+      selectedVisualReferenceStyle,
+    })
+    castingPlans = castingPlanDocument.castingDirections
+  }
+
   const imageUrls = parseImageUrls(appearance.imageUrls, 'characterAppearance.imageUrls')
   const nextImageUrls = [...imageUrls]
 
   for (let i = 0; i < indexes.length; i++) {
     const index = indexes[i]
-    const raw = baseDescriptions[index] || baseDescriptions[0]
+    const castingPlan = castingPlans?.[index]
+    const raw = castingPlan?.imagePrompt || baseDescriptions[index] || baseDescriptions[0]
     const metadata = candidateMetadata[index] ?? candidateMetadata[0] ?? null
-    const rawWithCastingStills = `${raw}${buildCastingStillPromptBlock(metadata, job.data.locale)}`
+    const rawWithCastingStills = castingPlan
+      ? [
+          raw,
+          '',
+          job.data.locale === 'en'
+            ? 'This prompt was produced by the Character DNA -> Casting Directions -> Appearance Descriptors -> Image Prompts -> Diversity Judge pipeline.'
+            : '该提示词来自 Character DNA -> Casting Directions -> Appearance Descriptors -> Image Prompts -> Diversity Judge 流程。',
+          buildCastingPlanDescription(castingPlan, job.data.locale),
+        ].join('\n')
+      : `${raw}${buildCastingStillPromptBlock(metadata, job.data.locale)}`
     const promptBase = addCharacterPromptSuffix(rawWithCastingStills)
     const prompt = appendSelectedVisualReferenceStylePromptBlock({
       prompt: promptBase,
@@ -240,6 +451,14 @@ export async function handleCharacterImageTask(job: Job<TaskJobData>) {
     data: {
       imageUrls: encodeImageUrls(nextImageUrls),
       imageUrl: mainImage || null,
+      ...(castingPlans
+        ? {
+            description: buildCastingPlanDescription(castingPlans[selectedIndex ?? 0] ?? castingPlans[0], job.data.locale),
+            descriptions: JSON.stringify(castingPlans.map((plan) => buildCastingPlanDescription(plan, job.data.locale))),
+            descriptionMetadata: stringifyAppearanceCandidateMetadata(buildCastingPlanMetadata(castingPlans, job.data.locale)),
+            changeReason: isEnglishLocale(job.data.locale) ? 'Casting look' : '选角定妆',
+          }
+        : {}),
     },
   })
 
@@ -247,5 +466,6 @@ export async function handleCharacterImageTask(job: Job<TaskJobData>) {
     appearanceId: appearance.id,
     imageCount: nextImageUrls.filter(Boolean).length,
     imageUrl: mainImage || null,
+    ...(castingPlanDocument ? { castingPlan: castingPlanDocument } : {}),
   }
 }

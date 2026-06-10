@@ -5,7 +5,10 @@ import { TASK_TYPE, type TaskJobData } from '@/lib/task/types'
 
 const utilsMock = vi.hoisted(() => ({
   assertTaskActive: vi.fn(async () => undefined),
-  getProjectModels: vi.fn(async () => ({ characterModel: 'image-model-1' })),
+  getProjectModels: vi.fn(async () => ({
+    characterModel: 'image-model-1',
+    analysisModel: 'analysis-model-1',
+  })),
   toSignedUrlIfCos: vi.fn((url: string | null | undefined) => (url ? `https://signed.example/${url}` : null)),
 }))
 
@@ -43,10 +46,15 @@ const sharedMock = vi.hoisted(() => ({
   }) => Promise<string>>(async () => 'cos/character-generated-0.png'),
 }))
 
+const castingPlanMock = vi.hoisted(() => ({
+  generateCharacterCastingPlanDocument: vi.fn(async () => buildCastingPlanDocument()),
+}))
+
 vi.mock('@/lib/workers/utils', () => utilsMock)
 vi.mock('@/lib/media/outbound-image', () => outboundMock)
 vi.mock('@/lib/prisma', () => ({ prisma: prismaMock }))
 vi.mock('@/lib/workers/shared', () => ({ reportTaskProgress: vi.fn(async () => undefined) }))
+vi.mock('@/lib/character-casting/casting-plan', () => castingPlanMock)
 vi.mock('@/lib/workers/handlers/image-task-handler-shared', async () => {
   const actual = await vi.importActual<typeof import('@/lib/workers/handlers/image-task-handler-shared')>(
     '@/lib/workers/handlers/image-task-handler-shared',
@@ -79,6 +87,104 @@ function buildJob(
   } as unknown as Job<TaskJobData>
 }
 
+function buildCastingPlanDocument() {
+  return {
+    characterDNA: {
+      ageRange: '五十到六十岁',
+      gender: '男性',
+      ethnicityRegion: '中国北方旧城',
+      socialClass: '底层小市民',
+      occupation: '无稳定职业',
+      temperament: '怯懦又虚张声势',
+      coreWound: '长期贫困和无后的羞耻',
+      desireNeed: '想被承认还能留下后代',
+      narrativeFunction: '推动求子荒诞事件',
+      bodyEnergy: '被生活压弯又硬撑体面',
+      styleCompatibility: '定格动画旧巷质感',
+    },
+    castingDirections: [
+      {
+        id: 'A',
+        candidateIndex: 0,
+        directionName: 'A 生活真实路线',
+        interpretationLogic: '普通旧城老光棍，把荒诞藏在低存在感里。',
+        faceFamily: '圆短松软脸',
+        bodyType: '矮瘦塌肩',
+        emotionalTemperature: '怯懦迟疑',
+        screenPresence: '低存在感但可信',
+        appearanceDescriptor: {
+          faceShape: '圆短脸',
+          boneStructure: '低颧骨圆下颌',
+          eyes: '眼距宽且闪躲',
+          nose: '短鼻梁圆鼻头',
+          lips: '薄唇下垂',
+          skinTexture: '蜡黄粗糙',
+          hairstyle: '稀疏地中海',
+          bodyType: '矮瘦塌肩',
+          posture: '背微驼手贴身',
+          wardrobe: '洗旧灰夹克',
+          visualKeywords: ['生活真实', '低存在感'],
+        },
+        imagePrompt: 'This is casting alternative A for the same character. same character DNA, different actor-like interpretation. Round short face, low cheekbones, evasive eyes, worn gray jacket.',
+      },
+      {
+        id: 'B',
+        candidateIndex: 1,
+        directionName: 'B 暴富荒诞路线',
+        interpretationLogic: '突然有钱后用夸张体面掩盖自卑。',
+        faceFamily: '宽短虚胖脸',
+        bodyType: '矮壮虚胖',
+        emotionalTemperature: '燥热虚张',
+        screenPresence: '滑稽又刺眼',
+        appearanceDescriptor: {
+          faceShape: '宽短脸',
+          boneStructure: '宽颧骨厚下颌',
+          eyes: '小眼睛外凸',
+          nose: '塌鼻梁宽鼻翼',
+          lips: '厚唇僵笑',
+          skinTexture: '油亮粗糙',
+          hairstyle: '中央圆秃',
+          bodyType: '矮壮虚胖',
+          posture: '挺胸叉腰',
+          wardrobe: '红衬衫粗金链',
+          visualKeywords: ['暴富荒诞', '粗金链'],
+        },
+        imagePrompt: 'This is casting alternative B for the same character. same character DNA, different actor-like interpretation. Wide short face, broad cheekbones, short thick body, red shirt and gold chain.',
+      },
+      {
+        id: 'C',
+        candidateIndex: 2,
+        directionName: 'C 悲凉尖瘦路线',
+        interpretationLogic: '把求子的孤独和老去的紧绷推到脸上。',
+        faceFamily: '尖瘦高颧脸',
+        bodyType: '高瘦干硬',
+        emotionalTemperature: '冷、悲凉、紧绷',
+        screenPresence: '刺痛和孤独感强',
+        appearanceDescriptor: {
+          faceShape: '窄长尖脸',
+          boneStructure: '高颧骨尖下巴',
+          eyes: '深陷细长眼',
+          nose: '鹰钩感高鼻梁',
+          lips: '干薄紧抿',
+          skinTexture: '灰黄干裂',
+          hairstyle: '油亮后梳稀发',
+          bodyType: '高瘦干硬',
+          posture: '脖子前探手攥紧',
+          wardrobe: '旧黑外套红内衫',
+          visualKeywords: ['悲凉', '尖瘦', '紧绷'],
+        },
+        imagePrompt: 'This is casting alternative C for the same character. same character DNA, different actor-like interpretation. Long narrow face, high cheekbones, hooked nose, tense thin body, melancholic presence.',
+      },
+    ],
+    diversityCheck: {
+      AB: '圆短低颧 vs 宽短厚颌，体型和 presence 不同。',
+      AC: '圆短松软 vs 尖瘦高颧，五官和姿态不同。',
+      BC: '宽短虚胖 vs 窄长高瘦，screen presence 不同。',
+      passed: true,
+    },
+  }
+}
+
 describe('worker character-image-task-handler behavior', () => {
   beforeEach(() => {
     vi.clearAllMocks()
@@ -86,6 +192,10 @@ describe('worker character-image-task-handler behavior', () => {
     prismaMock.project.findUnique.mockResolvedValue({
       visualStylePresetSource: 'system',
       visualStylePresetId: 'realistic',
+    })
+    utilsMock.getProjectModels.mockResolvedValue({
+      characterModel: 'image-model-1',
+      analysisModel: 'analysis-model-1',
     })
     prismaMock.projectVisualReferenceCase.findFirst.mockResolvedValue({
       id: 'style-case-default',
@@ -116,11 +226,16 @@ describe('worker character-image-task-handler behavior', () => {
       selectedIndex: 1,
     })
     prismaMock.projectEditScript.findFirst.mockResolvedValue(null)
-    prismaMock.projectEditScreenplay.findFirst.mockResolvedValue(null)
+    prismaMock.projectEditScreenplay.findFirst.mockResolvedValue({
+      screenplayText: '角色表：老王，五十多岁穷困潦倒，一夜暴富重金求子。',
+    })
   })
 
   it('characterModel not configured -> explicit error', async () => {
-    utilsMock.getProjectModels.mockResolvedValueOnce({ characterModel: '' })
+    utilsMock.getProjectModels.mockResolvedValueOnce({
+      characterModel: '',
+      analysisModel: 'analysis-model-1',
+    })
     await expect(handleCharacterImageTask(buildJob({}))).rejects.toThrow('Character model not configured')
   })
 
@@ -236,7 +351,7 @@ describe('worker character-image-task-handler behavior', () => {
     prismaMock.characterAppearance.findUnique.mockResolvedValueOnce({
       id: 'appearance-2',
       characterId: 'character-1',
-      appearanceIndex: 0,
+      appearanceIndex: 1,
       descriptions: JSON.stringify(['高挑女性调查员，黑色机能外套，黑色战术靴']),
       descriptionMetadata: JSON.stringify([
         {
@@ -357,6 +472,104 @@ describe('worker character-image-task-handler behavior', () => {
         ]),
         imageUrl: 'cos/character-generated-0.png',
       },
+    })
+  })
+
+  it('primary three-candidate generation uses Character DNA casting plan before image prompts', async () => {
+    outboundMock.normalizeOptionalReferenceImagesForGeneration.mockResolvedValueOnce(['normalized-style-ref'])
+    prismaMock.characterAppearance.findUnique.mockResolvedValueOnce({
+      id: 'appearance-1',
+      characterId: 'character-1',
+      appearanceIndex: 0,
+      descriptions: JSON.stringify(['老王：五十多岁穷困潦倒的老光棍，一夜暴富后拼命装体面']),
+      descriptionMetadata: null,
+      description: '老王：五十多岁穷困潦倒的老光棍，一夜暴富后拼命装体面',
+      imageUrls: JSON.stringify([]),
+      selectedIndex: 0,
+      imageUrl: null,
+      changeReason: '选角定妆',
+      character: { name: '老王' },
+    })
+    sharedMock.generateCleanImageToStorage
+      .mockResolvedValueOnce('cos/laowang-a.png')
+      .mockResolvedValueOnce('cos/laowang-b.png')
+      .mockResolvedValueOnce('cos/laowang-c.png')
+
+    const result = await handleCharacterImageTask(buildJob({ count: 3 }, 'appearance-1', 'episode-1'))
+
+    expect(castingPlanMock.generateCharacterCastingPlanDocument).toHaveBeenCalledWith(expect.objectContaining({
+      userId: 'user-1',
+      projectId: 'project-1',
+      locale: 'zh',
+      analysisModel: 'analysis-model-1',
+      characterRequest: expect.stringContaining('角色名：老王'),
+    }))
+    const castingPlanCalls = castingPlanMock.generateCharacterCastingPlanDocument.mock.calls as unknown as Array<[
+      { readonly characterRequest: string },
+    ]>
+    const castingPlanCall = castingPlanCalls[0]?.[0]
+    if (!castingPlanCall) throw new Error('Expected casting plan generation call')
+    expect(castingPlanCall.characterRequest).toContain('剧本文本')
+    expect(sharedMock.generateCleanImageToStorage).toHaveBeenCalledTimes(3)
+    expect(sharedMock.generateCleanImageToStorage.mock.calls[0]?.[0].prompt).toContain('This is casting alternative A for the same character.')
+    expect(sharedMock.generateCleanImageToStorage.mock.calls[1]?.[0].prompt).toContain('This is casting alternative B for the same character.')
+    expect(sharedMock.generateCleanImageToStorage.mock.calls[2]?.[0].prompt).toContain('This is casting alternative C for the same character.')
+    expect(sharedMock.generateCleanImageToStorage.mock.calls[0]?.[0].prompt).toContain('Character DNA -> Casting Directions -> Appearance Descriptors -> Image Prompts -> Diversity Judge')
+    expect(sharedMock.generateCleanImageToStorage.mock.calls[1]?.[0].prompt).toContain('宽短脸')
+    expect(sharedMock.generateCleanImageToStorage.mock.calls[2]?.[0].prompt).toContain('尖瘦高颧脸')
+    expect(prismaMock.characterAppearance.update).toHaveBeenCalledWith({
+      where: { id: 'appearance-1' },
+      data: expect.objectContaining({
+        imageUrls: JSON.stringify(['cos/laowang-a.png', 'cos/laowang-b.png', 'cos/laowang-c.png']),
+        imageUrl: 'cos/laowang-a.png',
+        descriptions: expect.stringContaining('选角方向 A'),
+        descriptionMetadata: expect.stringContaining('faceFamily:圆短松软脸'),
+        changeReason: '选角定妆',
+      }),
+    })
+    expect(result).toEqual(expect.objectContaining({
+      appearanceId: 'appearance-1',
+      imageCount: 3,
+      imageUrl: 'cos/laowang-a.png',
+      castingPlan: expect.objectContaining({
+        characterDNA: expect.objectContaining({ ageRange: '五十到六十岁' }),
+        diversityCheck: expect.objectContaining({ passed: true }),
+      }),
+    }))
+  })
+
+  it('primary single-candidate regeneration still plans three casting directions first', async () => {
+    prismaMock.characterAppearance.findUnique.mockResolvedValueOnce({
+      id: 'appearance-1',
+      characterId: 'character-1',
+      appearanceIndex: 0,
+      descriptions: JSON.stringify([
+        '老王：五十多岁穷困潦倒的老光棍，一夜暴富后拼命装体面',
+      ]),
+      descriptionMetadata: null,
+      description: '老王：五十多岁穷困潦倒的老光棍，一夜暴富后拼命装体面',
+      imageUrls: JSON.stringify([]),
+      selectedIndex: 0,
+      imageUrl: null,
+      changeReason: '初始形象',
+      character: { name: '老王' },
+    })
+    sharedMock.generateCleanImageToStorage.mockResolvedValueOnce('cos/laowang-c.png')
+
+    await handleCharacterImageTask(buildJob({ imageIndex: 2 }, 'appearance-1', 'episode-1'))
+
+    expect(castingPlanMock.generateCharacterCastingPlanDocument).toHaveBeenCalledTimes(1)
+    expect(sharedMock.generateCleanImageToStorage).toHaveBeenCalledTimes(1)
+    expect(sharedMock.generateCleanImageToStorage.mock.calls[0]?.[0].prompt).toContain('This is casting alternative C for the same character.')
+    expect(sharedMock.generateCleanImageToStorage.mock.calls[0]?.[0].prompt).toContain('尖瘦高颧脸')
+    expect(prismaMock.characterAppearance.update).toHaveBeenCalledWith({
+      where: { id: 'appearance-1' },
+      data: expect.objectContaining({
+        imageUrls: JSON.stringify(['', '', 'cos/laowang-c.png']),
+        imageUrl: 'cos/laowang-c.png',
+        descriptions: expect.stringContaining('选角方向 C'),
+        descriptionMetadata: expect.stringContaining('faceFamily:尖瘦高颧脸'),
+      }),
     })
   })
 })
