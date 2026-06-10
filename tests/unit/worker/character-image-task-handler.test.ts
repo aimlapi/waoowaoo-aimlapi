@@ -247,6 +247,7 @@ describe('worker character-image-task-handler behavior', () => {
       appearanceId: 'appearance-2',
       imageCount: 1,
       imageUrl: 'cos/character-generated-0.png',
+      finalImagePrompts: [expect.stringContaining('角色描述A')],
     })
 
     const generationInput = sharedMock.generateCleanImageToStorage.mock.calls[0]?.[0] as {
@@ -272,7 +273,7 @@ describe('worker character-image-task-handler behavior', () => {
     })
   })
 
-  it('primary appearance generation omits referenceImages option when no reference image exists', async () => {
+  it('primary appearance generation omits referenceImages option while using Character DNA casting prompt', async () => {
     outboundMock.normalizeOptionalReferenceImagesForGeneration.mockResolvedValueOnce([])
     prismaMock.characterAppearance.findUnique.mockResolvedValueOnce({
       id: 'appearance-1',
@@ -288,16 +289,24 @@ describe('worker character-image-task-handler behavior', () => {
       character: { name: 'Hero' },
     })
 
-    await handleCharacterImageTask(buildJob({ imageIndex: 0 }, 'appearance-1'))
+    const result = await handleCharacterImageTask(buildJob({ imageIndex: 0 }, 'appearance-1'))
 
     expect(prismaMock.characterAppearance.findFirst).not.toHaveBeenCalled()
     const generationInput = sharedMock.generateCleanImageToStorage.mock.calls[0]?.[0] as {
+      prompt: string
       options?: { referenceImages?: string[]; aspectRatio?: string }
     }
+    expect(generationInput.prompt).toContain('This is casting alternative A for the same character.')
     expect(generationInput.options).toEqual({
       aspectRatio: CHARACTER_ASSET_IMAGE_RATIO,
     })
     expect(Object.prototype.hasOwnProperty.call(generationInput.options || {}, 'referenceImages')).toBe(false)
+    expect(result).toEqual(expect.objectContaining({
+      finalImagePrompts: [expect.stringContaining('This is casting alternative A for the same character.')],
+      castingPlan: expect.objectContaining({
+        diversityCheck: expect.objectContaining({ passed: true }),
+      }),
+    }))
   })
 
   it('ignores legacy payload artStyle in prompt', async () => {
@@ -459,6 +468,13 @@ describe('worker character-image-task-handler behavior', () => {
       appearanceId: 'appearance-2',
       imageCount: 5,
       imageUrl: 'cos/character-generated-0.png',
+      finalImagePrompts: [
+        expect.stringContaining('角色描述A'),
+        expect.stringContaining('角色描述A'),
+        expect.stringContaining('角色描述A'),
+        expect.stringContaining('角色描述A'),
+        expect.stringContaining('角色描述A'),
+      ],
     })
     expect(prismaMock.characterAppearance.update).toHaveBeenCalledWith({
       where: { id: 'appearance-2' },
@@ -531,6 +547,11 @@ describe('worker character-image-task-handler behavior', () => {
       appearanceId: 'appearance-1',
       imageCount: 3,
       imageUrl: 'cos/laowang-a.png',
+      finalImagePrompts: [
+        expect.stringContaining('This is casting alternative A for the same character.'),
+        expect.stringContaining('This is casting alternative B for the same character.'),
+        expect.stringContaining('This is casting alternative C for the same character.'),
+      ],
       castingPlan: expect.objectContaining({
         characterDNA: expect.objectContaining({ ageRange: '五十到六十岁' }),
         diversityCheck: expect.objectContaining({ passed: true }),
@@ -571,5 +592,27 @@ describe('worker character-image-task-handler behavior', () => {
         descriptionMetadata: expect.stringContaining('faceFamily:尖瘦高颧脸'),
       }),
     })
+  })
+
+  it('primary appearance rejects indexes outside A/B/C instead of using legacy descriptions', async () => {
+    prismaMock.characterAppearance.findUnique.mockResolvedValueOnce({
+      id: 'appearance-1',
+      characterId: 'character-1',
+      appearanceIndex: 0,
+      descriptions: JSON.stringify(['旧方案A', '旧方案B', '旧方案C', '旧方案D']),
+      descriptionMetadata: null,
+      description: '旧方案A',
+      imageUrls: JSON.stringify([]),
+      selectedIndex: 0,
+      imageUrl: null,
+      changeReason: '初始形象',
+      character: { name: '老王' },
+    })
+
+    await expect(handleCharacterImageTask(buildJob({ count: 4 }, 'appearance-1', 'episode-1')))
+      .rejects
+      .toThrow('Primary character appearance generation only supports casting alternatives A/B/C through Character DNA flow')
+    expect(castingPlanMock.generateCharacterCastingPlanDocument).not.toHaveBeenCalled()
+    expect(sharedMock.generateCleanImageToStorage).not.toHaveBeenCalled()
   })
 })

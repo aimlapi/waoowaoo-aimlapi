@@ -167,6 +167,16 @@ function shouldUseCastingPlanForCharacterImages(input: {
     && input.indexes.every((index) => Number.isInteger(index) && index >= 0 && index < 3)
 }
 
+function assertPrimaryCastingPlanIndexes(input: {
+  readonly appearanceIndex: number
+  readonly indexes: readonly number[]
+}) {
+  if (input.appearanceIndex !== PRIMARY_APPEARANCE_INDEX) return
+  if (!shouldUseCastingPlanForCharacterImages(input)) {
+    throw new Error('Primary character appearance generation only supports casting alternatives A/B/C through Character DNA flow')
+  }
+}
+
 function describeAppearanceDescriptor(descriptor: CharacterAppearanceDescriptor): string {
   return [
     `faceShape: ${descriptor.faceShape}`,
@@ -354,6 +364,12 @@ export async function handleCharacterImageTask(job: Job<TaskJobData>) {
     ? [Number(singleIndex)]
     : Array.from({ length: count }, (_value, index) => index)
 
+  assertPrimaryCastingPlanIndexes({
+    appearanceIndex: appearance.appearanceIndex,
+    indexes,
+  })
+
+  const generatedPrompts: string[] = []
   let castingPlanDocument: CharacterCastingPlanDocument | null = null
   let castingPlans: CharacterCastingPlanSet | null = null
   if (shouldUseCastingPlanForCharacterImages({
@@ -389,7 +405,10 @@ export async function handleCharacterImageTask(job: Job<TaskJobData>) {
   for (let i = 0; i < indexes.length; i++) {
     const index = indexes[i]
     const castingPlan = castingPlans?.[index]
-    const raw = castingPlan?.imagePrompt || baseDescriptions[index] || baseDescriptions[0]
+    if (appearance.appearanceIndex === PRIMARY_APPEARANCE_INDEX && !castingPlan) {
+      throw new Error('Primary character appearance generation requires Character DNA casting plan prompt')
+    }
+    const raw = castingPlan?.imagePrompt ?? baseDescriptions[index] ?? baseDescriptions[0]
     const metadata = candidateMetadata[index] ?? candidateMetadata[0] ?? null
     const rawWithCastingStills = castingPlan
       ? [
@@ -407,6 +426,7 @@ export async function handleCharacterImageTask(job: Job<TaskJobData>) {
       style: selectedVisualReferenceStyle,
       locale: job.data.locale,
     })
+    generatedPrompts.push(prompt)
 
     await reportTaskProgress(job, 15 + Math.floor((i / Math.max(indexes.length, 1)) * 55), {
       stage: 'generate_character_image',
@@ -466,6 +486,7 @@ export async function handleCharacterImageTask(job: Job<TaskJobData>) {
     appearanceId: appearance.id,
     imageCount: nextImageUrls.filter(Boolean).length,
     imageUrl: mainImage || null,
+    finalImagePrompts: generatedPrompts,
     ...(castingPlanDocument ? { castingPlan: castingPlanDocument } : {}),
   }
 }
