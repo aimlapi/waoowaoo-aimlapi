@@ -83,5 +83,5 @@ Quality requirements:
 - Scene count must fit the target duration. Do not mechanically stretch.
 - Every hardChoices[i] must appear in hardChoiceSceneMap.
 - hardChoiceIndex starts at 1 and follows the Story Development hardChoices order.
-- beatNumbers are placeholders for the later Beat Engine. Each hard choice needs at least two beats.
+- beatNumbers are global numbering placeholders for the later Beat Engine. They start at 1 across the whole Beat Layer and keep increasing; do not reset inside each scene. Each hard choice needs at least two beats.
 - Do not write dialogue.

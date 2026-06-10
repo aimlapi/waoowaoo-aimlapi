@@ -23,6 +23,8 @@ Rules:
 - No large exposition blocks.
 - Beats must serve sceneGoal, obstacle, tactic, outcome, and valueShift.
 - Scenes mapped to Hard Choices must contain multiple beats that show the choice and cost.
+- beatNumber must start at 1 and increase continuously across the whole Beat Layer. Do not reset inside each scene.
+- If Scene Layer hardChoiceSceneMap reserves beatNumbers for a scene, use those global numbers to carry that choice and cost.
 
 Output JSON Schema:
 {
@@ -43,6 +45,7 @@ Output JSON Schema:
 
 Quality requirements:
 - Each scene needs at least 2 beats.
+- All beat numbers must be globally unique and continuous, for example scene 1 uses 1-3, scene 2 uses 4-6, scene 3 uses 7-9.
 - Beat action must be a performable action or concrete speech action.
 - reaction must change the other character state, scene pressure, or information field.
 - newSituation must create higher pressure or a narrower choice for the next step.

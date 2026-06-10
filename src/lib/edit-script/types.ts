@@ -345,15 +345,17 @@ export const beatLayerSceneSchema = z.object({
 export const beatLayerPackageSchema = z.object({
   beatLayer: z.array(beatLayerSceneSchema).min(1).max(24),
 }).superRefine((value, context) => {
+  let expectedBeatNumber = 1
   value.beatLayer.forEach((scene, sceneIndex) => {
     scene.beats.forEach((beat, beatIndex) => {
-      if (beat.beatNumber !== beatIndex + 1) {
+      if (beat.beatNumber !== expectedBeatNumber) {
         context.addIssue({
           code: z.ZodIssueCode.custom,
           path: ['beatLayer', sceneIndex, 'beats', beatIndex, 'beatNumber'],
-          message: 'Beat numbers must start at 1 inside each scene and increase by 1.',
+          message: 'Beat numbers must start at 1 and increase globally across the whole Beat Layer.',
         })
       }
+      expectedBeatNumber += 1
     })
   })
 })

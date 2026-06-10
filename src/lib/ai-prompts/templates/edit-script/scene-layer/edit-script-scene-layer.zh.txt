@@ -83,5 +83,5 @@ Value Swing Engine：
 - Scene 数量必须适配目标时长，不要机械拉长。
 - 每个 hardChoices[i] 都必须出现在 hardChoiceSceneMap 中。
 - hardChoiceIndex 从 1 开始，对应 Story Development hardChoices 的顺序。
-- beatNumbers 是给后续 Beat Engine 的占位承诺，每个 hard choice 至少 2 个 beat。
+- beatNumbers 是给后续 Beat Engine 的全局编号占位承诺，从整条 Beat Layer 的 1 开始连续递增，不要在每场戏内重置；每个 hard choice 至少 2 个 beat。
 - 不要写台词。

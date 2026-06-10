@@ -60,6 +60,7 @@ describe('edit script block-first prompt flow', () => {
     expect(sceneLayerPrompt).toContain('每场戏都必须发生价值变化')
     expect(sceneLayerPrompt).toContain('Value A VS Value B')
     expect(sceneLayerPrompt).toContain('每场戏必须尽量执行 locationTexture')
+    expect(sceneLayerPrompt).toContain('全局编号占位承诺')
     expect(sceneLayerPrompt).toContain('"sceneLayer"')
     expect(sceneLayerPrompt).toContain('"valueSwingLayer"')
 
@@ -78,6 +79,8 @@ describe('edit script block-first prompt flow', () => {
     expect(beatLayerPrompt).toContain('Beat Engine')
     expect(beatLayerPrompt).toContain('Action -> Reaction -> New Situation')
     expect(beatLayerPrompt).toContain('禁止连续解释')
+    expect(beatLayerPrompt).toContain('全局连续递增')
+    expect(beatLayerPrompt).toContain('第一场 1-3，第二场 4-6，第三场 7-9')
     expect(beatLayerPrompt).toContain('"beatLayer"')
 
     const dialogueLayerPrompt = buildAiPrompt({

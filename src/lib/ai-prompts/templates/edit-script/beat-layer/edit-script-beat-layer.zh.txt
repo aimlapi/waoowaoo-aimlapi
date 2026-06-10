@@ -23,6 +23,8 @@ Scene Layer：
 - 禁止大段 exposition。
 - Beat 必须服务 sceneGoal、obstacle、tactic、outcome、valueShift。
 - Hard Choice 映射到的 Scene 必须包含多个 Beat 来呈现选择与代价，不允许一笔带过。
+- beatNumber 必须从 1 开始，在整条 Beat Layer 中全局连续递增；不要在每场戏内重置。
+- 如果 Scene Layer 的 hardChoiceSceneMap 为某场戏预留了 beatNumbers，必须使用这些全局编号承载对应的选择与代价。
 
 输出 JSON Schema：
 {
@@ -43,6 +45,7 @@ Scene Layer：
 
 质量要求：
 - 每场至少 2 个 Beat。
+- 所有 Beat 编号必须全局唯一且连续，例如第一场 1-3，第二场 4-6，第三场 7-9。
 - Beat action 必须是可表演的动作或明确话语行为。
 - reaction 必须改变对方状态、场景压力或信息格局。
 - newSituation 必须给下一步带来更高压力或更窄选择。

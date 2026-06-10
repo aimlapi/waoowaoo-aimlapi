@@ -82,7 +82,7 @@ import {
   readProjectEditScreenplay,
   readProjectEditScript,
 } from '@/lib/edit-script/service'
-import { storyDevelopmentPackageSchema } from '@/lib/edit-script/types'
+import { beatLayerPackageSchema, storyDevelopmentPackageSchema } from '@/lib/edit-script/types'
 import { AI_PROMPT_IDS } from '@/lib/ai-prompts'
 
 function createRequest(): NextRequest {
@@ -412,13 +412,13 @@ const mockSceneLayer = {
     {
       hardChoiceIndex: 2,
       sceneNumber: 2,
-      beatNumbers: [1, 2],
+      beatNumbers: [3, 4],
       explicitCost: '他伤透李桂香并丢掉暴富后的面子',
     },
     {
       hardChoiceIndex: 3,
       sceneNumber: 3,
-      beatNumbers: [1, 2],
+      beatNumbers: [5, 6],
       explicitCost: '他失去最省事的体面证明',
     },
   ],
@@ -447,13 +447,13 @@ const mockBeatLayer = {
       sceneNumber: 2,
       beats: [
         {
-          beatNumber: 1,
+          beatNumber: 3,
           action: '刘满仓追问李桂香能不能生',
           reaction: '李桂香反问他要人还是要肚子',
           newSituation: '不能生育的真相逼近',
         },
         {
-          beatNumber: 2,
+          beatNumber: 4,
           action: '刘满仓失控把婚宴脸面压到她身上',
           reaction: '李桂香决定离开',
           newSituation: '婚事当众破裂',
@@ -464,13 +464,13 @@ const mockBeatLayer = {
       sceneNumber: 3,
       beats: [
         {
-          beatNumber: 1,
+          beatNumber: 5,
           action: '刘满仓看见早生贵子的喜联',
           reaction: '村里人催他给个说法',
           newSituation: '他必须选体面还是承认伤害',
         },
         {
-          beatNumber: 2,
+          beatNumber: 6,
           action: '刘满仓撕下喜联并让李桂香先走',
           reaction: '李桂香停住脚步但没有原谅',
           newSituation: '关系留下不确定入口',
@@ -486,7 +486,7 @@ const mockDialogueLayer = {
       sceneNumber: 2,
       dialogueBeats: [
         {
-          beatNumber: 1,
+          beatNumber: 3,
           speakerName: '刘满仓',
           characterWant: '刘满仓想确认求子目标不会落空',
           tactic: '用婚宴和村里眼光包装质问',
@@ -505,7 +505,7 @@ const mockDialogueLayer = {
       sceneNumber: 3,
       dialogueBeats: [
         {
-          beatNumber: 2,
+          beatNumber: 6,
           speakerName: '刘满仓',
           characterWant: '刘满仓想停止用求子证明体面',
           tactic: '不求原谅，只承认自己的软弱',
@@ -541,6 +541,38 @@ const mockSceneLayerDevelopmentDraft = {
   valueSwingLayer: mockSceneLayer.valueSwingLayer,
   hardChoiceSceneMap: mockSceneLayer.hardChoiceSceneMap,
 }
+
+describe('beat layer package schema', () => {
+  it('accepts globally increasing beat numbers across scenes', () => {
+    const result = beatLayerPackageSchema.safeParse(mockBeatLayer)
+
+    expect(result.success).toBe(true)
+  })
+
+  it('rejects beat numbers that reset inside each scene', () => {
+    const result = beatLayerPackageSchema.safeParse({
+      beatLayer: [
+        {
+          sceneNumber: 1,
+          beats: [
+            { beatNumber: 1, action: '行动一', reaction: '反应一', newSituation: '局面一' },
+            { beatNumber: 2, action: '行动二', reaction: '反应二', newSituation: '局面二' },
+          ],
+        },
+        {
+          sceneNumber: 2,
+          beats: [
+            { beatNumber: 1, action: '行动三', reaction: '反应三', newSituation: '局面三' },
+            { beatNumber: 2, action: '行动四', reaction: '反应四', newSituation: '局面四' },
+          ],
+        },
+      ],
+    })
+
+    expect(result.success).toBe(false)
+    expect(result.error?.issues[0]?.message).toBe('Beat numbers must start at 1 and increase globally across the whole Beat Layer.')
+  })
+})
 
 function mockSuccessfulAiSteps() {
   aiExecMock.executeAiTextStep
