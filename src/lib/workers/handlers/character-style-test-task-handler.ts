@@ -8,8 +8,9 @@ import { stringifyAppearanceCandidateMetadata } from '@/types/character-casting'
 import { evaluateCharacterCastingCandidates } from '@/lib/character-casting/evaluator'
 import type { CharacterCastingEvaluationResult } from '@/lib/character-casting/evaluation'
 import {
-  generateCharacterCastingPlans,
+  generateCharacterCastingPlanDocument,
   type CharacterCastingCandidatePlan,
+  type CharacterCastingPlanDocument,
   type CharacterCastingPlanSet,
 } from '@/lib/character-casting/casting-plan'
 import { normalizeOptionalReferenceImagesForGeneration } from '@/lib/media/outbound-image'
@@ -62,17 +63,25 @@ function buildCandidateDescription(
   candidatePlan?: CharacterCastingCandidatePlan,
 ): string {
   if (candidatePlan) {
+    const descriptor = candidatePlan.appearanceDescriptor
     return [
-      `${characterRequest}；${candidatePlan.label}`,
-      `候选身份定位：这是同一剧本角色的第 ${candidateIndex + 1} 位不同演员脸候选，不得与其他候选共用同一张脸、同一头模或同一底模。`,
-      `选角前提：${candidatePlan.castingPremise}`,
-      `脸型与年龄感：${candidatePlan.faceAndAge}`,
-      `发型与轮廓：${candidatePlan.hairAndSilhouette}`,
-      `体型与姿态：${candidatePlan.bodyAndPosture}`,
-      `服装与材质：${candidatePlan.costumeAndMaterials}`,
-      `表演状态：${candidatePlan.performanceState}`,
-      `标志性细节：${candidatePlan.signatureDetails.join('；')}`,
-      `硬差异锁定：${candidatePlan.differenceLocks.join('；')}`,
+      `${characterRequest}；选角方向 ${candidatePlan.id}：${candidatePlan.directionName}`,
+      `候选身份定位：这是同一剧本角色的第 ${candidateIndex + 1} 个不同选角/定妆方向，必须是 same character DNA, different actor-like interpretation，不得与其他候选共用同一张脸、同一头模或同一底模。`,
+      `解释逻辑：${candidatePlan.interpretationLogic}`,
+      `脸部家族：${candidatePlan.faceFamily}`,
+      `体型方向：${candidatePlan.bodyType}`,
+      `情绪温度：${candidatePlan.emotionalTemperature}`,
+      `银幕存在感：${candidatePlan.screenPresence}`,
+      `脸型：${descriptor.faceShape}`,
+      `骨相：${descriptor.boneStructure}`,
+      `眼睛：${descriptor.eyes}`,
+      `鼻子：${descriptor.nose}`,
+      `嘴唇：${descriptor.lips}`,
+      `皮肤质感：${descriptor.skinTexture}`,
+      `发型：${descriptor.hairstyle}`,
+      `姿态：${descriptor.posture}`,
+      `服装：${descriptor.wardrobe}`,
+      `视觉关键词：${descriptor.visualKeywords.join('；')}`,
     ].join('\n')
   }
   const directions = [
@@ -95,13 +104,26 @@ function buildCandidateMetadata(
       castingPlans?.[candidate.candidateIndex],
     ),
     visualTraits: {
-      face: '',
-      hair: '',
-      body: '',
-      costume: '',
+      face: castingPlans?.[candidate.candidateIndex]
+        ? [
+            castingPlans[candidate.candidateIndex].appearanceDescriptor.faceShape,
+            castingPlans[candidate.candidateIndex].appearanceDescriptor.boneStructure,
+            castingPlans[candidate.candidateIndex].appearanceDescriptor.eyes,
+            castingPlans[candidate.candidateIndex].appearanceDescriptor.nose,
+            castingPlans[candidate.candidateIndex].appearanceDescriptor.lips,
+          ].join('；')
+        : '',
+      hair: castingPlans?.[candidate.candidateIndex]?.appearanceDescriptor.hairstyle ?? '',
+      body: castingPlans?.[candidate.candidateIndex]
+        ? [
+            castingPlans[candidate.candidateIndex].appearanceDescriptor.bodyType,
+            castingPlans[candidate.candidateIndex].appearanceDescriptor.posture,
+          ].join('；')
+        : '',
+      costume: castingPlans?.[candidate.candidateIndex]?.appearanceDescriptor.wardrobe ?? '',
       makeupAndAccessories: '',
-      skin: '',
-      visibleState: '',
+      skin: castingPlans?.[candidate.candidateIndex]?.appearanceDescriptor.skinTexture ?? '',
+      visibleState: castingPlans?.[candidate.candidateIndex]?.screenPresence ?? '',
       accessibility: '',
       tattoosAndMarks: '',
       scars: '',
@@ -209,11 +231,12 @@ export async function handleCharacterStyleTestTask(job: Job<TaskJobData>) {
     ...generationOptions,
   }
 
+  let castingPlanDocument: CharacterCastingPlanDocument | null = null
   let castingPlans: CharacterCastingPlanSet | null = null
   if (castingCandidateCount === 3) {
     if (!analysisModel) throw new Error('analysisModel is required')
     if (!selectedVisualReferenceStyle) throw new Error('SELECTED_VISUAL_REFERENCE_STYLE_REQUIRED')
-    castingPlans = await generateCharacterCastingPlans({
+    castingPlanDocument = await generateCharacterCastingPlanDocument({
       userId: job.data.userId,
       projectId: job.data.projectId,
       locale: job.data.locale,
@@ -221,6 +244,7 @@ export async function handleCharacterStyleTestTask(job: Job<TaskJobData>) {
       characterRequest,
       selectedVisualReferenceStyle,
     })
+    castingPlans = castingPlanDocument.castingDirections
   }
 
   const imageKeys: string[] = []
@@ -326,6 +350,7 @@ export async function handleCharacterStyleTestTask(job: Job<TaskJobData>) {
     imageKeys,
     prompt: prompts[0],
     prompts,
+    ...(castingPlanDocument ? { castingPlan: castingPlanDocument } : {}),
     ...(castingPlans ? { castingPlans } : {}),
     aspectRatio: CHARACTER_STYLE_TEST_ASPECT_RATIO,
     styleSummary,

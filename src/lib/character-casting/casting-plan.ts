@@ -3,21 +3,48 @@ import { executeAiTextStep } from '@/lib/ai-exec/engine'
 import { safeParseJsonObject } from '@/lib/json-repair'
 import type { SelectedVisualReferenceStyle } from '@/lib/visual-reference-cases/selected-style'
 
+export type CharacterCastingDirectionId = 'A' | 'B' | 'C'
 export type CharacterCastingPlanIndex = 0 | 1 | 2
 
+export type CharacterDNA = {
+  readonly ageRange: string
+  readonly gender: string
+  readonly ethnicityRegion: string
+  readonly socialClass: string
+  readonly occupation: string
+  readonly temperament: string
+  readonly coreWound: string
+  readonly desireNeed: string
+  readonly narrativeFunction: string
+  readonly bodyEnergy: string
+  readonly styleCompatibility: string
+}
+
+export type CharacterAppearanceDescriptor = {
+  readonly faceShape: string
+  readonly boneStructure: string
+  readonly eyes: string
+  readonly nose: string
+  readonly lips: string
+  readonly skinTexture: string
+  readonly hairstyle: string
+  readonly bodyType: string
+  readonly posture: string
+  readonly wardrobe: string
+  readonly visualKeywords: readonly string[]
+}
+
 export type CharacterCastingCandidatePlan = {
+  readonly id: CharacterCastingDirectionId
   readonly candidateIndex: CharacterCastingPlanIndex
-  readonly label: string
-  readonly castingPremise: string
-  readonly faceAndAge: string
-  readonly hairAndSilhouette: string
-  readonly bodyAndPosture: string
-  readonly costumeAndMaterials: string
-  readonly performanceState: string
-  readonly storyContext: string
-  readonly signatureDetails: readonly string[]
-  readonly differenceLocks: readonly string[]
-  readonly promptDirective: string
+  readonly directionName: string
+  readonly interpretationLogic: string
+  readonly faceFamily: string
+  readonly bodyType: string
+  readonly emotionalTemperature: string
+  readonly screenPresence: string
+  readonly appearanceDescriptor: CharacterAppearanceDescriptor
+  readonly imagePrompt: string
 }
 
 export type CharacterCastingPlanSet = readonly [
@@ -25,6 +52,19 @@ export type CharacterCastingPlanSet = readonly [
   CharacterCastingCandidatePlan,
   CharacterCastingCandidatePlan,
 ]
+
+export type CharacterCastingDiversityCheck = {
+  readonly AB: string
+  readonly AC: string
+  readonly BC: string
+  readonly passed: true
+}
+
+export type CharacterCastingPlanDocument = {
+  readonly characterDNA: CharacterDNA
+  readonly castingDirections: CharacterCastingPlanSet
+  readonly diversityCheck: CharacterCastingDiversityCheck
+}
 
 type CharacterCastingPlanInput = {
   readonly userId: string
@@ -35,16 +75,61 @@ type CharacterCastingPlanInput = {
   readonly selectedVisualReferenceStyle: SelectedVisualReferenceStyle
 }
 
-const PLAN_KEYS = [
-  'castingPremise',
-  'faceAndAge',
-  'hairAndSilhouette',
-  'bodyAndPosture',
-  'costumeAndMaterials',
-  'performanceState',
-  'storyContext',
-  'promptDirective',
-] as const
+const DNA_KEYS: readonly (keyof CharacterDNA)[] = [
+  'ageRange',
+  'gender',
+  'ethnicityRegion',
+  'socialClass',
+  'occupation',
+  'temperament',
+  'coreWound',
+  'desireNeed',
+  'narrativeFunction',
+  'bodyEnergy',
+  'styleCompatibility',
+]
+
+const APPEARANCE_DESCRIPTOR_KEYS: readonly (keyof CharacterAppearanceDescriptor)[] = [
+  'faceShape',
+  'boneStructure',
+  'eyes',
+  'nose',
+  'lips',
+  'skinTexture',
+  'hairstyle',
+  'bodyType',
+  'posture',
+  'wardrobe',
+  'visualKeywords',
+]
+
+const DIRECTION_KEYS: readonly (keyof Omit<CharacterCastingCandidatePlan, 'candidateIndex'>)[] = [
+  'id',
+  'directionName',
+  'interpretationLogic',
+  'faceFamily',
+  'bodyType',
+  'emotionalTemperature',
+  'screenPresence',
+  'appearanceDescriptor',
+  'imagePrompt',
+]
+
+const DIVERSITY_KEYS: readonly (keyof CharacterCastingDiversityCheck)[] = ['AB', 'AC', 'BC', 'passed']
+
+const FORBIDDEN_DNA_KEYS = new Set([
+  'face',
+  'faceShape',
+  'boneStructure',
+  'eyes',
+  'eye',
+  'nose',
+  'lips',
+  'mouth',
+  'skinTexture',
+  'hairstyle',
+  'hair',
+])
 
 function isRecord(value: unknown): value is Record<string, unknown> {
   return !!value && typeof value === 'object' && !Array.isArray(value)
@@ -64,53 +149,183 @@ function readStringList(value: unknown, field: string): string[] {
   return value.map((item, index) => readString(item, `${field}.${index}`))
 }
 
-function readCandidateIndex(value: unknown, field: string): CharacterCastingPlanIndex {
-  if (value === 0 || value === 1 || value === 2) return value
+function assertOnlyKnownKeys(
+  value: Record<string, unknown>,
+  keys: readonly string[],
+  field: string,
+): void {
+  const allowed = new Set(keys)
+  for (const key of Object.keys(value)) {
+    if (!allowed.has(key)) {
+      throw new Error(`CHARACTER_CASTING_PLAN_INVALID:${field}.${key}`)
+    }
+  }
+}
+
+function normalizeTextForCompare(value: string): string {
+  return value
+    .toLocaleLowerCase()
+    .replace(/[\s,，。.;；:：/、|_-]+/g, '')
+    .trim()
+}
+
+function ensureDifferent(left: string, right: string, field: string): void {
+  if (normalizeTextForCompare(left) === normalizeTextForCompare(right)) {
+    throw new Error(`CHARACTER_CASTING_PLAN_INSUFFICIENT_DIVERSITY:${field}`)
+  }
+}
+
+function normalizeCharacterDNA(value: unknown): CharacterDNA {
+  if (!isRecord(value)) throw new Error('CHARACTER_CASTING_PLAN_INVALID:characterDNA')
+  assertOnlyKnownKeys(value, DNA_KEYS, 'characterDNA')
+  for (const key of Object.keys(value)) {
+    if (FORBIDDEN_DNA_KEYS.has(key)) {
+      throw new Error(`CHARACTER_CASTING_PLAN_INVALID:characterDNA.forbidden.${key}`)
+    }
+  }
+  return {
+    ageRange: readString(value.ageRange, 'characterDNA.ageRange'),
+    gender: readString(value.gender, 'characterDNA.gender'),
+    ethnicityRegion: readString(value.ethnicityRegion, 'characterDNA.ethnicityRegion'),
+    socialClass: readString(value.socialClass, 'characterDNA.socialClass'),
+    occupation: readString(value.occupation, 'characterDNA.occupation'),
+    temperament: readString(value.temperament, 'characterDNA.temperament'),
+    coreWound: readString(value.coreWound, 'characterDNA.coreWound'),
+    desireNeed: readString(value.desireNeed, 'characterDNA.desireNeed'),
+    narrativeFunction: readString(value.narrativeFunction, 'characterDNA.narrativeFunction'),
+    bodyEnergy: readString(value.bodyEnergy, 'characterDNA.bodyEnergy'),
+    styleCompatibility: readString(value.styleCompatibility, 'characterDNA.styleCompatibility'),
+  }
+}
+
+function normalizeAppearanceDescriptor(value: unknown, field: string): CharacterAppearanceDescriptor {
+  if (!isRecord(value)) throw new Error(`CHARACTER_CASTING_PLAN_INVALID:${field}`)
+  assertOnlyKnownKeys(value, APPEARANCE_DESCRIPTOR_KEYS, field)
+  return {
+    faceShape: readString(value.faceShape, `${field}.faceShape`),
+    boneStructure: readString(value.boneStructure, `${field}.boneStructure`),
+    eyes: readString(value.eyes, `${field}.eyes`),
+    nose: readString(value.nose, `${field}.nose`),
+    lips: readString(value.lips, `${field}.lips`),
+    skinTexture: readString(value.skinTexture, `${field}.skinTexture`),
+    hairstyle: readString(value.hairstyle, `${field}.hairstyle`),
+    bodyType: readString(value.bodyType, `${field}.bodyType`),
+    posture: readString(value.posture, `${field}.posture`),
+    wardrobe: readString(value.wardrobe, `${field}.wardrobe`),
+    visualKeywords: readStringList(value.visualKeywords, `${field}.visualKeywords`),
+  }
+}
+
+function readDirectionId(value: unknown, expected: CharacterCastingDirectionId, field: string): CharacterCastingDirectionId {
+  if (typeof value === 'string' && value === expected) return expected
   throw new Error(`CHARACTER_CASTING_PLAN_INVALID:${field}`)
 }
 
-function normalizeCandidatePlan(value: unknown, field: string): CharacterCastingCandidatePlan {
+function directionIndex(id: CharacterCastingDirectionId): CharacterCastingPlanIndex {
+  if (id === 'A') return 0
+  if (id === 'B') return 1
+  return 2
+}
+
+function normalizeCastingDirection(
+  value: unknown,
+  expectedId: CharacterCastingDirectionId,
+  field: string,
+): CharacterCastingCandidatePlan {
   if (!isRecord(value)) throw new Error(`CHARACTER_CASTING_PLAN_INVALID:${field}`)
-  for (const key of PLAN_KEYS) {
-    readString(value[key], `${field}.${key}`)
+  assertOnlyKnownKeys(value, DIRECTION_KEYS, field)
+  const id = readDirectionId(value.id, expectedId, `${field}.id`)
+  const imagePrompt = readString(value.imagePrompt, `${field}.imagePrompt`)
+  if (!imagePrompt.includes(`This is casting alternative ${id} for the same character.`)) {
+    throw new Error(`CHARACTER_CASTING_PLAN_INVALID:${field}.imagePrompt.alternativeLabel`)
+  }
+  if (!imagePrompt.toLocaleLowerCase().includes('same character dna, different actor-like interpretation')) {
+    throw new Error(`CHARACTER_CASTING_PLAN_INVALID:${field}.imagePrompt.characterDnaPhrase`)
   }
   return {
-    candidateIndex: readCandidateIndex(value.candidateIndex, `${field}.candidateIndex`),
-    label: readString(value.label, `${field}.label`),
-    castingPremise: readString(value.castingPremise, `${field}.castingPremise`),
-    faceAndAge: readString(value.faceAndAge, `${field}.faceAndAge`),
-    hairAndSilhouette: readString(value.hairAndSilhouette, `${field}.hairAndSilhouette`),
-    bodyAndPosture: readString(value.bodyAndPosture, `${field}.bodyAndPosture`),
-    costumeAndMaterials: readString(value.costumeAndMaterials, `${field}.costumeAndMaterials`),
-    performanceState: readString(value.performanceState, `${field}.performanceState`),
-    storyContext: readString(value.storyContext, `${field}.storyContext`),
-    signatureDetails: readStringList(value.signatureDetails, `${field}.signatureDetails`),
-    differenceLocks: readStringList(value.differenceLocks, `${field}.differenceLocks`),
-    promptDirective: readString(value.promptDirective, `${field}.promptDirective`),
+    id,
+    candidateIndex: directionIndex(id),
+    directionName: readString(value.directionName, `${field}.directionName`),
+    interpretationLogic: readString(value.interpretationLogic, `${field}.interpretationLogic`),
+    faceFamily: readString(value.faceFamily, `${field}.faceFamily`),
+    bodyType: readString(value.bodyType, `${field}.bodyType`),
+    emotionalTemperature: readString(value.emotionalTemperature, `${field}.emotionalTemperature`),
+    screenPresence: readString(value.screenPresence, `${field}.screenPresence`),
+    appearanceDescriptor: normalizeAppearanceDescriptor(value.appearanceDescriptor, `${field}.appearanceDescriptor`),
+    imagePrompt,
+  }
+}
+
+function normalizeDiversityCheck(value: unknown): CharacterCastingDiversityCheck {
+  if (!isRecord(value)) throw new Error('CHARACTER_CASTING_PLAN_INVALID:diversityCheck')
+  assertOnlyKnownKeys(value, DIVERSITY_KEYS, 'diversityCheck')
+  if (value.passed !== true) {
+    throw new Error('CHARACTER_CASTING_PLAN_INSUFFICIENT_DIVERSITY:diversityCheck.passed')
+  }
+  return {
+    AB: readString(value.AB, 'diversityCheck.AB'),
+    AC: readString(value.AC, 'diversityCheck.AC'),
+    BC: readString(value.BC, 'diversityCheck.BC'),
+    passed: true,
+  }
+}
+
+function assertDescriptorDiversity(
+  left: CharacterCastingCandidatePlan,
+  right: CharacterCastingCandidatePlan,
+): void {
+  const pair = `${left.id}${right.id}`
+  ensureDifferent(left.faceFamily, right.faceFamily, `${pair}.faceFamily`)
+  ensureDifferent(left.screenPresence, right.screenPresence, `${pair}.screenPresence`)
+  ensureDifferent(left.appearanceDescriptor.faceShape, right.appearanceDescriptor.faceShape, `${pair}.faceShape`)
+  ensureDifferent(left.appearanceDescriptor.boneStructure, right.appearanceDescriptor.boneStructure, `${pair}.boneStructure`)
+
+  const featureDifferences = [
+    normalizeTextForCompare(left.appearanceDescriptor.eyes) !== normalizeTextForCompare(right.appearanceDescriptor.eyes),
+    normalizeTextForCompare(left.appearanceDescriptor.nose) !== normalizeTextForCompare(right.appearanceDescriptor.nose),
+    normalizeTextForCompare(left.appearanceDescriptor.lips) !== normalizeTextForCompare(right.appearanceDescriptor.lips),
+  ].filter(Boolean).length
+  if (featureDifferences < 2) {
+    throw new Error(`CHARACTER_CASTING_PLAN_INSUFFICIENT_DIVERSITY:${pair}.eyesNoseLips`)
+  }
+
+  const hasBodyOrPostureDifference =
+    normalizeTextForCompare(left.appearanceDescriptor.bodyType) !== normalizeTextForCompare(right.appearanceDescriptor.bodyType)
+    || normalizeTextForCompare(left.appearanceDescriptor.posture) !== normalizeTextForCompare(right.appearanceDescriptor.posture)
+  if (!hasBodyOrPostureDifference) {
+    throw new Error(`CHARACTER_CASTING_PLAN_INSUFFICIENT_DIVERSITY:${pair}.bodyTypeOrPosture`)
+  }
+}
+
+function assertPlanDiversity(plans: CharacterCastingPlanSet): void {
+  assertDescriptorDiversity(plans[0], plans[1])
+  assertDescriptorDiversity(plans[0], plans[2])
+  assertDescriptorDiversity(plans[1], plans[2])
+}
+
+export function normalizeCharacterCastingPlanDocument(value: unknown): CharacterCastingPlanDocument {
+  if (!isRecord(value)) throw new Error('CHARACTER_CASTING_PLAN_INVALID:root')
+  assertOnlyKnownKeys(value, ['characterDNA', 'castingDirections', 'diversityCheck'], 'root')
+  const characterDNA = normalizeCharacterDNA(value.characterDNA)
+  const rawDirections = value.castingDirections
+  if (!Array.isArray(rawDirections) || rawDirections.length !== 3) {
+    throw new Error('CHARACTER_CASTING_PLAN_INVALID:castingDirections')
+  }
+  const directions: CharacterCastingPlanSet = [
+    normalizeCastingDirection(rawDirections[0], 'A', 'castingDirections.0'),
+    normalizeCastingDirection(rawDirections[1], 'B', 'castingDirections.1'),
+    normalizeCastingDirection(rawDirections[2], 'C', 'castingDirections.2'),
+  ]
+  assertPlanDiversity(directions)
+  return {
+    characterDNA,
+    castingDirections: directions,
+    diversityCheck: normalizeDiversityCheck(value.diversityCheck),
   }
 }
 
 export function normalizeCharacterCastingPlans(value: unknown): CharacterCastingPlanSet {
-  if (!isRecord(value)) throw new Error('CHARACTER_CASTING_PLAN_INVALID:root')
-  const rawCandidates = value.candidates
-  if (!Array.isArray(rawCandidates) || rawCandidates.length !== 3) {
-    throw new Error('CHARACTER_CASTING_PLAN_INVALID:candidates')
-  }
-  const candidates = rawCandidates.map((item, index) => normalizeCandidatePlan(item, `candidates.${index}`))
-  const byIndex = new Map<CharacterCastingPlanIndex, CharacterCastingCandidatePlan>()
-  for (const candidate of candidates) {
-    if (byIndex.has(candidate.candidateIndex)) {
-      throw new Error(`CHARACTER_CASTING_PLAN_INVALID:duplicateCandidateIndex.${candidate.candidateIndex}`)
-    }
-    byIndex.set(candidate.candidateIndex, candidate)
-  }
-  const first = byIndex.get(0)
-  const second = byIndex.get(1)
-  const third = byIndex.get(2)
-  if (!first || !second || !third) {
-    throw new Error('CHARACTER_CASTING_PLAN_INVALID:missingCandidateIndex')
-  }
-  return [first, second, third]
+  return normalizeCharacterCastingPlanDocument(value).castingDirections
 }
 
 function compactText(value: string, limit: number): string {
@@ -119,15 +334,22 @@ function compactText(value: string, limit: number): string {
   return `${normalized.slice(0, limit).trim()}...`
 }
 
-function buildPlanPrompt(input: CharacterCastingPlanInput): string {
+function buildPlanPrompt(input: CharacterCastingPlanInput, previousFailure?: string): string {
   const title = compactText(input.selectedVisualReferenceStyle.title, 80)
   const description = compactText(input.selectedVisualReferenceStyle.description, 240)
+  const retryBlock = previousFailure
+    ? [
+        '',
+        input.locale === 'en'
+          ? `Previous output failed validation and must be rewritten. Failure: ${previousFailure}`
+          : `上一次输出未通过校验，必须重写。失败原因：${previousFailure}`,
+      ].join('\n')
+    : ''
 
   if (input.locale === 'en') {
     return [
-      'Create three hard-differentiated actor casting plans for the same screenplay role before image generation.',
-      'Each plan represents a different actor face/head-mold candidate for the role, not the same actor restyled three times.',
-      'The plans are not final images. They are strict inputs for three later character look-test prompts.',
+      'Refactor the same screenplay-role casting process into a strict five-step JSON pipeline.',
+      'Important: do not directly generate three images from the script. First create Character DNA, then Casting Directions, then Appearance Descriptors, then Image Prompts, then Diversity Judge.',
       '',
       'Role request from the screenplay:',
       input.characterRequest,
@@ -136,26 +358,36 @@ function buildPlanPrompt(input: CharacterCastingPlanInput): string {
       `Title: ${title}`,
       `Description: ${description}`,
       '',
-      'Rules:',
-      '- Keep all plans within the same role and the selected visual reference medium.',
-      '- Do not copy the reference image composition, character positions, prop layout, or exact scene moment.',
-      '- Do not reuse scene-specific instructions from the reference-case prompt, including shared scene, character identity, character count, blocking, prop layout, or action moment.',
-      '- Do not introduce project style config, legacy style presets, or user-history style.',
-      '- Across A/B/C, the candidates must look like different people and different actors. They must not share the same face, head shape, facial proportions, or base model.',
-      '- The three plans must be visibly different casting options: different face length/width, cheekbones, jaw, nose bridge, eye spacing, eye shape, mouth shape, hair silhouette, body/posture, costume structure, performance state, and signature detail.',
-      '- Each plan must still obey the screenplay facts. Do not remove required role facts; vary how those facts are embodied by different faces, bodies, and performance temperaments.',
-      '- Write concrete visual decisions that an image model can execute. Avoid vague words like more realistic, more emotional, or more stylish unless followed by visible specifics.',
+      'Step 1. Character DNA Generator:',
+      'Generate the underlying role DNA from screenplay, role function, relationships, and story style. This layer must NOT describe concrete facial features.',
+      'characterDNA may only contain: ageRange, gender, ethnicityRegion, socialClass, occupation, temperament, coreWound, desireNeed, narrativeFunction, bodyEnergy, styleCompatibility.',
+      '',
+      'Step 2. Casting Space Planner:',
+      'Create exactly three mutually exclusive casting directions A/B/C. They must all fit the same DNA but have clearly different visual aura.',
+      'Do not vary only hair or clothes. Each direction must include a different faceFamily, bodyType, emotionalTemperature, and screenPresence.',
+      '',
+      'Step 3. Appearance Descriptor Generator:',
+      'For each direction, create a concrete appearanceDescriptor with faceShape, boneStructure, eyes, nose, lips, skinTexture, hairstyle, bodyType, posture, wardrobe, visualKeywords.',
+      'Keep fixed across all three: age range, social class, occupation credibility, core temperament, narrative function, and the selected visual-reference world style.',
+      '',
+      'Step 4. Image Prompt Builder:',
+      'Convert each appearanceDescriptor into an independent imagePrompt for one contact-sheet/look-test image.',
+      'Each imagePrompt must explicitly include the exact sentence: "This is casting alternative A/B/C for the same character." using the matching letter.',
+      'Each imagePrompt must also include the exact phrase: "same character DNA, different actor-like interpretation."',
+      '',
+      'Step 5. Diversity Judge:',
+      'Before returning, compare A/B, A/C, and B/C. If any two are insufficiently different, rewrite the weak direction before returning.',
+      'Passing criteria: different faceShape; different boneStructure; at least two of eyes/nose/lips differ; bodyType or posture differs; screenPresence differs; Character DNA does not drift.',
       '',
       'Return JSON only with this exact shape:',
-      '{"candidates":[{"candidateIndex":0,"label":"A grounded everyday option","castingPremise":"...","faceAndAge":"...","hairAndSilhouette":"...","bodyAndPosture":"...","costumeAndMaterials":"...","performanceState":"...","storyContext":"...","signatureDetails":["..."],"differenceLocks":["..."],"promptDirective":"..."}]}',
-      'candidates must contain exactly candidateIndex 0, 1, and 2.',
+      '{"characterDNA":{"ageRange":"","gender":"","ethnicityRegion":"","socialClass":"","occupation":"","temperament":"","coreWound":"","desireNeed":"","narrativeFunction":"","bodyEnergy":"","styleCompatibility":""},"castingDirections":[{"id":"A","directionName":"","interpretationLogic":"","faceFamily":"","bodyType":"","emotionalTemperature":"","screenPresence":"","appearanceDescriptor":{"faceShape":"","boneStructure":"","eyes":"","nose":"","lips":"","skinTexture":"","hairstyle":"","bodyType":"","posture":"","wardrobe":"","visualKeywords":[""]},"imagePrompt":""},{"id":"B","directionName":"","interpretationLogic":"","faceFamily":"","bodyType":"","emotionalTemperature":"","screenPresence":"","appearanceDescriptor":{"faceShape":"","boneStructure":"","eyes":"","nose":"","lips":"","skinTexture":"","hairstyle":"","bodyType":"","posture":"","wardrobe":"","visualKeywords":[""]},"imagePrompt":""},{"id":"C","directionName":"","interpretationLogic":"","faceFamily":"","bodyType":"","emotionalTemperature":"","screenPresence":"","appearanceDescriptor":{"faceShape":"","boneStructure":"","eyes":"","nose":"","lips":"","skinTexture":"","hairstyle":"","bodyType":"","posture":"","wardrobe":"","visualKeywords":[""]},"imagePrompt":""}],"diversityCheck":{"AB":"","AC":"","BC":"","passed":true}}',
+      retryBlock,
     ].join('\n')
   }
 
   return [
-    '请在生成图片前，先为同一个剧本角色设计三套“不同演员/不同脸”的硬差异选角定妆方案。',
-    '每套方案代表同一剧本角色的一位不同候选演员/不同头模，不是同一个演员换衣服、换表情或换妆。',
-    '这些方案不是最终图片，而是后续三张候选定妆图的强约束输入。',
+    '请把同一个剧本角色的选角定妆流程重构成严格的五步 JSON 管线。',
+    '重要：不要直接从剧本生成三张图。必须先生成 Character DNA，再生成 Casting Directions，再生成 Appearance Descriptors，再生成 Image Prompts，最后做 Diversity Judge。',
     '',
     '来自剧本的角色需求：',
     input.characterRequest,
@@ -164,41 +396,73 @@ function buildPlanPrompt(input: CharacterCastingPlanInput): string {
     `标题：${title}`,
     `描述：${description}`,
     '',
-    '规则：',
-    '- 三套方案必须仍然是同一个剧本角色，并保持已选视觉参考案例的媒介类别。',
-    '- 绝对不要复制视觉参考案例图的构图、人物站位、道具摆法或具体场景瞬间。',
-    '- 不要沿用案例提示词里的共享场景、角色身份、人物数量、人物站位、动作瞬间或道具布局；这些只属于案例图本身。',
-    '- 不要引入项目风格配置、旧项目风格、系统风格预设或用户历史偏好。',
-    '- A/B/C 必须达到陌生人/不同演员级别差异，不能像同一个人换衣服、换表情、换年龄滤镜或换发型；必须明显不是同一张脸、同一个头模或同一个底模。',
-    '- 三套方案必须像真正可比较的选角方案：脸长脸宽、颧骨、下颌、鼻梁、眼距、眼型、嘴型、头颅轮廓、发型轮廓、体型姿态、服装结构、表演状态、记忆点细节都要肉眼可区分。',
-    '- 必须遵守剧本事实，不能删掉角色必需特征；只能让这些事实由不同脸型、不同五官比例、不同体态和不同表演气质承载。',
-    '- 所有描述都要是图像模型能执行的可见决定。不要只写“更真实、更情绪化、更有风格”，必须写出具体脸、发、体态、衣服、细节。',
+    '1. Character DNA Generator：',
+    '根据剧本、角色功能、人物关系、故事风格生成底层角色信息。这一层禁止生成具体五官。',
+    'characterDNA 只能包含：ageRange、gender、ethnicityRegion、socialClass、occupation、temperament、coreWound、desireNeed、narrativeFunction、bodyEnergy、styleCompatibility。',
+    '',
+    '2. Casting Space Planner：',
+    '基于 Character DNA 生成 3 个互斥的 casting directions：A/B/C。三个方向都必须符合角色本质，但视觉气质明显不同。',
+    '不允许只做发型/衣服微调。每个 direction 必须有不同的 faceFamily、bodyType、emotionalTemperature、screenPresence。',
+    '',
+    '3. Appearance Descriptor Generator：',
+    '为每个 casting direction 生成具体 appearanceDescriptor，必须包含 faceShape、boneStructure、eyes、nose、lips、skinTexture、hairstyle、bodyType、posture、wardrobe、visualKeywords。',
+    '三组必须共同保持：年龄区间、社会阶层、职业可信度、人物核心气质、剧本功能、已选视觉参考案例的世界观风格。',
+    '',
+    '4. Image Prompt Builder：',
+    '把每组 appearanceDescriptor 转成独立的 imagePrompt，用于单张 contact sheet / look-test sheet 生图。',
+    '每个 imagePrompt 必须明确包含英文原句：This is casting alternative A/B/C for the same character. 其中字母必须匹配当前方案。',
+    '每个 imagePrompt 还必须包含英文原句：same character DNA, different actor-like interpretation.',
+    '',
+    '5. Diversity Judge：',
+    '返回前检查 A/B、A/C、B/C。如果任意两组之间差异不足，必须先重写薄弱方向再返回。',
+    '通过标准：faceShape 不同；boneStructure 不同；eyes / nose / lips 至少两项不同；bodyType 或 posture 至少一项不同；screenPresence 不同；Character DNA 不能漂移。',
     '',
     '只返回 JSON，结构必须完全如下：',
-    '{"candidates":[{"candidateIndex":0,"label":"A 生活真实路线","castingPremise":"...","faceAndAge":"...","hairAndSilhouette":"...","bodyAndPosture":"...","costumeAndMaterials":"...","performanceState":"...","storyContext":"...","signatureDetails":["..."],"differenceLocks":["..."],"promptDirective":"..."}]}',
-    'candidates 必须且只能包含 candidateIndex 0、1、2。',
+    '{"characterDNA":{"ageRange":"","gender":"","ethnicityRegion":"","socialClass":"","occupation":"","temperament":"","coreWound":"","desireNeed":"","narrativeFunction":"","bodyEnergy":"","styleCompatibility":""},"castingDirections":[{"id":"A","directionName":"","interpretationLogic":"","faceFamily":"","bodyType":"","emotionalTemperature":"","screenPresence":"","appearanceDescriptor":{"faceShape":"","boneStructure":"","eyes":"","nose":"","lips":"","skinTexture":"","hairstyle":"","bodyType":"","posture":"","wardrobe":"","visualKeywords":[""]},"imagePrompt":""},{"id":"B","directionName":"","interpretationLogic":"","faceFamily":"","bodyType":"","emotionalTemperature":"","screenPresence":"","appearanceDescriptor":{"faceShape":"","boneStructure":"","eyes":"","nose":"","lips":"","skinTexture":"","hairstyle":"","bodyType":"","posture":"","wardrobe":"","visualKeywords":[""]},"imagePrompt":""},{"id":"C","directionName":"","interpretationLogic":"","faceFamily":"","bodyType":"","emotionalTemperature":"","screenPresence":"","appearanceDescriptor":{"faceShape":"","boneStructure":"","eyes":"","nose":"","lips":"","skinTexture":"","hairstyle":"","bodyType":"","posture":"","wardrobe":"","visualKeywords":[""]},"imagePrompt":""}],"diversityCheck":{"AB":"","AC":"","BC":"","passed":true}}',
+    retryBlock,
   ].join('\n')
 }
 
-export async function generateCharacterCastingPlans(
+async function executePlanGeneration(
   input: CharacterCastingPlanInput,
-): Promise<CharacterCastingPlanSet> {
+  previousFailure?: string,
+): Promise<CharacterCastingPlanDocument> {
   const completion = await executeAiTextStep({
     userId: input.userId,
     model: input.analysisModel,
     projectId: input.projectId,
     action: 'character_casting_plan_generate',
-    messages: [{ role: 'user', content: buildPlanPrompt(input) }],
-    temperature: 0.4,
+    messages: [{ role: 'user', content: buildPlanPrompt(input, previousFailure) }],
+    temperature: 0.35,
     reasoning: false,
     meta: {
       stepId: 'character_casting_plan',
-      stepTitle: input.locale === 'en' ? 'Generate casting plans' : '生成选角候选方案',
+      stepTitle: input.locale === 'en' ? 'Generate casting DNA and alternatives' : '生成角色 DNA 与选角方向',
       stepIndex: 1,
       stepTotal: 1,
     },
   })
-  return normalizeCharacterCastingPlans(safeParseJsonObject(completion.text))
+  return normalizeCharacterCastingPlanDocument(safeParseJsonObject(completion.text))
+}
+
+export async function generateCharacterCastingPlanDocument(
+  input: CharacterCastingPlanInput,
+): Promise<CharacterCastingPlanDocument> {
+  try {
+    return await executePlanGeneration(input)
+  } catch (error) {
+    const message = error instanceof Error ? error.message : 'unknown validation error'
+    if (!message.startsWith('CHARACTER_CASTING_PLAN_INSUFFICIENT_DIVERSITY')) {
+      throw error
+    }
+    return executePlanGeneration(input, message)
+  }
+}
+
+export async function generateCharacterCastingPlans(
+  input: CharacterCastingPlanInput,
+): Promise<CharacterCastingPlanSet> {
+  return (await generateCharacterCastingPlanDocument(input)).castingDirections
 }
 
 function formatList(items: readonly string[]): string {
@@ -210,40 +474,53 @@ export function renderCharacterCastingPlanPromptBlock(input: {
   readonly locale: Locale
 }): string {
   const plan = input.plan
+  const descriptor = plan.appearanceDescriptor
   if (input.locale === 'en') {
     return [
-      `Hard casting plan for candidate ${plan.candidateIndex}: ${plan.label}`,
-      `Casting premise: ${plan.castingPremise}`,
-      `Face and age read: ${plan.faceAndAge}`,
-      `Hair and silhouette: ${plan.hairAndSilhouette}`,
-      `Body and posture: ${plan.bodyAndPosture}`,
-      `Costume and materials: ${plan.costumeAndMaterials}`,
-      `Performance state: ${plan.performanceState}`,
-      `Story context: ${plan.storyContext}`,
-      'Signature visible details:',
-      formatList(plan.signatureDetails),
-      'Difference locks against the other candidates:',
-      formatList(plan.differenceLocks),
-      `Candidate-specific image directive: ${plan.promptDirective}`,
-      'Across-candidate identity lock: this is a different actor face candidate for the same role, and must clearly not be the same person as the other candidates.',
-      'This candidate must follow this plan exactly; do not average it with other candidates.',
+      `Casting alternative ${plan.id}: ${plan.directionName}`,
+      `Interpretation logic: ${plan.interpretationLogic}`,
+      `Face family: ${plan.faceFamily}`,
+      `Body type: ${plan.bodyType}`,
+      `Emotional temperature: ${plan.emotionalTemperature}`,
+      `Screen presence: ${plan.screenPresence}`,
+      'Appearance descriptor:',
+      `- Face shape: ${descriptor.faceShape}`,
+      `- Bone structure: ${descriptor.boneStructure}`,
+      `- Eyes: ${descriptor.eyes}`,
+      `- Nose: ${descriptor.nose}`,
+      `- Lips: ${descriptor.lips}`,
+      `- Skin texture: ${descriptor.skinTexture}`,
+      `- Hairstyle: ${descriptor.hairstyle}`,
+      `- Body type: ${descriptor.bodyType}`,
+      `- Posture: ${descriptor.posture}`,
+      `- Wardrobe: ${descriptor.wardrobe}`,
+      'Visual keywords:',
+      formatList(descriptor.visualKeywords),
+      `Independent image prompt for this alternative: ${plan.imagePrompt}`,
+      'Same-character lock: preserve the shared Character DNA only; do not average this actor-like interpretation with alternatives A/B/C.',
     ].join('\n')
   }
   return [
-    `候选 ${plan.candidateIndex} 的硬差异选角方案：${plan.label}`,
-    `选角前提：${plan.castingPremise}`,
-    `脸型与年龄感：${plan.faceAndAge}`,
-    `发型与轮廓：${plan.hairAndSilhouette}`,
-    `体型与姿态：${plan.bodyAndPosture}`,
-    `服装与材质：${plan.costumeAndMaterials}`,
-    `表演状态：${plan.performanceState}`,
-    `故事语境：${plan.storyContext}`,
-    '标志性可见细节：',
-    formatList(plan.signatureDetails),
-    '与其他候选拉开的硬锁定差异：',
-    formatList(plan.differenceLocks),
-    `本候选图片专属指令：${plan.promptDirective}`,
-    '跨候选身份锁定：这是同一剧本角色的一位不同演员脸候选，必须明显不是其他候选那张脸。',
-    '本候选必须严格执行这套方案；不要把其他候选方案平均混合进来。',
+    `选角方向 ${plan.id}：${plan.directionName}`,
+    `解释逻辑：${plan.interpretationLogic}`,
+    `脸部家族：${plan.faceFamily}`,
+    `体型方向：${plan.bodyType}`,
+    `情绪温度：${plan.emotionalTemperature}`,
+    `银幕存在感：${plan.screenPresence}`,
+    '具体形象描述：',
+    `- faceShape：${descriptor.faceShape}`,
+    `- boneStructure：${descriptor.boneStructure}`,
+    `- eyes：${descriptor.eyes}`,
+    `- nose：${descriptor.nose}`,
+    `- lips：${descriptor.lips}`,
+    `- skinTexture：${descriptor.skinTexture}`,
+    `- hairstyle：${descriptor.hairstyle}`,
+    `- bodyType：${descriptor.bodyType}`,
+    `- posture：${descriptor.posture}`,
+    `- wardrobe：${descriptor.wardrobe}`,
+    '视觉关键词：',
+    formatList(descriptor.visualKeywords),
+    `本方向独立生图 prompt：${plan.imagePrompt}`,
+    '同角色锁定：只保持共用 Character DNA；不要把这个演员式诠释与 A/B/C 其他方案平均混合。',
   ].join('\n')
 }

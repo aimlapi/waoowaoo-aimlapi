@@ -140,14 +140,15 @@ function buildChineseCastingPhotoPrompt(
   candidateIndex?: number,
   candidatePlan?: CharacterCastingCandidatePlan,
 ): string {
-  const candidateBrief = buildChineseCastingCandidateBrief(candidateIndex)
+  const candidateBrief = candidatePlan ? '' : buildChineseCastingCandidateBrief(candidateIndex)
   return [
     '生成一张用于选角、试镜与人物定妆判断的 contact sheet / look-test sheet。',
     '媒介和画风必须由已选视觉参考案例决定：真人案例就保持真人向摄影定妆；动画、定格、插画、CG 或其他媒介案例就保持对应媒介的角色定妆包。不要自行指定真人、动画、CG、插画或任何旧风格预设。',
     `人物定妆需求（来自剧本和角色需求）：${characterRequest}`,
     candidateBrief,
     candidatePlan ? renderCharacterCastingPlanPromptBlock({ plan: candidatePlan, locale: 'zh' }) : '',
-    '跨候选身份硬约束：A/B/C 是同一剧本角色的三位不同候选演员/不同脸头模，不是同一个演员的三套造型。三张候选图之间必须明显不是同一个人，达到不同真人演员/不同人偶头模级别差别。',
+    '流程硬约束：这张图必须来自已生成的 Character DNA -> Casting Direction -> Appearance Descriptor -> Image Prompt 链路，不得绕过角色 DNA 直接从剧本临场生成。',
+    '跨候选身份硬约束：A/B/C 是同一剧本角色的三位不同选角/定妆方向，是 same character DNA, different actor-like interpretation，不是同一个演员的三套造型。三张候选图之间必须有明显不同的演员脸、骨相、体态和银幕存在感。',
     '候选差异硬约束：本次如果生成 3 组候选，三组之间必须像三个真实可选角色定妆方案，而不是同一个生成结果的复刻。A/B/C 的脸长脸宽、颧骨、下颌、鼻梁、眼距、眼型、嘴型、头颅轮廓、年龄质感、发型轮廓、体型姿态、服装结构、表演状态和记忆点必须能被肉眼区分。',
     '不要用同一个 seed、同一张脸、同一底模或同一套 facial identity；如果模型倾向复用面孔，优先牺牲服装小变化，也必须把脸骨和五官比例拉开。',
     '画面目标：像剧组用于选角、试镜、定妆和服装试装的候选资料，用来判断这个角色形象与这套妆造是否适合剧本。',
@@ -169,14 +170,15 @@ function buildEnglishCastingPhotoPrompt(
   candidateIndex?: number,
   candidatePlan?: CharacterCastingCandidatePlan,
 ): string {
-  const candidateBrief = buildEnglishCastingCandidateBrief(candidateIndex)
+  const candidateBrief = candidatePlan ? '' : buildEnglishCastingCandidateBrief(candidateIndex)
   return [
     'Generate one contact sheet / look-test sheet for casting, audition, and character look approval.',
     'The medium and rendering style must come from the selected visual reference case: keep live-action references live-action, and keep animation, stop-motion, illustration, CG, or any other selected medium in that same medium. Do not independently choose live-action, anime, CG, illustration, or any legacy style preset.',
     `Casting and look-test request from the screenplay and character requirements: ${characterRequest}`,
     candidateBrief,
     candidatePlan ? renderCharacterCastingPlanPromptBlock({ plan: candidatePlan, locale: 'en' }) : '',
-    'Across-candidate actor identity rule: A/B/C are three different actor-face/head-mold candidates for the same screenplay role, not three styling variants of the same actor. The three candidate images must clearly not be the same person.',
+    'Pipeline rule: this image must come from the generated Character DNA -> Casting Direction -> Appearance Descriptor -> Image Prompt chain. Do not bypass Character DNA and improvise directly from the script.',
+    'Across-candidate actor identity rule: A/B/C are three different casting and look-test directions for the same screenplay role: same character DNA, different actor-like interpretation. They are not three styling variants of the same actor. The three candidate images must clearly have different actor faces, bone structures, body energies, and screen presence.',
     'Candidate separation hard rule: when generating three candidates, they must read like three viable character look-test options, not replicas of the same generated result. A/B/C must be visibly distinguishable in face length/width, cheekbones, jaw, nose bridge, eye spacing, eye shape, mouth shape, skull silhouette, age texture, hair silhouette, body/posture, costume structure, performance state, and visual hook.',
     'Do not use the same seed, face, base model, or facial identity. If the model tends to reuse a face, prioritize changing facial bone structure and feature proportions even more than minor wardrobe variation.',
     'Goal: make it feel like production material for casting, audition, look approval, and costume fitting, used to judge whether this character image and styling fit the screenplay.',

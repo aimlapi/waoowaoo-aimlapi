@@ -37,7 +37,7 @@ describe('character style test prompt modes', () => {
     expect(prompt).toContain('只能出现当前这一个角色本人')
     expect(prompt).toContain('照片/镜子/屏幕里的人像或人形剪影')
     expect(prompt).toContain('跨候选身份硬约束')
-    expect(prompt).toContain('三位不同候选演员/不同脸头模')
+    expect(prompt).toContain('same character DNA, different actor-like interpretation')
     expect(prompt).toContain('候选差异硬约束')
     expect(prompt).toContain('不要用同一个 seed、同一张脸、同一底模')
     expect(prompt).toContain('姓名、电话、邮箱')
@@ -67,27 +67,37 @@ describe('character style test prompt modes', () => {
       promptMode: 'casting_photo',
       candidateIndex: 1,
       candidatePlan: {
+        id: 'B',
         candidateIndex: 1,
-        label: 'B 情绪裂痕路线',
-        castingPremise: '同一角色但更明显被生活压垮。',
-        faceAndAge: '长脸、深眼窝、眼眶泛红。',
-        hairAndSilhouette: '乱发贴额，鬓角灰白。',
-        bodyAndPosture: '脖子前探，手指攥紧。',
-        costumeAndMaterials: '松垮棉袄，皱旧内衫。',
-        performanceState: '强撑体面，快要崩溃。',
-        storyContext: '昏暗楼道。',
-        signatureDetails: ['攥紧手指', '泛红眼眶'],
-        differenceLocks: ['不能使用 A 的圆脸普通感', '不能使用 C 的油亮后梳头'],
-        promptDirective: '情绪压迫最强，脸和姿态必须不同。',
+        directionName: 'B 情绪裂痕路线',
+        interpretationLogic: '同一角色但更明显被生活压垮。',
+        faceFamily: '窄长脸、深眼窝、疲惫脆弱型演员脸',
+        bodyType: '高瘦前探',
+        emotionalTemperature: '湿冷、压抑、快要崩溃',
+        screenPresence: '脆弱而刺痛，先看到角色内伤',
+        appearanceDescriptor: {
+          faceShape: '长脸，下巴窄长',
+          boneStructure: '高颧骨，深眼窝，窄下颌',
+          eyes: '眼眶泛红，眼神湿润',
+          nose: '细长鼻梁，鼻翼窄',
+          lips: '干裂薄唇，嘴角下垂',
+          skinTexture: '灰黄干燥，眼下暗沉',
+          hairstyle: '乱发贴额，鬓角灰白',
+          bodyType: '高瘦单薄，脖子前探',
+          posture: '肩膀下沉，手指攥紧',
+          wardrobe: '松垮棉袄，皱旧内衫',
+          visualKeywords: ['攥紧手指', '泛红眼眶', '皱旧棉袄'],
+        },
+        imagePrompt: 'This is casting alternative B for the same character. same character DNA, different actor-like interpretation. Long face, deep eye sockets, red wet eyes, thin nose, dry lips, collapsed posture look-test contact sheet.',
       },
     })
 
-    expect(prompt).toContain('候选 1 的硬差异选角方案：B 情绪裂痕路线')
-    expect(prompt).toContain('脸型与年龄感：长脸、深眼窝、眼眶泛红。')
-    expect(prompt).toContain('与其他候选拉开的硬锁定差异')
-    expect(prompt).toContain('跨候选身份锁定')
+    expect(prompt).toContain('选角方向 B：B 情绪裂痕路线')
+    expect(prompt).toContain('faceShape：长脸，下巴窄长')
+    expect(prompt).toContain('本方向独立生图 prompt')
+    expect(prompt).toContain('same character DNA, different actor-like interpretation')
     expect(prompt).toContain('整张候选图只能出现当前这一个角色本人')
-    expect(prompt).toContain('本候选必须严格执行这套方案')
+    expect(prompt).toContain('不要把这个演员式诠释与 A/B/C 其他方案平均混合')
   })
 
   it('summarizes casting mode without reusing style asset wording', () => {

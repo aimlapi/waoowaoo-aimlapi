@@ -97,50 +97,96 @@ type CastingEvaluationCallInput = {
 
 function buildCastingPlanJson(): string {
   return JSON.stringify({
-    candidates: [
+    characterDNA: {
+      ageRange: '二十二到二十五岁',
+      gender: '女性',
+      ethnicityRegion: '当代中国城市职场',
+      socialClass: '普通工薪阶层，刚进入职场',
+      occupation: '公司实习生',
+      temperament: '温柔、克制、有边界感',
+      coreWound: '害怕在职场里被吞没，也害怕自己不够好',
+      desireNeed: '想被认可，同时保住自尊和距离',
+      narrativeFunction: '在职场压力中承载观众的共情入口',
+      bodyEnergy: '收着、谨慎、但内里有韧性',
+      styleCompatibility: '低饱和写实职场室内，冷白光和自然皮肤质感',
+    },
+    castingDirections: [
       {
-        candidateIndex: 0,
-        label: 'A 生活真实路线',
-        castingPremise: '普通清瘦实习生，像真实办公室里会遇到的人。',
-        faceAndAge: '圆脸偏幼，眼距略宽，皮肤自然，有轻微黑眼圈。',
-        hairAndSilhouette: '低马尾，碎发压在耳后，整体轮廓低调。',
-        bodyAndPosture: '肩窄，站姿收着，手臂贴近身体。',
-        costumeAndMaterials: '旧针织开衫、洗旧衬衫、帆布包，材质柔软起毛。',
-        performanceState: '克制礼貌，眼神闪避但不慌张。',
-        storyContext: '茶水间和工位旁的低干扰生活背景。',
-        signatureDetails: ['磨旧帆布包', '袖口起球', '素色发圈'],
-        differenceLocks: ['不能使用候选 B 的湿润眼神', '不能使用候选 C 的短发强轮廓'],
-        promptDirective: '生成最普通、最生活化的一版，重点是低调可信。',
+        id: 'A',
+        directionName: 'A 生活真实路线',
+        interpretationLogic: '把角色放在真实办公室会遇到的普通新人里。',
+        faceFamily: '圆脸偏幼、软轮廓、普通清瘦实习生脸',
+        bodyType: '肩窄清瘦',
+        emotionalTemperature: '温和、拘谨、礼貌',
+        screenPresence: '低调可信，像真实工位旁的人',
+        appearanceDescriptor: {
+          faceShape: '圆脸偏幼，下巴短圆',
+          boneStructure: '颧骨低平，下颌软，面部骨点不强',
+          eyes: '眼距略宽，眼神闪避但不慌张',
+          nose: '短鼻梁，小圆鼻头',
+          lips: '嘴唇薄，常抿着',
+          skinTexture: '自然皮肤，有轻微黑眼圈',
+          hairstyle: '低马尾，碎发压在耳后',
+          bodyType: '肩窄清瘦，手臂贴近身体',
+          posture: '站姿收着，重心略后',
+          wardrobe: '旧针织开衫、洗旧衬衫、帆布包',
+          visualKeywords: ['磨旧帆布包', '袖口起球', '素色发圈', '生活真实'],
+        },
+        imagePrompt: 'This is casting alternative A for the same character. same character DNA, different actor-like interpretation. Round young face, low cheekbones, wide-set evasive eyes, narrow shoulders, old cardigan, grounded office intern look-test contact sheet.',
       },
       {
-        candidateIndex: 1,
-        label: 'B 情绪裂痕路线',
-        castingPremise: '同一角色但更显内在压力，像刚经历职场打击。',
-        faceAndAge: '长脸，颧骨更明显，眼下泛红，嘴唇干。',
-        hairAndSilhouette: '半散低束发，额前碎发凌乱，轮廓更疲惫。',
-        bodyAndPosture: '肩膀下沉，脖子前探，双手攥紧。',
-        costumeAndMaterials: '宽松外套、皱衬衫、旧围巾，布料更松垮。',
-        performanceState: '强忍眼泪，防备但仍保持礼貌。',
-        storyContext: '楼梯间或公司后门，背景压迫但不抢主体。',
-        signatureDetails: ['泛红眼眶', '攥紧的指节', '皱旧围巾'],
-        differenceLocks: ['不能沿用候选 A 的圆脸低马尾', '不能使用候选 C 的醒目配饰'],
-        promptDirective: '生成情绪压力最强的一版，脸和姿态必须明显区别于 A/C。',
+        id: 'B',
+        directionName: 'B 情绪裂痕路线',
+        interpretationLogic: '把职场打击后的压力和脆弱推到脸与姿态上。',
+        faceFamily: '长脸高颧、湿润眼神、疲惫脆弱型演员脸',
+        bodyType: '高瘦单薄',
+        emotionalTemperature: '湿冷、强忍、压抑',
+        screenPresence: '情绪压力最强，观众先看到她的内伤',
+        appearanceDescriptor: {
+          faceShape: '长脸，下巴窄长，脸颊凹',
+          boneStructure: '颧骨更明显，眉骨轻压，颌线细',
+          eyes: '眼下泛红，眼神湿润，视线防备',
+          nose: '细长鼻梁，鼻翼窄',
+          lips: '嘴唇干裂，唇色浅',
+          skinTexture: '皮肤偏干，眼下暗沉',
+          hairstyle: '半散低束发，额前碎发凌乱',
+          bodyType: '高瘦单薄，脖子前探',
+          posture: '肩膀下沉，双手攥紧',
+          wardrobe: '宽松外套、皱衬衫、旧围巾',
+          visualKeywords: ['泛红眼眶', '攥紧指节', '皱旧围巾', '情绪裂痕'],
+        },
+        imagePrompt: 'This is casting alternative B for the same character. same character DNA, different actor-like interpretation. Long face, stronger cheekbones, red wet eyes, narrow nose, dry lips, collapsed shoulders, emotionally wounded office intern look-test contact sheet.',
       },
       {
-        candidateIndex: 2,
-        label: 'C 轮廓记忆路线',
-        castingPremise: '同一角色但有更强一眼记住的造型轮廓。',
-        faceAndAge: '窄脸短下巴，眉骨更利，表情更冷静。',
-        hairAndSilhouette: '齐耳短发，发尾外翘，头部轮廓清楚。',
-        bodyAndPosture: '背挺直，重心偏一侧，动作更利落。',
-        costumeAndMaterials: '短夹克、高领内搭、窄肩包，层次线条更硬。',
-        performanceState: '安静疏离，目光稳定但保持距离。',
-        storyContext: '电梯口或玻璃门边，几何线条衬托轮廓。',
-        signatureDetails: ['齐耳短发', '窄肩包', '硬挺短夹克'],
-        differenceLocks: ['不能使用候选 A 的低调针织开衫', '不能使用候选 B 的疲惫凌乱状态'],
-        promptDirective: '生成轮廓最强的一版，必须和 A/B 在脸型、发型、服装结构上拉开。',
+        id: 'C',
+        directionName: 'C 轮廓记忆路线',
+        interpretationLogic: '让同样温柔有距离的角色有更利落的银幕轮廓。',
+        faceFamily: '窄脸短下巴、利眉骨、冷静疏离型演员脸',
+        bodyType: '瘦直利落',
+        emotionalTemperature: '冷静、疏离、清醒',
+        screenPresence: '轮廓最强，一眼能记住但仍可信',
+        appearanceDescriptor: {
+          faceShape: '窄脸短下巴，脸部纵深短',
+          boneStructure: '眉骨更利，颧骨斜收，下颌干净',
+          eyes: '眼型狭长，目光稳定但保持距离',
+          nose: '直鼻梁，鼻尖清楚',
+          lips: '唇形清晰，嘴角平直',
+          skinTexture: '皮肤细腻偏冷调，轻微疲惫纹理',
+          hairstyle: '齐耳短发，发尾外翘',
+          bodyType: '瘦直利落，肩线清楚',
+          posture: '背挺直，重心偏一侧',
+          wardrobe: '短夹克、高领内搭、窄肩包',
+          visualKeywords: ['齐耳短发', '窄肩包', '硬挺短夹克', '清醒疏离'],
+        },
+        imagePrompt: 'This is casting alternative C for the same character. same character DNA, different actor-like interpretation. Narrow short-chin face, sharper brow bone, long steady eyes, straight nose, crisp lips, ear-length short hair, upright posture, silhouette-forward office intern look-test contact sheet.',
       },
     ],
+    diversityCheck: {
+      AB: 'A 圆脸低颧低存在感，B 长脸高颧湿冷脆弱；眼鼻唇、体态、presence 均不同，DNA 未漂移。',
+      AC: 'A 软圆生活真实，C 窄脸短下巴利落疏离；脸型骨相、发型、姿态和银幕存在感不同。',
+      BC: 'B 情绪裂痕高瘦前探，C 冷静轮廓瘦直挺背；五官至少两项不同，body/posture 不同。',
+      passed: true,
+    },
   })
 }
 
@@ -284,24 +330,26 @@ describe('worker character-style-test-task-handler', () => {
     }, 'project-1'))
 
     expect(handlerSharedMock.generateCleanImageToStorage).toHaveBeenCalledTimes(3)
-    expect(handlerSharedMock.generateCleanImageToStorage.mock.calls[0]?.[0].prompt).toContain('候选 A 方向：生活真实度优先')
-    expect(handlerSharedMock.generateCleanImageToStorage.mock.calls[1]?.[0].prompt).toContain('候选 B 方向：情绪创伤与表演强度优先')
-    expect(handlerSharedMock.generateCleanImageToStorage.mock.calls[2]?.[0].prompt).toContain('候选 C 方向：造型记忆点与轮廓识别优先')
+    expect(handlerSharedMock.generateCleanImageToStorage.mock.calls[0]?.[0].prompt).toContain('选角方向 A：A 生活真实路线')
+    expect(handlerSharedMock.generateCleanImageToStorage.mock.calls[1]?.[0].prompt).toContain('选角方向 B：B 情绪裂痕路线')
+    expect(handlerSharedMock.generateCleanImageToStorage.mock.calls[2]?.[0].prompt).toContain('选角方向 C：C 轮廓记忆路线')
     expect(handlerSharedMock.generateCleanImageToStorage.mock.calls[2]?.[0].prompt).toContain('候选差异硬约束')
-    expect(handlerSharedMock.generateCleanImageToStorage.mock.calls[2]?.[0].prompt).toContain('三位不同候选演员/不同脸头模')
+    expect(handlerSharedMock.generateCleanImageToStorage.mock.calls[2]?.[0].prompt).toContain('same character DNA, different actor-like interpretation')
     expect(handlerSharedMock.generateCleanImageToStorage.mock.calls[2]?.[0].prompt).toContain('不要用同一个 seed、同一张脸、同一底模')
     expect(aiExecMock.executeAiTextStep).toHaveBeenCalledWith(expect.objectContaining({
       action: 'character_casting_plan_generate',
       model: 'analysis-model-1',
       projectId: 'project-1',
     }))
-    expect(handlerSharedMock.generateCleanImageToStorage.mock.calls[0]?.[0].prompt).toContain('候选 0 的硬差异选角方案：A 生活真实路线')
-    expect(handlerSharedMock.generateCleanImageToStorage.mock.calls[0]?.[0].prompt).toContain('圆脸偏幼，眼距略宽')
-    expect(handlerSharedMock.generateCleanImageToStorage.mock.calls[1]?.[0].prompt).toContain('候选 1 的硬差异选角方案：B 情绪裂痕路线')
-    expect(handlerSharedMock.generateCleanImageToStorage.mock.calls[1]?.[0].prompt).toContain('长脸，颧骨更明显')
-    expect(handlerSharedMock.generateCleanImageToStorage.mock.calls[2]?.[0].prompt).toContain('候选 2 的硬差异选角方案：C 轮廓记忆路线')
+    expect(handlerSharedMock.generateCleanImageToStorage.mock.calls[0]?.[0].prompt).toContain('选角方向 A：A 生活真实路线')
+    expect(handlerSharedMock.generateCleanImageToStorage.mock.calls[0]?.[0].prompt).toContain('圆脸偏幼')
+    expect(handlerSharedMock.generateCleanImageToStorage.mock.calls[0]?.[0].prompt).toContain('This is casting alternative A for the same character.')
+    expect(handlerSharedMock.generateCleanImageToStorage.mock.calls[1]?.[0].prompt).toContain('选角方向 B：B 情绪裂痕路线')
+    expect(handlerSharedMock.generateCleanImageToStorage.mock.calls[1]?.[0].prompt).toContain('长脸，下巴窄长')
+    expect(handlerSharedMock.generateCleanImageToStorage.mock.calls[1]?.[0].prompt).toContain('This is casting alternative B for the same character.')
+    expect(handlerSharedMock.generateCleanImageToStorage.mock.calls[2]?.[0].prompt).toContain('选角方向 C：C 轮廓记忆路线')
     expect(handlerSharedMock.generateCleanImageToStorage.mock.calls[2]?.[0].prompt).toContain('齐耳短发')
-    expect(handlerSharedMock.generateCleanImageToStorage.mock.calls[2]?.[0].prompt).toContain('跨候选身份锁定')
+    expect(handlerSharedMock.generateCleanImageToStorage.mock.calls[2]?.[0].prompt).toContain('This is casting alternative C for the same character.')
     expect(evaluatorMock.evaluateCharacterCastingCandidates).toHaveBeenCalledWith(expect.objectContaining({
       userId: 'user-1',
       analysisModel: 'analysis-model-1',
@@ -317,7 +365,7 @@ describe('worker character-style-test-task-handler', () => {
     ]>
     const evaluationCall = evaluationCalls[0]?.[0]
     if (!evaluationCall) throw new Error('Expected evaluateCharacterCastingCandidates to be called')
-    expect(evaluationCall.candidates[1].request).toContain('第 2 位不同演员脸候选')
+    expect(evaluationCall.candidates[1].request).toContain('第 2 个不同选角/定妆方向')
     expect(prismaMock.characterAppearance.update).toHaveBeenCalledWith({
       where: { id: 'appearance-1' },
       data: expect.objectContaining({
@@ -342,10 +390,14 @@ describe('worker character-style-test-task-handler', () => {
       ],
       appearanceId: 'appearance-1',
       evaluation: expect.objectContaining({ winnerIndex: 1 }),
+      castingPlan: expect.objectContaining({
+        characterDNA: expect.objectContaining({ occupation: '公司实习生' }),
+        diversityCheck: expect.objectContaining({ passed: true }),
+      }),
       castingPlans: expect.arrayContaining([
-        expect.objectContaining({ label: 'A 生活真实路线' }),
-        expect.objectContaining({ label: 'B 情绪裂痕路线' }),
-        expect.objectContaining({ label: 'C 轮廓记忆路线' }),
+        expect.objectContaining({ directionName: 'A 生活真实路线' }),
+        expect.objectContaining({ directionName: 'B 情绪裂痕路线' }),
+        expect.objectContaining({ directionName: 'C 轮廓记忆路线' }),
       ]),
     }))
   })
