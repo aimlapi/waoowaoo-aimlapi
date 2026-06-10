@@ -16,6 +16,29 @@ export async function seedMinimalDomainState() {
   const project = await createFixtureProject(user.id)
   const novelProject = await createFixtureNovelProject(project.id)
   const episode = await createFixtureEpisode(novelProject.id)
+  const editScreenplay = await prisma.projectEditScreenplay.create({
+    data: {
+      projectId: project.id,
+      episodeId: episode.id,
+      userPrompt: 'seed user prompt',
+      screenplayText: 'seed screenplay text',
+      status: 'ready',
+    },
+  })
+  const visualReferenceCase = await prisma.projectVisualReferenceCase.create({
+    data: {
+      projectId: project.id,
+      episodeId: episode.id,
+      screenplayId: editScreenplay.id,
+      title: 'Seed live-action visual reference',
+      description: 'Naturalistic live-action reference with restrained lighting and grounded production design.',
+      prompt: 'Naturalistic live-action style, restrained lighting, grounded production design, coherent cinematic texture.',
+      status: 'completed',
+      imageUrl: 'https://provider.example/visual-reference.jpg',
+      isSelected: true,
+      sortIndex: 0,
+    },
+  })
 
   const clip = await prisma.projectClip.create({
     data: {
@@ -169,6 +192,8 @@ export async function seedMinimalDomainState() {
     project,
     novelProject,
     episode,
+    editScreenplay,
+    visualReferenceCase,
     clip,
     storyboard,
     panel,
