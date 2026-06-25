@@ -1,0 +1,169 @@
+剪辑先行剧本生成流程与本次产物
+生成时间：2026-06-25
+测试项目：7bbdebcf-f244-4f1f-abd0-c9f0437fbf41
+测试剧集：89dd1ee0-0883-4952-b41e-f70ec669a0e2
+
+
+一、生成流程
+
+用户输入创意：
+一个沉溺在梦核世界里逃避现实的情感乞丐。
+
+前置交互：
+1. 用户输入创意。
+2. 系统要求选择短片时长档位和画幅。
+3. 本次选择为 long，约 120 秒，16:9。
+4. 提交异步任务 generate_edit_screenplay。
+
+七层生成流程：
+1. Screenplay Skeleton Layer
+2. Sequence Layer
+3. Scene Layer
+4. Beat Layer
+5. Dramatic Interaction Layer
+6. Dialogue Layer
+7. Screenplay
+
+保存结果：
+1. storyDevelopmentJson 保存完整七层蓝图。
+2. screenplayText 保存最终剧本文本。
+3. 状态变为 screenplay_ready。
+
+
+二、每层产物
+
+1. Screenplay Skeleton Layer
+
+作用：
+判断故事出发点，建立剧本骨架。
+
+本次产物：
+故事出发点为 character。
+
+核心 premise：
+一个极度孤独的青年为了在梦核系统的虚假空旷商城里无限留存，必须决定是否彻底格式化并上传他现实中仅存的、关于母亲声音的实体磁带。在系统即将吞噬他最后人性的一刻，他选择痛苦地肉体拔掉电极，回归冰冷的现实废墟，守护真实的悲恸。
+
+核心戏剧问题：
+在绝对虚幻的高甜温存与绝对真实却冰冷刺骨的现实废墟之间，一个情感乞丐是否愿意为了保留最后一丝真感情而承受永恒的精神孤寂？
+
+sceneSkeleton：
+本次生成 1 场。
+
+
+2. Sequence Layer
+
+作用：
+把剧本骨架拆成戏剧推进序列。
+
+本次产物：
+生成 3 个 sequence。
+
+Sequence 1：虚幻避风港的绝对丧失
+目标：不交出物理磁带的前提下，寻找继续留在梦核世界的路径。
+结果：主角插入母亲磁带，开启不可逆的数码溶解程序。
+
+Sequence 2：高糖糖精的窒息围剿
+目标：面对拟真的“母亲”拥抱时，重拾母亲真实声音的主导权。
+结果：主角意识到虚幻极乐的算法本质，开始寻找物理断电手段。
+
+Sequence 3：带着血泪的暴烈清醒
+目标：拔除脑骨里的突触电极，阻止磁带被抹平。
+结果：虚拟广场崩塌，主角回到现实，按停机器，保住磁带。
+
+
+3. Scene Layer
+
+作用：
+把序列落成具体场景结构。
+
+本次产物：
+生成 1 场。
+
+场景标题：
+The Last 120 Seconds of the Emotional Beggar: From Golden Illusion to Bloody Reality
+
+场景目标：
+许默试图在1995梦境广场中购买“母亲哄睡”的限时拟真幻像，并在系统红色升级警告启动后，极力在不彻底毁灭母亲真实声音的前提下保全自己在虚拟天国的居留权。
+
+场景阻碍：
+梦核系统强制闭锁升级程序、AI 合成母亲、现实世界中催租房东和暴风雨。
+
+场景结果：
+许默在 99% 进度时暴力扯断深入脑骨的神经突触，浑身是血地回到现实阁楼，及时按停磁带解析，保全磁带上仅存的两秒真实叹息。
+
+
+4. Beat Layer
+
+作用：
+把场景拆成 action -> reaction -> strategyChange -> informationChange -> newCondition。
+
+本次产物：
+Scene 1 被拆成 10 个 beat。
+
+前三个 beat：
+1. 许默抚摸红点磁带 -> 系统大厅亮起温黄走廊。
+2. 系统公告红字闪烁 -> 许默蜷缩抱头。
+3. 现实房东踹门 -> 许默插入老旧磁带。
+
+
+5. Dramatic Interaction Layer
+
+作用：
+把 Beat Layer 自动派生为对白前的互动计划。
+
+生成方式：
+代码从 Beat Layer 自动派生，不调用模型。
+
+本次产物：
+生成 10 个 interaction。
+
+主要字段：
+spokenSurface
+hiddenLayer
+subtextPlan
+informationControl
+dialogueTactics
+behavioralExpression
+microTurn
+dialogueConstraint
+
+
+6. Dialogue Layer
+
+作用：
+根据前面结构生成关键对白草稿。
+
+本次产物：
+生成了现实房东、虚构母亲、真实母亲声音等对白/声音文本。
+
+体现为：
+1. 现实房东的沈阳铁西口音。
+2. 虚构母亲前期温柔、后期电噪崩坏的合成声。
+3. 真实母亲磁带中的沙哑、咳嗽、东北语气。
+
+
+7. Screenplay
+
+作用：
+把前六层蓝图翻译成完整剧本文本。
+
+本次产物：
+最终剧本已生成。
+
+剧本标题：
+《1995梦幻广场的最后登出》
+
+故事梗概：
+在冰冷漏雨的城中村阁楼里，重度成瘾于虚拟“梦核”空间的年轻情感乞丐许默，在被逼格式化母亲唯一种子磁带的死线前，选择自残拔除神经突触，回归真实废墟守护唯一的悲恸。
+
+角色：
+许默
+现实房东（O.S.）
+虚构母亲
+真实母亲（声音）
+
+场景：
+场景 1｜内景. 许默的阁楼与1995梦境广场 - 夜
+
+最终状态：
+screenplay_ready
