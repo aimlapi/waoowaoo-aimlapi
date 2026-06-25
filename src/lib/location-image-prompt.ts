@@ -15,12 +15,12 @@ export function buildLocationImagePromptCore(params: {
     : '必须以指定的场景空间板机位方向作为构图最高优先级，从该方向清楚展示主要结构、前景/中景/背景和空间边界。禁止生成局部裁切、锚点缺失、空间关系模糊的泛化背景，或生成成其他视角。'
 
   const noMarkConstraints = params.locale === 'en'
-    ? 'Do not add non-diegetic overlays such as subtitles, captions, explanatory text, watermarks, annotation labels, arrows, guide lines, marking lines, outline placeholders, UI markers, map labels, or blueprint graphics. Natural in-world text on plausible scene objects such as shop signs, street signs, door numbers, posters, packaging, or screens is allowed only when it belongs to the described environment; keep it secondary and do not turn it into random gibberish or intrusive floating text.'
-    : '不要添加非场景内的叠加元素，例如字幕、说明文字、水印、注释标签、箭头、引导线、标注线、轮廓占位、UI标记、地图标签、平面图或蓝图式图形。场景世界里自然存在的文字可以保留，例如招牌、路标、门牌、海报、包装、屏幕文字，但必须属于当前环境，保持次要且自然，不要变成随机乱码或突兀漂浮文字。'
+    ? 'Do not add artificial layout aids such as arrows, guide lines, marking lines, outline placeholders, UI markers, map callouts, or blueprint graphics. In-world markings on plausible scene objects such as shop signs, street signs, door numbers, posters, packaging, or screens are allowed when they belong to the described environment.'
+    : '不要添加人工布局辅助元素，例如箭头、引导线、标注线、轮廓占位、UI标记、地图 callout、平面图或蓝图式图形。场景世界里自然存在的招牌、路标、门牌、海报、包装、屏幕内容等可以保留，只要它们属于当前环境。'
 
   const placementSpaceConstraints = params.locale === 'en'
-    ? 'Keep stable anchor objects and nearby usable open floor or open space visible for later character placement. Treat this as invisible layout guidance only; do not draw labels, outlines, boxes, arrows, guide marks, or artificial placeholders.'
-    : '为后续人物落位保留清晰稳定的空间锚点，以及锚点周边可用的地面或空白区域。这只是不可见的布局指导，不要画出文字标签、轮廓框、箭头、引导线、标记或人工占位图形。'
+    ? 'Keep stable anchor objects and nearby usable open floor or open space visible for later character placement. Treat this as invisible layout guidance only; do not draw outlines, boxes, arrows, guide marks, or artificial placeholders.'
+    : '为后续人物落位保留清晰稳定的空间锚点，以及锚点周边可用的地面或空白区域。这只是不可见的布局指导，不要画出轮廓框、箭头、引导线、标记或人工占位图形。'
 
   return `${promptBody}\n\n${fidelityConstraints}\n${spatialConstraints}\n${placementSpaceConstraints}\n${noMarkConstraints}`.trim()
 }

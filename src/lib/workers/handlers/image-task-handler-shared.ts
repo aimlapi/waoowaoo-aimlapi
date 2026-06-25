@@ -1,7 +1,9 @@
 import { type Job } from 'bullmq'
+import sharp from 'sharp'
 import { prisma } from '@/lib/prisma'
 import { type TaskJobData } from '@/lib/task/types'
 import { decodeImageUrlsFromDb } from '@/lib/contracts/image-urls-contract'
+import { generateUniqueKey, getObjectBuffer, getSignedUrl, uploadObject } from '@/lib/storage'
 import {
   findAppearanceForStoryboardReference,
   findCharacterForStoryboardReference,
@@ -175,6 +177,10 @@ export interface ResolvedPanelPropAsset {
   imageUrl: string | null
   source: 'panel' | 'requirement'
 }
+
+type PropReferenceImageResult =
+  | { ok: true; signedUrl: string; sourceUrl: string; cropKey: string }
+  | { ok: false; issue: string; sourceUrl: string | null }
 
 export function parseJsonStringArray(value: unknown): string[] {
   if (!value) return []
@@ -460,6 +466,67 @@ function findPropAsset(projectData: NovelProjectData, input: { propId?: string |
   return props.find((prop) => normalizeAssetName(prop.name) === targetName) || null
 }
 
+function readReferenceStorageKey(value: string | null) {
+  if (!value) return null
+  const trimmed = value.trim()
+  if (trimmed.startsWith('images/')) return trimmed
+  return null
+}
+
+async function createSinglePropReferenceImage(prop: ResolvedPanelPropAsset): Promise<PropReferenceImageResult> {
+  if (!prop.imageUrl) {
+    return { ok: false, issue: 'reference_image_missing', sourceUrl: null }
+  }
+  const sourceKey = readReferenceStorageKey(prop.imageUrl)
+  if (!sourceKey) {
+    return { ok: false, issue: 'reference_image_not_storage_key', sourceUrl: prop.imageUrl }
+  }
+
+  try {
+    const input = await getObjectBuffer(sourceKey)
+    const metadata = await sharp(input).metadata()
+    if (!metadata.width || !metadata.height) {
+      return { ok: false, issue: 'reference_image_metadata_missing', sourceUrl: sourceKey }
+    }
+
+    const cropWidth = Math.max(1, Math.min(metadata.width, Math.round(metadata.width * 0.42)))
+    const cropBuffer = await sharp(input)
+      .extract({
+        left: 0,
+        top: 0,
+        width: cropWidth,
+        height: metadata.height,
+      })
+      .extend({
+        top: 64,
+        bottom: 64,
+        left: 64,
+        right: 64,
+        background: '#ffffff',
+      })
+      .jpeg({ quality: 95, mozjpeg: true })
+      .toBuffer()
+    const cropKey = await uploadObject(
+      cropBuffer,
+      generateUniqueKey(`prop-reference-crop-${prop.id}`, 'jpg'),
+      1,
+      'image/jpeg',
+    )
+    return {
+      ok: true,
+      signedUrl: getSignedUrl(cropKey, 3600),
+      sourceUrl: sourceKey,
+      cropKey,
+    }
+  } catch (error) {
+    return {
+      ok: false,
+      issue: `reference_image_crop_failed:${error instanceof Error ? error.message : String(error)}`,
+      sourceUrl: sourceKey,
+    }
+  }
+}
+
 export function resolvePanelPropAssets(projectData: NovelProjectData, panel: PanelLike): ResolvedPanelPropAsset[] {
   const resolved = new Map<string, ResolvedPanelPropAsset>()
   const addAsset = (asset: LocationLike, source: ResolvedPanelPropAsset['source']) => {
@@ -711,15 +778,15 @@ export async function collectPanelReferenceImageItemsWithDiagnostics(
   }
 
   for (const prop of resolvePanelPropAssets(projectData, panel)) {
-    const signed = toSignedUrlIfCos(prop.imageUrl, 3600)
-    if (!signed) {
+    const referenceImage = await createSinglePropReferenceImage(prop)
+    if (!referenceImage.ok) {
       pushIssue(collection, {
         kind: 'prop',
         inputIndex: null,
         name: prop.name,
         propId: prop.id,
-        sourceUrl: prop.imageUrl,
-        issue: 'reference_image_missing',
+        sourceUrl: referenceImage.sourceUrl,
+        issue: referenceImage.issue,
       })
       continue
     }
@@ -730,10 +797,10 @@ export async function collectPanelReferenceImageItemsWithDiagnostics(
         inputIndex: null,
         name: prop.name,
         propId: prop.id,
-        sourceUrl: prop.imageUrl,
+        sourceUrl: referenceImage.sourceUrl,
       },
       {
-        url: signed,
+        url: referenceImage.signedUrl,
         role: 'prop',
         name: prop.name,
       },

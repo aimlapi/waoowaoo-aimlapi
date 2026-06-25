@@ -1,10 +1,20 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest'
+import sharp from 'sharp'
 
 const outboundMock = vi.hoisted(() => ({
   normalizeOptionalReferenceImagesForGeneration: vi.fn(async (input: string[]) => [`normalized:${input[0]}`]),
 }))
 
 vi.mock('@/lib/media/outbound-image', () => outboundMock)
+
+const storageMock = vi.hoisted(() => ({
+  generateUniqueKey: vi.fn((prefix: string, ext: string) => `images/${prefix}-test.${ext}`),
+  getObjectBuffer: vi.fn(),
+  getSignedUrl: vi.fn((key: string) => `/signed/${key}`),
+  uploadObject: vi.fn(async (_body: Buffer, key: string) => key),
+}))
+
+vi.mock('@/lib/storage', () => storageMock)
 
 import {
   collectPanelReferenceImageItemsWithDiagnostics,
@@ -18,6 +28,18 @@ describe('reference image item normalization', () => {
   beforeEach(() => {
     vi.clearAllMocks()
     outboundMock.normalizeOptionalReferenceImagesForGeneration.mockImplementation(async (input: string[]) => [`normalized:${input[0]}`])
+    storageMock.getObjectBuffer.mockImplementation(async () =>
+      await sharp({
+        create: {
+          width: 100,
+          height: 100,
+          channels: 3,
+          background: { r: 255, g: 20, b: 147 },
+        },
+      })
+        .jpeg()
+        .toBuffer(),
+    )
   })
 
   it('returns normalized images and continuous image-number mappings', async () => {
@@ -92,7 +114,7 @@ describe('reference image item normalization', () => {
         selectedImageId: 'prop-cup-image',
         images: [{
           id: 'prop-cup-image',
-          imageUrl: 'https://example.com/prop-cup.png',
+          imageUrl: 'images/prop-cup.png',
           description: '白底居中的高脚杯道具',
           isSelected: true,
         }],
@@ -105,14 +127,21 @@ describe('reference image item normalization', () => {
     }, { strict: true })
 
     expect(result.items).toEqual([
-      { url: 'https://example.com/prop-cup.png', role: 'prop', name: '催情药剂高脚杯' },
+      { url: '/signed/images/prop-reference-crop-prop-cup-test.jpg', role: 'prop', name: '催情药剂高脚杯' },
     ])
+    expect(storageMock.getObjectBuffer).toHaveBeenCalledWith('images/prop-cup.png')
+    expect(storageMock.uploadObject).toHaveBeenCalledWith(
+      expect.any(Buffer),
+      'images/prop-reference-crop-prop-cup-test.jpg',
+      1,
+      'image/jpeg',
+    )
     expect(result.diagnostics).toEqual([
       expect.objectContaining({
         kind: 'prop',
         name: '催情药剂高脚杯',
         propId: 'prop-cup',
-        sourceUrl: 'https://example.com/prop-cup.png',
+        sourceUrl: 'images/prop-cup.png',
         issue: null,
       }),
     ])
@@ -127,7 +156,7 @@ describe('reference image item normalization', () => {
         selectedImageId: 'prop-cup-image',
         images: [{
           id: 'prop-cup-image',
-          imageUrl: 'https://example.com/prop-cup.png',
+          imageUrl: 'images/prop-cup.png',
           description: '白底居中的高脚杯道具',
           isSelected: true,
         }],
@@ -138,7 +167,7 @@ describe('reference image item normalization', () => {
         selectedImageId: 'prop-badge-image',
         images: [{
           id: 'prop-badge-image',
-          imageUrl: 'https://example.com/prop-badge.png',
+          imageUrl: 'images/prop-badge.png',
           description: '白底居中的徽章道具',
           isSelected: true,
         }],
@@ -170,7 +199,7 @@ describe('reference image item normalization', () => {
     }, { strict: true })
 
     expect(result.items).toEqual([
-      { url: 'https://example.com/prop-cup.png', role: 'prop', name: '催情药剂高脚杯' },
+      { url: '/signed/images/prop-reference-crop-prop-cup-test.jpg', role: 'prop', name: '催情药剂高脚杯' },
     ])
   })
 
@@ -257,7 +286,7 @@ describe('reference image item normalization', () => {
         name: '催情药剂高脚杯',
         description: '白底居中的高脚杯道具',
         source: 'requirement',
-        reference_instruction: expect.stringContaining('exact identity source'),
+        reference_instruction: expect.stringContaining('cropped single-object identity plate'),
       }),
     ])
     expect(context.context.prop_references).toEqual(context.panel.props)

@@ -12,7 +12,7 @@
 - finalPanelPrompt 必须是可直接交给图片模型的单张电影分镜图提示词。
 - finalVideoPrompt 必须是可直接交给视频模型的当前 shot 视频提示词，必须包含导演动作、摄影运动/静止、声音和时长约束。
 - 不输出 x/y、坐标、网格、coordinate、blockedZones、cameraVantages、profileSource。
-- 严禁新增人物、道具、建筑、天气、时代元素、服装、符号、剧情动作或剧本外对白。
+- 严禁新增人物、道具、建筑、天气、时代元素、服装、剧情动作或剧本外对白。
 
 Director Decoupage：
 {director_decoupage_json}

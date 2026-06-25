@@ -22,6 +22,65 @@ function joinLines(lines: ReadonlyArray<string | null | undefined>): string {
     .join('\n')
 }
 
+const DEAD_VISUAL_BAN_LATIN_PATTERNS = [
+  'text',
+  'word',
+  'subtitle',
+  'caption',
+  'watermark',
+  'logo',
+  'label',
+  'symbol',
+  'annotation',
+]
+
+const DEAD_VISUAL_BAN_CJK_PATTERNS = [
+  '文字',
+  '字幕',
+  '花字',
+  '水印',
+  '标注',
+  '标签',
+  '符号',
+  '编号',
+]
+
+function isDeadVisualBan(value: string): boolean {
+  const normalized = value.trim().toLowerCase()
+  if (!normalized) return true
+  return DEAD_VISUAL_BAN_LATIN_PATTERNS.some((pattern) => {
+    const patternRegex = new RegExp(`\\b${pattern}s?\\b`, 'u')
+    return patternRegex.test(normalized)
+  }) || DEAD_VISUAL_BAN_CJK_PATTERNS.some((pattern) => normalized.includes(pattern))
+}
+
+function sanitizeVisualNegativePrompt(value: string, locale: Locale): string | null {
+  const segments = value
+    .split(/[;,；，、]/u)
+    .map((segment) => segment.trim())
+    .filter((segment) => segment.length > 0)
+    .filter((segment) => !isDeadVisualBan(segment))
+
+  if (segments.length === 0) return null
+  return segments.join(locale === 'en' ? '; ' : '，')
+}
+
+function renderNegativeConstraintsLine(styleBible: EditScriptStyleBible, locale: Locale): string | null {
+  const negativePrompt = sanitizeVisualNegativePrompt(styleBible.stylePolicy.visual.negativePrompt, locale)
+  if (!negativePrompt) return null
+  return locale === 'en'
+    ? `Negative constraints: ${negativePrompt}`
+    : `负向约束：${negativePrompt}`
+}
+
+function renderHardBansLine(styleBible: EditScriptStyleBible, locale: Locale): string | null {
+  const hardBans = styleBible.stylePolicy.hardBans.filter((item) => !isDeadVisualBan(item))
+  if (hardBans.length === 0) return null
+  return locale === 'en'
+    ? `Hard bans: ${hardBans.join('; ')}`
+    : `硬禁用项：${hardBans.join('；')}`
+}
+
 function appendBlock(base: string, block: string): string {
   const trimmedBase = base.trim()
   const trimmedBlock = block.trim()
@@ -123,8 +182,8 @@ function renderVisualLines(styleBible: EditScriptStyleBible, locale: Locale, usa
       `Color: ${visual.colorPrompt}`,
       usage === 'assetImage' ? `Texture: ${visual.texturePrompt}` : null,
       usage === 'video' ? null : `Composition: ${visual.compositionPrompt}`,
-      `Negative constraints: ${visual.negativePrompt}`,
-      `Hard bans: ${styleBible.stylePolicy.hardBans.join('; ')}`,
+      renderNegativeConstraintsLine(styleBible, locale),
+      renderHardBansLine(styleBible, locale),
     ]
     return base.filter((line): line is string => typeof line === 'string')
   }
@@ -134,8 +193,8 @@ function renderVisualLines(styleBible: EditScriptStyleBible, locale: Locale, usa
     `色彩：${visual.colorPrompt}`,
     usage === 'assetImage' ? `质感：${visual.texturePrompt}` : null,
     usage === 'video' ? null : `构图：${visual.compositionPrompt}`,
-    `负向约束：${visual.negativePrompt}`,
-    `硬禁用项：${styleBible.stylePolicy.hardBans.join('；')}`,
+    renderNegativeConstraintsLine(styleBible, locale),
+    renderHardBansLine(styleBible, locale),
   ]
   return base.filter((line): line is string => typeof line === 'string')
 }

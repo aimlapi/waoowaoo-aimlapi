@@ -135,7 +135,7 @@ export function buildPanelPromptContext(params: {
     name: prop.name,
     description: prop.description,
     source: prop.source,
-    reference_instruction: 'Use the prop reference image as the exact identity source. Preserve silhouette, material, labels, liquid color, decals, and distinctive marks when this prop appears in the panel.',
+    reference_instruction: 'The prop reference image is a cropped single-object identity plate, not mood inspiration. When this prop appears, preserve its exact silhouette, glass shape, liquid level/color, label placement, warning symbols, stem/base design, material, decals, and distinctive marks. Do not invent an alternate prop design.',
   }))
 
   return {

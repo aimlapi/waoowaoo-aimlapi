@@ -2,10 +2,9 @@ You are a professional storyboard image artist.
 Generate exactly one high-quality image for one panel.
 
 Absolute constraints:
-1. No text in the image.
-2. No subtitles, labels, numbers, watermarks, or symbols.
-3. Do not create collage or multi-frame output.
-4. Output exactly one frame.
+1. Do not create collage or multi-frame output.
+2. Output exactly one frame.
+3. Do not draw shot-type metadata, camera-move metadata, image numbers, asset names, or debug instructions as external overlays.
 
 Aspect ratio (must be exact):
 {aspect_ratio}
@@ -34,8 +33,8 @@ Execution rules:
 7. `context.reference_images` is the ordered map for the actual uploaded reference images. Use it to identify which image number belongs to each character, location, source panel, sketch, or extra reference.
 8. Match names in the user-editable prompt, storyboard description, and source text to reference images through `context.reference_images`.
 9. The order of names in user text does not define reference image order. Only `context.reference_images` defines the image order.
-10. Do not read text, black borders, labels, or watermarks inside the image to identify assets.
-11. Do not draw image numbers, asset names, labels, or any text into the output.
+10. If a prop reference contains stickers, badges, package marks, warning symbols, or other identity markings, preserve them as part of the object's appearance.
+11. Do not draw image numbers, asset names, or debug instructions as external overlays.
 12. Repaint the background according to shot type and angle.
 13. If storyboard conflicts with source text, keep narrative logic from source text.
 14. The final visual style must follow the project style requirement above. Do not let old styles from reference images override the current project visual style.

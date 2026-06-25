@@ -12,7 +12,7 @@ Core rules:
 - finalPanelPrompt must be directly usable for one cinematic storyboard image.
 - finalVideoPrompt must be directly usable for the current shot video generation and must include director action, camera movement/locked state, sound, and duration constraints.
 - Do not output x/y, coordinates, grids, coordinate, blockedZones, cameraVantages, or profileSource.
-- Do not add characters, props, buildings, weather, period elements, costumes, symbols, plot actions, or dialogue outside the screenplay.
+- Do not add characters, props, buildings, weather, period elements, costumes, plot actions, or dialogue outside the screenplay.
 
 Director Decoupage:
 {director_decoupage_json}

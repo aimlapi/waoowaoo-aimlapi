@@ -54,6 +54,35 @@ describe('style-bible-prompt', () => {
     expect(block).not.toContain('声音负向约束：')
   })
 
+  it('filters stored text bans from negative prompts and hard bans', () => {
+    const styleBible = buildZenStyleBibleFixture()
+    const block = renderStyleBiblePromptBlock({
+      styleBible: {
+        ...styleBible,
+        stylePolicy: {
+          ...styleBible.stylePolicy,
+          visual: {
+            ...styleBible.stylePolicy.visual,
+            negativePrompt: 'photorealistic, live action, subtitles, text, watermark, plastic texture',
+          },
+          hardBans: [
+            'no text',
+            'no watermark',
+            'no real humans',
+          ],
+        },
+      },
+      usage: 'storyboardImage',
+      locale: 'en',
+    })
+
+    expect(block).toContain('Negative constraints: photorealistic; live action; plastic texture')
+    expect(block).toContain('Hard bans: no real humans')
+    expect(block).not.toContain('subtitles')
+    expect(block).not.toContain('watermark')
+    expect(block).not.toContain('Hard bans: no text')
+  })
+
   it('invalid non-null Style Bible json fails explicitly', () => {
     expect(() => parseNullableEditScriptStyleBible({ strategy: 'style_bible' }))
       .toThrow('EDIT_SCRIPT_STYLE_BIBLE_INVALID')

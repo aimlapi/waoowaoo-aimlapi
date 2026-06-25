@@ -41,7 +41,7 @@ export function buildCharacterCandidatePromptInstruction(input: {
       '- Let the AI image model keep reasonable design freedom. Do not lock every facial feature, exact hair strand, color swatch, or accessory unless the input requires it.',
       '- The three prompts must differ by design emphasis: 1) faithful identity and silhouette, 2) wardrobe/material/era texture, 3) role energy and storyboard usability.',
       '- If a Style Bible is provided, make the casting, clothing, palette, texture, and atmosphere compatible with it inside the prompt wording.',
-      '- Do not include layout instructions, aspect ratio, watermark rules, text labels, or image count. The system suffix will add the asset-board structure later.',
+      '- Do not include layout instructions, aspect ratio, or image count. The system suffix will add the asset-board structure later.',
       'Output JSON only: {"prompts":["prompt 1","prompt 2","prompt 3"]}.',
     ])
   }
@@ -57,7 +57,7 @@ export function buildCharacterCandidatePromptInstruction(input: {
     '- 给生图模型保留合理发挥空间。除非输入明确要求，不要把每一个五官细节、发丝、色块、配饰都写死。',
     '- 三条 prompt 必须侧重点不同：1）身份与轮廓忠实版，2）服装/材质/年代质感版，3）角色能量与分镜可用性版。',
     '- 如果存在 Style Bible，必须把选角、服装、色彩、材质和氛围写成与它兼容的视觉描述。',
-    '- 不要写版式、画幅比例、水印规则、文字标签或图片数量；资产板结构会由系统后缀统一追加。',
+    '- 不要写版式、画幅比例或图片数量；资产板结构会由系统后缀统一追加。',
     '只输出 JSON：{"prompts":["提示词1","提示词2","提示词3"]}。',
   ])
 }

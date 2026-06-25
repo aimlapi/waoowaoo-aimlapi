@@ -71,7 +71,7 @@ function outputRule(locale: Locale): string {
       'Hard layout: one square 1:1 canvas; a thick clean vertical divider and a thick clean horizontal divider form four equal rectangular panels.',
       'Panel order must be fixed: top-left FRONT, top-right BACK, bottom-left LEFT, bottom-right RIGHT.',
       'Each panel must show a separate camera angle of the same physical set. The image is invalid if it becomes one full-bleed wide-angle interior, one panorama, one unsegmented room render, five thumbnails, or an irregular collage.',
-      'Each panel should include one small readable corner label only: FRONT, BACK, LEFT, RIGHT. Do not add any other captions, subtitles, watermarks, UI marks, or explanatory text.',
+      'Each panel should include one small readable corner label only: FRONT, BACK, LEFT, RIGHT.',
       'Do not include named main characters or narrative action beats. Temporary tiny background silhouettes are allowed only when necessary for scale, but the asset must remain an empty reusable location reference.',
     ])
   }
@@ -83,7 +83,7 @@ function outputRule(locale: Locale): string {
     '硬性版式：一张 1:1 正方形画布；用清晰粗直的竖向分隔线和横向分隔线切成四个等大矩形 panel。',
     '四格顺序必须固定：左上=前，右上=后，左下=左，右下=右。',
     '每个 panel 必须是同一个真实布景的不同机位。若画面变成一张全屏单透视室内图、一张全景图、没有分隔线的房间图、五张缩略图或不规则拼贴，视为失败。',
-    '每个格子只允许有一个小而清晰的角标：前、后、左、右。不要添加其他说明文字、字幕、水印、UI 标记或解释性文字。',
+    '每个格子只允许有一个小而清晰的角标：前、后、左、右。',
     '不要出现有名主角或叙事动作瞬间。只有在需要标尺时才允许极小的背景人影，但资产本质必须仍是可复用空场景参考。',
   ])
 }
