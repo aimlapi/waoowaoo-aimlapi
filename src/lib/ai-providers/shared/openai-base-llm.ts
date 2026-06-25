@@ -90,6 +90,7 @@ export async function runOpenAIBaseUrlLlmCompletion(input: {
   temperature: number
   reasoning: boolean
   reasoningEffort: 'minimal' | 'low' | 'medium' | 'high'
+  maxTokens?: number
   maxRetries: number
   isOpenRouter?: boolean
   openRouterSessionId?: string
@@ -117,6 +118,7 @@ export async function runOpenAIBaseUrlLlmCompletion(input: {
       system: getSystemPrompt(input.messages),
       messages: getConversationMessages(input.messages) as ModelMessage[],
       ...(input.reasoning ? {} : { temperature: input.temperature }),
+      ...(input.maxTokens ? { maxOutputTokens: input.maxTokens } : {}),
       maxRetries: input.maxRetries,
       ...(aiSdkProviderOptions ? { providerOptions: aiSdkProviderOptions } : {}),
     })
@@ -156,6 +158,7 @@ export async function runOpenAIBaseUrlLlmCompletion(input: {
     model: input.modelId,
     messages: promptCacheRequest.messages as OpenAI.Chat.Completions.ChatCompletionMessageParam[],
     temperature: input.temperature,
+    ...(input.maxTokens ? { max_tokens: input.maxTokens } : {}),
     ...(promptCacheRequest.cacheControl ? { cache_control: promptCacheRequest.cacheControl } : {}),
     ...extraParams,
   } as unknown as OpenAI.Chat.Completions.ChatCompletionCreateParamsNonStreaming, buildOpenRouterRequestOptions(openRouterSessionId))
@@ -208,6 +211,7 @@ export async function runOpenAIBaseUrlLlmStream(input: AiProviderLlmStreamContex
       system: getSystemPrompt(input.messages),
       messages: getConversationMessages(input.messages),
       ...(useReasoning ? {} : { temperature: input.options.temperature ?? 0.7 }),
+      ...(input.options.maxTokens ? { maxOutputTokens: input.options.maxTokens } : {}),
       maxRetries: input.options.maxRetries ?? 2,
       ...(aiSdkProviderOptions ? { providerOptions: aiSdkProviderOptions } : {}),
     })
@@ -282,6 +286,7 @@ export async function runOpenAIBaseUrlLlmStream(input: AiProviderLlmStreamContex
     model: input.selection.modelId,
     messages: promptCacheRequest.messages as OpenAI.Chat.Completions.ChatCompletionMessageParam[],
     ...((input.options.reasoning ?? true) ? {} : { temperature: input.options.temperature ?? 0.7 }),
+    ...(input.options.maxTokens ? { max_tokens: input.options.maxTokens } : {}),
     stream: true,
     ...(promptCacheRequest.cacheControl ? { cache_control: promptCacheRequest.cacheControl } : {}),
     ...extraParams,

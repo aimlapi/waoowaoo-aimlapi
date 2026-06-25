@@ -83,6 +83,25 @@ describe('OpenRouter prompt cache provider contract', () => {
     expect(body.cache_control).toEqual({ type: 'ephemeral', ttl: '1h' })
   })
 
+  it('passes explicit max_tokens to OpenRouter completion requests', async () => {
+    await runOpenRouterLlmCompletion({
+      modelId: 'google/gemini-3.5-flash',
+      providerConfig: { apiKey: 'sk-openrouter', baseUrl: 'https://openrouter.example/v1' },
+      messages: [{ role: 'user', content: 'write a compact JSON object' }],
+      temperature: 0.2,
+      reasoning: false,
+      reasoningEffort: 'minimal',
+      maxTokens: 8192,
+      maxRetries: 0,
+    })
+
+    const [body] = completionCreateMock.mock.calls[0] as [
+      Record<string, unknown>,
+      Record<string, unknown>,
+    ]
+    expect(body.max_tokens).toBe(8192)
+  })
+
   it('sends Gemini explicit cache control only on cacheable content blocks', async () => {
     await runOpenRouterLlmCompletion({
       modelId: 'google/gemini-3.5-flash',
@@ -216,5 +235,32 @@ describe('OpenRouter prompt cache provider contract', () => {
       },
       provider_cost_credits: usdToCredits(0.0125),
     })
+  })
+
+  it('passes explicit max_tokens to OpenRouter streaming requests', async () => {
+    completionCreateMock.mockResolvedValue(openRouterStreamChunks())
+
+    await runOpenRouterLlmStream({
+      userId: 'user-1',
+      selection: {
+        provider: 'openrouter',
+        modelId: 'google/gemini-3.5-flash',
+        modelKey: 'openrouter::google/gemini-3.5-flash',
+      },
+      providerConfig: {
+        id: 'openrouter',
+        name: 'OpenRouter',
+        apiKey: 'sk-openrouter',
+        baseUrl: 'https://openrouter.example/v1',
+      },
+      messages: [{ role: 'user', content: 'write a compact JSON object' }],
+      options: { reasoning: false, maxTokens: 8192 },
+    })
+
+    const [body] = completionCreateMock.mock.calls[0] as [
+      Record<string, unknown>,
+      Record<string, unknown>,
+    ]
+    expect(body.max_tokens).toBe(8192)
   })
 })

@@ -231,6 +231,7 @@ export async function runChatCompletion(
     temperature = 0.7,
     reasoning = true,
     reasoningEffort = 'high',
+    maxTokens,
     maxRetries = 2,
   } = options
   const projectId =
@@ -274,6 +275,7 @@ export async function runChatCompletion(
         temperature,
         reasoning,
         reasoningEffort,
+        maxTokens,
         maxRetries,
         openRouterSessionId,
       })

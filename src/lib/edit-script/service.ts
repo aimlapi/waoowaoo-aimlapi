@@ -287,6 +287,7 @@ const EDIT_SCREENPLAY_STATUS_SCREENPLAY_READY = 'screenplay_ready'
 const EDIT_SCREENPLAY_STATUS_STYLE_PREVIEW_GENERATING = 'style_preview_generating'
 const EDIT_SCREENPLAY_STATUS_STYLE_PREVIEW_READY = 'style_preview_ready'
 const EDIT_SCREENPLAY_STATUS_FAILED = 'failed'
+const EDIT_FIRST_TEXT_MAX_OUTPUT_TOKENS = 8192
 const EDIT_SCRIPT_ASSET_REVIEW_PENDING = 'pending'
 const EDIT_SCRIPT_ASSET_REVIEW_APPROVED = 'approved'
 
@@ -473,6 +474,7 @@ async function runPromptStep(input: {
   readonly stepTitle: string
   readonly stepIndex: number
   readonly stepTotal: number
+  readonly maxOutputTokens?: number
 }): Promise<Record<string, unknown>> {
   const finalPromptContent = buildAiPromptContent({
     promptId: input.promptId,
@@ -489,6 +491,7 @@ async function runPromptStep(input: {
     model: input.model,
     messages: [{ role: 'user', content: finalPromptContent }],
     temperature: 0.4,
+    maxTokens: input.maxOutputTokens,
     projectId: input.projectId,
     action,
     meta: {
@@ -522,6 +525,7 @@ async function runPromptTextStep(input: {
   readonly stepTitle: string
   readonly stepIndex: number
   readonly stepTotal: number
+  readonly maxOutputTokens?: number
 }): Promise<string> {
   const finalPromptContent = buildAiPromptContent({
     promptId: input.promptId,
@@ -538,6 +542,7 @@ async function runPromptTextStep(input: {
     model: input.model,
     messages: [{ role: 'user', content: finalPromptContent }],
     temperature: 0.5,
+    maxTokens: input.maxOutputTokens,
     projectId: input.projectId,
     action,
     meta: {
@@ -589,6 +594,7 @@ async function generateEditStylePreviewOptions(input: {
     stepTitle: 'Edit style preview options',
     stepIndex: 2,
     stepTotal: 2,
+    maxOutputTokens: EDIT_FIRST_TEXT_MAX_OUTPUT_TOKENS,
   })
   const parsed = editStylePreviewOptionsSchema.parse(raw).stylePreviews
   if (parsed.length !== input.count) {
@@ -1451,6 +1457,7 @@ export async function generateProjectEditScreenplay(input: GenerateEditScreenpla
     stepTitle: 'Edit screenplay',
     stepIndex: 1,
     stepTotal: 1,
+    maxOutputTokens: EDIT_FIRST_TEXT_MAX_OUTPUT_TOKENS,
   })
   const saved = await prisma.projectEditScreenplay.upsert({
     where: { episodeId: input.episodeId },
@@ -1535,6 +1542,7 @@ export async function reviseProjectEditScreenplay(input: ReviseEditScreenplayInp
     stepTitle: 'Revise edit screenplay',
     stepIndex: 1,
     stepTotal: 1,
+    maxOutputTokens: EDIT_FIRST_TEXT_MAX_OUTPUT_TOKENS,
   })
 
   await prisma.projectEditScreenplay.update({
