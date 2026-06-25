@@ -23,6 +23,7 @@ describe('platform model catalog', () => {
     expect(modelKeys).toContain('google::gemini-3.5-flash')
     expect(modelKeys).toContain('openrouter::google/gemini-3.5-flash')
     expect(modelKeys).toContain('fal::gpt-image-2')
+    expect(modelKeys).toContain('openrouter::openai/gpt-image-2')
     expect(modelKeys).toContain('fal::fal-ai/lyria3/pro')
     expect(modelKeys).toContain('ark::doubao-seedance-2-0-260128')
     expect(modelKeys).toContain('openrouter::anthropic/claude-sonnet-4.6')
@@ -32,10 +33,10 @@ describe('platform model catalog', () => {
 
     expect(getPlatformDefaultModels()).toEqual({
       analysisModel: 'openrouter::anthropic/claude-sonnet-4.6',
-      characterModel: 'fal::gpt-image-2',
-      locationModel: 'fal::gpt-image-2',
-      storyboardModel: 'fal::gpt-image-2',
-      editModel: 'fal::gpt-image-2',
+      characterModel: 'openrouter::openai/gpt-image-2',
+      locationModel: 'openrouter::openai/gpt-image-2',
+      storyboardModel: 'openrouter::openai/gpt-image-2',
+      editModel: 'openrouter::openai/gpt-image-2',
       videoModel: 'openrouter::bytedance/seedance-2.0-fast',
       musicModel: 'fal::fal-ai/lyria3/pro',
     })

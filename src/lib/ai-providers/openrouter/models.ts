@@ -11,11 +11,17 @@ import { usdToCredits } from '@/lib/ai-registry/pricing-currency'
 
 export const OPENROUTER_SEEDANCE_2_VIDEO_MODEL_ID = 'bytedance/seedance-2.0'
 export const OPENROUTER_SEEDANCE_2_FAST_VIDEO_MODEL_ID = 'bytedance/seedance-2.0-fast'
+export const OPENROUTER_GPT_IMAGE_2_MODEL_ID = 'openai/gpt-image-2'
 export const OPENROUTER_GEMINI_3_5_FLASH_MODEL_ID = 'google/gemini-3.5-flash'
 export const OPENROUTER_CLAUDE_SONNET_4_6_MODEL_ID = 'anthropic/claude-sonnet-4.6'
 export const OPENROUTER_GPT_5_5_MODEL_ID = 'openai/gpt-5.5'
 export const OPENROUTER_PLATFORM_DEFAULT_ANALYSIS_MODEL_KEY = `openrouter::${OPENROUTER_CLAUDE_SONNET_4_6_MODEL_ID}`
+export const OPENROUTER_PLATFORM_DEFAULT_IMAGE_MODEL_KEY = `openrouter::${OPENROUTER_GPT_IMAGE_2_MODEL_ID}`
 export const OPENROUTER_PLATFORM_DEFAULT_VIDEO_MODEL_KEY = `openrouter::${OPENROUTER_SEEDANCE_2_FAST_VIDEO_MODEL_ID}`
+
+export const OPENROUTER_IMAGE_MODEL_IDS = new Set([
+  OPENROUTER_GPT_IMAGE_2_MODEL_ID,
+])
 
 export const OPENROUTER_VIDEO_MODEL_IDS = new Set([
   OPENROUTER_SEEDANCE_2_VIDEO_MODEL_ID,
@@ -26,6 +32,8 @@ const OPENROUTER_SEEDANCE_2_DURATION_OPTIONS = [4, 5, 6, 7, 8, 9, 10, 11, 12, 13
 const OPENROUTER_SEEDANCE_2_RESOLUTION_OPTIONS = ['480p', '720p', '1080p'] as const
 const OPENROUTER_SEEDANCE_2_FAST_RESOLUTION_OPTIONS = ['480p', '720p'] as const
 export const OPENROUTER_SEEDANCE_2_ASPECT_RATIO_OPTIONS = ['1:1', '3:4', '9:16', '4:3', '16:9', '21:9', '9:21'] as const
+const OPENROUTER_GPT_IMAGE_2_QUALITY_OPTIONS = ['auto', 'low', 'medium', 'high'] as const
+const OPENROUTER_GPT_IMAGE_2_BACKGROUND_OPTIONS = ['auto', 'opaque'] as const
 
 function openrouterTokenPricing(inputUsdPerMillion: number, outputUsdPerMillion: number) {
   return {
@@ -35,6 +43,10 @@ function openrouterTokenPricing(inputUsdPerMillion: number, outputUsdPerMillion:
       { when: { tokenType: 'output' }, amount: usdToCredits(outputUsdPerMillion) },
     ],
   }
+}
+
+function openrouterFlatPricing(flatUsd: number) {
+  return { mode: 'flat' as const, flatAmount: usdToCredits(flatUsd) }
 }
 
 function openrouterVideoSecondPricing(tiers: ReadonlyArray<readonly [resolution: string, amountUsdPerSecond: number]>) {
@@ -49,6 +61,12 @@ function openrouterVideoSecondPricing(tiers: ReadonlyArray<readonly [resolution:
 }
 
 export const OPENROUTER_BUILTIN_PRICING_CATALOG_ENTRIES = [
+  {
+    apiType: 'image',
+    provider: 'openrouter',
+    modelId: OPENROUTER_GPT_IMAGE_2_MODEL_ID,
+    pricing: openrouterFlatPricing(0.12),
+  },
   {
     apiType: 'text',
     provider: 'openrouter',
@@ -113,6 +131,12 @@ export const OPENROUTER_BUILTIN_PRICING_CATALOG_ENTRIES = [
 ] as const
 
 export const OPENROUTER_BUILTIN_CAPABILITY_CATALOG_ENTRIES = [
+  {
+    modelType: 'image',
+    provider: 'openrouter',
+    modelId: OPENROUTER_GPT_IMAGE_2_MODEL_ID,
+    capabilities: { image: { qualityOptions: [...OPENROUTER_GPT_IMAGE_2_QUALITY_OPTIONS] } },
+  },
   { modelType: 'llm', provider: 'openrouter', modelId: 'google/gemini-3.1-pro-preview', capabilities: { llm: { reasoningEffortOptions: ['low', 'medium', 'high'] } } },
   { modelType: 'llm', provider: 'openrouter', modelId: 'google/gemini-3-pro-preview', capabilities: { llm: { reasoningEffortOptions: ['low', 'medium', 'high'] } } },
   { modelType: 'llm', provider: 'openrouter', modelId: OPENROUTER_GEMINI_3_5_FLASH_MODEL_ID, capabilities: { llm: { reasoningEffortOptions: ['minimal', 'low', 'medium', 'high'] } } },
@@ -153,6 +177,7 @@ export const OPENROUTER_BUILTIN_CAPABILITY_CATALOG_ENTRIES = [
 ] as const
 
 export const OPENROUTER_API_CONFIG_CATALOG_MODELS = [
+  { modelId: OPENROUTER_GPT_IMAGE_2_MODEL_ID, name: 'GPT Image 2', type: 'image', provider: 'openrouter' },
   { modelId: 'google/gemini-3.1-pro-preview', name: 'Gemini 3.1 Pro', type: 'llm', provider: 'openrouter' },
   { modelId: 'google/gemini-3-pro-preview', name: 'Gemini 3 Pro', type: 'llm', provider: 'openrouter' },
   { modelId: OPENROUTER_GEMINI_3_5_FLASH_MODEL_ID, name: 'Gemini 3.5 Flash', type: 'llm', provider: 'openrouter' },
@@ -167,6 +192,7 @@ export const OPENROUTER_API_CONFIG_CATALOG_MODELS = [
 ] as const
 
 export const OPENROUTER_PLATFORM_MODEL_PRESETS = [
+  { provider: 'openrouter', modelId: OPENROUTER_GPT_IMAGE_2_MODEL_ID, name: 'GPT Image 2', type: 'image' },
   { provider: 'openrouter', modelId: OPENROUTER_GEMINI_3_5_FLASH_MODEL_ID, name: 'Gemini 3.5 Flash', type: 'llm' },
   { provider: 'openrouter', modelId: OPENROUTER_CLAUDE_SONNET_4_6_MODEL_ID, name: 'Claude Sonnet 4.6', type: 'llm' },
   { provider: 'openrouter', modelId: OPENROUTER_GPT_5_5_MODEL_ID, name: 'GPT-5.5', type: 'llm' },
@@ -175,6 +201,22 @@ export const OPENROUTER_PLATFORM_MODEL_PRESETS = [
 ] as const satisfies ReadonlyArray<PlatformModelPreset>
 
 export function resolveOpenRouterOptionSchema(modality: MediaModality, modelId?: string): AiOptionSchema {
+  if (modality === 'image') {
+    return buildMediaOptionSchema('image', {
+      allowedKeys: ['background', 'outputCompression'],
+      validators: {
+        quality: enumValidator(OPENROUTER_GPT_IMAGE_2_QUALITY_OPTIONS),
+        background: enumValidator(OPENROUTER_GPT_IMAGE_2_BACKGROUND_OPTIONS),
+        outputCompression: integerRangeValidator({ min: 0, max: 100 }),
+      },
+      objectValidators: [
+        () => modelId === undefined || OPENROUTER_IMAGE_MODEL_IDS.has(modelId)
+          ? { ok: true }
+          : { ok: false, reason: `modelId=${modelId}` },
+      ],
+    })
+  }
+
   if (modality === 'video') {
     return buildMediaOptionSchema('video', {
       allowedKeys: ['referenceImages'],

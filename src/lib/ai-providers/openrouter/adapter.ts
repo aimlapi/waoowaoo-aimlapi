@@ -3,10 +3,11 @@ import { describeMediaVariantBase } from '@/lib/ai-providers/shared/media-adapte
 import { createOpenAiSdkLanguageModel } from '@/lib/ai-providers/shared/language-model'
 import { resolveOpenRouterOptionSchema } from './models'
 import { runOpenRouterLlmCompletion, runOpenRouterLlmStream, runOpenRouterVisionCompletion } from './llm'
+import { executeOpenRouterImageGeneration } from './image'
 import { executeOpenRouterVideoGeneration } from './video'
 
 function describeOpenRouterMediaVariant(
-  modality: 'video',
+  modality: 'image' | 'video',
   selection: Parameters<NonNullable<AiProviderAdapter['video']>['describe']>[0],
 ) {
   return describeMediaVariantBase({
@@ -34,6 +35,10 @@ export const openRouterAdapter: AiProviderAdapter = {
   },
   completeVision: runOpenRouterVisionCompletion,
   streamLlm: runOpenRouterLlmStream,
+  image: {
+    describe: (selection) => describeOpenRouterMediaVariant('image', selection),
+    execute: executeOpenRouterImageGeneration,
+  },
   video: {
     describe: (selection) => describeOpenRouterMediaVariant('video', selection),
     execute: executeOpenRouterVideoGeneration,

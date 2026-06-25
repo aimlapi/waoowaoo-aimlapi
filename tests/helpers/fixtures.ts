@@ -1,7 +1,7 @@
 import { randomUUID } from 'node:crypto'
-import { FAL_PLATFORM_DEFAULT_IMAGE_MODEL_KEY } from '@/lib/ai-providers/fal/models'
 import {
   OPENROUTER_PLATFORM_DEFAULT_ANALYSIS_MODEL_KEY,
+  OPENROUTER_PLATFORM_DEFAULT_IMAGE_MODEL_KEY,
   OPENROUTER_PLATFORM_DEFAULT_VIDEO_MODEL_KEY,
 } from '@/lib/ai-providers/openrouter/models'
 import { prisma } from './prisma'
@@ -27,10 +27,10 @@ export async function createFixtureProject(userId: string) {
       userId,
       name: `project_${id}`,
       analysisModel: OPENROUTER_PLATFORM_DEFAULT_ANALYSIS_MODEL_KEY,
-      characterModel: FAL_PLATFORM_DEFAULT_IMAGE_MODEL_KEY,
-      locationModel: FAL_PLATFORM_DEFAULT_IMAGE_MODEL_KEY,
-      storyboardModel: FAL_PLATFORM_DEFAULT_IMAGE_MODEL_KEY,
-      editModel: FAL_PLATFORM_DEFAULT_IMAGE_MODEL_KEY,
+      characterModel: OPENROUTER_PLATFORM_DEFAULT_IMAGE_MODEL_KEY,
+      locationModel: OPENROUTER_PLATFORM_DEFAULT_IMAGE_MODEL_KEY,
+      storyboardModel: OPENROUTER_PLATFORM_DEFAULT_IMAGE_MODEL_KEY,
+      editModel: OPENROUTER_PLATFORM_DEFAULT_IMAGE_MODEL_KEY,
       videoModel: OPENROUTER_PLATFORM_DEFAULT_VIDEO_MODEL_KEY,
       videoRatio: '9:16',
       imageResolution: '2K',
@@ -43,10 +43,10 @@ export async function createFixtureNovelProject(projectId: string) {
     where: { id: projectId },
     data: {
       analysisModel: OPENROUTER_PLATFORM_DEFAULT_ANALYSIS_MODEL_KEY,
-      characterModel: FAL_PLATFORM_DEFAULT_IMAGE_MODEL_KEY,
-      locationModel: FAL_PLATFORM_DEFAULT_IMAGE_MODEL_KEY,
-      storyboardModel: FAL_PLATFORM_DEFAULT_IMAGE_MODEL_KEY,
-      editModel: FAL_PLATFORM_DEFAULT_IMAGE_MODEL_KEY,
+      characterModel: OPENROUTER_PLATFORM_DEFAULT_IMAGE_MODEL_KEY,
+      locationModel: OPENROUTER_PLATFORM_DEFAULT_IMAGE_MODEL_KEY,
+      storyboardModel: OPENROUTER_PLATFORM_DEFAULT_IMAGE_MODEL_KEY,
+      editModel: OPENROUTER_PLATFORM_DEFAULT_IMAGE_MODEL_KEY,
       videoModel: OPENROUTER_PLATFORM_DEFAULT_VIDEO_MODEL_KEY,
       videoRatio: '9:16',
       imageResolution: '2K',

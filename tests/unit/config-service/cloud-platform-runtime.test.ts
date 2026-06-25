@@ -76,10 +76,10 @@ describe('cloud platform runtime project config', () => {
 
     expect(config).toEqual({
       analysisModel: 'openrouter::anthropic/claude-sonnet-4.6',
-      characterModel: 'fal::gpt-image-2',
-      locationModel: 'fal::gpt-image-2',
-      storyboardModel: 'fal::gpt-image-2',
-      editModel: 'fal::gpt-image-2',
+      characterModel: 'openrouter::openai/gpt-image-2',
+      locationModel: 'openrouter::openai/gpt-image-2',
+      storyboardModel: 'openrouter::openai/gpt-image-2',
+      editModel: 'openrouter::openai/gpt-image-2',
       videoModel: 'openrouter::bytedance/seedance-2.0-fast',
       singleShotVideoModel: 'openrouter::bytedance/seedance-2.0-fast',
       sequenceVideoModel: 'openrouter::bytedance/seedance-2.0-fast',
