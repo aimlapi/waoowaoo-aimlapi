@@ -8,6 +8,7 @@ import { withTaskUiPayload } from '@/lib/task/ui-payload'
 import { buildImageBillingPayload, getProjectModelConfig } from '@/lib/config-service'
 import { normalizeImageGenerationCount } from '@/lib/image-generation/count'
 import { ensureProjectLocationImageSlots } from '@/lib/image-generation/location-slots'
+import { LOCATION_SCENE_BOARD_VIEW_COUNT } from '@/lib/asset-generation/location-scene-board-prompts'
 import { hasCharacterAppearanceOutput, hasLocationImageOutput, hasPanelImageOutput } from '@/lib/task/has-output'
 import { sanitizeImageInputsForTaskPayload } from '@/lib/media/outbound-image'
 import { resolveEditScriptStyleBibleSignatureForTask } from '@/lib/edit-script/style-bible-prompt'
@@ -74,7 +75,7 @@ export function createMediaOperations(): ProjectAgentOperationRegistryDraft {
         assertNoLegacyArtStyle(toObject(input))
         const count = input.type === 'character'
           ? normalizeImageGenerationCount('character', (input as Record<string, unknown>).count)
-          : normalizeImageGenerationCount('location', (input as Record<string, unknown>).count)
+          : LOCATION_SCENE_BOARD_VIEW_COUNT
 
         const appearanceId = normalizeString((input as Record<string, unknown>).appearanceId)
         const targetType = input.type === 'character' ? 'CharacterAppearance' : 'LocationImage'

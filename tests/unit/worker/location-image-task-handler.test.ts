@@ -59,7 +59,7 @@ const spatialProfileServiceMock = vi.hoisted(() => ({
 
 const textEngineMock = vi.hoisted(() => ({
   executeAiTextStep: vi.fn(async () => ({
-    text: JSON.stringify({ prompt: '雨夜街道候选最终 prompt，完整空场景资产图' }),
+    text: JSON.stringify({ prompt: '雨夜街道空间板最终 prompt，同一地点独立视角' }),
   })),
 }))
 
@@ -157,9 +157,14 @@ describe('worker location-image-task-handler behavior', () => {
 
     expect(sharedMock.generateCleanImageToStorage).toHaveBeenCalledWith(
       expect.objectContaining({
-        prompt: expect.stringContaining('雨夜街道候选最终 prompt'),
+        prompt: expect.stringContaining('雨夜街道空间板最终 prompt'),
         targetId: 'location-image-1',
         options: expect.objectContaining({ aspectRatio: LOCATION_IMAGE_RATIO }),
+      }),
+    )
+    expect(sharedMock.generateCleanImageToStorage).toHaveBeenCalledWith(
+      expect.objectContaining({
+        prompt: expect.stringContaining('主氛围图'),
       }),
     )
     expect(sharedMock.generateCleanImageToStorage).toHaveBeenCalledWith(
@@ -169,7 +174,7 @@ describe('worker location-image-task-handler behavior', () => {
     )
     expect(sharedMock.generateCleanImageToStorage).toHaveBeenCalledWith(
       expect.objectContaining({
-        prompt: expect.stringContaining('必须使用宽广完整的场景全景构图'),
+        prompt: expect.stringContaining('必须以指定的场景空间板机位方向作为构图最高优先级'),
       }),
     )
     const generationCall = sharedMock.generateCleanImageToStorage.mock.calls[0] as unknown as [{ prompt: string }] | undefined
@@ -183,7 +188,10 @@ describe('worker location-image-task-handler behavior', () => {
     expect(textEngineMock.executeAiTextStep).toHaveBeenCalledWith(
       expect.objectContaining({
         model: 'analysis-model-1',
-        action: 'location_candidate_prompt',
+        action: 'location_scene_board_prompt',
+        meta: expect.objectContaining({
+          stepId: 'location_scene_board_prompt:establishing',
+        }),
       }),
     )
 
@@ -290,6 +298,43 @@ describe('worker location-image-task-handler behavior', () => {
       where: { id: 'location-1' },
       data: { selectedImageId: 'location-image-1' },
     })
+  })
+
+  it('generates fixed spatial-board views for grouped location image slots', async () => {
+    prismaMock.locationImage.findUnique.mockResolvedValueOnce(null)
+    prismaMock.projectLocation.findUnique.mockResolvedValueOnce({
+      id: 'location-1',
+      name: 'Old Town',
+      images: [
+        { id: 'location-image-1', locationId: 'location-1', imageIndex: 0, description: '雨夜街道 A' },
+        { id: 'location-image-2', locationId: 'location-1', imageIndex: 1, description: '雨夜街道 B' },
+        { id: 'location-image-3', locationId: 'location-1', imageIndex: 2, description: '雨夜街道 C' },
+        { id: 'location-image-4', locationId: 'location-1', imageIndex: 3, description: '雨夜街道 D' },
+        { id: 'location-image-5', locationId: 'location-1', imageIndex: 4, description: '雨夜街道 E' },
+      ],
+    })
+
+    await handleLocationImageTask(buildJob({ locationId: 'location-1', count: 5 }, 'location-1'))
+
+    const stepIds = textEngineMock.executeAiTextStep.mock.calls.map((call) => {
+      const input = call[0] as { meta?: { stepId?: string } }
+      return input.meta?.stepId
+    })
+    expect(stepIds).toEqual([
+      'location_scene_board_prompt:establishing',
+      'location_scene_board_prompt:front',
+      'location_scene_board_prompt:back',
+      'location_scene_board_prompt:left',
+      'location_scene_board_prompt:right',
+    ])
+    const prompts = sharedMock.generateCleanImageToStorage.mock.calls.map((call) => {
+      const input = call[0] as { prompt?: string }
+      return input.prompt || ''
+    })
+    expect(prompts[1]).toContain('前方视角')
+    expect(prompts[2]).toContain('后方视角')
+    expect(prompts[3]).toContain('左侧视角')
+    expect(prompts[4]).toContain('右侧视角')
   })
 
   it('uses the same aspect ratio as character generation for prop images', async () => {

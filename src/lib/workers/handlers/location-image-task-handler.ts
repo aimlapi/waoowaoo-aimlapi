@@ -6,11 +6,11 @@ import { type TaskJobData } from '@/lib/task/types'
 import { executeAiTextStep } from '@/lib/ai-exec/engine'
 import { safeParseJsonObject } from '@/lib/json-repair'
 import {
-  appendLocationCompleteSceneRule,
-  buildLocationCandidateStrategies,
-  parseLocationCandidatePrompt,
-  type LocationCandidateStrategy,
-} from '@/lib/asset-generation/location-candidate-prompts'
+  appendLocationSceneBoardViewRule,
+  buildLocationSceneBoardView,
+  parseLocationSceneBoardPrompt,
+  type LocationSceneBoardView,
+} from '@/lib/asset-generation/location-scene-board-prompts'
 import { reportTaskProgress } from '../shared'
 import {
   assertTaskActive,
@@ -62,27 +62,27 @@ function resolveRequestedLocationCount(payload: AnyObj): number | null {
   return normalizeImageGenerationCount('location', payload.count)
 }
 
-async function generateLocationCandidatePrompt(input: {
+async function generateLocationSceneBoardPrompt(input: {
   readonly userId: string
   readonly projectId: string
   readonly analysisModel: string
-  readonly strategy: LocationCandidateStrategy
+  readonly view: LocationSceneBoardView
 }): Promise<string> {
   const completion = await executeAiTextStep({
     userId: input.userId,
     model: input.analysisModel,
-    messages: [{ role: 'user', content: input.strategy.draftInstruction }],
+    messages: [{ role: 'user', content: input.view.draftInstruction }],
     temperature: 0.72,
     projectId: input.projectId,
-    action: 'location_candidate_prompt',
+    action: 'location_scene_board_prompt',
     meta: {
-      stepId: `location_candidate_prompt:${input.strategy.id}`,
-      stepTitle: input.strategy.label,
+      stepId: `location_scene_board_prompt:${input.view.id}`,
+      stepTitle: input.view.label,
       stepIndex: 1,
       stepTotal: 1,
     },
   })
-  return parseLocationCandidatePrompt(safeParseJsonObject(completion.text))
+  return parseLocationSceneBoardPrompt(safeParseJsonObject(completion.text))
 }
 
 export async function handleLocationImageTask(job: Job<TaskJobData>) {
@@ -164,33 +164,33 @@ export async function handleLocationImageTask(job: Job<TaskJobData>) {
         })
       }
       const locale = job.data.locale === 'en' ? 'en' : 'zh'
-      const strategySource = singleImageOnly(payload)
+      const sourceDescription = payload.imageIndex !== undefined
         ? promptBody
         : groupedLocationDescription || promptBody
-      const strategies = buildLocationCandidateStrategies({
-        description: strategySource,
+      const view = buildLocationSceneBoardView({
+        description: sourceDescription,
         locale,
         styleBible,
+        imageIndex: item.imageIndex,
       })
-      const strategy = strategies[item.imageIndex % strategies.length]
-      if (!strategy) throw new Error('LOCATION_CANDIDATE_STRATEGY_NOT_FOUND')
       const profileModel = spatialProfileModel
       if (!profileModel) throw new Error('LOCATION_SPATIAL_PROFILE_MODEL_REQUIRED')
       await reportTaskProgress(job, 12 + Math.floor((i / Math.max(locationImages.length, 1)) * 8), {
-        stage: 'generate_location_candidate_prompt',
+        stage: 'generate_location_scene_board_prompt',
         imageId: item.id,
-        strategy: strategy.id,
+        view: view.id,
       })
-      const candidatePrompt = await generateLocationCandidatePrompt({
+      const candidatePrompt = await generateLocationSceneBoardPrompt({
         userId,
         projectId,
         analysisModel: profileModel,
-        strategy,
+        view,
       })
       return buildLocationImagePromptCore({
-        description: appendLocationCompleteSceneRule({
+        description: appendLocationSceneBoardViewRule({
           prompt: candidatePrompt,
           locale,
+          imageIndex: item.imageIndex,
         }),
         locale,
       })
@@ -283,8 +283,4 @@ export async function handleLocationImageTask(job: Job<TaskJobData>) {
     updated: locationImages.length,
     locationIds,
   }
-}
-
-function singleImageOnly(payload: AnyObj): boolean {
-  return payload.imageIndex !== undefined
 }

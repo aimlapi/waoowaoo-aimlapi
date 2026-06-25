@@ -13,11 +13,11 @@ import {
   parseCharacterCandidatePrompts,
 } from '@/lib/asset-generation/character-candidate-prompts'
 import {
-  appendLocationCompleteSceneRule,
-  buildLocationCandidateStrategies,
-  parseLocationCandidatePrompt,
-  type LocationCandidateStrategy,
-} from '@/lib/asset-generation/location-candidate-prompts'
+  appendLocationSceneBoardViewRule,
+  buildLocationSceneBoardView,
+  parseLocationSceneBoardPrompt,
+  type LocationSceneBoardView,
+} from '@/lib/asset-generation/location-scene-board-prompts'
 import { buildLocationImagePromptCore } from '@/lib/location-image-prompt'
 import { buildPropImagePromptCore } from '@/lib/prop-image-prompt'
 import {
@@ -49,6 +49,7 @@ interface GlobalCharacterRecord {
 interface GlobalLocationImageRecord {
   id: string
   description: string | null
+  imageIndex: number
 }
 
 interface GlobalLocationRecord {
@@ -102,26 +103,26 @@ async function generateGlobalCharacterCandidatePrompts(input: {
   return parseCharacterCandidatePrompts(safeParseJsonObject(completion.text))
 }
 
-async function generateGlobalLocationCandidatePrompt(input: {
+async function generateGlobalLocationSceneBoardPrompt(input: {
   readonly userId: string
   readonly analysisModel: string
-  readonly strategy: LocationCandidateStrategy
+  readonly view: LocationSceneBoardView
 }): Promise<string> {
   const completion = await executeAiTextStep({
     userId: input.userId,
     model: input.analysisModel,
-    messages: [{ role: 'user', content: input.strategy.draftInstruction }],
+    messages: [{ role: 'user', content: input.view.draftInstruction }],
     temperature: 0.72,
     projectId: 'global-asset-hub',
-    action: 'global_location_candidate_prompt',
+    action: 'global_location_scene_board_prompt',
     meta: {
-      stepId: `global_location_candidate_prompt:${input.strategy.id}`,
-      stepTitle: input.strategy.label,
+      stepId: `global_location_scene_board_prompt:${input.view.id}`,
+      stepTitle: input.view.label,
       stepIndex: 1,
       stepTotal: 1,
     },
   })
-  return parseLocationCandidatePrompt(safeParseJsonObject(completion.text))
+  return parseLocationSceneBoardPrompt(safeParseJsonObject(completion.text))
 }
 
 export async function handleAssetHubImageTask(job: Job<TaskJobData>) {
@@ -229,24 +230,24 @@ export async function handleAssetHubImageTask(job: Job<TaskJobData>) {
           })
         }
         const locale = job.data.locale === 'en' ? 'en' : 'zh'
-        const strategies = buildLocationCandidateStrategies({
+        const view = buildLocationSceneBoardView({
           description: groupedLocationDescription || image.description || '',
           locale,
           styleBible: null,
+          imageIndex: image.imageIndex,
         })
-        const strategy = strategies[targetImages.indexOf(image) % strategies.length]
-        if (!strategy) throw new Error('LOCATION_CANDIDATE_STRATEGY_NOT_FOUND')
         const profileModel = spatialProfileModel
         if (!profileModel) throw new Error('LOCATION_SPATIAL_PROFILE_MODEL_REQUIRED')
-        const candidatePrompt = await generateGlobalLocationCandidatePrompt({
+        const candidatePrompt = await generateGlobalLocationSceneBoardPrompt({
           userId,
           analysisModel: profileModel,
-          strategy,
+          view,
         })
         return buildLocationImagePromptCore({
-          description: appendLocationCompleteSceneRule({
+          description: appendLocationSceneBoardViewRule({
             prompt: candidatePrompt,
             locale,
+            imageIndex: image.imageIndex,
           }),
           locale,
         })

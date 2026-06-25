@@ -11,8 +11,8 @@ export function buildLocationImagePromptCore(params: {
     : '必须以场景描述为最高优先级，保留核心场景身份、可见物体、材质、时代感和空间关系，不要替换成其他场景类型。'
 
   const spatialConstraints = params.locale === 'en'
-    ? 'Use a wide, complete environment composition that clearly shows the main structure, foreground/midground/background, and visible spatial boundaries. Do not generate a generic partial background, cropped anchor, or ambiguous layout.'
-    : '必须使用宽广完整的场景全景构图，清楚展示主要结构、前景/中景/背景和空间边界。禁止生成局部裁切、锚点缺失、空间关系模糊的泛化背景。'
+    ? 'Use the requested spatial-board camera direction as the composition authority. Clearly show the main structure, foreground/midground/background, and visible spatial boundaries from that direction. Do not generate a generic partial background, cropped anchor, ambiguous layout, or a different viewpoint than requested.'
+    : '必须以指定的场景空间板机位方向作为构图最高优先级，从该方向清楚展示主要结构、前景/中景/背景和空间边界。禁止生成局部裁切、锚点缺失、空间关系模糊的泛化背景，或生成成其他视角。'
 
   const noMarkConstraints = params.locale === 'en'
     ? 'Do not add non-diegetic overlays such as subtitles, captions, explanatory text, watermarks, annotation labels, arrows, guide lines, marking lines, outline placeholders, UI markers, map labels, or blueprint graphics. Natural in-world text on plausible scene objects such as shop signs, street signs, door numbers, posters, packaging, or screens is allowed only when it belongs to the described environment; keep it secondary and do not turn it into random gibberish or intrusive floating text.'

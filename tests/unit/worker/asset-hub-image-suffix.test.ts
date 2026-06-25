@@ -52,7 +52,7 @@ const textEngineMock = vi.hoisted(() => ({
         }),
       }
     }
-    return { text: JSON.stringify({ prompt: '全局候选场景 prompt，完整空场景资产图' }) }
+    return { text: JSON.stringify({ prompt: '全局场景空间板 prompt，同一地点独立视角' }) }
   }),
 }))
 
@@ -184,9 +184,9 @@ describe('asset hub character image prompt suffix regression', () => {
       id: 'global-location-1',
       name: 'Old Town',
       images: [
-        { id: 'global-location-image-1', description: '雨夜街道 A' },
-        { id: 'global-location-image-2', description: '雨夜街道 B' },
-        { id: 'global-location-image-3', description: '雨夜街道 C' },
+        { id: 'global-location-image-1', imageIndex: 0, description: '雨夜街道 A' },
+        { id: 'global-location-image-2', imageIndex: 1, description: '雨夜街道 B' },
+        { id: 'global-location-image-3', imageIndex: 2, description: '雨夜街道 C' },
       ],
     })
 
@@ -203,6 +203,12 @@ describe('asset hub character image prompt suffix regression', () => {
     })
     expect(sharedMock.generateCleanImageToStorage).toHaveBeenCalledTimes(1)
     expect(textEngineMock.executeAiTextStep).toHaveBeenCalledTimes(1)
+    expect(textEngineMock.executeAiTextStep).toHaveBeenCalledWith(expect.objectContaining({
+      action: 'global_location_scene_board_prompt',
+      meta: expect.objectContaining({
+        stepId: 'global_location_scene_board_prompt:establishing',
+      }),
+    }))
     expect(prismaMock.globalLocationImage.update).toHaveBeenCalledTimes(1)
     expect(prismaMock.globalLocationImage.update).toHaveBeenCalledWith({
       where: { id: 'global-location-image-1' },
@@ -221,6 +227,7 @@ describe('asset hub character image prompt suffix regression', () => {
       images: [
         {
           id: 'global-prop-image-1',
+          imageIndex: 0,
           description: '银质餐具套装，包含刀叉与汤匙，线条简洁，金属冷白光泽',
         },
       ],

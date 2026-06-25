@@ -107,6 +107,27 @@ describe('media operations', () => {
     }))
   })
 
+  it('regenerate_group -> creates five fixed spatial-board slots for locations', async () => {
+    const ops = createMediaOperations()
+    const ctx = buildCtx()
+    await ops.regenerate_group.execute(ctx as never, {
+      type: 'location',
+      id: 'location-1',
+      count: 2,
+    })
+
+    expect(locationSlotsMock.ensureProjectLocationImageSlots).toHaveBeenCalledWith({
+      locationId: 'location-1',
+      count: 5,
+      fallbackDescription: 'sum',
+    })
+    expect(configMock.buildImageBillingPayload).toHaveBeenCalledWith(expect.objectContaining({
+      basePayload: expect.objectContaining({
+        count: 5,
+      }),
+    }))
+  })
+
   it('regenerate_single_image -> submits IMAGE_CHARACTER task', async () => {
     const ops = createMediaOperations()
     const ctx = buildCtx()
