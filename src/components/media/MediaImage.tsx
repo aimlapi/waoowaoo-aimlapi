@@ -1,6 +1,5 @@
 'use client'
 
-import Image from 'next/image'
 import type { CSSProperties, ImgHTMLAttributes, MouseEventHandler } from 'react'
 import { toDisplayImageUrl } from '@/lib/media/image-url'
 
@@ -17,8 +16,8 @@ export type MediaImageProps = {
   priority?: boolean
 } & Omit<ImgHTMLAttributes<HTMLImageElement>, 'src' | 'alt' | 'width' | 'height'>
 
-function isStableMediaRoute(src: string) {
-  return src.startsWith('/m/')
+function mergeClassNames(...classNames: Array<string | undefined | false>): string {
+  return classNames.filter(Boolean).join(' ')
 }
 
 export function resolveMediaImageSource(src: string | null | undefined): string | null {
@@ -41,49 +40,17 @@ export function MediaImage({
   const resolvedSrc = resolveMediaImageSource(src)
   if (!resolvedSrc) return null
 
-  if (isStableMediaRoute(resolvedSrc)) {
-    if (fill) {
-      return (
-        <Image
-          src={resolvedSrc}
-          alt={alt}
-          fill
-          sizes={sizes || '100vw'}
-          priority={priority}
-          className={className}
-          style={style}
-          onClick={onClick}
-          {...imgProps}
-        />
-      )
-    }
-
-    return (
-      <Image
-        src={resolvedSrc}
-        alt={alt}
-        width={width}
-        height={height}
-        sizes={sizes}
-        priority={priority}
-        className={className}
-        style={style}
-        onClick={onClick}
-        {...imgProps}
-      />
-    )
-  }
-
   return (
-    // 外部 URL 兜底，避免 next/image 远程域名限制影响兼容链路
+    // 本地媒体路由与签名存储 URL 直接交给浏览器加载，确保 load/error 事件可靠回传给加载态组件。
     // eslint-disable-next-line @next/next/no-img-element
     <img
       src={resolvedSrc}
       alt={alt}
-      className={className}
+      className={mergeClassNames(className, fill && 'absolute inset-0 h-full w-full')}
       style={style}
       onClick={onClick}
       loading={priority ? 'eager' : 'lazy'}
+      {...(!fill ? { width, height, sizes } : { sizes })}
       {...imgProps}
     />
   )
