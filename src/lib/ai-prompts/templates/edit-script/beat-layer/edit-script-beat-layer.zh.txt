@@ -39,6 +39,16 @@ Scene Layer：
 - 危机场景必须继承 sceneLayerPackage.crisisSceneDesign，同时压迫 externalChoice 与 internalChoice。
 - Beat Layer 只能给 Dialogue Layer 提供语义和策略基础，不得提前写台词。
 
+机器校验合同（最高优先级）：
+- 顶层 JSON 只能是 { "beatLayerPackage": { ... } }。
+- 每个 beats[] 元素只能包含这些字段：beatNumber、sceneNumber、action、reaction、actionReactionCouple、strategyChange、informationChange、subtextSeed、valuePressure、newCondition。
+- 每个 action 只能包含 actor、strategy、intent；每个 reaction 只能包含 actor、strategy、intent。
+- action.strategy 与 reaction.strategy 必须是下方策略词库中的英文 token 原文；禁止输出中文策略词、同义词、解释短语或新枚举。
+- informationChange 必须是 setup、payoff、misdirect、partial_reveal、full_reveal、none 之一；禁止输出其他词。
+- valuePressure 必须同时包含 externalPressure 和 internalPressure。
+- 如果需要表达 tacticalShift，只能写进 strategyChange 或 beatArc.midSceneTacticalShift；禁止在 beat 对象里新增 tacticalShift、tactic、dialogueHint、emotion、camera、shot、description、result 等字段。
+- 如果你不确定某个字段是否允许，宁可把信息压缩进已允许的 strategyChange、subtextSeed 或 newCondition，不得新增字段。
+
 策略词库：
 - show：表现
 - mask：掩饰

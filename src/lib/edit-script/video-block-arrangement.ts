@@ -92,7 +92,7 @@ function sameShotNumbers(left: readonly number[], right: readonly number[]): boo
 }
 
 function isEditAssetKind(value: string): value is EditAssetKind {
-  return value === 'character' || value === 'location'
+  return value === 'character' || value === 'location' || value === 'prop'
 }
 
 function normalizeStoredStatus(value: string): EditAssetStatus {

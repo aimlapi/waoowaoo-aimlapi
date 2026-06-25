@@ -207,7 +207,7 @@ describe('edit script normalization', () => {
     })).toThrow('VIDEO_BLOCK_PLAN_GROUP_DURATION_UNSUPPORTED:17')
   })
 
-  it('extracts only character and location requirements linked to real shots', () => {
+  it('extracts character, location, and key prop requirements linked to real shots', () => {
     const shots = normalizeEditScriptCore({
       title: 'Assets',
       durationSec: 16,
@@ -260,6 +260,12 @@ describe('edit script normalization', () => {
           description: 'A sterile orbital docking bay with red warning light.',
           shotNumbers: [1, 3],
         },
+        {
+          kind: 'prop',
+          name: 'Heartbeat Collar',
+          description: 'A polished steel world-rule collar with red countdown projection and inner hooks.',
+          shotNumbers: [2, 4],
+        },
       ],
     }, shots)
 
@@ -278,6 +284,15 @@ describe('edit script normalization', () => {
         name: 'Dock',
         description: 'A sterile orbital docking bay with red warning light.',
         shotNumbers: [1],
+        status: 'pending',
+        targetId: null,
+        errorMessage: null,
+      },
+      {
+        kind: 'prop',
+        name: 'Heartbeat Collar',
+        description: 'A polished steel world-rule collar with red countdown projection and inner hooks.',
+        shotNumbers: [2],
         status: 'pending',
         targetId: null,
         errorMessage: null,

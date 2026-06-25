@@ -80,7 +80,7 @@ function isRecord(value: unknown): value is Record<string, unknown> {
 }
 
 function isEditAssetKind(value: string): value is EditAssetKind {
-  return value === 'character' || value === 'location'
+  return value === 'character' || value === 'location' || value === 'prop'
 }
 
 function normalizeStoredStatus(value: string): EditAssetStatus {

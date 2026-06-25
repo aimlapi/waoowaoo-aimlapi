@@ -64,8 +64,8 @@ const SELECTABLE_TOOL_DESCRIPTION_COPY: Record<string, { zh: string; en: string 
     en: 'Generate or regenerate 1-3 screenplay-based visual style preview images after screenplay review. Also use during visual style choice when the user asks to redo, adjust, make darker/more abstract, or specify a non-real-person art direction; non-real-person art direction may include anime 3D or stylized 3D; pass user feedback in styleDirection, count is capped at 3, and regeneration appends new candidates.',
   },
   generate_edit_script_assets: {
-    zh: '根据当前剪辑先行表创建/复用所需角色与场景资产，并为缺失图片提交生成任务。要处理全部需求时不要传 requirementId；只有处理单个需求时才传真实 editScript.requirements[].id，禁止传 "*" 或任何通配值。',
-    en: 'Create or reuse required character/location assets from the current edit-first table and submit missing image tasks. To process every requirement, omit requirementId; pass requirementId only for one exact editScript.requirements[].id. Never pass "*" or any wildcard value.',
+    zh: '根据当前剪辑先行表创建/复用所需角色、场景与道具资产，并为缺失图片提交生成任务。要处理全部需求时不要传 requirementId；只有处理单个需求时才传真实 editScript.requirements[].id，禁止传 "*" 或任何通配值。',
+    en: 'Create or reuse required character/location/prop assets from the current edit-first table and submit missing image tasks. To process every requirement, omit requirementId; pass requirementId only for one exact editScript.requirements[].id. Never pass "*" or any wildcard value.',
   },
   revise_edit_script_assets: {
     zh: '在资产审核未通过时，按用户提交的 revisionNotes 返工剪辑资产图片。必须传入 revisionNotes；只有要处理单个需求时才传真实 editScript.requirements[].id。工具成功返回前，不要声称已经重新提交任务。',

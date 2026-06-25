@@ -3,7 +3,7 @@ import { Prisma } from '@prisma/client'
 import { prisma } from '@/lib/prisma'
 import { ApiError } from '@/lib/api-errors'
 import { executeAiTextStep } from '@/lib/ai-exec/engine'
-import { AI_PROMPT_IDS, buildAiPromptContent } from '@/lib/ai-prompts'
+import { AI_PROMPT_IDS, buildAiPrompt, buildAiPromptContent } from '@/lib/ai-prompts'
 import { flattenChatMessageContent } from '@/lib/ai-registry/message-content'
 import { buildDefaultTaskBillingInfo, withTextBilling } from '@/lib/billing'
 import { buildImageBillingPayloadFromUserConfig, getProjectModelConfig, getUserModelConfig } from '@/lib/config-service'
@@ -308,7 +308,13 @@ const EDIT_SCREENPLAY_STATUS_STYLE_PREVIEW_GENERATING = 'style_preview_generatin
 const EDIT_SCREENPLAY_STATUS_STYLE_PREVIEW_READY = 'style_preview_ready'
 const EDIT_SCREENPLAY_STATUS_FAILED = 'failed'
 const EDIT_FIRST_TEXT_MAX_OUTPUT_TOKENS = 8192
-const EDIT_SCREENPLAY_DEVELOPMENT_MAX_OUTPUT_TOKENS = 12_000
+const EDIT_SCREENPLAY_JSON_OBJECT_SYSTEM_PROMPT = [
+  'You are a JSON API for a screenplay development pipeline.',
+  'Return exactly one valid JSON object and nothing else.',
+  'Do not return Markdown, code fences, arrays, prose, analysis, or explanations.',
+  'The first non-whitespace character must be { and the last non-whitespace character must be }.',
+  'Use double-quoted JSON keys and string values. Do not use trailing commas.',
+].join(' ')
 const EDIT_SCRIPT_ASSET_REVIEW_PENDING = 'pending'
 const EDIT_SCRIPT_ASSET_REVIEW_APPROVED = 'approved'
 
@@ -611,21 +617,21 @@ async function runPromptStep(input: {
   readonly stepTotal: number
   readonly maxOutputTokens?: number
 }): Promise<Record<string, unknown>> {
-  const finalPromptContent = buildAiPromptContent({
+  const finalPrompt = buildAiPrompt({
     promptId: input.promptId,
     locale: input.locale,
     variables: input.variables,
-    cacheVariableKeys: Object.keys(input.variables),
-    minCacheChars: EDIT_SCRIPT_PROMPT_CACHE_MIN_CHARS,
   })
-  const finalPrompt = flattenChatMessageContent(finalPromptContent)
   const maxInputTokens = Math.max(1200, Math.ceil(finalPrompt.length * 1.2))
   const action = input.promptId
   const runCompletion = async () => executeAiTextStep({
     userId: input.userId,
     model: input.model,
-    messages: [{ role: 'user', content: finalPromptContent }],
-    temperature: 0.4,
+    messages: [
+      { role: 'system', content: EDIT_SCREENPLAY_JSON_OBJECT_SYSTEM_PROMPT },
+      { role: 'user', content: finalPrompt },
+    ],
+    temperature: 0.2,
     maxTokens: input.maxOutputTokens,
     projectId: input.projectId,
     action,
@@ -751,7 +757,7 @@ function readShotNumbers(value: Prisma.JsonValue): number[] {
 }
 
 function isEditAssetKind(value: string): value is EditAssetKind {
-  return value === 'character' || value === 'location'
+  return value === 'character' || value === 'location' || value === 'prop'
 }
 
 function normalizeStoredStatus(value: string): EditAssetStatus {
@@ -872,7 +878,7 @@ async function resolveLocationAsset(projectId: string, targetId: string | null):
 
 async function resolveRequirementAsset(projectId: string, requirement: PersistedEditScriptRequirement): Promise<ExistingAssetRef | null> {
   if (requirement.kind === 'character') return resolveCharacterAsset(projectId, requirement.targetId)
-  if (requirement.kind === 'location') return resolveLocationAsset(projectId, requirement.targetId)
+  if (requirement.kind === 'location' || requirement.kind === 'prop') return resolveLocationAsset(projectId, requirement.targetId)
   return null
 }
 
@@ -1635,7 +1641,6 @@ export async function generateProjectEditScreenplay(input: GenerateEditScreenpla
     stepTitle: 'Screenplay skeleton',
     stepIndex: 1,
     stepTotal: 7,
-    maxOutputTokens: EDIT_SCREENPLAY_DEVELOPMENT_MAX_OUTPUT_TOKENS,
   })).screenplaySkeleton
   assertScreenplaySkeletonSceneCount({
     screenplaySkeleton,
@@ -1671,7 +1676,6 @@ export async function generateProjectEditScreenplay(input: GenerateEditScreenpla
     stepTitle: 'Sequence layer',
     stepIndex: 2,
     stepTotal: 7,
-    maxOutputTokens: EDIT_SCREENPLAY_DEVELOPMENT_MAX_OUTPUT_TOKENS,
   })).sequenceLayer
   if (!reusableSequenceLayer) {
     await persistScreenplayDevelopmentDraft({
@@ -1705,7 +1709,6 @@ export async function generateProjectEditScreenplay(input: GenerateEditScreenpla
     stepTitle: 'Scene layer',
     stepIndex: 3,
     stepTotal: 7,
-    maxOutputTokens: EDIT_SCREENPLAY_DEVELOPMENT_MAX_OUTPUT_TOKENS,
   }))
   if (!reusableSceneLayerPackage) {
     await persistScreenplayDevelopmentDraft({
@@ -1741,7 +1744,6 @@ export async function generateProjectEditScreenplay(input: GenerateEditScreenpla
     stepTitle: 'Beat layer',
     stepIndex: 4,
     stepTotal: 7,
-    maxOutputTokens: EDIT_SCREENPLAY_DEVELOPMENT_MAX_OUTPUT_TOKENS,
   }))
   if (!reusableBeatLayerPackage) {
     await persistScreenplayDevelopmentDraft({
@@ -1802,7 +1804,6 @@ export async function generateProjectEditScreenplay(input: GenerateEditScreenpla
     stepTitle: 'Dialogue layer',
     stepIndex: 6,
     stepTotal: 7,
-    maxOutputTokens: EDIT_SCREENPLAY_DEVELOPMENT_MAX_OUTPUT_TOKENS,
   }))
   if (!reusableDialogueLayerPackage) {
     await persistScreenplayDevelopmentDraft({
@@ -2553,7 +2554,7 @@ async function findExistingAsset(input: {
   }
 
   const locations = await prisma.projectLocation.findMany({
-    where: { projectId: input.projectId, assetKind: 'location' },
+    where: { projectId: input.projectId, assetKind: input.kind },
     select: {
       id: true,
       name: true,
@@ -2625,7 +2626,7 @@ async function createRequiredAsset(input: {
       projectId: input.projectId,
       name: input.name,
       summary: input.description,
-      assetKind: 'location',
+      assetKind: input.kind,
       images: {
         create: {
           imageIndex: 0,
@@ -2693,7 +2694,7 @@ async function createRequiredAssetInTransaction(
       projectId: input.projectId,
       name: input.name,
       summary: input.description,
-      assetKind: 'location',
+      assetKind: input.kind,
       images: {
         create: {
           imageIndex: 0,

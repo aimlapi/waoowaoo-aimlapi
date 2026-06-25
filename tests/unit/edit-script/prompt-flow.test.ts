@@ -170,6 +170,25 @@ describe('edit script block-first prompt flow', () => {
     expect(stylePreviewPrompt).not.toContain('即便是“风格化 3D”也不允许')
     expect(stylePreviewPrompt).not.toContain('非真人且非 3D')
 
+    const beatLayerPrompt = buildAiPrompt({
+      promptId: AI_PROMPT_IDS.EDIT_SCRIPT_BEAT_LAYER,
+      locale: 'zh',
+      variables: {
+        user_request: '生成一条连续短片',
+        screenplay_skeleton_json: JSON.stringify({ screenplaySkeleton: { sceneSkeleton: [] } }),
+        sequence_layer_json: JSON.stringify({ sequenceLayer: { sequences: [] } }),
+        scene_layer_json: JSON.stringify({ sceneLayerPackage: { sceneLayer: [] } }),
+        duration_seconds: '60',
+        aspect_ratio: '16:9',
+      },
+    })
+
+    expect(beatLayerPrompt).toContain('机器校验合同（最高优先级）')
+    expect(beatLayerPrompt).toContain('每个 beats[] 元素只能包含这些字段')
+    expect(beatLayerPrompt).toContain('action.strategy 与 reaction.strategy 必须是下方策略词库中的英文 token 原文')
+    expect(beatLayerPrompt).toContain('informationChange 必须是 setup、payoff、misdirect、partial_reveal、full_reveal、none 之一')
+    expect(beatLayerPrompt).toContain('禁止在 beat 对象里新增 tacticalShift、tactic、dialogueHint、emotion、camera、shot、description、result 等字段')
+
     const primaryPrompt = buildAiPrompt({
       promptId: AI_PROMPT_IDS.EDIT_SCRIPT_PRIMARY,
       locale: 'zh',
@@ -208,8 +227,30 @@ describe('edit script block-first prompt flow', () => {
     })
 
     expect(assetExtractPrompt).toContain('"kind": "character"')
+    expect(assetExtractPrompt).toContain('"kind": "prop"')
     expect(assetExtractPrompt).toContain('"description": "用于图片生成的视觉描述"')
-    expect(assetExtractPrompt).toContain('第一阶段不要提取道具、音频、分镜图、视频')
+    expect(assetExtractPrompt).toContain('关键道具筛选来自道具分析规则')
+    expect(assetExtractPrompt).toContain('只提取会反复参与视觉叙事，或承担世界规则、人物身份/价值转向、动作冲突、高潮目标的稳定道具资产')
+    expect(assetExtractPrompt).toContain('世界规则道具')
+    expect(assetExtractPrompt).toContain('人物身份或价值转向道具')
+    expect(assetExtractPrompt).toContain('动作冲突核心道具')
+    expect(assetExtractPrompt).toContain('高潮目标物或 set piece')
+    expect(assetExtractPrompt).toContain('反复参与视觉叙事的象征道具')
+    expect(assetExtractPrompt).toContain('不要提取普通餐桌、餐椅、墙面、衣物、鞋子、普通化妆品')
+    expect(assetExtractPrompt).not.toContain('第一阶段不要提取道具')
+
+    const propCreatePrompt = buildAiPrompt({
+      promptId: AI_PROMPT_IDS.PROP_CREATE,
+      locale: 'zh',
+      variables: {
+        user_input: '精钢心动检测脖环，制度惩罚装置，红色倒计时投影，内圈倒钩。',
+      },
+    })
+
+    expect(propCreatePrompt).toContain('道具资产视觉设计师')
+    expect(propCreatePrompt).toContain('只描述道具本体的静态视觉信息')
+    expect(propCreatePrompt).toContain('适合白底居中的道具资产图生成')
+    expect(propCreatePrompt).toContain('禁止出现人物、手部、桌面、房间、场景、光影氛围')
 
     const videoPromptBlock = buildAiPrompt({
       promptId: AI_PROMPT_IDS.EDIT_SCRIPT_VIDEO_PROMPT_BLOCK,
@@ -348,5 +389,24 @@ describe('edit script block-first prompt flow', () => {
     expect(englishStylePreviewPrompt).toContain('hardBans are chain-wide hard bans')
     expect(englishStylePreviewPrompt).not.toContain('Stylized 3D is also prohibited')
     expect(englishStylePreviewPrompt).not.toContain('non-3D')
+
+    const englishBeatLayerPrompt = buildAiPrompt({
+      promptId: AI_PROMPT_IDS.EDIT_SCRIPT_BEAT_LAYER,
+      locale: 'en',
+      variables: {
+        user_request: 'Create a continuous short film',
+        screenplay_skeleton_json: JSON.stringify({ screenplaySkeleton: { sceneSkeleton: [] } }),
+        sequence_layer_json: JSON.stringify({ sequenceLayer: { sequences: [] } }),
+        scene_layer_json: JSON.stringify({ sceneLayerPackage: { sceneLayer: [] } }),
+        duration_seconds: '60',
+        aspect_ratio: '16:9',
+      },
+    })
+
+    expect(englishBeatLayerPrompt).toContain('Machine validation contract (highest priority)')
+    expect(englishBeatLayerPrompt).toContain('Each beats[] item may contain only these fields')
+    expect(englishBeatLayerPrompt).toContain('must be exact English tokens from Strategy vocabulary below')
+    expect(englishBeatLayerPrompt).toContain('informationChange must be exactly one of setup, payoff, misdirect, partial_reveal, full_reveal, none')
+    expect(englishBeatLayerPrompt).toContain('Do not add tacticalShift, tactic, dialogueHint, emotion, camera, shot, description, result')
   })
 })

@@ -12,6 +12,7 @@ export const AI_PROMPT_IDS = {
   LOCATION_SPATIAL_PROFILE: 'location-spatial-profile',
   LOCATION_UPDATE_DESCRIPTION: 'location-update-description',
   PROP_ANALYZE: 'prop-analyze',
+  PROP_CREATE: 'prop-create',
   PROP_UPDATE_DESCRIPTION: 'prop-update-description',
   SCRIPT_CLIP_SEGMENTS: 'script-clip-segments',
   SCRIPT_EPISODE_SPLIT: 'script-episode-split',

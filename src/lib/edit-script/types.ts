@@ -2,7 +2,7 @@ import { z } from 'zod'
 import type { LocationSpatialProfileStatus } from '@/lib/location-spatial-profile/types'
 import { EDIT_FIRST_DURATION_TIERS } from './duration-tier'
 
-export const EDIT_ASSET_KINDS = ['character', 'location'] as const
+export const EDIT_ASSET_KINDS = ['character', 'location', 'prop'] as const
 export type EditAssetKind = (typeof EDIT_ASSET_KINDS)[number]
 
 export const EDIT_ASSET_STATUSES = ['pending', 'generating', 'completed', 'failed'] as const

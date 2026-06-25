@@ -5,7 +5,7 @@ import { ApiError, getRequestId } from '@/lib/api-errors'
 import { buildDefaultTaskBillingInfo } from '@/lib/billing'
 import { buildImageBillingPayload, getProjectModelConfig } from '@/lib/config-service'
 import { decodeImageUrlsFromDb } from '@/lib/contracts/image-urls-contract'
-import { CHARACTER_ASSET_IMAGE_RATIO, LOCATION_IMAGE_RATIO } from '@/lib/constants'
+import { CHARACTER_ASSET_IMAGE_RATIO, LOCATION_IMAGE_RATIO, PROP_IMAGE_RATIO } from '@/lib/constants'
 import { submitTask } from '@/lib/task/submitter'
 import { TASK_TYPE } from '@/lib/task/types'
 import { withTaskUiPayload } from '@/lib/task/ui-payload'
@@ -122,7 +122,7 @@ async function resolveEditScriptAssetRevisionTarget(input: {
     }
   }
 
-  if (input.requirement.kind === 'location') {
+  if (input.requirement.kind === 'location' || input.requirement.kind === 'prop') {
     const location = await prisma.projectLocation.findFirst({
       where: {
         id: targetId,
@@ -154,7 +154,7 @@ async function resolveEditScriptAssetRevisionTarget(input: {
       targetId: image.id,
       hasOutputAtStart: Boolean(image.imageMediaId || image.imageUrl),
       body: {
-        type: 'location',
+        type: input.requirement.kind,
         locationId: location.id,
         locationImageId: image.id,
         imageIndex: image.imageIndex,
@@ -182,7 +182,11 @@ async function submitEditScriptAssetRevisionTask(input: {
   readonly revisionHash: string
 }): Promise<Omit<EditScriptAssetRevisionTask, 'requirementId' | 'kind' | 'name'>> {
   const projectModelConfig = await getProjectModelConfig(input.projectId, input.userId)
-  const aspectRatio = input.requirement.kind === 'character' ? CHARACTER_ASSET_IMAGE_RATIO : LOCATION_IMAGE_RATIO
+  const aspectRatio = input.requirement.kind === 'character'
+    ? CHARACTER_ASSET_IMAGE_RATIO
+    : input.requirement.kind === 'prop'
+      ? PROP_IMAGE_RATIO
+      : LOCATION_IMAGE_RATIO
   const billingPayload = await buildImageBillingPayload({
     projectId: input.projectId,
     userId: input.userId,

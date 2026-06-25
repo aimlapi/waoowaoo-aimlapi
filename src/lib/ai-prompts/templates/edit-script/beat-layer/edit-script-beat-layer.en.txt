@@ -39,6 +39,16 @@ Core principles:
 - The crisis scene must inherit sceneLayerPackage.crisisSceneDesign and pressure both externalChoice and internalChoice.
 - Beat Layer only provides semantic and strategic basis for Dialogue Layer. Do not write dialogue early.
 
+Machine validation contract (highest priority):
+- The top-level JSON must only be { "beatLayerPackage": { ... } }.
+- Each beats[] item may contain only these fields: beatNumber, sceneNumber, action, reaction, actionReactionCouple, strategyChange, informationChange, subtextSeed, valuePressure, newCondition.
+- Each action may contain only actor, strategy, intent. Each reaction may contain only actor, strategy, intent.
+- action.strategy and reaction.strategy must be exact English tokens from Strategy vocabulary below. Do not output translated strategy labels, synonyms, explanatory phrases, or new enum values.
+- informationChange must be exactly one of setup, payoff, misdirect, partial_reveal, full_reveal, none. Do not output any other value.
+- valuePressure must contain both externalPressure and internalPressure.
+- If you need to express tacticalShift, write it only inside strategyChange or beatArc.midSceneTacticalShift. Do not add tacticalShift, tactic, dialogueHint, emotion, camera, shot, description, result, or any other extra field inside a beat object.
+- If you are unsure whether a field is allowed, compress the information into an allowed field such as strategyChange, subtextSeed, or newCondition. Do not add new fields.
+
 Strategy vocabulary:
 - show
 - mask

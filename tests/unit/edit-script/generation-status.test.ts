@@ -279,6 +279,126 @@ function mockSuccessfulAiSteps() {
     })
 }
 
+function mockSuccessfulScreenplayDevelopmentSteps() {
+  aiExecMock.executeAiTextStep
+    .mockResolvedValueOnce({
+      text: JSON.stringify({
+        screenplaySkeleton: {
+          skeletonPremise: 'A quiet signal wakes a station.',
+          centralDramaticQuestion: 'Can the operator answer the signal without losing herself?',
+          storyOriginDiagnosis: { primaryOrigin: 'concept' },
+          storyStructureBlueprint: { structuralBeats: {} },
+          sceneSkeleton: [
+            {
+              sceneNumber: 1,
+              sceneGoal: '确认信号来源',
+              sceneAntagonist: '失控的空间站系统',
+              sceneOutcome: '操作员被迫进入核心舱',
+            },
+            {
+              sceneNumber: 2,
+              sceneGoal: '切断异常信号',
+              sceneAntagonist: '信号中的未知意识',
+              sceneOutcome: '操作员发现信号正在求救',
+            },
+            {
+              sceneNumber: 3,
+              sceneGoal: '决定是否回应信号',
+              sceneAntagonist: '即将关闭的生存系统',
+              sceneOutcome: '操作员回应信号并改变空间站航向',
+            },
+          ],
+        },
+      }),
+    })
+    .mockResolvedValueOnce({
+      text: JSON.stringify({
+        sequenceLayer: {
+          sequences: [
+            { sequenceNumber: 1, sequenceGoal: '发现异常并进入核心舱' },
+            { sequenceNumber: 2, sequenceGoal: '理解信号并做出选择' },
+          ],
+        },
+      }),
+    })
+    .mockResolvedValueOnce({
+      text: JSON.stringify({
+        sceneLayerPackage: {
+          sceneLayer: [
+            {
+              sceneNumber: 1,
+              sceneGoal: '确认信号来源',
+              sceneAntagonist: '失控的空间站系统',
+              outcome: '操作员被迫进入核心舱',
+              turningPoint: '舱门从身后锁死',
+            },
+            {
+              sceneNumber: 2,
+              sceneGoal: '切断异常信号',
+              sceneAntagonist: '信号中的未知意识',
+              outcome: '操作员发现信号正在求救',
+              turningPoint: '屏幕显示另一端仍有人存活',
+            },
+            {
+              sceneNumber: 3,
+              sceneGoal: '决定是否回应信号',
+              sceneAntagonist: '即将关闭的生存系统',
+              outcome: '操作员回应信号并改变空间站航向',
+              turningPoint: '她把备用电源接入发射阵列',
+            },
+          ],
+        },
+      }),
+    })
+    .mockResolvedValueOnce({
+      text: JSON.stringify({
+        beatLayerPackage: {
+          sceneBeatBlocks: [
+            {
+              sceneNumber: 1,
+              beats: [
+                {
+                  beatNumber: 1,
+                  sceneNumber: 1,
+                  action: { actor: '操作员', strategy: 'probe', intent: '按下监听键' },
+                  reaction: { actor: '空间站系统', strategy: 'force', intent: '锁死舱门' },
+                  actionReactionCouple: '试探 ↔ 逼迫',
+                  strategyChange: '操作员从远程排查改为进入核心舱',
+                  informationChange: 'setup',
+                  subtextSeed: '她害怕信号不是机器故障。',
+                  valuePressure: {
+                    externalPressure: '信号威胁空间站安全',
+                    internalPressure: '她必须承认自己想听见回应',
+                  },
+                  newCondition: '她无法再从外部切断信号',
+                },
+              ],
+            },
+          ],
+        },
+      }),
+    })
+    .mockResolvedValueOnce({
+      text: JSON.stringify({
+        dialogueLayer: [
+          {
+            sceneNumber: 1,
+            dialogueBeats: [
+              {
+                beatNumber: 1,
+                speakerName: '操作员',
+                dialogue: '别再装成噪声。',
+              },
+            ],
+          },
+        ],
+      }),
+    })
+    .mockResolvedValueOnce({
+      text: '标题：《科幻短片》\n\n故事梗概：一条安静信号唤醒空间站。',
+    })
+}
+
 describe('edit script generation status persistence', () => {
   beforeEach(() => {
     vi.clearAllMocks()
@@ -435,11 +555,10 @@ describe('edit script generation status persistence', () => {
   })
 
   it('generates screenplay for user review without starting style preview tasks', async () => {
-    aiExecMock.executeAiTextStep
+    mockSuccessfulScreenplayDevelopmentSteps()
+    prismaMock.projectEditScreenplay.findFirst
+      .mockResolvedValueOnce(null)
       .mockResolvedValueOnce({
-        text: '标题：《科幻短片》\n\n故事梗概：一条安静信号唤醒空间站。',
-      })
-    prismaMock.projectEditScreenplay.findFirst.mockResolvedValueOnce({
       id: 'screenplay-1',
       projectId: 'project-1',
       episodeId: 'episode-1',
@@ -465,23 +584,44 @@ describe('edit script generation status persistence', () => {
     expect(screenplay.styleBible).toBeNull()
     expect(screenplay.status).toBe('screenplay_ready')
     expect(screenplay.stylePreviews).toHaveLength(0)
-    expect(aiExecMock.executeAiTextStep).toHaveBeenCalledTimes(1)
+    expect(aiExecMock.executeAiTextStep).toHaveBeenCalledTimes(6)
     expect(aiExecMock.executeAiTextStep).toHaveBeenNthCalledWith(1, expect.objectContaining({
+      action: AI_PROMPT_IDS.EDIT_SCRIPT_SCREENPLAY_SKELETON,
+      temperature: 0.2,
+      maxTokens: undefined,
+      meta: expect.objectContaining({
+        stepId: AI_PROMPT_IDS.EDIT_SCRIPT_SCREENPLAY_SKELETON,
+        stepIndex: 1,
+        stepTotal: 7,
+      }),
+    }))
+    const firstAiCall = aiExecMock.executeAiTextStep.mock.calls[0]?.[0] as {
+      readonly messages?: ReadonlyArray<{ readonly role?: string; readonly content?: unknown }>
+    } | undefined
+    expect(firstAiCall?.messages?.[0]).toEqual({
+      role: 'system',
+      content: expect.stringContaining('Return exactly one valid JSON object and nothing else.'),
+    })
+    expect(firstAiCall?.messages?.[1]).toEqual(expect.objectContaining({
+      role: 'user',
+      content: expect.stringContaining('Screenplay Skeleton Layer'),
+    }))
+    expect(aiExecMock.executeAiTextStep).toHaveBeenNthCalledWith(6, expect.objectContaining({
       action: AI_PROMPT_IDS.EDIT_SCRIPT_SCREENPLAY,
       meta: expect.objectContaining({
         stepId: AI_PROMPT_IDS.EDIT_SCRIPT_SCREENPLAY,
-        stepIndex: 1,
-        stepTotal: 1,
+        stepIndex: 7,
+        stepTotal: 7,
       }),
     }))
     expect(prismaMock.projectEditScreenplay.upsert).toHaveBeenCalledWith(expect.objectContaining({
       create: expect.objectContaining({
-        userPrompt: structuredUserPrompt,
+        userPrompt: expect.stringContaining('场景骨架必须为 3-4 场，推荐 3 场。'),
         screenplayText: '标题：《科幻短片》\n\n故事梗概：一条安静信号唤醒空间站。',
         status: 'screenplay_ready',
       }),
       update: expect.objectContaining({
-        userPrompt: structuredUserPrompt,
+        userPrompt: expect.stringContaining('场景骨架必须为 3-4 场，推荐 3 场。'),
         screenplayText: '标题：《科幻短片》\n\n故事梗概：一条安静信号唤醒空间站。',
         status: 'screenplay_ready',
       }),

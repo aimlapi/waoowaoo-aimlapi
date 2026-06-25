@@ -115,7 +115,7 @@ const sourceVideoBlockSchema = z.object({
 
 const sourceAssetSchema = z.object({
   requirementId: z.string().min(1),
-  kind: z.enum(['character', 'location']),
+  kind: z.enum(['character', 'location', 'prop']),
   name: z.string(),
   description: z.string(),
   shotNumbers: z.array(z.number().int().positive()),

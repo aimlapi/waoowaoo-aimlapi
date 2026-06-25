@@ -105,7 +105,7 @@ const reviseEditScriptAssetsInputSchema = z.object({
   requirementId: editScriptAssetRequirementIdSchema
     .describe('Optional exact editScript.requirements[].id. Omit requirementId to revise every required asset. Never pass "*" or any wildcard.')
     .optional(),
-  revisionNotes: z.string().trim().min(1).describe('Concrete user asset review notes to apply when revising edit-first character/location assets.'),
+  revisionNotes: z.string().trim().min(1).describe('Concrete user asset review notes to apply when revising edit-first character/location/prop assets.'),
 }).passthrough()
 
 const generateEditCinematographyShotPlanInputSchema = z.object({
@@ -168,7 +168,7 @@ const editScriptSummaryOutputSchema = z.object({
   assetReviewStatus: z.enum(['pending', 'approved']).optional(),
   requirements: z.array(z.object({
     id: z.string().min(1).optional(),
-    kind: z.enum(['character', 'location']),
+    kind: z.enum(['character', 'location', 'prop']),
     name: z.string().min(1),
     status: z.string().optional(),
     targetId: z.string().nullable().optional(),
@@ -195,7 +195,7 @@ const editScriptAssetGenerationOutputSchema = z.object({
   })),
   submittedTasks: z.array(z.object({
     requirementId: z.string().min(1),
-    kind: z.enum(['character', 'location']),
+    kind: z.enum(['character', 'location', 'prop']),
     name: z.string().min(1),
     taskId: z.string().min(1),
     status: z.string().min(1),
@@ -223,7 +223,7 @@ const editScriptAssetRevisionOutputSchema = z.object({
   })),
   submittedTasks: z.array(z.object({
     requirementId: z.string().min(1),
-    kind: z.enum(['character', 'location']),
+    kind: z.enum(['character', 'location', 'prop']),
     name: z.string().min(1),
     taskId: z.string().min(1),
     status: z.string().min(1),
@@ -642,7 +642,7 @@ export function createEditScriptOperations(): ProjectAgentOperationRegistryDraft
     }),
     generate_edit_script_assets: defineOperation({
       id: 'generate_edit_script_assets',
-      summary: 'Create or reuse required character/location assets from the current edit-first table and submit missing image generation tasks.',
+      summary: 'Create or reuse required character/location/prop assets from the current edit-first table and submit missing image generation tasks.',
       intent: 'act',
       prerequisites: { episodeId: 'required' },
       effects: EFFECTS_BULK_WRITE,
@@ -684,7 +684,7 @@ export function createEditScriptOperations(): ProjectAgentOperationRegistryDraft
     }),
     revise_edit_script_assets: defineOperation({
       id: 'revise_edit_script_assets',
-      summary: 'Revise ready edit-first character/location asset images from user asset review notes and submit async modification tasks.',
+      summary: 'Revise ready edit-first character/location/prop asset images from user asset review notes and submit async modification tasks.',
       intent: 'act',
       prerequisites: { episodeId: 'required' },
       effects: EFFECTS_BULK_WRITE,

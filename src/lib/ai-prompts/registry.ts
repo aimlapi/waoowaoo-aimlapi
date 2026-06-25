@@ -57,6 +57,10 @@ export const AI_PROMPT_CATALOG: Record<AiPromptId, AiPromptCatalogEntry> = {
     variableKeys: ['input', 'props_lib_name'],
     operationIds: ['analyze_props'],
   },
+  [AI_PROMPT_IDS.PROP_CREATE]: {
+    pathStem: 'prop/create',
+    variableKeys: ['user_input'],
+  },
   [AI_PROMPT_IDS.PROP_UPDATE_DESCRIPTION]: {
     pathStem: 'prop/update-description',
     variableKeys: ['prop_name', 'original_description', 'modify_instruction', 'image_context'],

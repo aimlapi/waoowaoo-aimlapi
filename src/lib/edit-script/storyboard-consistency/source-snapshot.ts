@@ -78,7 +78,7 @@ function parseShotsJson(value: Prisma.JsonValue): EditScriptShot[] {
 function mapRequirements(requirements: readonly PersistedRequirement[]): EditAssetRequirement[] {
   return requirements.map((requirement) => ({
     id: requirement.id,
-    kind: requirement.kind === 'location' ? 'location' : 'character',
+    kind: requirement.kind === 'location' || requirement.kind === 'prop' ? requirement.kind : 'character',
     name: requirement.name,
     description: requirement.description,
     shotNumbers: readShotNumbers(requirement.shotIndexes),

@@ -79,7 +79,7 @@ duration and aspect-ratio choice
 -> user visual-style choice
 -> director decoupage
 -> edit table
--> character/location assets and spatial profiles
+-> character/location/prop assets and spatial profiles
 -> user asset review
 -> cinematography shot plan
 -> storyboard spatial blocking
@@ -124,7 +124,7 @@ After the previews are ready:
 
 ## Asset review
 
-After character/location assets and spatial profiles are ready:
+After character/location/prop assets and spatial profiles are ready:
 
 - Request the user's asset review.
 - If the user submits asset revision notes, treat the review as not approved; call the asset revision tool with the user's notes. Do not say tasks were resubmitted until the tool succeeds.

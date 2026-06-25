@@ -10,7 +10,7 @@ import { safeParseJsonObject } from '@/lib/json-repair'
 import { buildAiPrompt as buildPrompt, AI_PROMPT_IDS as PROMPT_IDS } from '@/lib/ai-prompts'
 import type { Locale } from '@/i18n/routing'
 
-export type AssetType = 'character' | 'location'
+export type AssetType = 'character' | 'location' | 'prop'
 
 export interface AIDesignOptions {
     userId: string
@@ -32,7 +32,7 @@ export interface AIDesignResult {
 
 /**
  * AI 设计通用函数
- * 根据用户指令生成角色或场景的 prompt 描述
+ * 根据用户指令生成角色、场景或道具的 prompt 描述
  */
 export async function aiDesign(options: AIDesignOptions): Promise<AIDesignResult> {
     const {
@@ -48,7 +48,11 @@ export async function aiDesign(options: AIDesignOptions): Promise<AIDesignResult
     if (!userInstruction?.trim()) {
         return {
             success: false,
-            error: assetType === 'character' ? '请输入人物设计需求' : '请输入场景设计需求'
+            error: assetType === 'character'
+                ? '请输入人物设计需求'
+                : assetType === 'prop'
+                    ? '请输入道具设计需求'
+                    : '请输入场景设计需求'
         }
     }
 
@@ -62,9 +66,7 @@ export async function aiDesign(options: AIDesignOptions): Promise<AIDesignResult
     let finalPrompt: string
     try {
         finalPrompt = buildPrompt({
-            promptId: assetType === 'character'
-                ? PROMPT_IDS.CHARACTER_CREATE
-                : PROMPT_IDS.LOCATION_CREATE,
+            promptId: resolveCreatePromptId(assetType),
             locale,
             variables: {
                 user_input: userInstruction,
@@ -76,7 +78,7 @@ export async function aiDesign(options: AIDesignOptions): Promise<AIDesignResult
     }
 
     // 调用 LLM
-    const action = assetType === 'character' ? 'ai_design_character' : 'ai_design_location'
+    const action = resolveDesignAction(assetType)
     const maxInputTokens = Math.max(1200, Math.ceil(finalPrompt.length * 1.2))
     const runCompletion = async () =>
         await executeAiTextStep({
@@ -88,7 +90,7 @@ export async function aiDesign(options: AIDesignOptions): Promise<AIDesignResult
             action,
             meta: {
                 stepId: action,
-                stepTitle: assetType === 'character' ? '角色设计' : '场景设计',
+                stepTitle: resolveDesignStepTitle(assetType),
                 stepIndex: 1,
                 stepTotal: 1,
             },
@@ -126,4 +128,22 @@ export async function aiDesign(options: AIDesignOptions): Promise<AIDesignResult
         success: true,
         prompt: typeof parsedResponse.prompt === 'string' ? parsedResponse.prompt : '',
     }
+}
+
+function resolveCreatePromptId(assetType: AssetType): typeof PROMPT_IDS.CHARACTER_CREATE | typeof PROMPT_IDS.LOCATION_CREATE | typeof PROMPT_IDS.PROP_CREATE {
+    if (assetType === 'character') return PROMPT_IDS.CHARACTER_CREATE
+    if (assetType === 'prop') return PROMPT_IDS.PROP_CREATE
+    return PROMPT_IDS.LOCATION_CREATE
+}
+
+function resolveDesignAction(assetType: AssetType): string {
+    if (assetType === 'character') return 'ai_design_character'
+    if (assetType === 'prop') return 'ai_design_prop'
+    return 'ai_design_location'
+}
+
+function resolveDesignStepTitle(assetType: AssetType): string {
+    if (assetType === 'character') return '角色设计'
+    if (assetType === 'prop') return '道具设计'
+    return '场景设计'
 }

@@ -62,7 +62,7 @@ function readJsonArray(value: Prisma.JsonValue | null): readonly unknown[] {
 }
 
 export function normalizeEditScriptAssetKindForRevision(value: string): EditAssetKind | null {
-  return value === 'character' || value === 'location' ? value : null
+  return value === 'character' || value === 'location' || value === 'prop' ? value : null
 }
 
 function normalizeAssetStatus(value: string): EditAssetStatus {
