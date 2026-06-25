@@ -252,7 +252,7 @@ export interface ProjectShot {
   imageTaskRunning?: boolean
 }
 
-export type ProjectEditAssetKind = 'character' | 'location'
+export type ProjectEditAssetKind = 'character' | 'location' | 'prop'
 export type ProjectEditAssetStatus = 'pending' | 'generating' | 'completed' | 'failed'
 
 export interface ProjectEditScriptShot {

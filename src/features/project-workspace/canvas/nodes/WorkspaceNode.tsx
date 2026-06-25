@@ -1510,6 +1510,7 @@ function EditAssetGroupContent({
                     alt={asset.name}
                     containerClassName="h-full w-full bg-slate-100"
                     className="h-full w-full object-cover"
+                    priority
                   />
                 ) : asset.isRunning ? null : (
                   <AppIcon name={editAssetPlaceholderIconName(asset.kind)} className="h-6 w-6" />
