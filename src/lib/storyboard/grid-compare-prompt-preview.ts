@@ -113,6 +113,8 @@ async function buildSinglePromptPreview(input: {
   const promptContext = buildPanelPromptContext({
     panel: {
       id: input.panel.id,
+      panelIndex: input.panel.panelIndex,
+      panelNumber: input.panel.panelNumber ?? null,
       shotType: input.panel.shotType,
       cameraMove: input.panel.cameraMove,
       description: input.panel.description,
@@ -120,6 +122,7 @@ async function buildSinglePromptPreview(input: {
       videoPrompt: input.panel.videoPrompt,
       location: input.panel.location,
       characters: input.panel.characters,
+      props: input.panel.props ?? null,
       srtSegment: input.panel.srtSegment,
       photographyRules: input.panel.photographyRules,
       actingNotes: input.panel.actingNotes,

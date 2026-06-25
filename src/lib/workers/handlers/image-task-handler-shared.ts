@@ -50,6 +50,7 @@ interface CharacterLike {
 }
 
 interface LocationImageLike {
+  id?: string
   description?: string | null
   spatialProfileJson?: unknown
   imageIndex?: number
@@ -58,20 +59,42 @@ interface LocationImageLike {
 }
 
 interface LocationLike {
+  id?: string
   name: string
+  summary?: string | null
+  assetKind?: string | null
+  selectedImageId?: string | null
   images?: LocationImageLike[]
+}
+
+interface EditAssetRequirementLike {
+  id: string
+  kind: string
+  name: string
+  description: string | null
+  shotIndexes: unknown
+  status: string
+  targetId: string | null
 }
 
 export interface NovelProjectData {
   videoRatio?: string | null
   characters?: CharacterLike[]
   locations?: LocationLike[]
+  props?: LocationLike[]
+  editAssetRequirements?: EditAssetRequirementLike[]
 }
 
 interface PanelLike {
   sketchImageUrl?: string | null
   characters?: string | null
   location?: string | null
+  props?: string | null
+  description?: string | null
+  imagePrompt?: string | null
+  srtSegment?: string | null
+  panelIndex?: number | null
+  panelNumber?: number | null
 }
 
 export interface PanelCharacterReference {
@@ -107,9 +130,10 @@ export interface NormalizedReferenceImageItems {
 }
 
 export type PanelReferenceImageDiagnostic = {
-  kind: 'sketch' | 'character' | 'location'
+  kind: 'sketch' | 'character' | 'location' | 'prop'
   inputIndex: number | null
   name?: string | null
+  propId?: string | null
   characterId?: string | null
   appearance?: string | null
   appearanceId?: string | null
@@ -135,8 +159,21 @@ export type PanelReferenceImageCollection = {
 
 interface ProjectDataDb {
   project: {
-    findUnique(args: Record<string, unknown>): Promise<NovelProjectData | null>
+    findUnique(args: Record<string, unknown>): Promise<NovelProjectDataWithAssets | null>
   }
+}
+
+type NovelProjectDataWithAssets = NovelProjectData & {
+  locations?: LocationLike[]
+  editAssetRequirements?: EditAssetRequirementLike[]
+}
+
+export interface ResolvedPanelPropAsset {
+  id: string
+  name: string
+  description: string | null
+  imageUrl: string | null
+  source: 'panel' | 'requirement'
 }
 
 export function parseJsonStringArray(value: unknown): string[] {
@@ -244,6 +281,7 @@ export async function resolveNovelData(projectId: string, _userId?: string) {
     include: {
       characters: { include: { appearances: { orderBy: { appearanceIndex: 'asc' } } } },
       locations: { include: { images: { orderBy: { imageIndex: 'asc' } } } },
+      editAssetRequirements: true,
     },
   })
 
@@ -251,7 +289,13 @@ export async function resolveNovelData(projectId: string, _userId?: string) {
     throw new Error(`Project not found: ${projectId}`)
   }
 
-  return data
+  const locations = data.locations || []
+  return {
+    ...data,
+    locations: locations.filter((location) => location.assetKind !== 'prop'),
+    props: locations.filter((location) => location.assetKind === 'prop'),
+    editAssetRequirements: data.editAssetRequirements || [],
+  }
 }
 
 export function parsePanelCharacterReferences(value: string | null | undefined): PanelCharacterReference[] {
@@ -289,6 +333,166 @@ function pushReferenceImageItem(
     signedUrl: item.url,
     issue: null,
   })
+}
+
+function normalizeAssetName(value: string) {
+  return value.trim().toLowerCase().replace(/[「」"“”'‘’\s]/g, '')
+}
+
+function readRecordString(record: Record<string, unknown>, keys: readonly string[]) {
+  for (const key of keys) {
+    const value = record[key]
+    if (typeof value === 'string' && value.trim()) return value.trim()
+  }
+  return null
+}
+
+function parsePropReferences(value: unknown): Array<{ name: string; propId: string | null }> {
+  if (!value) return []
+  if (Array.isArray(value)) {
+    return value.flatMap((item) => {
+      if (typeof item === 'string' && item.trim()) {
+        return [{ name: item.trim(), propId: null }]
+      }
+      if (item && typeof item === 'object' && !Array.isArray(item)) {
+        const record = item as Record<string, unknown>
+        const name = readRecordString(record, ['name', 'propName', 'title'])
+        const propId = readRecordString(record, ['id', 'propId', 'assetId', 'targetId'])
+        if (name) return [{ name, propId }]
+        if (propId) return [{ name: propId, propId }]
+      }
+      return []
+    })
+  }
+  if (typeof value !== 'string') return []
+  const trimmed = value.trim()
+  if (!trimmed) return []
+  try {
+    return parsePropReferences(JSON.parse(trimmed))
+  } catch {
+    return trimmed
+      .split(/[\n,，、]/)
+      .map((item) => item.trim())
+      .filter(Boolean)
+      .map((name) => ({ name, propId: null }))
+  }
+}
+
+function parseShotNumbers(value: unknown): number[] {
+  if (!value) return []
+  if (Array.isArray(value)) {
+    return value
+      .map((item) => {
+        if (typeof item === 'number' && Number.isFinite(item)) return Math.trunc(item)
+        if (typeof item === 'string' && item.trim()) {
+          const parsed = Number(item.trim())
+          return Number.isFinite(parsed) ? Math.trunc(parsed) : null
+        }
+        return null
+      })
+      .filter((item): item is number => item !== null)
+  }
+  if (typeof value === 'string') {
+    try {
+      return parseShotNumbers(JSON.parse(value))
+    } catch {
+      const parsed = Number(value.trim())
+      return Number.isFinite(parsed) ? [Math.trunc(parsed)] : []
+    }
+  }
+  return []
+}
+
+function panelShotNumbers(panel: PanelLike) {
+  const numbers = new Set<number>()
+  if (typeof panel.panelNumber === 'number' && Number.isFinite(panel.panelNumber)) {
+    numbers.add(Math.trunc(panel.panelNumber))
+  }
+  if (typeof panel.panelIndex === 'number' && Number.isFinite(panel.panelIndex)) {
+    numbers.add(Math.trunc(panel.panelIndex) + 1)
+  }
+  return numbers
+}
+
+function panelSearchText(panel: PanelLike) {
+  return normalizeAssetName([
+    panel.props,
+    panel.location,
+    panel.characters,
+    panel.description,
+    panel.imagePrompt,
+    panel.srtSegment,
+  ].filter((item): item is string => typeof item === 'string' && item.trim()).join('\n'))
+}
+
+function propNameKeywords(name: string) {
+  const normalized = normalizeAssetName(name)
+  const keywords = new Set<string>()
+  if (normalized.length >= 2) keywords.add(normalized)
+  for (const length of [4, 3, 2]) {
+    if (normalized.length >= length) keywords.add(normalized.slice(-length))
+  }
+  return Array.from(keywords).filter((keyword) => keyword.length >= 2)
+}
+
+function panelMentionsProp(panel: PanelLike, propName: string) {
+  const searchText = panelSearchText(panel)
+  if (!searchText) return false
+  return propNameKeywords(propName).some((keyword) => searchText.includes(keyword))
+}
+
+function pickSelectedAssetImage(asset: LocationLike) {
+  const images = asset.images || []
+  return images.find((image) => image.isSelected)
+    || images.find((image) => image.id && image.id === asset.selectedImageId)
+    || images[0]
+    || null
+}
+
+function findPropAsset(projectData: NovelProjectData, input: { propId?: string | null; name?: string | null }) {
+  const props = projectData.props || []
+  if (input.propId) {
+    const byId = props.find((prop) => prop.id === input.propId)
+    if (byId) return byId
+  }
+  if (!input.name) return null
+  const targetName = normalizeAssetName(input.name)
+  return props.find((prop) => normalizeAssetName(prop.name) === targetName) || null
+}
+
+export function resolvePanelPropAssets(projectData: NovelProjectData, panel: PanelLike): ResolvedPanelPropAsset[] {
+  const resolved = new Map<string, ResolvedPanelPropAsset>()
+  const addAsset = (asset: LocationLike, source: ResolvedPanelPropAsset['source']) => {
+    if (!asset.id) return
+    const selectedImage = pickSelectedAssetImage(asset)
+    resolved.set(asset.id, {
+      id: asset.id,
+      name: asset.name,
+      description: selectedImage?.description || asset.summary || null,
+      imageUrl: selectedImage?.imageUrl || null,
+      source,
+    })
+  }
+
+  for (const reference of parsePropReferences(panel.props)) {
+    const asset = findPropAsset(projectData, { propId: reference.propId, name: reference.name })
+    if (asset) addAsset(asset, 'panel')
+  }
+
+  const shotNumbers = panelShotNumbers(panel)
+  if (shotNumbers.size === 0) return Array.from(resolved.values())
+  for (const requirement of projectData.editAssetRequirements || []) {
+    if (requirement.kind !== 'prop' || !requirement.targetId) continue
+    const requirementShots = parseShotNumbers(requirement.shotIndexes)
+    if (!requirementShots.some((shotNumber) => shotNumbers.has(shotNumber))) continue
+    if (!panelMentionsProp(panel, requirement.name)) continue
+    const asset = findPropAsset(projectData, { propId: requirement.targetId, name: requirement.name })
+    if (asset) {
+      addAsset(asset, 'requirement')
+    }
+  }
+
+  return Array.from(resolved.values())
 }
 
 function imageNo(index: number, locale: TaskJobData['locale'] | undefined): string {
@@ -506,8 +710,39 @@ export async function collectPanelReferenceImageItemsWithDiagnostics(
     }
   }
 
-  if (options.strict && collection.issues.some((issue) => issue.kind === 'character')) {
-    throw new Error(`PANEL_CHARACTER_REFERENCE_INVALID:${formatPanelReferenceIssue(collection.issues)}`)
+  for (const prop of resolvePanelPropAssets(projectData, panel)) {
+    const signed = toSignedUrlIfCos(prop.imageUrl, 3600)
+    if (!signed) {
+      pushIssue(collection, {
+        kind: 'prop',
+        inputIndex: null,
+        name: prop.name,
+        propId: prop.id,
+        sourceUrl: prop.imageUrl,
+        issue: 'reference_image_missing',
+      })
+      continue
+    }
+    pushReferenceImageItem(
+      collection,
+      {
+        kind: 'prop',
+        inputIndex: null,
+        name: prop.name,
+        propId: prop.id,
+        sourceUrl: prop.imageUrl,
+      },
+      {
+        url: signed,
+        role: 'prop',
+        name: prop.name,
+      },
+    )
+  }
+
+  const strictIssues = collection.issues.filter((issue) => issue.kind === 'character' || issue.kind === 'prop')
+  if (options.strict && strictIssues.length > 0) {
+    throw new Error(`PANEL_REFERENCE_INVALID:${formatPanelReferenceIssue(strictIssues)}`)
   }
 
   return collection

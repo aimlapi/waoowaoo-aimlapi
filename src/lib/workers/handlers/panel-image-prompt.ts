@@ -7,6 +7,7 @@ import {
 } from '@/lib/storyboard-character-bindings'
 import {
   parsePanelCharacterReferences,
+  resolvePanelPropAssets,
   type NumberedReferenceImage,
   type NovelProjectData,
 } from './image-task-handler-shared'
@@ -50,6 +51,8 @@ function pickAppearanceDescription(appearance: {
 
 export type PanelPromptSource = {
   id: string
+  panelIndex: number | null
+  panelNumber: number | null
   shotType: string | null
   cameraMove: string | null
   description: string | null
@@ -57,6 +60,7 @@ export type PanelPromptSource = {
   videoPrompt: string | null
   location: string | null
   characters: string | null
+  props: string | null
   srtSegment: string | null
   photographyRules: string | null
   actingNotes: string | null
@@ -126,10 +130,19 @@ export function buildPanelPromptContext(params: {
       spatial_profile: selectedImage && 'spatialProfileJson' in selectedImage ? selectedImage.spatialProfileJson ?? null : null,
     }
   })()
+  const propContexts = resolvePanelPropAssets(params.projectData, params.panel).map((prop) => ({
+    propId: prop.id,
+    name: prop.name,
+    description: prop.description,
+    source: prop.source,
+    reference_instruction: 'Use the prop reference image as the exact identity source. Preserve silhouette, material, labels, liquid color, decals, and distinctive marks when this prop appears in the panel.',
+  }))
 
   return {
     panel: {
       panel_id: params.panel.id,
+      panel_index: params.panel.panelIndex,
+      panel_number: params.panel.panelNumber,
       shot_type: params.panel.shotType || '',
       camera_move: params.panel.cameraMove || '',
       description: params.panel.description || '',
@@ -137,6 +150,7 @@ export function buildPanelPromptContext(params: {
       video_prompt: params.panel.videoPrompt || '',
       location: params.panel.location || '',
       characters: panelCharacters,
+      props: propContexts,
       source_text: params.panel.srtSegment || '',
       photography_rules: photographyRules,
       shot_blocking: shotBlocking,
@@ -144,6 +158,7 @@ export function buildPanelPromptContext(params: {
     },
     context: {
       character_appearances: characterContexts,
+      prop_references: propContexts,
       location_reference: locationContext,
       reference_images: params.referenceImagesMap,
       additional_reference_images: (params.referenceImageNotes || []).map((note, index) => ({

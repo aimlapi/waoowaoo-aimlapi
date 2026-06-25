@@ -7,9 +7,12 @@ const outboundMock = vi.hoisted(() => ({
 vi.mock('@/lib/media/outbound-image', () => outboundMock)
 
 import {
+  collectPanelReferenceImageItemsWithDiagnostics,
   normalizeReferenceImageItemsForGeneration,
+  type NovelProjectData,
   type ReferenceImageItem,
 } from '@/lib/workers/handlers/image-task-handler-shared'
+import { buildPanelPromptContext } from '@/lib/workers/handlers/panel-image-prompt'
 
 describe('reference image item normalization', () => {
   beforeEach(() => {
@@ -77,6 +80,189 @@ describe('reference image item normalization', () => {
     expect(result.referenceImagesMap).toEqual([
       { image_no: 'Image 1', role: 'character', name: 'Hero' },
       { image_no: 'Image 2', role: 'location', name: 'Old Town' },
+    ])
+  })
+
+  it('includes selected prop asset references from explicit panel props', async () => {
+    const projectData: NovelProjectData = {
+      props: [{
+        id: 'prop-cup',
+        name: '催情药剂高脚杯',
+        assetKind: 'prop',
+        selectedImageId: 'prop-cup-image',
+        images: [{
+          id: 'prop-cup-image',
+          imageUrl: 'https://example.com/prop-cup.png',
+          description: '白底居中的高脚杯道具',
+          isSelected: true,
+        }],
+      }],
+    }
+
+    const result = await collectPanelReferenceImageItemsWithDiagnostics(projectData, {
+      props: JSON.stringify(['催情药剂高脚杯']),
+      panelIndex: 0,
+    }, { strict: true })
+
+    expect(result.items).toEqual([
+      { url: 'https://example.com/prop-cup.png', role: 'prop', name: '催情药剂高脚杯' },
+    ])
+    expect(result.diagnostics).toEqual([
+      expect.objectContaining({
+        kind: 'prop',
+        name: '催情药剂高脚杯',
+        propId: 'prop-cup',
+        sourceUrl: 'https://example.com/prop-cup.png',
+        issue: null,
+      }),
+    ])
+  })
+
+  it('includes selected prop asset references from edit asset shot indexes when panel props are empty', async () => {
+    const projectData: NovelProjectData = {
+      props: [{
+        id: 'prop-cup',
+        name: '催情药剂高脚杯',
+        assetKind: 'prop',
+        selectedImageId: 'prop-cup-image',
+        images: [{
+          id: 'prop-cup-image',
+          imageUrl: 'https://example.com/prop-cup.png',
+          description: '白底居中的高脚杯道具',
+          isSelected: true,
+        }],
+      }, {
+        id: 'prop-badge',
+        name: '纯金飞鹰徽章',
+        assetKind: 'prop',
+        selectedImageId: 'prop-badge-image',
+        images: [{
+          id: 'prop-badge-image',
+          imageUrl: 'https://example.com/prop-badge.png',
+          description: '白底居中的徽章道具',
+          isSelected: true,
+        }],
+      }],
+      editAssetRequirements: [{
+        id: 'req-cup',
+        kind: 'prop',
+        name: '催情药剂高脚杯',
+        description: '白底居中的高脚杯道具',
+        shotIndexes: [1, 7],
+        status: 'completed',
+        targetId: 'prop-cup',
+      }, {
+        id: 'req-badge',
+        kind: 'prop',
+        name: '纯金飞鹰徽章',
+        description: '白底居中的徽章道具',
+        shotIndexes: [1],
+        status: 'completed',
+        targetId: 'prop-badge',
+      }],
+    }
+
+    const result = await collectPanelReferenceImageItemsWithDiagnostics(projectData, {
+      props: null,
+      description: '高脚杯中盛着耀眼粉红的荧色药液。',
+      panelIndex: 0,
+      panelNumber: null,
+    }, { strict: true })
+
+    expect(result.items).toEqual([
+      { url: 'https://example.com/prop-cup.png', role: 'prop', name: '催情药剂高脚杯' },
+    ])
+  })
+
+  it('fails explicitly when a required prop has no selected reference image', async () => {
+    const projectData: NovelProjectData = {
+      props: [{
+        id: 'prop-cup',
+        name: '催情药剂高脚杯',
+        assetKind: 'prop',
+        selectedImageId: null,
+        images: [{
+          id: 'prop-cup-image',
+          imageUrl: null,
+          description: '白底居中的高脚杯道具',
+          isSelected: true,
+        }],
+      }],
+      editAssetRequirements: [{
+        id: 'req-cup',
+        kind: 'prop',
+        name: '催情药剂高脚杯',
+        description: '白底居中的高脚杯道具',
+        shotIndexes: [1],
+        status: 'completed',
+        targetId: 'prop-cup',
+      }],
+    }
+
+    await expect(collectPanelReferenceImageItemsWithDiagnostics(projectData, {
+      description: '高脚杯中盛着耀眼粉红的荧色药液。',
+      panelIndex: 0,
+    }, { strict: true })).rejects.toThrow('PANEL_REFERENCE_INVALID:prop:催情药剂高脚杯:reference_image_missing')
+  })
+
+  it('writes resolved prop identity into panel prompt context', () => {
+    const projectData: NovelProjectData = {
+      props: [{
+        id: 'prop-cup',
+        name: '催情药剂高脚杯',
+        assetKind: 'prop',
+        selectedImageId: 'prop-cup-image',
+        images: [{
+          id: 'prop-cup-image',
+          imageUrl: 'https://example.com/prop-cup.png',
+          description: '白底居中的高脚杯道具',
+          isSelected: true,
+        }],
+      }],
+      editAssetRequirements: [{
+        id: 'req-cup',
+        kind: 'prop',
+        name: '催情药剂高脚杯',
+        description: '白底居中的高脚杯道具',
+        shotIndexes: [1],
+        status: 'completed',
+        targetId: 'prop-cup',
+      }],
+    }
+
+    const context = buildPanelPromptContext({
+      panel: {
+        id: 'panel-1',
+        panelIndex: 0,
+        panelNumber: null,
+        shotType: 'close-up',
+        cameraMove: 'static',
+        description: '粉红药液高脚杯',
+        imagePrompt: 'wine glass with pink liquid',
+        videoPrompt: null,
+        location: null,
+        characters: null,
+        props: null,
+        srtSegment: '高脚杯中盛着耀眼粉红的荧色药液。',
+        photographyRules: null,
+        actingNotes: null,
+      },
+      projectData,
+      referenceImagesMap: [{ image_no: '图 1', role: 'prop', name: '催情药剂高脚杯' }],
+    })
+
+    expect(context.panel.props).toEqual([
+      expect.objectContaining({
+        propId: 'prop-cup',
+        name: '催情药剂高脚杯',
+        description: '白底居中的高脚杯道具',
+        source: 'requirement',
+        reference_instruction: expect.stringContaining('exact identity source'),
+      }),
+    ])
+    expect(context.context.prop_references).toEqual(context.panel.props)
+    expect(context.context.reference_images).toEqual([
+      { image_no: '图 1', role: 'prop', name: '催情药剂高脚杯' },
     ])
   })
 })

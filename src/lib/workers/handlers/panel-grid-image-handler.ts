@@ -16,6 +16,7 @@ import {
   collectPanelReferenceImageItemsWithDiagnostics,
   normalizeReferenceImageItemsForGeneration,
   parsePanelCharacterReferences,
+  resolvePanelPropAssets,
   type NumberedReferenceImage,
   type ReferenceImageItem,
   resolveNovelData,
@@ -48,6 +49,7 @@ export type GridPanel = {
   id: string
   storyboardId: string
   panelIndex: number
+  panelNumber?: number | null
   shotType: string | null
   cameraMove: string | null
   description: string | null
@@ -55,6 +57,7 @@ export type GridPanel = {
   videoPrompt: string | null
   location: string | null
   characters: string | null
+  props?: string | null
   srtSegment: string | null
   photographyRules: string | null
   actingNotes: string | null
@@ -313,6 +316,12 @@ export function buildCompactGridCell(input: {
       image_prompt: compactText(input.panel.imagePrompt, 720),
       location: compactText(input.panel.location, 160),
       characters: parsePanelCharacterReferences(input.panel.characters),
+      props: resolvePanelPropAssets(input.projectData, input.panel).map((prop) => ({
+        propId: prop.id,
+        name: prop.name,
+        description: compactText(prop.description, 320),
+        source: prop.source,
+      })),
       source_text: compactText(input.panel.srtSegment, 320),
       photography_rules: compactPhotographyRules(input.panel.photographyRules),
       acting_notes: compactActingNotes(input.panel.actingNotes),

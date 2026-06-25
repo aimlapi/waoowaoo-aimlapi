@@ -152,6 +152,8 @@ export async function handlePanelImageTask(job: Job<TaskJobData>) {
   const promptContext = buildPanelPromptContext({
     panel: {
       id: panel.id,
+      panelIndex: panel.panelIndex,
+      panelNumber: panel.panelNumber,
       shotType: panel.shotType,
       cameraMove: panel.cameraMove,
       description: panel.description,
@@ -159,6 +161,7 @@ export async function handlePanelImageTask(job: Job<TaskJobData>) {
       videoPrompt: panel.videoPrompt,
       location: panel.location,
       characters: panel.characters,
+      props: panel.props,
       srtSegment: panel.srtSegment,
       photographyRules: panel.photographyRules,
       actingNotes: panel.actingNotes,
