@@ -11,6 +11,7 @@ import { prisma } from '@/lib/prisma'
 import { decryptApiKey } from '@/lib/crypto-utils'
 import { parseModelKeyStrict } from '@/lib/ai-registry/selection'
 import { getDeploymentConfig } from '@/lib/deployment/config'
+import { allowsLocalPlatformProviderConfigOverride } from '@/lib/deployment/features'
 import { getPlatformModels } from '@/lib/platform-models/catalog'
 import type { UnifiedModelType } from '@/lib/ai-registry/types'
 import {
@@ -47,6 +48,10 @@ type PlatformProviderEnv = {
   baseUrl?: string
 }
 
+type PlatformProviderEnvResolution =
+  | { ok: true; env: PlatformProviderEnv }
+  | { ok: false; error: Error }
+
 const SUPPORTED_PROVIDER_IDS = new Set(['ark', 'openrouter', 'fal', 'google'])
 
 function isPlainObject(value: unknown): value is object {
@@ -67,7 +72,7 @@ function getProviderFamily(providerId: string): string {
   return colonIndex === -1 ? trimmed : trimmed.slice(0, colonIndex)
 }
 
-function resolvePlatformProviderEnv(providerId: string): PlatformProviderEnv {
+function resolvePlatformProviderEnvCandidate(providerId: string): PlatformProviderEnvResolution {
   const providerFamily = getProviderFamily(providerId)
   const envPrefix = (() => {
     switch (providerFamily) {
@@ -86,16 +91,19 @@ function resolvePlatformProviderEnv(providerId: string): PlatformProviderEnv {
 
   const apiKey = readEnvString(`${envPrefix}_API_KEY`)
   if (!apiKey) {
-    throw new Error(`PLATFORM_PROVIDER_API_KEY_MISSING: ${providerId}`)
+    return { ok: false, error: new Error(`PLATFORM_PROVIDER_API_KEY_MISSING: ${providerId}`) }
   }
 
   const baseUrl = readEnvString(`${envPrefix}_BASE_URL`)
   if (providerFamily === 'openrouter' && !baseUrl) {
-    throw new Error(`PLATFORM_PROVIDER_BASE_URL_MISSING: ${providerId}`)
+    return { ok: false, error: new Error(`PLATFORM_PROVIDER_BASE_URL_MISSING: ${providerId}`) }
   }
   return {
-    apiKey,
-    ...(baseUrl ? { baseUrl } : {}),
+    ok: true,
+    env: {
+      apiKey,
+      ...(baseUrl ? { baseUrl } : {}),
+    },
   }
 }
 
@@ -217,6 +225,14 @@ function pickProviderStrict(providers: CustomProvider[], providerId: string): Cu
   throw new Error(`PROVIDER_NOT_FOUND: ${providerId} is not configured`)
 }
 
+function findProviderByIdOrFamily(providers: CustomProvider[], providerId: string): CustomProvider | null {
+  const matched = providers.find((provider) => provider.id === providerId)
+  if (matched) return matched
+
+  const providerFamily = getProviderFamily(providerId)
+  return providers.find((provider) => getProviderFamily(provider.id) === providerFamily) ?? null
+}
+
 async function readUserConfig(userId: string): Promise<{ models: CustomModel[]; providers: CustomProvider[] }> {
   const pref = await prisma.userPreference.findUnique({
     where: { userId },
@@ -294,16 +310,41 @@ export interface ProviderConfig {
   baseUrl?: string
 }
 
+async function getUserProviderConfig(userId: string, providerId: string): Promise<ProviderConfig | null> {
+  const { providers } = await readUserConfig(userId)
+  const provider = findProviderByIdOrFamily(providers, providerId)
+
+  if (!provider?.apiKey) {
+    return null
+  }
+
+  return {
+    id: provider.id,
+    name: provider.name,
+    apiKey: decryptApiKey(provider.apiKey),
+    baseUrl: normalizeProviderRuntimeBaseUrl(provider.id, provider.baseUrl),
+  }
+}
+
 export async function getProviderConfig(userId: string, providerId: string): Promise<ProviderConfig> {
   const deployment = getDeploymentConfig()
   if (deployment.providerCredentialMode === 'platform-key') {
-    const platform = resolvePlatformProviderEnv(providerId)
-    return {
-      id: providerId,
-      name: providerId,
-      apiKey: platform.apiKey,
-      baseUrl: normalizeProviderRuntimeBaseUrl(providerId, platform.baseUrl),
+    const platformResolution = resolvePlatformProviderEnvCandidate(providerId)
+    if (platformResolution.ok) {
+      return {
+        id: providerId,
+        name: providerId,
+        apiKey: platformResolution.env.apiKey,
+        baseUrl: normalizeProviderRuntimeBaseUrl(providerId, platformResolution.env.baseUrl),
+      }
     }
+
+    if (allowsLocalPlatformProviderConfigOverride(deployment)) {
+      const userProvider = await getUserProviderConfig(userId, providerId)
+      if (userProvider) return userProvider
+    }
+
+    throw platformResolution.error
   }
 
   const { providers } = await readUserConfig(userId)

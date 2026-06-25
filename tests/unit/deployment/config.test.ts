@@ -3,11 +3,19 @@ import { getDeploymentConfig, toPublicDeploymentConfig } from '@/lib/deployment/
 import { getDeploymentFeatures, toPublicDeploymentFeatures } from '@/lib/deployment/features'
 
 const ORIGINAL_ENV = {
+  NODE_ENV: process.env.NODE_ENV,
   DEPLOYMENT_EDITION: process.env.DEPLOYMENT_EDITION,
   PROVIDER_CREDENTIAL_MODE: process.env.PROVIDER_CREDENTIAL_MODE,
 }
 
+const mutableEnv = process.env as Record<string, string | undefined>
+
 function resetEnv() {
+  if (ORIGINAL_ENV.NODE_ENV === undefined) {
+    delete mutableEnv.NODE_ENV
+  } else {
+    mutableEnv.NODE_ENV = ORIGINAL_ENV.NODE_ENV
+  }
   if (ORIGINAL_ENV.DEPLOYMENT_EDITION === undefined) {
     delete process.env.DEPLOYMENT_EDITION
   } else {
@@ -83,7 +91,9 @@ describe('deployment config', () => {
     })
   })
 
-  it('enables official cloud public, billing, and invite surfaces without exposing API configuration', () => {
+  it('enables official cloud public, billing, and invite surfaces without exposing API configuration in production', () => {
+    mutableEnv.NODE_ENV = 'production'
+
     const features = getDeploymentFeatures({
       edition: 'cloud',
       providerCredentialMode: 'platform-key',
@@ -101,5 +111,17 @@ describe('deployment config', () => {
       requireInviteCodeOnSignup: false,
       usePlatformProviderConfig: true,
     })
+  })
+
+  it('exposes API configuration for local platform-key previews', () => {
+    mutableEnv.NODE_ENV = 'development'
+
+    const features = getDeploymentFeatures({
+      edition: 'cloud',
+      providerCredentialMode: 'platform-key',
+    })
+
+    expect(features.showApiConfig).toBe(true)
+    expect(features.usePlatformProviderConfig).toBe(true)
   })
 })

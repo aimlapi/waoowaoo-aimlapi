@@ -43,10 +43,20 @@ function cloneDeploymentFeatures(features: DeploymentFeatures): DeploymentFeatur
   return { ...features }
 }
 
+export function allowsLocalPlatformProviderConfigOverride(config: DeploymentConfig): boolean {
+  return config.providerCredentialMode === 'platform-key' && process.env.NODE_ENV !== 'production'
+}
+
 export function getDeploymentFeatures(config: DeploymentConfig): DeploymentFeatures {
-  return cloneDeploymentFeatures(config.edition === 'cloud'
+  const features = cloneDeploymentFeatures(config.edition === 'cloud'
     ? CLOUD_DEPLOYMENT_FEATURES
     : SELF_HOSTED_DEPLOYMENT_FEATURES)
+
+  if (allowsLocalPlatformProviderConfigOverride(config)) {
+    features.showApiConfig = true
+  }
+
+  return features
 }
 
 export function toPublicDeploymentFeatures(features: DeploymentFeatures): DeploymentFeatures {
