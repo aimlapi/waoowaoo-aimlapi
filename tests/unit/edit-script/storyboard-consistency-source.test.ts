@@ -121,4 +121,41 @@ describe('storyboard consistency source snapshot assets', () => {
       data: { status: 'completed', errorMessage: null },
     })
   })
+
+  it('does not require spatial profiles for prop assets with selected images', async () => {
+    prismaMock.projectLocation.findUnique.mockResolvedValueOnce({
+      selectedImageId: 'prop-image-1',
+      images: [{
+        id: 'prop-image-1',
+        imageUrl: 'images/prop-ready.jpg',
+        isSelected: true,
+        spatialProfileJson: null,
+        spatialProfileStatus: 'pending',
+      }],
+    })
+
+    const snapshots = await buildAssetSnapshots([
+      requirement({
+        id: 'req-prop',
+        kind: 'prop',
+        name: 'Ready prop',
+        targetId: 'prop-1',
+        status: 'generating',
+      }),
+    ])
+
+    expect(snapshots).toEqual([
+      expect.objectContaining({
+        requirementId: 'req-prop',
+        kind: 'prop',
+        targetId: 'prop-1',
+        previewImageUrl: 'images/prop-ready.jpg',
+        spatialProfile: null,
+      }),
+    ])
+    expect(prismaMock.projectEditAssetRequirement.updateMany).toHaveBeenCalledWith({
+      where: { id: { in: ['req-prop'] } },
+      data: { status: 'completed', errorMessage: null },
+    })
+  })
 })

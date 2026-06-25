@@ -181,6 +181,12 @@ async function resolveAssetImage(requirement: EditAssetRequirement): Promise<Res
     ?? location?.images.find((item) => !!item.imageUrl)
     ?? null
   if (!image?.imageUrl) return { previewImageUrl: null, spatialProfile: null }
+  if (requirement.kind === 'prop') {
+    return {
+      previewImageUrl: image.imageUrl,
+      spatialProfile: null,
+    }
+  }
   if (image.spatialProfileStatus !== 'ready' || !image.spatialProfileJson) {
     throw new ApiError('CONFLICT', {
       code: 'LOCATION_SPATIAL_PROFILE_REQUIRED',
