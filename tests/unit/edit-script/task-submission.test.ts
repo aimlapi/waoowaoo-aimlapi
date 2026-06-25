@@ -1,4 +1,5 @@
 import type { NextRequest } from 'next/server'
+import { Prisma } from '@prisma/client'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 import { TASK_TYPE } from '@/lib/task/types'
 
@@ -100,6 +101,8 @@ describe('edit screenplay task submission', () => {
         projectId: 'project-1',
         episodeId: 'episode-1',
         userPrompt: expect.stringContaining('生成一部恐怖短片'),
+        styleBibleJson: Prisma.JsonNull,
+        storyDevelopmentJson: Prisma.JsonNull,
         screenplayText: '',
         status: 'generating',
       }),
@@ -154,6 +157,7 @@ describe('edit screenplay task submission', () => {
       id: 'screenplay-1',
       userPrompt: 'old prompt',
       styleBibleJson: { style: 'old' },
+      storyDevelopmentJson: { schemaVersion: 9, developmentStage: 'dialogueLayer' },
       screenplayText: 'old screenplay',
       status: 'screenplay_ready',
     })
@@ -176,6 +180,8 @@ describe('edit screenplay task submission', () => {
       where: { id: 'screenplay-1' },
       data: expect.objectContaining({
         userPrompt: expect.stringContaining('生成一部恐怖短片'),
+        styleBibleJson: Prisma.JsonNull,
+        storyDevelopmentJson: Prisma.JsonNull,
         status: 'generating',
       }),
       select: { id: true },
@@ -184,6 +190,8 @@ describe('edit screenplay task submission', () => {
       where: { id: 'screenplay-1' },
       data: expect.objectContaining({
         userPrompt: 'old prompt',
+        styleBibleJson: { style: 'old' },
+        storyDevelopmentJson: { schemaVersion: 9, developmentStage: 'dialogueLayer' },
         screenplayText: 'old screenplay',
         status: 'screenplay_ready',
       }),

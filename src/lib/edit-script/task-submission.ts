@@ -24,6 +24,7 @@ type EditScreenplaySnapshot = {
   readonly id: string
   readonly userPrompt: string
   readonly styleBibleJson: Prisma.JsonValue | null
+  readonly storyDevelopmentJson: Prisma.JsonValue | null
   readonly screenplayText: string
   readonly status: string
 }
@@ -80,6 +81,7 @@ async function restoreEditScreenplaySnapshot(params: {
     data: {
       userPrompt: params.snapshot.userPrompt,
       styleBibleJson: toNullableInputJson(params.snapshot.styleBibleJson),
+      storyDevelopmentJson: toNullableInputJson(params.snapshot.storyDevelopmentJson),
       screenplayText: params.snapshot.screenplayText,
       status: params.snapshot.status,
     },
@@ -159,6 +161,7 @@ async function prepareEditScreenplayGenerationTarget(input: {
       id: true,
       userPrompt: true,
       styleBibleJson: true,
+      storyDevelopmentJson: true,
       screenplayText: true,
       status: true,
     },
@@ -175,6 +178,7 @@ async function prepareEditScreenplayGenerationTarget(input: {
         data: {
           userPrompt: structuredUserPrompt,
           styleBibleJson: Prisma.JsonNull,
+          storyDevelopmentJson: Prisma.JsonNull,
           status: EDIT_SCREENPLAY_STATUS_GENERATING,
         },
         select: { id: true },
@@ -185,6 +189,7 @@ async function prepareEditScreenplayGenerationTarget(input: {
           episodeId: input.episodeId,
           userPrompt: structuredUserPrompt,
           styleBibleJson: Prisma.JsonNull,
+          storyDevelopmentJson: Prisma.JsonNull,
           screenplayText: '',
           status: EDIT_SCREENPLAY_STATUS_GENERATING,
         },

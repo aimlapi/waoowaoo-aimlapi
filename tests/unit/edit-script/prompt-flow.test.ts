@@ -51,24 +51,33 @@ describe('edit script block-first prompt flow', () => {
       locale: 'zh',
       variables: {
         user_request: '生成一条连续短片',
-        duration_guidance: durationGuidance,
+        screenplay_blueprint_json: JSON.stringify({
+          schemaVersion: 9,
+          screenplaySkeleton: { sceneSkeleton: [] },
+          sequenceLayer: { sequences: [] },
+          sceneLayerPackage: { sceneLayer: [] },
+          beatLayerPackage: { sceneBeatBlocks: [] },
+          interactionLayerPackage: { interactions: [] },
+          dialogueLayer: [],
+        }),
+        duration_seconds: '60',
         aspect_ratio: '16:9',
       },
     })
 
-    expect(screenplayPrompt).toContain('AI 可控短片剧本')
-    expect(screenplayPrompt).toContain('剧本必须适配不超过 120 秒的短片')
-    expect(screenplayPrompt).toContain('禁止真人类型')
-    expect(screenplayPrompt).toContain('最终画面比例：16:9')
+    expect(screenplayPrompt).toContain('Screenplay Generator')
+    expect(screenplayPrompt).toContain('七层剧本蓝图')
+    expect(screenplayPrompt).toContain('Screenplay Skeleton Layer -> Sequence Layer -> Scene Layer -> Beat Layer -> Dramatic Interaction Layer -> Dialogue Layer -> Screenplay')
+    expect(screenplayPrompt).toContain('目标总时长：60 秒')
+    expect(screenplayPrompt).toContain('画幅：16:9')
     expect(screenplayPrompt).not.toContain('aspect_ratio')
-    expect(screenplayPrompt).toContain('不要机械凑满固定秒数')
-    expect(screenplayPrompt).toContain('这里只写剧情内容，不写镜头语言、景别、构图、运镜、剪辑节奏、group/single、视频生成提示词、音效、BGM 或后期说明')
-    expect(screenplayPrompt).toContain('这里只写剧情事实，不生成剧本、场景、人物的任何风格提示词')
-    expect(screenplayPrompt).toContain('禁止输出或固化视觉风格、画风、美术媒介、材质质感、色彩风格、光影风格、镜头风格、声音风格、Style Bible、image prompt、video prompt')
-    expect(screenplayPrompt).toContain('如果用户原始需求包含风格、画风、美术媒介或视觉效果要求，不要把它写进剧本文本')
-    expect(screenplayPrompt).toContain('角色名：2-3 个客观、剧情识别所需的稳定外观/状态特征')
-    expect(screenplayPrompt).toContain('动作段落里的场景、道具和人物只允许写剧情事实与空间事实')
+    expect(screenplayPrompt).toContain('"schemaVersion":9')
+    expect(screenplayPrompt).toContain('每个 Beat 必须体现 action -> reaction -> strategyChange -> informationChange -> newCondition')
+    expect(screenplayPrompt).toContain('对白必须遵循 Dialogue Layer，不要把 subtext 直接说出口')
+    expect(screenplayPrompt).toContain('角色名：2-3 个稳定视觉特征 + 关键身份/状态 + 来自 Dialogue Layer 的必要说话气质')
+    expect(screenplayPrompt).toContain('场景数量以 Scene Layer 为准')
     expect(screenplayPrompt).toContain('不要出现“镜头”“特写”“推镜”“剪切”“CUT TO”')
+    expect(screenplayPrompt).not.toContain('duration_guidance')
     expect(screenplayPrompt).not.toContain('项目风格输入')
     expect(screenplayPrompt).not.toContain('project_style_json')
     expect(screenplayPrompt).not.toContain('Style Bible（唯一风格来源）')
