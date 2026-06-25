@@ -39,14 +39,19 @@ export async function ensureProjectLocationImageSlots(input: {
   locale: Locale
   descriptionMode?: LocationSlotDescriptionMode
 }) {
+  const descriptionMode = input.descriptionMode ?? 'copy'
   const existing = await prisma.locationImage.findMany({
     where: { locationId: input.locationId },
     select: { imageIndex: true, description: true },
     orderBy: { imageIndex: 'asc' },
   })
+  if (descriptionMode === 'scene-board') {
+    await prisma.locationImage.deleteMany({
+      where: { locationId: input.locationId, imageIndex: { gte: input.count } },
+    })
+  }
   const existingIndexes = new Set(existing.map((item) => item.imageIndex))
   const toCreate: Array<{ locationId: string; imageIndex: number; description: string }> = []
-  const descriptionMode = input.descriptionMode ?? 'copy'
 
   for (let imageIndex = 0; imageIndex < input.count; imageIndex += 1) {
     const description = buildLocationImageSlotDescription({
@@ -83,14 +88,19 @@ export async function ensureGlobalLocationImageSlots(input: {
   locale: Locale
   descriptionMode?: LocationSlotDescriptionMode
 }) {
+  const descriptionMode = input.descriptionMode ?? 'copy'
   const existing = await prisma.globalLocationImage.findMany({
     where: { locationId: input.locationId },
     select: { imageIndex: true, description: true },
     orderBy: { imageIndex: 'asc' },
   })
+  if (descriptionMode === 'scene-board') {
+    await prisma.globalLocationImage.deleteMany({
+      where: { locationId: input.locationId, imageIndex: { gte: input.count } },
+    })
+  }
   const existingIndexes = new Set(existing.map((item) => item.imageIndex))
   const toCreate: Array<{ locationId: string; imageIndex: number; description: string }> = []
-  const descriptionMode = input.descriptionMode ?? 'copy'
 
   for (let imageIndex = 0; imageIndex < input.count; imageIndex += 1) {
     const description = buildLocationImageSlotDescription({

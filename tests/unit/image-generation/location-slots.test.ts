@@ -5,11 +5,13 @@ const prismaMock = vi.hoisted(() => ({
     findMany: vi.fn(),
     createMany: vi.fn(async () => ({ count: 0 })),
     updateMany: vi.fn(async () => ({ count: 1 })),
+    deleteMany: vi.fn(async () => ({ count: 0 })),
   },
   globalLocationImage: {
     findMany: vi.fn(),
     createMany: vi.fn(async () => ({ count: 0 })),
     updateMany: vi.fn(async () => ({ count: 1 })),
+    deleteMany: vi.fn(async () => ({ count: 0 })),
   },
 }))
 
@@ -59,6 +61,9 @@ describe('location image slot descriptions', () => {
     expect(prismaMock.locationImage.updateMany).toHaveBeenCalledWith({
       where: { locationId: 'location-1', imageIndex: 0 },
       data: { description: expect.stringContaining('四宫格空间板') },
+    })
+    expect(prismaMock.locationImage.deleteMany).toHaveBeenCalledWith({
+      where: { locationId: 'location-1', imageIndex: { gte: 1 } },
     })
     expect(prismaMock.locationImage.createMany).not.toHaveBeenCalled()
   })

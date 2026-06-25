@@ -67,9 +67,11 @@ function outputRule(locale: Locale): string {
     return joinLines([
       'Output JSON only: {"prompt":"final image-generation prompt"}.',
       'The prompt value must be the final image prompt only. It must not include analysis notes, hidden reasoning, strategy names, the original full input, or instructions to choose a location.',
-      'The final prompt must describe exactly one empty reusable scene reference image as a 2x2 contact sheet: front view, back view, left view, right view.',
-      'Use one square 1:1 frame containing four equal quadrants separated by clean thin dividers.',
-      'Each quadrant should include a small readable corner label only: FRONT, BACK, LEFT, RIGHT. Do not add any other captions, subtitles, watermarks, UI marks, or explanatory text.',
+      'The final prompt must describe exactly one empty reusable scene reference image that is visibly a 2x2 contact sheet, not a single room view.',
+      'Hard layout: one square 1:1 canvas; a thick clean vertical divider and a thick clean horizontal divider form four equal rectangular panels.',
+      'Panel order must be fixed: top-left FRONT, top-right BACK, bottom-left LEFT, bottom-right RIGHT.',
+      'Each panel must show a separate camera angle of the same physical set. The image is invalid if it becomes one full-bleed wide-angle interior, one panorama, one unsegmented room render, five thumbnails, or an irregular collage.',
+      'Each panel should include one small readable corner label only: FRONT, BACK, LEFT, RIGHT. Do not add any other captions, subtitles, watermarks, UI marks, or explanatory text.',
       'Do not include named main characters or narrative action beats. Temporary tiny background silhouettes are allowed only when necessary for scale, but the asset must remain an empty reusable location reference.',
     ])
   }
@@ -77,8 +79,10 @@ function outputRule(locale: Locale): string {
   return joinLines([
     '只输出 JSON：{"prompt":"最终图片生成提示词"}。',
     'prompt 字段必须只包含最终图片提示词，不得包含分析说明、隐藏推理、策略名称、完整原始输入或“选择地点”这类任务指令。',
-    '最终 prompt 必须描述且只描述一张 2x2 四宫格空场景参考图：前方、后方、左侧、右侧。',
-    '使用 1:1 正方形画幅，内部四个等大格子，用干净细分隔线区分。',
+    '最终 prompt 必须描述且只描述一张明确可见的 2x2 四宫格空场景参考图，不是一张单独室内透视图。',
+    '硬性版式：一张 1:1 正方形画布；用清晰粗直的竖向分隔线和横向分隔线切成四个等大矩形 panel。',
+    '四格顺序必须固定：左上=前，右上=后，左下=左，右下=右。',
+    '每个 panel 必须是同一个真实布景的不同机位。若画面变成一张全屏单透视室内图、一张全景图、没有分隔线的房间图、五张缩略图或不规则拼贴，视为失败。',
     '每个格子只允许有一个小而清晰的角标：前、后、左、右。不要添加其他说明文字、字幕、水印、UI 标记或解释性文字。',
     '不要出现有名主角或叙事动作瞬间。只有在需要标尺时才允许极小的背景人影，但资产本质必须仍是可复用空场景参考。',
   ])
@@ -214,20 +218,42 @@ export function appendLocationSceneBoardViewRule(input: {
   const view = resolveLocationSceneBoardView(input.imageIndex)
   const rule = input.locale === 'en'
     ? joinLines([
+      'CRITICAL IMAGE FORMAT - MUST OBEY BEFORE ANY SCENE CONTENT:',
+      'ONE FINAL IMAGE ONLY. The final image must look like a square 2x2 contact sheet / reference board, with four separate camera-view panels.',
+      'The image must have a visible cross divider: one vertical divider and one horizontal divider, crossing in the exact center.',
+      'If the output is a single perspective room image without four separated panels, the output is wrong.',
       `Locked spatial layout plan that must be obeyed:\n${input.layoutPlan}`,
       `This is the ${view.enLabel} for a same-location spatial reference board.`,
       view.enCoverage,
-      'Generate one square 1:1 image containing four equal quadrants: FRONT, BACK, LEFT, RIGHT. Use clean thin dividers and one small label per quadrant only.',
+      'Generate exactly one square 1:1 image. The image itself must be a visible 2x2 contact sheet with four equal panels.',
+      'Mandatory panel order: top-left FRONT, top-right BACK, bottom-left LEFT, bottom-right RIGHT.',
+      'Use a clear vertical divider and a clear horizontal divider crossing at the exact center. The result must not be a single full-bleed interior, panorama, unsegmented room, five-image set, or irregular collage.',
+      'Use one small corner label per panel only: FRONT, BACK, LEFT, RIGHT.',
       'Keep all quadrants empty and reusable for later character placement and storyboard inheritance.',
     ])
     : joinLines([
+      'CRITICAL IMAGE FORMAT - MUST OBEY BEFORE ANY SCENE CONTENT:',
+      'ONE FINAL IMAGE ONLY. The final image must look like a square 2x2 contact sheet / reference board, with four separate camera-view panels.',
+      'The image must have a visible cross divider: one vertical divider and one horizontal divider, crossing in the exact center.',
+      'If the output is a single perspective room image without four separated panels, the output is wrong.',
+      '关键版式要求，优先级高于所有场景内容：',
+      '只输出一张最终图片。最终图片必须看起来像一张正方形 2x2 四宫格 contact sheet / 场景参考板，包含四个独立机位 panel。',
+      '画面必须有可见十字分隔线：一条竖线、一条横线，在画面正中心交叉。',
+      '如果输出是一张没有四格分隔的单透视房间图，就是错误结果。',
       `必须遵守的锁定空间布局说明：\n${input.layoutPlan}`,
       `这是同一地点场景空间板的${view.zhLabel}。`,
       view.zhCoverage,
-      '只生成一张 1:1 正方形图片，内部包含四个等大格子：前、后、左、右。使用干净细分隔线，每格只放一个小角标。',
+      '只生成一张 1:1 正方形图片。图片本身必须是清楚可见的 2x2 四宫格 contact sheet，内部只有四个等大 panel。',
+      '固定 panel 顺序：左上=前，右上=后，左下=左，右下=右。',
+      '必须有一条清晰竖向分隔线和一条清晰横向分隔线，在画面正中心交叉。结果不得是一张全屏单透视室内图、全景图、无分隔房间图、五张图组合或不规则拼贴。',
+      '每个 panel 只放一个小角标：前、后、左、右。',
       '四个格子都保持为空场景资产，方便后续人物落位和分镜继承。',
     ])
-  return joinLines([input.prompt, rule])
+  return joinLines([
+    rule,
+    input.prompt,
+    rule,
+  ])
 }
 
 export function parseLocationSceneBoardLayoutPlan(parsed: Record<string, unknown>): string {

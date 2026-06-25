@@ -43,12 +43,15 @@ describe('asset candidate prompt builders', () => {
     expect(views.every((view) => view.aspectRatio === '1:1')).toBe(true)
     expect(views[0]?.draftInstruction).toContain('四宫格空间板')
     expect(views[0]?.draftInstruction).toContain('前方、后方、左侧、右侧')
-    expect(appendLocationSceneBoardViewRule({
+    const finalPrompt = appendLocationSceneBoardViewRule({
       prompt: '旧办公室空场景',
       locale: 'zh',
       imageIndex: 0,
       layoutPlan: '前方是玻璃门，后方是吧台，左侧是卡座，右侧是操作台。',
-    })).toContain('四宫格空间板')
+    })
+    expect(finalPrompt).toContain('四宫格空间板')
+    expect(finalPrompt).toContain('左上=前，右上=后，左下=左，右下=右')
+    expect(finalPrompt).toContain('结果不得是一张全屏单透视室内图')
     expect(parseLocationSceneBoardPrompt({ prompt: '最终场景 prompt' })).toBe('最终场景 prompt')
   })
 
