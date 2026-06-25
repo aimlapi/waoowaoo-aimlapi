@@ -63,6 +63,7 @@ import {
   type EditFirstDurationTier,
 } from './duration-tier'
 import {
+  assertScreenplaySkeletonSceneCount,
   beatLayerPackageSchema,
   buildInteractionLayerPackageFromBeatLayer,
   dialogueLayerPackageSchema,
@@ -1636,6 +1637,10 @@ export async function generateProjectEditScreenplay(input: GenerateEditScreenpla
     stepTotal: 7,
     maxOutputTokens: EDIT_SCREENPLAY_DEVELOPMENT_MAX_OUTPUT_TOKENS,
   })).screenplaySkeleton
+  assertScreenplaySkeletonSceneCount({
+    screenplaySkeleton,
+    durationTier: input.durationTier,
+  })
   if (!reusableScreenplaySkeleton) {
     await persistScreenplayDevelopmentDraft({
       projectId: input.projectId,

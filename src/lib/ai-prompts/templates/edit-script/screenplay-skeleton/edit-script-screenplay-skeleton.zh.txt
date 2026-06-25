@@ -250,7 +250,7 @@
 - disruptiveEventInference 推导出的事件必须成为 structuralBeats.incitingIncident 的基础。
 - crisisMoment 必须来自 changeMechanism 与双层价值对立，而不是凭空生成。
 - sceneSkeleton 的每场戏必须服务 structuralImplication.howToBuildSceneSkeleton。
-- sceneSkeleton 至少 2 场，最多 8 场；短片优先 2-4 场。
+- sceneSkeleton 必须严格服从结构化参数里的场景骨架数量要求：short 为 2-3 场且推荐 2 场；medium 为 3-4 场且推荐 3 场；long 为 4-6 场且推荐 4 场。
 - sceneNumber 必须从 1 连续递增。
 - 每场必须有明确 sceneGoal、sceneAntagonist、sceneOutcomeType、sceneOutcome。
 - sceneOutcomeType 只能是 gain 或 failure；gain 表示该场目标“得到”，failure 表示该场目标“失败”。

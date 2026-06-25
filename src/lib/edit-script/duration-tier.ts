@@ -15,6 +15,15 @@ export interface EditFirstDurationSpec {
   readonly enGuidance: string
 }
 
+export interface EditFirstSceneCountSpec {
+  readonly tier: EditFirstDurationTier
+  readonly targetScenes: number
+  readonly minScenes: number
+  readonly maxScenes: number
+  readonly zhGuidance: string
+  readonly enGuidance: string
+}
+
 const EDIT_FIRST_DURATION_SPECS: Record<EditFirstDurationTier, EditFirstDurationSpec> = {
   short: {
     tier: 'short',
@@ -45,6 +54,33 @@ const EDIT_FIRST_DURATION_SPECS: Record<EditFirstDurationTier, EditFirstDuration
     enLabel: 'Long',
     zhGuidance: '长时长档位，约 120 秒，硬上限 120 秒。允许更充分铺垫和结尾回响，但最终总时长不得超过 120 秒，不要为了凑时长填充冗余情节。',
     enGuidance: 'Long duration tier, around 120 seconds with a hard 120-second cap. Allow fuller setup and ending resonance, but the final total duration must not exceed 120 seconds and must not add filler just to use time.',
+  },
+}
+
+const EDIT_FIRST_SCENE_COUNT_SPECS: Record<EditFirstDurationTier, EditFirstSceneCountSpec> = {
+  short: {
+    tier: 'short',
+    targetScenes: 2,
+    minScenes: 2,
+    maxScenes: 3,
+    zhGuidance: '场景骨架必须为 2-3 场，推荐 2 场。',
+    enGuidance: 'The scene skeleton must contain 2-3 scenes; target 2 scenes.',
+  },
+  medium: {
+    tier: 'medium',
+    targetScenes: 3,
+    minScenes: 3,
+    maxScenes: 4,
+    zhGuidance: '场景骨架必须为 3-4 场，推荐 3 场。',
+    enGuidance: 'The scene skeleton must contain 3-4 scenes; target 3 scenes.',
+  },
+  long: {
+    tier: 'long',
+    targetScenes: 4,
+    minScenes: 4,
+    maxScenes: 6,
+    zhGuidance: '场景骨架必须为 4-6 场，推荐 4 场。',
+    enGuidance: 'The scene skeleton must contain 4-6 scenes; target 4 scenes.',
   },
 }
 
@@ -88,6 +124,10 @@ export function resolveEditFirstDurationSpec(tier: EditFirstDurationTier): EditF
   return EDIT_FIRST_DURATION_SPECS[tier]
 }
 
+export function resolveEditFirstSceneCountSpec(tier: EditFirstDurationTier): EditFirstSceneCountSpec {
+  return EDIT_FIRST_SCENE_COUNT_SPECS[tier]
+}
+
 export function readEditFirstDurationTierFromText(text: string): EditFirstDurationTier | null {
   const normalized = text.trim().toLowerCase()
   if (!normalized) return null
@@ -129,9 +169,10 @@ export function buildEditFirstStructuredUserPrompt(input: {
 }): string {
   const basePrompt = stripEditFirstStructuredParameters(input.prompt)
   const spec = resolveEditFirstDurationSpec(input.durationTier)
+  const sceneCountSpec = resolveEditFirstSceneCountSpec(input.durationTier)
   const structuredLine = input.locale === 'en'
-    ? `Structured edit-first parameters: duration tier ${spec.tier} (${spec.enLabel}, around ${String(spec.targetSeconds)} seconds); final aspect ratio ${input.aspectRatio}.`
-    : `剪辑先行结构化参数：时长档位 ${spec.tier}（${spec.zhLabel}，约 ${String(spec.targetSeconds)} 秒）；最终画面比例 ${input.aspectRatio}。`
+    ? `Structured edit-first parameters: duration tier ${spec.tier} (${spec.enLabel}, around ${String(spec.targetSeconds)} seconds); ${sceneCountSpec.enGuidance} Final aspect ratio ${input.aspectRatio}.`
+    : `剪辑先行结构化参数：时长档位 ${spec.tier}（${spec.zhLabel}，约 ${String(spec.targetSeconds)} 秒）；${sceneCountSpec.zhGuidance} 最终画面比例 ${input.aspectRatio}。`
   return [basePrompt, '', structuredLine].join('\n')
 }
 

@@ -1,4 +1,5 @@
 import { z } from 'zod'
+import { resolveEditFirstSceneCountSpec, type EditFirstDurationTier } from './duration-tier'
 
 const jsonRecordSchema = z.object({}).catchall(z.unknown())
 
@@ -171,6 +172,24 @@ export type InteractionLayerPackage = z.infer<typeof interactionLayerPackageSche
 export type DialogueLayer = z.infer<typeof dialogueLayerPackageSchema>['dialogueLayer']
 export type ScreenplayDevelopmentDraftPackage = z.infer<typeof screenplayDevelopmentDraftPackageSchema>
 export type ScreenplayDevelopmentPackage = z.infer<typeof screenplayDevelopmentPackageSchema>
+
+export function assertScreenplaySkeletonSceneCount(input: {
+  readonly screenplaySkeleton: ScreenplaySkeleton
+  readonly durationTier: EditFirstDurationTier
+}): void {
+  const spec = resolveEditFirstSceneCountSpec(input.durationTier)
+  const actualScenes = input.screenplaySkeleton.sceneSkeleton.length
+  if (actualScenes >= spec.minScenes && actualScenes <= spec.maxScenes) return
+
+  throw new Error([
+    'EDIT_SCREENPLAY_SKELETON_SCENE_COUNT_INVALID',
+    `tier=${spec.tier}`,
+    `min=${String(spec.minScenes)}`,
+    `max=${String(spec.maxScenes)}`,
+    `target=${String(spec.targetScenes)}`,
+    `actual=${String(actualScenes)}`,
+  ].join(':'))
+}
 
 const STRATEGY_LABELS: Record<z.infer<typeof beatStrategySchema>, string> = {
   show: '表现',

@@ -6,8 +6,10 @@ import {
   normalizeEditScriptStructure,
 } from '@/lib/edit-script/normalize'
 import {
+  buildEditFirstStructuredUserPrompt,
   readEditFirstDurationTierFromText,
   requireEditFirstDurationSpecFromPrompt,
+  resolveEditFirstSceneCountSpec,
 } from '@/lib/edit-script/duration-tier'
 
 describe('edit script normalization', () => {
@@ -421,6 +423,33 @@ describe('edit script normalization', () => {
     expect(readEditFirstDurationTierFromText('make it 90 seconds')).toBe('long')
     expect(readEditFirstDurationTierFromText('make it 2 minutes')).toBe('long')
     expect(readEditFirstDurationTierFromText('make it 300 seconds')).toBeNull()
+  })
+
+  it('maps edit-first duration tiers to scene skeleton count ranges', () => {
+    expect(resolveEditFirstSceneCountSpec('short')).toMatchObject({
+      targetScenes: 2,
+      minScenes: 2,
+      maxScenes: 3,
+    })
+    expect(resolveEditFirstSceneCountSpec('medium')).toMatchObject({
+      targetScenes: 3,
+      minScenes: 3,
+      maxScenes: 4,
+    })
+    expect(resolveEditFirstSceneCountSpec('long')).toMatchObject({
+      targetScenes: 4,
+      minScenes: 4,
+      maxScenes: 6,
+    })
+  })
+
+  it('includes the scene skeleton count rule in structured edit-first prompt parameters', () => {
+    expect(buildEditFirstStructuredUserPrompt({
+      prompt: '一个梦核短片',
+      durationTier: 'long',
+      aspectRatio: '16:9',
+      locale: 'zh',
+    })).toContain('场景骨架必须为 4-6 场，推荐 4 场。')
   })
 
   it('requires a persisted duration tier before downstream edit-first generation', () => {

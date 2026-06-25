@@ -1,10 +1,45 @@
 import { describe, expect, it } from 'vitest'
 import {
+  assertScreenplaySkeletonSceneCount,
   beatLayerPackageSchema,
   buildInteractionLayerPackageFromBeatLayer,
+  type ScreenplaySkeleton,
 } from '@/lib/edit-script/screenplay-development'
 
+function buildScreenplaySkeleton(sceneCount: number): ScreenplaySkeleton {
+  return {
+    sceneSkeleton: Array.from({ length: sceneCount }, (_, index) => ({
+      sceneNumber: index + 1,
+      sceneGoal: `目标 ${String(index + 1)}`,
+      sceneAntagonist: `阻碍 ${String(index + 1)}`,
+      sceneOutcome: `结果 ${String(index + 1)}`,
+    })),
+  }
+}
+
 describe('screenplay development layers', () => {
+  it('rejects a long-duration screenplay skeleton with only one scene', () => {
+    expect(() => assertScreenplaySkeletonSceneCount({
+      screenplaySkeleton: buildScreenplaySkeleton(1),
+      durationTier: 'long',
+    })).toThrow('EDIT_SCREENPLAY_SKELETON_SCENE_COUNT_INVALID:tier=long:min=4:max=6:target=4:actual=1')
+  })
+
+  it('accepts the target scene skeleton count for each duration tier', () => {
+    expect(() => assertScreenplaySkeletonSceneCount({
+      screenplaySkeleton: buildScreenplaySkeleton(2),
+      durationTier: 'short',
+    })).not.toThrow()
+    expect(() => assertScreenplaySkeletonSceneCount({
+      screenplaySkeleton: buildScreenplaySkeleton(3),
+      durationTier: 'medium',
+    })).not.toThrow()
+    expect(() => assertScreenplaySkeletonSceneCount({
+      screenplaySkeleton: buildScreenplaySkeleton(4),
+      durationTier: 'long',
+    })).not.toThrow()
+  })
+
   it('derives dramatic interactions from beat action-reaction strategy instead of prompting a fallback layer', () => {
     const beatLayerPackage = beatLayerPackageSchema.parse({
       beatLayerPackage: {

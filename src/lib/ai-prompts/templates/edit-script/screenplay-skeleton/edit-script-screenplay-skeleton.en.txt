@@ -250,7 +250,7 @@ Quality requirements:
 - The event inferred by disruptiveEventInference must become the basis of structuralBeats.incitingIncident.
 - crisisMoment must come from changeMechanism and the dual value oppositions, not from nowhere.
 - Every sceneSkeleton scene must serve structuralImplication.howToBuildSceneSkeleton.
-- sceneSkeleton must contain at least 2 and at most 8 scenes. Prefer 2-4 scenes for short films.
+- sceneSkeleton must strictly obey the structured scene-count requirement: short uses 2-3 scenes and targets 2; medium uses 3-4 scenes and targets 3; long uses 4-6 scenes and targets 4.
 - sceneNumber must start at 1 and increase continuously.
 - Every scene must have clear sceneGoal, sceneAntagonist, sceneOutcomeType, and sceneOutcome.
 - sceneOutcomeType must be gain or failure. gain means the scene goal is obtained; failure means the scene goal fails.
