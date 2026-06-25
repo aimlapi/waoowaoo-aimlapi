@@ -146,11 +146,19 @@ export interface EditAssetRequirement {
   readonly taskTargetId?: string | null
   readonly errorMessage?: string | null
   readonly previewImageUrl?: string | null
+  readonly previewImages?: readonly EditAssetPreviewImage[]
   readonly spatialProfileJson?: unknown | null
   readonly spatialProfileStatus?: LocationSpatialProfileStatus | null
   readonly spatialProfileError?: string | null
   readonly spatialProfileAnalyzedAt?: string | Date | null
   readonly spatialProfileModel?: string | null
+}
+
+export interface EditAssetPreviewImage {
+  readonly id: string
+  readonly imageIndex: number
+  readonly imageUrl: string
+  readonly isSelected: boolean
 }
 
 export interface EditScriptAssetGenerationTask {

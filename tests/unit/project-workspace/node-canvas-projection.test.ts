@@ -1610,6 +1610,11 @@ describe('workspace node canvas projection', () => {
             taskTargetId: 'location-1',
             errorMessage: null,
             previewImageUrl: 'https://example.com/location.png',
+            previewImages: [
+              { id: 'location-image-0', imageIndex: 0, imageUrl: 'https://example.com/location.png', isSelected: true },
+              { id: 'location-image-1', imageIndex: 1, imageUrl: 'https://example.com/location-front.png', isSelected: false },
+              { id: 'location-image-2', imageIndex: 2, imageUrl: 'https://example.com/location-back.png', isSelected: false },
+            ],
             spatialProfileStatus: 'ready',
             spatialProfileModel: 'vision-model',
             spatialProfileJson: {
@@ -1683,6 +1688,11 @@ describe('workspace node canvas projection', () => {
       kind: 'location',
     })
     expect(locationAsset?.previewImageUrl).toBe('https://example.com/location.png')
+    expect(locationAsset?.previewImages).toEqual([
+      { id: 'location-image-0', imageIndex: 0, imageUrl: 'https://example.com/location.png', isSelected: true },
+      { id: 'location-image-1', imageIndex: 1, imageUrl: 'https://example.com/location-front.png', isSelected: false },
+      { id: 'location-image-2', imageIndex: 2, imageUrl: 'https://example.com/location-back.png', isSelected: false },
+    ])
     expect(locationAsset?.shotNumbers).toEqual([1])
     expect(assetGroupNode?.data.runtimeTargets).toEqual([
       {

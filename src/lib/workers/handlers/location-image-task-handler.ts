@@ -2,13 +2,18 @@ import { type Job } from 'bullmq'
 import { prisma } from '@/lib/prisma'
 import { addLocationPromptSuffix, addPropPromptSuffix } from '@/lib/constants'
 import { normalizeImageGenerationCount } from '@/lib/image-generation/count'
-import { type TaskJobData } from '@/lib/task/types'
+import { TASK_EVENT_TYPE, type TaskJobData } from '@/lib/task/types'
+import { publishTaskEvent } from '@/lib/task/publisher'
 import { executeAiTextStep } from '@/lib/ai-exec/engine'
 import { safeParseJsonObject } from '@/lib/json-repair'
 import {
   appendLocationSceneBoardViewRule,
+  buildLocationSceneBoardLayoutPlan,
   buildLocationSceneBoardView,
+  parseLocationSceneBoardLayoutPlan,
   parseLocationSceneBoardPrompt,
+  resolveLocationSceneBoardView,
+  stripLocationSceneBoardSlotDescription,
   type LocationSceneBoardView,
 } from '@/lib/asset-generation/location-scene-board-prompts'
 import { reportTaskProgress } from '../shared'
@@ -85,6 +90,29 @@ async function generateLocationSceneBoardPrompt(input: {
   return parseLocationSceneBoardPrompt(safeParseJsonObject(completion.text))
 }
 
+async function generateLocationSceneBoardLayoutPlan(input: {
+  readonly userId: string
+  readonly projectId: string
+  readonly analysisModel: string
+  readonly draftInstruction: string
+}): Promise<string> {
+  const completion = await executeAiTextStep({
+    userId: input.userId,
+    model: input.analysisModel,
+    messages: [{ role: 'user', content: input.draftInstruction }],
+    temperature: 0.35,
+    projectId: input.projectId,
+    action: 'location_scene_board_layout_plan',
+    meta: {
+      stepId: 'location_scene_board_layout_plan',
+      stepTitle: 'Location spatial layout plan',
+      stepIndex: 1,
+      stepTotal: 1,
+    },
+  })
+  return parseLocationSceneBoardLayoutPlan(safeParseJsonObject(completion.text))
+}
+
 export async function handleLocationImageTask(job: Job<TaskJobData>) {
   const payload = (job.data.payload || {}) as AnyObj
   const projectId = job.data.projectId
@@ -150,8 +178,47 @@ export async function handleLocationImageTask(job: Job<TaskJobData>) {
   const completedLocationIds = new Set<string>()
   const selectedLocationImageIds = new Map<string, string>()
   const groupedLocationDescription = assetType === 'location'
-    ? locationImages.find((it) => typeof it.description === 'string' && it.description.trim())?.description?.trim() || ''
+    ? stripLocationSceneBoardSlotDescription(locationImages.find((it) => typeof it.description === 'string' && it.description.trim())?.description?.trim() || '')
     : ''
+  const locale = job.data.locale === 'en' ? 'en' : 'zh'
+  const locationLayoutPlan = await (async () => {
+    if (assetType !== 'location') return null
+    const profileModel = spatialProfileModel
+    if (!profileModel) throw new Error('LOCATION_SPATIAL_PROFILE_MODEL_REQUIRED')
+    const layoutSourceDescription = groupedLocationDescription
+      || stripLocationSceneBoardSlotDescription(locationImages[0]?.description || '')
+    if (!layoutSourceDescription) return null
+    await reportTaskProgress(job, 10, {
+      stage: 'generate_location_scene_board_layout_plan',
+    })
+    const layoutView = buildLocationSceneBoardLayoutPlan({
+      description: layoutSourceDescription,
+      locale,
+      styleBible,
+    })
+    const layoutPlan = await generateLocationSceneBoardLayoutPlan({
+      userId,
+      projectId,
+      analysisModel: profileModel,
+      draftInstruction: layoutView.draftInstruction,
+    })
+    await publishTaskEvent({
+      taskId: job.data.taskId,
+      projectId,
+      userId,
+      type: TASK_EVENT_TYPE.PROGRESS,
+      taskType: job.data.type,
+      targetType: job.data.targetType,
+      targetId: job.data.targetId,
+      episodeId: job.data.episodeId || null,
+      persist: true,
+      payload: {
+        stage: 'persist_location_scene_board_layout_plan',
+        layoutPlan,
+      },
+    })
+    return layoutPlan
+  })()
 
   for (let i = 0; i < locationImages.length; i++) {
     const item = locationImages[i]
@@ -163,15 +230,15 @@ export async function handleLocationImageTask(job: Job<TaskJobData>) {
           description: promptBody,
         })
       }
-      const locale = job.data.locale === 'en' ? 'en' : 'zh'
       const sourceDescription = payload.imageIndex !== undefined
-        ? promptBody
-        : groupedLocationDescription || promptBody
+        ? stripLocationSceneBoardSlotDescription(promptBody)
+        : groupedLocationDescription || stripLocationSceneBoardSlotDescription(promptBody)
       const view = buildLocationSceneBoardView({
         description: sourceDescription,
         locale,
         styleBible,
         imageIndex: item.imageIndex,
+        layoutPlan: locationLayoutPlan || sourceDescription,
       })
       const profileModel = spatialProfileModel
       if (!profileModel) throw new Error('LOCATION_SPATIAL_PROFILE_MODEL_REQUIRED')
@@ -191,6 +258,7 @@ export async function handleLocationImageTask(job: Job<TaskJobData>) {
           prompt: candidatePrompt,
           locale,
           imageIndex: item.imageIndex,
+          layoutPlan: locationLayoutPlan || sourceDescription,
         }),
         locale,
       })
@@ -205,6 +273,29 @@ export async function handleLocationImageTask(job: Job<TaskJobData>) {
       styleBible,
       usage: 'assetImage',
       locale: job.data.locale,
+    })
+    const promptView = assetType === 'location'
+      ? resolveLocationSceneBoardView(item.imageIndex)
+      : null
+    await publishTaskEvent({
+      taskId: job.data.taskId,
+      projectId,
+      userId,
+      type: TASK_EVENT_TYPE.PROGRESS,
+      taskType: job.data.type,
+      targetType: job.data.targetType,
+      targetId: job.data.targetId,
+      episodeId: job.data.episodeId || null,
+      persist: true,
+      payload: {
+        stage: 'persist_location_image_prompt',
+        imageId: item.id,
+        imageIndex: item.imageIndex,
+        view: promptView?.id ?? null,
+        finalPrompt: prompt,
+        modelId,
+        generationOptions: payload.generationOptions ?? null,
+      },
     })
     await reportTaskProgress(job, 20 + Math.floor((i / Math.max(locationImages.length, 1)) * 55), {
       stage: 'generate_location_image',

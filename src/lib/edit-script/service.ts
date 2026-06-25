@@ -293,6 +293,7 @@ interface PersistedEditCinematographyShotPlan {
 interface ExistingAssetRef {
   readonly id: string
   readonly previewImageUrl: string | null
+  readonly previewImages?: readonly ExistingAssetPreviewImage[]
   readonly hasOutput: boolean
   readonly taskTargetType: 'CharacterAppearance' | 'LocationImage'
   readonly taskTargetId: string
@@ -301,6 +302,13 @@ interface ExistingAssetRef {
   readonly spatialProfileError?: string | null
   readonly spatialProfileAnalyzedAt?: Date | null
   readonly spatialProfileModel?: string | null
+}
+
+interface ExistingAssetPreviewImage {
+  readonly id: string
+  readonly imageIndex: number
+  readonly imageUrl: string
+  readonly isSelected: boolean
 }
 
 const EDIT_SCREENPLAY_STATUS_SCREENPLAY_READY = 'screenplay_ready'
@@ -862,9 +870,18 @@ async function resolveLocationAsset(projectId: string, targetId: string | null):
     ?? location?.images[0]
     ?? null
   if (!location || !image) return null
+  const previewImages = location.images
+    .filter((item) => typeof item.imageUrl === 'string' && item.imageUrl.trim().length > 0)
+    .map((item): ExistingAssetPreviewImage => ({
+      id: item.id,
+      imageIndex: item.imageIndex,
+      imageUrl: item.imageUrl as string,
+      isSelected: item.id === location.selectedImageId || item.isSelected,
+    }))
   return {
     id: location.id,
     previewImageUrl: image.imageUrl || null,
+    previewImages,
     hasOutput: Boolean(image.imageMediaId || image.imageUrl),
     taskTargetType: 'LocationImage',
     taskTargetId: location.id,
@@ -928,6 +945,7 @@ async function mapPersistedEditScript(script: PersistedEditScript): Promise<Edit
       taskTargetId: resolvedAsset?.taskTargetId ?? null,
       errorMessage: status === 'failed' ? taskFailure || requirement.errorMessage : null,
       previewImageUrl: resolvedAsset?.previewImageUrl ?? null,
+      previewImages: resolvedAsset?.previewImages ?? undefined,
       spatialProfileJson: resolvedAsset?.spatialProfileJson ?? null,
       spatialProfileStatus: resolvedAsset?.spatialProfileStatus ?? null,
       spatialProfileError: resolvedAsset?.spatialProfileError ?? null,

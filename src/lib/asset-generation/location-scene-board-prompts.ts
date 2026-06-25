@@ -3,18 +3,18 @@ import type { EditScriptStyleBible } from '@/lib/edit-script/types'
 import { renderStyleBiblePromptBlock } from '@/lib/edit-script/style-bible-prompt'
 
 export type LocationSceneBoardViewId =
-  | 'establishing'
-  | 'front'
-  | 'back'
-  | 'left'
-  | 'right'
+  | 'quad-grid'
 
-export const LOCATION_SCENE_BOARD_VIEW_COUNT = 5
+export const LOCATION_SCENE_BOARD_VIEW_COUNT = 1
 
 export interface LocationSceneBoardView {
   readonly id: LocationSceneBoardViewId
   readonly label: string
-  readonly aspectRatio: '4:3'
+  readonly aspectRatio: '1:1'
+  readonly draftInstruction: string
+}
+
+export interface LocationSceneBoardLayoutPlan {
   readonly draftInstruction: string
 }
 
@@ -28,39 +28,11 @@ interface LocationSceneBoardViewSpec {
 
 const LOCATION_SCENE_BOARD_VIEW_SPECS: readonly LocationSceneBoardViewSpec[] = [
   {
-    id: 'establishing',
-    zhLabel: '主氛围图',
-    enLabel: 'Establishing mood view',
-    zhCoverage: '生成这个地点的主氛围建立镜头。画面要像可复用的电影场景资产：展示整体空间格局、主视觉锚点、入口/出口、主要家具或建筑结构、光源方向和可供后续人物落位的区域。',
-    enCoverage: 'Generate the establishing mood view for this location. The image must work as a reusable film location asset: show the overall layout, primary visual anchors, entrances/exits, major furniture or architecture, lighting direction, and usable areas for later character placement.',
-  },
-  {
-    id: 'front',
-    zhLabel: '前方视角',
-    enLabel: 'Front coverage view',
-    zhCoverage: '生成同一地点的前方覆盖视角。镜头站在空间前轴，面向主要背景墙、窗景、舞台面或最能承载叙事的正面方向；必须与主氛围图共享同一套建筑、家具、材质、色彩和光源，只改变观察方向。',
-    enCoverage: 'Generate the front coverage view of the same location. Place the camera on the front axis, looking toward the main background wall, window view, stage plane, or strongest narrative-facing direction; keep the same architecture, furniture, materials, palette, and light sources as the establishing view, changing only the viewing direction.',
-  },
-  {
-    id: 'back',
-    zhLabel: '后方视角',
-    enLabel: 'Back coverage view',
-    zhCoverage: '生成同一地点的后方覆盖视角。镜头站在与前方视角相反的一侧，展示前方视角看不见的入口、吧台、走廊、墙面、后场结构或逃离路线；必须延续同一空间的锚点和美术规则。',
-    enCoverage: 'Generate the back coverage view of the same location. Place the camera on the opposite side from the front view, revealing entrances, counters, corridors, rear walls, backstage structure, or escape routes hidden from the front view; preserve the same spatial anchors and production-design rules.',
-  },
-  {
-    id: 'left',
-    zhLabel: '左侧视角',
-    enLabel: 'Left coverage view',
-    zhCoverage: '生成同一地点的左侧覆盖视角。镜头从空间左侧横向观察，重点展示左侧墙面、侧向动线、桌椅/门窗/柱体关系和可用于侧向调度的地面区域；不得把地点改成新场景。',
-    enCoverage: 'Generate the left coverage view of the same location. Observe laterally from the left side, emphasizing the left wall, side movement path, furniture/door/window/column relationships, and floor areas useful for lateral blocking; do not turn it into a different scene.',
-  },
-  {
-    id: 'right',
-    zhLabel: '右侧视角',
-    enLabel: 'Right coverage view',
-    zhCoverage: '生成同一地点的右侧覆盖视角。镜头从空间右侧横向观察，重点展示右侧墙面、侧向动线、桌椅/门窗/柱体关系和可用于反打或运动镜头的地面区域；必须与左侧视角形成同一空间的互补覆盖。',
-    enCoverage: 'Generate the right coverage view of the same location. Observe laterally from the right side, emphasizing the right wall, side movement path, furniture/door/window/column relationships, and floor areas useful for reverse angles or moving shots; it must complement the left view within the same space.',
+    id: 'quad-grid',
+    zhLabel: '四宫格空间板',
+    enLabel: '2x2 spatial board',
+    zhCoverage: '生成同一个地点的一张 2x2 四宫格场景空间板。四个格子必须分别展示前方、后方、左侧、右侧四个机位；每格都必须继承同一套房间结构、门窗位置、家具锚点、材质、色彩和光源，不得像四个不同地点。',
+    enCoverage: 'Generate one 2x2 location spatial-board image for the same physical set. The four quadrants must show front, back, left, and right camera coverage; every quadrant must inherit the same room structure, doors/windows, furniture anchors, materials, palette, and light sources rather than looking like four different locations.',
   },
 ]
 
@@ -95,9 +67,9 @@ function outputRule(locale: Locale): string {
     return joinLines([
       'Output JSON only: {"prompt":"final image-generation prompt"}.',
       'The prompt value must be the final image prompt only. It must not include analysis notes, hidden reasoning, strategy names, the original full input, or instructions to choose a location.',
-      'The final prompt must describe exactly one empty reusable scene reference image for the requested spatial-board view.',
-      'Use a 4:3 landscape frame. Do not make a contact sheet, collage, blueprint, map, storyboard panel, or multi-panel layout.',
-      'Do not add visible direction labels, arrows, captions, subtitles, watermarks, UI marks, or explanatory text.',
+      'The final prompt must describe exactly one empty reusable scene reference image as a 2x2 contact sheet: front view, back view, left view, right view.',
+      'Use one square 1:1 frame containing four equal quadrants separated by clean thin dividers.',
+      'Each quadrant should include a small readable corner label only: FRONT, BACK, LEFT, RIGHT. Do not add any other captions, subtitles, watermarks, UI marks, or explanatory text.',
       'Do not include named main characters or narrative action beats. Temporary tiny background silhouettes are allowed only when necessary for scale, but the asset must remain an empty reusable location reference.',
     ])
   }
@@ -105,10 +77,28 @@ function outputRule(locale: Locale): string {
   return joinLines([
     '只输出 JSON：{"prompt":"最终图片生成提示词"}。',
     'prompt 字段必须只包含最终图片提示词，不得包含分析说明、隐藏推理、策略名称、完整原始输入或“选择地点”这类任务指令。',
-    '最终 prompt 必须描述且只描述一张空场景参考图，服务于指定的空间板视角。',
-    '使用 4:3 横版画幅。不要生成拼图、接触表、蓝图、地图、分镜格或多宫格。',
-    '不要添加可见方向标签、箭头、说明文字、字幕、水印、UI 标记或解释性文字。',
+    '最终 prompt 必须描述且只描述一张 2x2 四宫格空场景参考图：前方、后方、左侧、右侧。',
+    '使用 1:1 正方形画幅，内部四个等大格子，用干净细分隔线区分。',
+    '每个格子只允许有一个小而清晰的角标：前、后、左、右。不要添加其他说明文字、字幕、水印、UI 标记或解释性文字。',
     '不要出现有名主角或叙事动作瞬间。只有在需要标尺时才允许极小的背景人影，但资产本质必须仍是可复用空场景参考。',
+  ])
+}
+
+function layoutPlanOutputRule(locale: Locale): string {
+  if (locale === 'en') {
+    return joinLines([
+      'Output JSON only: {"layoutPlan":"locked spatial layout plan"}.',
+      'The layoutPlan must be a compact production-design spatial bible, not an image prompt.',
+      'It must define the same physical set for every later camera angle: room shape, front/back/left/right walls, fixed doors/windows, ceiling/floor logic, furniture positions, landmark objects, lighting direction, and practical blocking zones.',
+      'Do not write multiple alternative layouts. Do not include hidden reasoning.',
+    ])
+  }
+
+  return joinLines([
+    '只输出 JSON：{"layoutPlan":"锁定空间布局说明"}。',
+    'layoutPlan 必须是一份紧凑的电影美术空间圣经，不是图片生成提示词。',
+    '它必须为后续所有机位定义同一个真实布景：房间形状、前/后/左/右墙面、固定门窗、天花/地面逻辑、家具位置、标志性物体、光源方向和可调度人物区域。',
+    '不要写多个备选布局。不要包含隐藏推理。',
   ])
 }
 
@@ -131,6 +121,16 @@ function sharedContext(input: {
   ]
 }
 
+export function stripLocationSceneBoardSlotDescription(description: string): string {
+  const zhMarker = '\n\n场景空间板槽位：'
+  const enMarker = '\n\nScene-board slot:'
+  const zhIndex = description.indexOf(zhMarker)
+  if (zhIndex >= 0) return description.slice(0, zhIndex).trim()
+  const enIndex = description.indexOf(enMarker)
+  if (enIndex >= 0) return description.slice(0, enIndex).trim()
+  return description.trim()
+}
+
 export function resolveLocationSceneBoardView(imageIndex: number): LocationSceneBoardViewSpec {
   const view = LOCATION_SCENE_BOARD_VIEW_SPECS[imageIndex]
   if (!view) {
@@ -139,11 +139,38 @@ export function resolveLocationSceneBoardView(imageIndex: number): LocationScene
   return view
 }
 
+export function buildLocationSceneBoardLayoutPlan(input: {
+  readonly description: string
+  readonly locale: Locale
+  readonly styleBible: EditScriptStyleBible | null
+}): LocationSceneBoardLayoutPlan {
+  const draftInstruction = input.locale === 'en'
+    ? joinLines([
+      'You are a film production designer building the locked spatial plan for a same-location multi-angle reference board.',
+      ...sharedContext(input),
+      styleBibleContext(input),
+      'Create one internally consistent set layout that later front/back/left/right view prompts must inherit exactly.',
+      'Use concrete spatial language: camera axes, wall names, fixed anchors, object positions, doorway/window placement, ceiling feature placement, floor zones, lighting direction, and usable blocking space.',
+      layoutPlanOutputRule(input.locale),
+    ])
+    : joinLines([
+      '你是电影美术指导，正在为同一地点的多角度场景空间板建立锁定空间布局。',
+      ...sharedContext(input),
+      styleBibleContext(input),
+      '创建一套内部一致的布景空间关系，后续前/后/左/右视角 prompt 必须严格继承这套关系。',
+      '使用具体空间语言：机位轴线、墙面命名、固定锚点、物体位置、门窗位置、天花特征位置、地面分区、光源方向和可调度人物区域。',
+      layoutPlanOutputRule(input.locale),
+    ])
+
+  return { draftInstruction }
+}
+
 export function buildLocationSceneBoardView(input: {
   readonly description: string
   readonly locale: Locale
   readonly styleBible: EditScriptStyleBible | null
   readonly imageIndex: number
+  readonly layoutPlan: string
 }): LocationSceneBoardView {
   const view = resolveLocationSceneBoardView(input.imageIndex)
   const draftInstruction = input.locale === 'en'
@@ -151,27 +178,29 @@ export function buildLocationSceneBoardView(input: {
       'You are a film production designer creating a coherent multi-angle location reference pack for later storyboards.',
       ...sharedContext(input),
       styleBibleContext(input),
-      `Required spatial-board view: ${view.enLabel}.`,
+      `Locked spatial layout plan:\n${input.layoutPlan}`,
+      `Required spatial-board output: ${view.enLabel}.`,
       view.enCoverage,
-      'Preserve stable anchors across the whole pack: architecture, window/door positions, ceiling/floor logic, furniture families, color accents, material texture, and motivated light direction.',
-      'Make the camera angle useful for later shot planning, including clear foreground/midground/background and practical blocking space.',
+      'Inside the single image, keep stable anchors across all four quadrants: architecture, window/door positions, ceiling/floor logic, furniture families, color accents, material texture, and motivated light direction.',
+      'Make every quadrant useful for later shot planning, including clear foreground/midground/background and practical blocking space.',
       outputRule(input.locale),
     ])
     : joinLines([
       '你是电影美术指导，正在为后续分镜创建同一地点的多角度场景参考包。',
       ...sharedContext(input),
       styleBibleContext(input),
-      `指定空间板视角：${view.zhLabel}。`,
+      `锁定空间布局说明：\n${input.layoutPlan}`,
+      `指定空间板输出：${view.zhLabel}。`,
       view.zhCoverage,
-      '必须在整套空间板中保持稳定锚点：建筑结构、门窗位置、天花/地面逻辑、家具类型、色彩重心、材质纹理和有动机的光源方向。',
-      '机位角度要服务后续镜头规划，清楚呈现前景/中景/背景，并保留可调度人物的实用空间。',
+      '必须在同一张图的四个格子里保持稳定锚点：建筑结构、门窗位置、天花/地面逻辑、家具类型、色彩重心、材质纹理和有动机的光源方向。',
+      '每个格子的机位都要服务后续镜头规划，清楚呈现前景/中景/背景，并保留可调度人物的实用空间。',
       outputRule(input.locale),
     ])
 
   return {
     id: view.id,
     label: input.locale === 'en' ? view.enLabel : view.zhLabel,
-    aspectRatio: '4:3',
+    aspectRatio: '1:1',
     draftInstruction,
   }
 }
@@ -180,22 +209,33 @@ export function appendLocationSceneBoardViewRule(input: {
   readonly prompt: string
   readonly locale: Locale
   readonly imageIndex: number
+  readonly layoutPlan: string
 }): string {
   const view = resolveLocationSceneBoardView(input.imageIndex)
   const rule = input.locale === 'en'
     ? joinLines([
-      `This is the ${view.enLabel} in a same-location spatial reference board.`,
+      `Locked spatial layout plan that must be obeyed:\n${input.layoutPlan}`,
+      `This is the ${view.enLabel} for a same-location spatial reference board.`,
       view.enCoverage,
-      'Generate one 4:3 landscape image only. No contact sheet, no multi-panel layout, no labels, no arrows, no readable overlay text.',
-      'Keep it empty and reusable for later character placement and storyboard inheritance.',
+      'Generate one square 1:1 image containing four equal quadrants: FRONT, BACK, LEFT, RIGHT. Use clean thin dividers and one small label per quadrant only.',
+      'Keep all quadrants empty and reusable for later character placement and storyboard inheritance.',
     ])
     : joinLines([
-      `这是同一地点场景空间板中的${view.zhLabel}。`,
+      `必须遵守的锁定空间布局说明：\n${input.layoutPlan}`,
+      `这是同一地点场景空间板的${view.zhLabel}。`,
       view.zhCoverage,
-      '只生成一张 4:3 横版图片。不要拼图，不要多宫格，不要标签，不要箭头，不要可读叠加文字。',
-      '保持为空场景资产，方便后续人物落位和分镜继承。',
+      '只生成一张 1:1 正方形图片，内部包含四个等大格子：前、后、左、右。使用干净细分隔线，每格只放一个小角标。',
+      '四个格子都保持为空场景资产，方便后续人物落位和分镜继承。',
     ])
   return joinLines([input.prompt, rule])
+}
+
+export function parseLocationSceneBoardLayoutPlan(parsed: Record<string, unknown>): string {
+  const layoutPlan = parsed.layoutPlan
+  if (typeof layoutPlan !== 'string' || !layoutPlan.trim()) {
+    throw new Error('LOCATION_SCENE_BOARD_LAYOUT_PLAN_INVALID')
+  }
+  return layoutPlan.trim()
 }
 
 export function parseLocationSceneBoardPrompt(parsed: Record<string, unknown>): string {
@@ -205,4 +245,3 @@ export function parseLocationSceneBoardPrompt(parsed: Record<string, unknown>): 
   }
   return prompt.trim()
 }
-

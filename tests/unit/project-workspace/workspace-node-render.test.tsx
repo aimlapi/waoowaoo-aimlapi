@@ -175,7 +175,12 @@ describe('workspace node rendering', () => {
             shotNumbers: [1],
             statusLabel: 'Pending',
             isRunning: false,
-            previewImageUrl: null,
+            previewImageUrl: 'https://example.com/dock-establishing.png',
+            previewImages: [
+              { id: 'dock-0', imageIndex: 0, imageUrl: 'https://example.com/dock-establishing.png', isSelected: true },
+              { id: 'dock-1', imageIndex: 1, imageUrl: 'https://example.com/dock-front.png', isSelected: false },
+              { id: 'dock-2', imageIndex: 2, imageUrl: 'https://example.com/dock-back.png', isSelected: false },
+            ],
           },
           {
             requirementId: 'req-running-location',
@@ -194,6 +199,9 @@ describe('workspace node rendering', () => {
 
     expect(html).toContain('data-media-image-with-loading="true"')
     expect(html).toContain('https://example.com/pilot.png')
+    expect(html).toContain('https://example.com/dock-establishing.png')
+    expect(html).toContain('https://example.com/dock-front.png')
+    expect(html).toContain('https://example.com/dock-back.png')
     expect(html).toContain('role="button"')
     expect(html).toContain('aria-pressed="false"')
     expect(html).toContain('aria-label="previewLarge: Pilot"')
@@ -201,8 +209,7 @@ describe('workspace node rendering', () => {
     expect(html).toContain('data-icon="searchPlus"')
     expect(html).not.toContain('md:opacity-0')
     expect(html).not.toContain('group-hover:opacity-100')
-    expect(html).not.toContain('aria-label="previewLarge: Dock"')
-    expect(html).toContain('data-icon="mapPin"')
+    expect(html).toContain('aria-label="previewLarge: Dock"')
     expect(html).toContain('workspace-node-loading-surface')
     expect(html).not.toContain('absolute inset-0 z-10 flex items-center justify-center')
   })

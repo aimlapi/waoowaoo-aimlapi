@@ -207,6 +207,8 @@ async function submitGlobalAssetGenerateTask(input: AssetGenerateInput) {
           description: location.images[0]?.description ?? null,
         })
         : location.summary || location.name,
+      locale,
+      descriptionMode: input.kind === 'location' ? 'scene-board' : 'copy',
     })
   }
 
@@ -329,6 +331,8 @@ async function submitProjectAssetGenerateTask(input: AssetGenerateInput) {
           description: location.images[0]?.description ?? null,
         })
         : location.summary || location.name,
+      locale,
+      descriptionMode: input.kind === 'location' ? 'scene-board' : 'copy',
     })
   }
 

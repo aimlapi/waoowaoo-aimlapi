@@ -107,10 +107,10 @@ describe('media operations', () => {
     }))
   })
 
-  it('regenerate_group -> creates five fixed spatial-board slots for locations', async () => {
+  it('regenerate_group -> submits one quad-grid spatial-board task for locations', async () => {
     const ops = createMediaOperations()
     const ctx = buildCtx()
-    await ops.regenerate_group.execute(ctx as never, {
+    const result = await ops.regenerate_group.execute(ctx as never, {
       type: 'location',
       id: 'location-1',
       count: 2,
@@ -118,14 +118,27 @@ describe('media operations', () => {
 
     expect(locationSlotsMock.ensureProjectLocationImageSlots).toHaveBeenCalledWith({
       locationId: 'location-1',
-      count: 5,
+      count: 1,
       fallbackDescription: 'sum',
+      locale: 'zh',
+      descriptionMode: 'scene-board',
     })
-    expect(configMock.buildImageBillingPayload).toHaveBeenCalledWith(expect.objectContaining({
+    expect(submitTaskMock).toHaveBeenCalledTimes(1)
+    expect(configMock.buildImageBillingPayload).toHaveBeenNthCalledWith(1, expect.objectContaining({
       basePayload: expect.objectContaining({
-        count: 5,
+        count: 1,
       }),
     }))
+    expect(submitTaskMock).toHaveBeenNthCalledWith(1, expect.objectContaining({
+      type: TASK_TYPE.REGENERATE_GROUP,
+      targetType: 'LocationImage',
+      targetId: 'location-1',
+    }))
+    expect(result).toMatchObject({
+      success: true,
+      async: true,
+      taskId: 'task-1',
+    })
   })
 
   it('regenerate_single_image -> submits IMAGE_CHARACTER task', async () => {

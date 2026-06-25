@@ -469,6 +469,7 @@
         "linkedShots": "Linked Shots",
         "targetAsset": "Asset ID",
         "characterAsset": "Required Character",
+        "propAsset": "Required Prop",
         "locationAsset": "Required Location",
         "previewLarge": "View large image",
         "yes": "Yes",

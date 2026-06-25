@@ -282,11 +282,19 @@ export interface ProjectEditAssetRequirement {
   taskTargetId?: string | null
   errorMessage: string | null
   previewImageUrl?: string | null
+  previewImages?: ProjectEditAssetPreviewImage[]
   spatialProfileJson?: unknown | null
   spatialProfileStatus?: LocationSpatialProfileStatus | null
   spatialProfileError?: string | null
   spatialProfileAnalyzedAt?: string | Date | null
   spatialProfileModel?: string | null
+}
+
+export interface ProjectEditAssetPreviewImage {
+  id: string
+  imageIndex: number
+  imageUrl: string
+  isSelected: boolean
 }
 
 export interface ProjectEditScreenplay {

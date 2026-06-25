@@ -58,14 +58,28 @@ const spatialProfileServiceMock = vi.hoisted(() => ({
 }))
 
 const textEngineMock = vi.hoisted(() => ({
-  executeAiTextStep: vi.fn(async () => ({
-    text: JSON.stringify({ prompt: '雨夜街道空间板最终 prompt，同一地点独立视角' }),
-  })),
+  executeAiTextStep: vi.fn(async (input: { readonly action?: string }) => {
+    if (input.action === 'location_scene_board_layout_plan') {
+      return {
+        text: JSON.stringify({
+          layoutPlan: '锁定布局：前墙是落地窗，后墙是吧台，左墙有入口，右墙有蓝色卡座，中央保留调度通道。',
+        }),
+      }
+    }
+    return {
+      text: JSON.stringify({ prompt: '雨夜街道空间板最终 prompt，同一地点独立视角' }),
+    }
+  }),
+}))
+
+const taskPublisherMock = vi.hoisted(() => ({
+  publishTaskEvent: vi.fn(async () => undefined),
 }))
 
 vi.mock('@/lib/workers/utils', () => utilsMock)
 vi.mock('@/lib/prisma', () => ({ prisma: prismaMock }))
 vi.mock('@/lib/ai-exec/engine', () => textEngineMock)
+vi.mock('@/lib/task/publisher', () => taskPublisherMock)
 vi.mock('@/lib/workers/shared', () => ({ reportTaskProgress: vi.fn(async () => undefined) }))
 vi.mock('@/lib/workers/handlers/image-task-handler-shared', async () => {
   const actual = await vi.importActual<typeof import('@/lib/workers/handlers/image-task-handler-shared')>(
@@ -164,7 +178,12 @@ describe('worker location-image-task-handler behavior', () => {
     )
     expect(sharedMock.generateCleanImageToStorage).toHaveBeenCalledWith(
       expect.objectContaining({
-        prompt: expect.stringContaining('主氛围图'),
+        prompt: expect.stringContaining('四宫格空间板'),
+      }),
+    )
+    expect(sharedMock.generateCleanImageToStorage).toHaveBeenCalledWith(
+      expect.objectContaining({
+        prompt: expect.stringContaining('前方、后方、左侧、右侧'),
       }),
     )
     expect(sharedMock.generateCleanImageToStorage).toHaveBeenCalledWith(
@@ -175,6 +194,11 @@ describe('worker location-image-task-handler behavior', () => {
     expect(sharedMock.generateCleanImageToStorage).toHaveBeenCalledWith(
       expect.objectContaining({
         prompt: expect.stringContaining('必须以指定的场景空间板机位方向作为构图最高优先级'),
+      }),
+    )
+    expect(sharedMock.generateCleanImageToStorage).toHaveBeenCalledWith(
+      expect.objectContaining({
+        prompt: expect.stringContaining('锁定布局：前墙是落地窗，后墙是吧台'),
       }),
     )
     const generationCall = sharedMock.generateCleanImageToStorage.mock.calls[0] as unknown as [{ prompt: string }] | undefined
@@ -188,12 +212,46 @@ describe('worker location-image-task-handler behavior', () => {
     expect(textEngineMock.executeAiTextStep).toHaveBeenCalledWith(
       expect.objectContaining({
         model: 'analysis-model-1',
-        action: 'location_scene_board_prompt',
+        action: 'location_scene_board_layout_plan',
         meta: expect.objectContaining({
-          stepId: 'location_scene_board_prompt:establishing',
+          stepId: 'location_scene_board_layout_plan',
         }),
       }),
     )
+    expect(textEngineMock.executeAiTextStep).toHaveBeenCalledWith(
+      expect.objectContaining({
+        model: 'analysis-model-1',
+        action: 'location_scene_board_prompt',
+        meta: expect.objectContaining({
+          stepId: 'location_scene_board_prompt:quad-grid',
+        }),
+      }),
+    )
+    expect(taskPublisherMock.publishTaskEvent).toHaveBeenCalledWith(expect.objectContaining({
+      taskId: 'task-location-image-1',
+      projectId: 'project-1',
+      userId: 'user-1',
+      type: 'task.progress',
+      taskType: TASK_TYPE.IMAGE_LOCATION,
+      targetType: 'LocationImage',
+      targetId: 'location-image-1',
+      persist: true,
+      payload: expect.objectContaining({
+        stage: 'persist_location_image_prompt',
+        imageId: 'location-image-1',
+        imageIndex: 0,
+        view: 'quad-grid',
+        finalPrompt: expect.stringContaining('雨夜街道空间板最终 prompt'),
+      }),
+    }))
+    expect(taskPublisherMock.publishTaskEvent).toHaveBeenCalledWith(expect.objectContaining({
+      taskId: 'task-location-image-1',
+      persist: true,
+      payload: expect.objectContaining({
+        stage: 'persist_location_scene_board_layout_plan',
+        layoutPlan: '锁定布局：前墙是落地窗，后墙是吧台，左墙有入口，右墙有蓝色卡座，中央保留调度通道。',
+      }),
+    }))
 
     expect(prismaMock.locationImage.update).toHaveBeenCalledWith({
       where: { id: 'location-image-1' },
@@ -284,7 +342,7 @@ describe('worker location-image-task-handler behavior', () => {
       locationIds: ['location-1'],
     })
     expect(sharedMock.generateCleanImageToStorage).toHaveBeenCalledTimes(1)
-    expect(textEngineMock.executeAiTextStep).toHaveBeenCalledTimes(1)
+    expect(textEngineMock.executeAiTextStep).toHaveBeenCalledTimes(2)
     expect(prismaMock.locationImage.update).toHaveBeenCalledTimes(2)
     expect(prismaMock.locationImage.update).toHaveBeenCalledWith({
       where: { id: 'location-image-1' },
@@ -300,41 +358,33 @@ describe('worker location-image-task-handler behavior', () => {
     })
   })
 
-  it('generates fixed spatial-board views for grouped location image slots', async () => {
+  it('generates one quad-grid spatial-board image for grouped location image slots', async () => {
     prismaMock.locationImage.findUnique.mockResolvedValueOnce(null)
     prismaMock.projectLocation.findUnique.mockResolvedValueOnce({
       id: 'location-1',
       name: 'Old Town',
       images: [
         { id: 'location-image-1', locationId: 'location-1', imageIndex: 0, description: '雨夜街道 A' },
-        { id: 'location-image-2', locationId: 'location-1', imageIndex: 1, description: '雨夜街道 B' },
-        { id: 'location-image-3', locationId: 'location-1', imageIndex: 2, description: '雨夜街道 C' },
-        { id: 'location-image-4', locationId: 'location-1', imageIndex: 3, description: '雨夜街道 D' },
-        { id: 'location-image-5', locationId: 'location-1', imageIndex: 4, description: '雨夜街道 E' },
       ],
     })
 
-    await handleLocationImageTask(buildJob({ locationId: 'location-1', count: 5 }, 'location-1'))
+    await handleLocationImageTask(buildJob({ locationId: 'location-1', count: 1 }, 'location-1'))
 
     const stepIds = textEngineMock.executeAiTextStep.mock.calls.map((call) => {
       const input = call[0] as { meta?: { stepId?: string } }
       return input.meta?.stepId
     })
     expect(stepIds).toEqual([
-      'location_scene_board_prompt:establishing',
-      'location_scene_board_prompt:front',
-      'location_scene_board_prompt:back',
-      'location_scene_board_prompt:left',
-      'location_scene_board_prompt:right',
+      'location_scene_board_layout_plan',
+      'location_scene_board_prompt:quad-grid',
     ])
     const prompts = sharedMock.generateCleanImageToStorage.mock.calls.map((call) => {
       const input = call[0] as { prompt?: string }
       return input.prompt || ''
     })
-    expect(prompts[1]).toContain('前方视角')
-    expect(prompts[2]).toContain('后方视角')
-    expect(prompts[3]).toContain('左侧视角')
-    expect(prompts[4]).toContain('右侧视角')
+    expect(prompts).toHaveLength(1)
+    expect(prompts[0]).toContain('四宫格空间板')
+    expect(prompts[0]).toContain('前方、后方、左侧、右侧')
   })
 
   it('uses the same aspect ratio as character generation for prop images', async () => {

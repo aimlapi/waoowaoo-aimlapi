@@ -444,7 +444,131 @@ function LoadingSpinner() {
 }
 
 function editAssetPlaceholderIconName(kind: WorkspaceCanvasEditAssetGroupItem['kind']): AppIconName {
-  return kind === 'character' ? 'user' : 'mapPin'
+  if (kind === 'character') return 'user'
+  return 'mapPin'
+}
+
+function editAssetPreviewSourceImages(asset: WorkspaceCanvasEditAssetGroupItem): readonly string[] {
+  if (asset.previewImages && asset.previewImages.length > 0) {
+    return asset.previewImages.map((image) => image.imageUrl)
+  }
+  return asset.previewImageUrl ? [asset.previewImageUrl] : []
+}
+
+function editAssetPrimaryPreviewSourceImage(asset: WorkspaceCanvasEditAssetGroupItem | null): string | null {
+  if (!asset) return null
+  const selectedImage = asset.previewImages?.find((image) => image.isSelected)
+  if (selectedImage) return selectedImage.imageUrl
+  const firstImage = asset.previewImages?.[0]
+  if (firstImage) return firstImage.imageUrl
+  return asset.previewImageUrl ?? null
+}
+
+function EditAssetPreviewTile({
+  asset,
+  labels,
+}: {
+  readonly asset: WorkspaceCanvasEditAssetGroupItem
+  readonly labels: ReturnType<typeof useTranslations>
+}) {
+  const onPreviewImage = useContext(WorkspaceNodeImagePreviewContext)
+  const previewSourceImages = editAssetPreviewSourceImages(asset)
+  const previewImages = previewSourceImages
+    .map((sourceImageUrl) => ({
+      sourceImageUrl,
+      displayImageUrl: toDisplayImageUrl(sourceImageUrl),
+    }))
+    .filter((image): image is { readonly sourceImageUrl: string; readonly displayImageUrl: string } => Boolean(image.displayImageUrl))
+  const primaryPreviewSourceImageUrl = editAssetPrimaryPreviewSourceImage(asset)
+  const primaryPreviewDisplayImageUrl = toDisplayImageUrl(primaryPreviewSourceImageUrl)
+
+  return (
+    <div className={`relative flex aspect-square items-center justify-center overflow-hidden bg-slate-100 text-[var(--glass-text-tertiary)] ${asset.isRunning ? 'workspace-node-loading-surface' : ''}`}>
+      {previewImages.length > 1 ? (
+        <div className="grid h-full w-full grid-cols-2 gap-px bg-slate-200">
+          {previewImages.map((image, imageIndex) => (
+            <MediaImageWithLoading
+              key={`${asset.requirementId}:preview:${imageIndex}`}
+              src={image.displayImageUrl}
+              alt={`${asset.name} ${imageIndex + 1}`}
+              containerClassName={`${imageIndex === 0 ? 'col-span-2' : ''} h-full w-full min-h-0 bg-slate-100`}
+              className="h-full w-full object-cover"
+              priority
+            />
+          ))}
+        </div>
+      ) : primaryPreviewDisplayImageUrl ? (
+        <MediaImageWithLoading
+          src={primaryPreviewDisplayImageUrl}
+          alt={asset.name}
+          containerClassName="h-full w-full bg-slate-100"
+          className="h-full w-full object-cover"
+          priority
+        />
+      ) : asset.isRunning ? null : (
+        <AppIcon name={editAssetPlaceholderIconName(asset.kind)} className="h-6 w-6" />
+      )}
+      {primaryPreviewSourceImageUrl && primaryPreviewDisplayImageUrl && onPreviewImage ? (
+        <button
+          type="button"
+          className="nodrag nowheel absolute right-2 top-2 z-20 inline-flex h-8 w-8 items-center justify-center rounded-full border border-white/75 bg-slate-950/72 text-white shadow-sm backdrop-blur transition hover:bg-slate-950/85 focus:outline-none focus:ring-2 focus:ring-white/80"
+          aria-label={`${labels('previewLarge')}: ${asset.name}`}
+          title={labels('previewLarge')}
+          onMouseDown={(event) => event.stopPropagation()}
+          onClick={(event) => {
+            event.stopPropagation()
+            onPreviewImage(primaryPreviewSourceImageUrl)
+          }}
+        >
+          <AppIcon name="searchPlus" className="h-4 w-4" />
+        </button>
+      ) : null}
+    </div>
+  )
+}
+
+function EditAssetPreviewImageGrid({
+  asset,
+  labels,
+}: {
+  readonly asset: WorkspaceCanvasEditAssetGroupItem
+  readonly labels: ReturnType<typeof useTranslations>
+}) {
+  const onPreviewImage = useContext(WorkspaceNodeImagePreviewContext)
+  const images = (asset.previewImages ?? [])
+    .map((image) => ({
+      sourceImageUrl: image.imageUrl,
+      displayImageUrl: toDisplayImageUrl(image.imageUrl),
+      imageIndex: image.imageIndex,
+    }))
+    .filter((image): image is { readonly sourceImageUrl: string; readonly displayImageUrl: string; readonly imageIndex: number } => Boolean(image.displayImageUrl))
+
+  if (images.length <= 1) return null
+
+  return (
+    <div className="grid grid-cols-3 gap-2">
+      {images.map((image) => (
+        <button
+          key={`${asset.requirementId}:detail-preview:${image.imageIndex}`}
+          type="button"
+          className="nodrag aspect-square overflow-hidden rounded-[10px] bg-slate-100 ring-1 ring-slate-200 transition hover:ring-slate-400 focus:outline-none focus:ring-2 focus:ring-slate-900/30"
+          aria-label={`${labels('previewLarge')}: ${asset.name} ${image.imageIndex + 1}`}
+          onClick={(event) => {
+            event.stopPropagation()
+            onPreviewImage?.(image.sourceImageUrl)
+          }}
+        >
+          <MediaImageWithLoading
+            src={image.displayImageUrl}
+            alt={`${asset.name} ${image.imageIndex + 1}`}
+            containerClassName="h-full w-full bg-slate-100"
+            className="h-full w-full object-cover"
+            priority
+          />
+        </button>
+      ))}
+    </div>
+  )
 }
 
 function validCandidateImages(data: WorkspaceCanvasFlowNode['data']): string[] {
@@ -1477,7 +1601,7 @@ function EditAssetGroupContent({
     return <p className={`${SELECTABLE_TEXT_CLASS} text-sm leading-6 text-[var(--glass-text-secondary)]`}>{data.body}</p>
   }
   const current = details.assets.find((asset) => asset.requirementId === open) ?? null
-  const currentPreviewSourceImageUrl = current?.previewImageUrl ?? null
+  const currentPreviewSourceImageUrl = editAssetPrimaryPreviewSourceImage(current)
   const currentPreviewDisplayImageUrl = toDisplayImageUrl(currentPreviewSourceImageUrl)
   return (
     <div className={nodeContentInteractionClass(data, 'space-y-3')}>
@@ -1485,8 +1609,6 @@ function EditAssetGroupContent({
       <div className="grid grid-cols-3 gap-2.5">
         {details.assets.map((asset) => {
           const on = open === asset.requirementId
-          const previewSourceImageUrl = asset.previewImageUrl ?? null
-          const imageUrl = toDisplayImageUrl(previewSourceImageUrl)
           const selectAsset = () => setOpen(on ? null : asset.requirementId)
           return (
             <div
@@ -1503,34 +1625,7 @@ function EditAssetGroupContent({
                 selectAsset()
               }}
             >
-              <div className={`relative flex aspect-square items-center justify-center bg-slate-100 text-[var(--glass-text-tertiary)] ${asset.isRunning ? 'workspace-node-loading-surface' : ''}`}>
-                {imageUrl ? (
-                  <MediaImageWithLoading
-                    src={imageUrl}
-                    alt={asset.name}
-                    containerClassName="h-full w-full bg-slate-100"
-                    className="h-full w-full object-cover"
-                    priority
-                  />
-                ) : asset.isRunning ? null : (
-                  <AppIcon name={editAssetPlaceholderIconName(asset.kind)} className="h-6 w-6" />
-                )}
-                {previewSourceImageUrl && imageUrl && onPreviewImage ? (
-                  <button
-                    type="button"
-                    className="nodrag nowheel absolute right-2 top-2 z-20 inline-flex h-8 w-8 items-center justify-center rounded-full border border-white/75 bg-slate-950/72 text-white shadow-sm backdrop-blur transition hover:bg-slate-950/85 focus:outline-none focus:ring-2 focus:ring-white/80"
-                    aria-label={`${labels('previewLarge')}: ${asset.name}`}
-                    title={labels('previewLarge')}
-                    onMouseDown={(event) => event.stopPropagation()}
-                    onClick={(event) => {
-                      event.stopPropagation()
-                      onPreviewImage(previewSourceImageUrl)
-                    }}
-                  >
-                    <AppIcon name="searchPlus" className="h-4 w-4" />
-                  </button>
-                ) : null}
-              </div>
+              <EditAssetPreviewTile asset={asset} labels={labels} />
               <div className="px-2.5 py-1.5">
                 <p className={`${SELECTABLE_TEXT_CLASS} truncate text-[11px] font-semibold text-[var(--glass-text-primary)]`}>{asset.name}</p>
                 <p className={`${SELECTABLE_TEXT_CLASS} truncate text-[10px] text-[var(--glass-text-tertiary)]`}>{asset.eyebrow} · {asset.statusLabel}</p>
@@ -1550,6 +1645,7 @@ function EditAssetGroupContent({
             { label: current.eyebrow, value: current.kind === 'character' ? labels('characters') : labels('locations') },
             { label: labels('shotCount'), value: current.shotNumbers.join(', ') },
           ])}
+          <EditAssetPreviewImageGrid asset={current} labels={labels} />
           {renderTextBlock(current.description)}
           <div className="flex flex-wrap items-center gap-2">
             {currentPreviewSourceImageUrl && currentPreviewDisplayImageUrl && onPreviewImage ? (

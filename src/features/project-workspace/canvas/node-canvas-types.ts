@@ -416,7 +416,7 @@ export interface WorkspaceCanvasEditAssetDetails {
 
 export interface WorkspaceCanvasEditAssetGroupItem {
   readonly requirementId: string
-  readonly kind: 'character' | 'location'
+  readonly kind: 'character' | 'location' | 'prop'
   readonly name: string
   readonly eyebrow: string
   readonly description: string
@@ -424,8 +424,16 @@ export interface WorkspaceCanvasEditAssetGroupItem {
   readonly statusLabel: string
   readonly isRunning: boolean
   readonly previewImageUrl?: string | null
+  readonly previewImages?: readonly WorkspaceCanvasEditAssetPreviewImage[]
   readonly action?: WorkspaceCanvasNodeAction
   readonly actionLabel?: string
+}
+
+export interface WorkspaceCanvasEditAssetPreviewImage {
+  readonly id: string
+  readonly imageIndex: number
+  readonly imageUrl: string
+  readonly isSelected: boolean
 }
 
 export interface WorkspaceCanvasEditAssetGroupDetails {

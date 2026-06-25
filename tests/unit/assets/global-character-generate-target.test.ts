@@ -9,6 +9,9 @@ const prismaMock = vi.hoisted(() => ({
   globalLocation: {
     findFirst: vi.fn(),
   },
+  projectLocation: {
+    findUnique: vi.fn(),
+  },
 }))
 
 const submitTaskMock = vi.hoisted(() => vi.fn(async () => ({
@@ -25,9 +28,12 @@ const configMock = vi.hoisted(() => ({
     characterModel: 'character-model-1',
     locationModel: 'location-model-1',
   })),
-  getProjectModelConfig: vi.fn(),
-  buildImageBillingPayload: vi.fn(),
-  buildImageBillingPayloadFromUserConfig: vi.fn(({ basePayload }) => basePayload),
+  getProjectModelConfig: vi.fn(async () => ({
+    characterModel: 'project-character-model-1',
+    locationModel: 'project-location-model-1',
+  })),
+  buildImageBillingPayload: vi.fn(async ({ basePayload }: { basePayload: Record<string, unknown> }) => basePayload),
+  buildImageBillingPayloadFromUserConfig: vi.fn(({ basePayload }: { basePayload: Record<string, unknown> }) => basePayload),
 }))
 
 const hasOutputMock = vi.hoisted(() => ({
@@ -48,6 +54,9 @@ vi.mock('@/lib/task/submitter', () => ({ submitTask: submitTaskMock }))
 vi.mock('@/lib/config-service', () => configMock)
 vi.mock('@/lib/task/has-output', () => hasOutputMock)
 vi.mock('@/lib/image-generation/location-slots', () => locationSlotsMock)
+vi.mock('@/lib/edit-script/style-bible-prompt', () => ({
+  resolveEditScriptStyleBibleSignatureForTask: vi.fn(async () => 'style-signature-1'),
+}))
 
 describe('global character generate task target', () => {
   beforeEach(() => {
@@ -58,6 +67,12 @@ describe('global character generate task target', () => {
       summary: '雨夜街道',
       assetKind: 'location',
       images: [{ description: '雨夜街道' }],
+    })
+    prismaMock.projectLocation.findUnique.mockResolvedValue({
+      name: 'Project Diner',
+      summary: '雨夜西餐厅',
+      assetKind: 'location',
+      images: [{ description: '雨夜西餐厅' }],
     })
   })
 
@@ -106,7 +121,7 @@ describe('global character generate task target', () => {
     }))
   })
 
-  it('uses five fixed spatial-board slots for global location group generation', async () => {
+  it('uses one quad-grid spatial-board slot for global location generation', async () => {
     const { submitAssetGenerateTask } = await import('@/lib/assets/services/asset-actions')
 
     await submitAssetGenerateTask({
@@ -127,8 +142,10 @@ describe('global character generate task target', () => {
 
     expect(locationSlotsMock.ensureGlobalLocationImageSlots).toHaveBeenCalledWith({
       locationId: 'location-1',
-      count: 5,
+      count: 1,
       fallbackDescription: '雨夜街道',
+      locale: 'zh',
+      descriptionMode: 'scene-board',
     })
     expect(submitTaskMock).toHaveBeenCalledWith(expect.objectContaining({
       type: TASK_TYPE.ASSET_HUB_IMAGE,
@@ -137,8 +154,54 @@ describe('global character generate task target', () => {
       payload: expect.objectContaining({
         id: 'location-1',
         type: 'location',
-        count: 5,
+        count: 1,
       }),
     }))
+  })
+
+  it('submits one quad-grid task for project location spatial-board generation', async () => {
+    const { submitAssetGenerateTask } = await import('@/lib/assets/services/asset-actions')
+
+    const result = await submitAssetGenerateTask({
+      request: new Request('http://localhost/api/assets/location-1/generate') as unknown as NextRequest,
+      kind: 'location',
+      assetId: 'location-1',
+      body: {
+        scope: 'project',
+        kind: 'location',
+        count: 2,
+        meta: { locale: 'zh' },
+      },
+      access: {
+        scope: 'project',
+        userId: 'user-1',
+        projectId: 'project-1',
+      },
+      episodeId: 'episode-1',
+    })
+
+    expect(locationSlotsMock.ensureProjectLocationImageSlots).toHaveBeenCalledWith({
+      locationId: 'location-1',
+      count: 1,
+      fallbackDescription: '雨夜西餐厅',
+      locale: 'zh',
+      descriptionMode: 'scene-board',
+    })
+    expect(submitTaskMock).toHaveBeenCalledTimes(1)
+    expect(submitTaskMock).toHaveBeenNthCalledWith(1, expect.objectContaining({
+      type: TASK_TYPE.IMAGE_LOCATION,
+      targetType: 'LocationImage',
+      targetId: 'location-1',
+      payload: expect.objectContaining({
+        id: 'location-1',
+        type: 'location',
+        count: 1,
+      }),
+    }))
+    expect(result).toMatchObject({
+      success: true,
+      async: true,
+      taskId: 'task-1',
+    })
   })
 })

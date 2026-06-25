@@ -690,7 +690,7 @@ function assetReferencesForVideoBlock(
 ): Array<{
   readonly id: string
   readonly name: string
-  readonly kind: 'character' | 'location'
+  readonly kind: 'character' | 'location' | 'prop'
   readonly imageUrl?: string | null
   readonly shotNumbers: readonly number[]
 }> {
@@ -703,6 +703,24 @@ function assetReferencesForVideoBlock(
       kind: requirement.kind,
       imageUrl,
       shotNumbers: requirement.shotNumbers,
+    }]
+  })
+}
+
+function editAssetPreviewImages(asset: ProjectEditAssetRequirement): Array<{
+  readonly id: string
+  readonly imageIndex: number
+  readonly imageUrl: string
+  readonly isSelected: boolean
+}> {
+  return (asset.previewImages ?? []).flatMap((image) => {
+    const imageUrl = stringValue(image.imageUrl)
+    if (!imageUrl) return []
+    return [{
+      id: image.id,
+      imageIndex: image.imageIndex,
+      imageUrl,
+      isSelected: image.isSelected,
     }]
   })
 }
@@ -973,7 +991,9 @@ function assetStatusLabel(status: ProjectEditAssetRequirement['status'], transla
 }
 
 function assetKindLabel(kind: ProjectEditAssetRequirement['kind'], translate: Translate): string {
-  return kind === 'character' ? translate('nodeFields.characterAsset') : translate('nodeFields.locationAsset')
+  if (kind === 'character') return translate('nodeFields.characterAsset')
+  if (kind === 'prop') return translate('nodeFields.propAsset')
+  return translate('nodeFields.locationAsset')
 }
 
 function numberedTitle(label: string, index: number): string {
@@ -1618,6 +1638,7 @@ export function buildWorkspaceNodeCanvasProjection({
           statusLabel: assetStatusLabel(asset.status, translate),
           isRunning: asset.status === 'generating',
           previewImageUrl: asset.previewImageUrl,
+          previewImages: editAssetPreviewImages(asset),
           action: assetAction,
           actionLabel: assetAction
             ? canGenerateAsset ? translate('actions.generateEditAsset') : translate('actions.regenerateImage')

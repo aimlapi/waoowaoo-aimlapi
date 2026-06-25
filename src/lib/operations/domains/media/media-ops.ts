@@ -85,6 +85,8 @@ export function createMediaOperations(): ProjectAgentOperationRegistryDraft {
           throw new ApiError('INVALID_PARAMS')
         }
 
+        const locale = resolveRequiredTaskLocale(ctx.request, toObject(input))
+
         if (input.type === 'location') {
           const location = await prisma.projectLocation.findUnique({
             where: { id: input.id },
@@ -97,6 +99,8 @@ export function createMediaOperations(): ProjectAgentOperationRegistryDraft {
             locationId: input.id,
             count,
             fallbackDescription: location.summary || location.name,
+            locale,
+            descriptionMode: 'scene-board',
           })
         }
 
@@ -131,7 +135,6 @@ export function createMediaOperations(): ProjectAgentOperationRegistryDraft {
           throw new ApiError('INVALID_PARAMS', { code: 'IMAGE_MODEL_CAPABILITY_NOT_CONFIGURED', message })
         }
 
-        const locale = resolveRequiredTaskLocale(ctx.request, billingPayload)
         const styleBibleSignature = await resolveEditScriptStyleBibleSignatureForTask({
           projectId: ctx.projectId,
           episodeId: normalizeString(toObject(input).episodeId) || null,

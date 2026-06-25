@@ -42,7 +42,7 @@ export const CHARACTER_PROMPT_SUFFIX = '角色资产设定图，画面固定为�
 // 道具图片生成的系统后缀（固定白底三视图资产图）
 export const PROP_PROMPT_SUFFIX = '道具设定图，画面分为左右两个区域：【左侧区域】占约1/3宽度，是道具主体的主视图特写；【右侧区域】占约2/3宽度，是同一道具的三视图横向排列（从左到右依次为：正面、侧面、背面），三视图高度一致。纯白色背景，主体居中完整展示，无人物、无手部、无桌面陈设、无环境背景、无其他元素。'
 
-// 场景图片生成由场景空间板 prompt 控制：主氛围 + 前/后/左/右独立视角。
+// 场景图片生成由场景空间板 prompt 控制：一张 2x2 四宫格覆盖前/后/左/右。
 export const LOCATION_PROMPT_SUFFIX = ''
 
 // 角色资产图生成比例（固定角色资产板：左主全身 + 右上三视图 + 右下动作/语境样本）
@@ -56,10 +56,10 @@ export const CHARACTER_IMAGE_BANANA_RATIO = CHARACTER_ASSET_IMAGE_RATIO
 // 道具图片生成比例（道具仍使用紧凑设定图，不跟随角色资产板比例）
 export const PROP_IMAGE_RATIO = '3:2'
 
-// 场景图片生成比例（4:3 横版空间参考图）
-export const LOCATION_IMAGE_RATIO = '4:3'
-// 场景图片尺寸（用于Seedream API）- 4:3 4K
-export const LOCATION_IMAGE_SIZE = '4096x3072'
+// 场景图片生成比例（1:1 四宫格空间参考图）
+export const LOCATION_IMAGE_RATIO = '1:1'
+// 场景图片尺寸（用于Seedream API）- 1:1 4K
+export const LOCATION_IMAGE_SIZE = '4096x4096'
 // 场景图片尺寸（用于Banana API）
 export const LOCATION_IMAGE_BANANA_RATIO = LOCATION_IMAGE_RATIO
 

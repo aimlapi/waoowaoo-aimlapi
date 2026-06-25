@@ -469,6 +469,7 @@
         "linkedShots": "关联镜头",
         "targetAsset": "资产 ID",
         "characterAsset": "需求人物",
+        "propAsset": "需求道具",
         "locationAsset": "需求场景",
         "previewLarge": "查看大图",
         "yes": "是",
