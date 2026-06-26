@@ -31,6 +31,7 @@ import {
   planStoryboardPanelImageSubmissionGroups,
   type StoryboardPanelImageSubmissionGroup,
 } from '@/lib/storyboard/grid-image-groups'
+import { PANEL_IMAGE_PROMPT_CONTRACT_SIGNATURE } from '@/lib/storyboard/panel-image-dedupe'
 
 function normalizeString(value: unknown): string {
   return typeof value === 'string' ? value.trim() : ''
@@ -341,8 +342,9 @@ export function createStoryboardPanelImageOperations(): ProjectAgentOperationReg
                 sourceVideoBlockId: group.sourceVideoBlockId,
                 panelIds: group.panels.map((panel) => panel.id),
                 styleBibleSignature,
+                panelImagePromptContractSignature: PANEL_IMAGE_PROMPT_CONTRACT_SIGNATURE,
               })
-              : `edit_first_panel_image:${primaryPanel.id}:${styleBibleSignature}`,
+              : `edit_first_panel_image:${primaryPanel.id}:${styleBibleSignature}:${PANEL_IMAGE_PROMPT_CONTRACT_SIGNATURE}`,
             billingInfo: buildDefaultTaskBillingInfo(TASK_TYPE.IMAGE_PANEL, billingPayload),
             decoratePayload: false,
           })
@@ -532,6 +534,7 @@ export function createStoryboardPanelImageOperations(): ProjectAgentOperationReg
             sourceVideoBlockId,
             panelIds,
             styleBibleSignature,
+            panelImagePromptContractSignature: PANEL_IMAGE_PROMPT_CONTRACT_SIGNATURE,
           }),
           billingInfo: buildDefaultTaskBillingInfo(TASK_TYPE.IMAGE_PANEL, billingPayload),
           decoratePayload: false,
@@ -748,7 +751,7 @@ export function createStoryboardPanelImageOperations(): ProjectAgentOperationReg
             intent: 'regenerate',
             hasOutputAtStart,
           }),
-          dedupeKey: `image_panel:${panelId}:${candidateCount}:${styleBibleSignature}:${referenceSignature}`,
+          dedupeKey: `image_panel:${panelId}:${candidateCount}:${styleBibleSignature}:${referenceSignature}:${PANEL_IMAGE_PROMPT_CONTRACT_SIGNATURE}`,
           billingInfo: buildDefaultTaskBillingInfo(TASK_TYPE.IMAGE_PANEL, billingPayload),
           decoratePayload: false,
         })

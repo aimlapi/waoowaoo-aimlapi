@@ -3,6 +3,7 @@ import { NextRequest } from 'next/server'
 import type { ProjectAgentOperationContext } from '@/lib/operations/types'
 import { writeOperationDataPart } from '@/lib/operations/types'
 import { TASK_TYPE } from '@/lib/task/types'
+import { PANEL_IMAGE_PROMPT_CONTRACT_SIGNATURE } from '@/lib/storyboard/panel-image-dedupe'
 
 type SubmitOperationTaskMockInput = Record<string, unknown> & {
   payload: Record<string, unknown>
@@ -14,6 +15,7 @@ const prismaMock = vi.hoisted(() => ({
   },
   projectPanel: {
     findMany: vi.fn(),
+    findUnique: vi.fn(),
   },
 }))
 
@@ -103,6 +105,10 @@ describe('generate_storyboard_grid_images operation', () => {
         imageMediaId: null,
       },
     ])
+    prismaMock.projectPanel.findUnique.mockResolvedValue({
+      imageUrl: 'images/panel-old.jpg',
+      imageMediaId: null,
+    })
   })
 
   it('submits a 2x2 storyboard image task for the selected panel group', async () => {
@@ -150,6 +156,46 @@ describe('generate_storyboard_grid_images operation', () => {
         { kind: 'panel_candidate_cancel', targetType: 'ProjectPanel', targetId: 'panel-1' },
         { kind: 'panel_candidate_cancel', targetType: 'ProjectPanel', targetId: 'panel-2' },
       ],
+    }))
+  })
+})
+
+describe('regenerate_panel_image operation', () => {
+  beforeEach(() => {
+    vi.clearAllMocks()
+    prismaMock.projectPanel.findUnique.mockResolvedValue({
+      imageUrl: 'images/panel-old.jpg',
+      imageMediaId: null,
+    })
+  })
+
+  it('includes the panel image prompt contract in the dedupe key', async () => {
+    const operation = createStoryboardPanelImageOperations().regenerate_panel_image
+    const result = await operation.execute(buildContext(), {
+      confirmed: true,
+      panelId: 'panel-1',
+    })
+
+    expect(result).toMatchObject({
+      taskId: 'task-grid-1',
+      panelId: 'panel-1',
+    })
+    expect(submitOperationTaskMock).toHaveBeenCalledWith(expect.objectContaining({
+      type: TASK_TYPE.IMAGE_PANEL,
+      targetType: 'ProjectPanel',
+      targetId: 'panel-1',
+      operationId: 'regenerate_panel_image',
+      dedupeKey: `image_panel:panel-1:1:style-signature-1:7ed74dd0e969:${PANEL_IMAGE_PROMPT_CONTRACT_SIGNATURE}`,
+      payload: expect.objectContaining({
+        panelId: 'panel-1',
+        candidateCount: 1,
+        referenceMode: 'asset',
+        imageModel: 'storyboard-model-1',
+        ui: expect.objectContaining({
+          intent: 'regenerate',
+          hasOutputAtStart: true,
+        }),
+      }),
     }))
   })
 })
@@ -204,6 +250,7 @@ describe('generate_edit_script_storyboard_images operation', () => {
       targetType: 'ProjectPanel',
       targetId: 'panel-1',
       operationId: 'generate_edit_script_storyboard_images',
+      dedupeKey: `edit_first_panel_image:panel-1:style-signature-1:${PANEL_IMAGE_PROMPT_CONTRACT_SIGNATURE}`,
       payload: expect.objectContaining({
         panelId: 'panel-1',
         referenceMode: 'asset',
@@ -212,6 +259,7 @@ describe('generate_edit_script_storyboard_images operation', () => {
     }))
     expect(submitOperationTaskMock.mock.calls[1]?.[0]).toEqual(expect.objectContaining({
       targetId: 'panel-2',
+      dedupeKey: `edit_first_panel_image:panel-2:style-signature-1:${PANEL_IMAGE_PROMPT_CONTRACT_SIGNATURE}`,
       payload: expect.objectContaining({
         panelId: 'panel-2',
         referenceMode: 'asset',
