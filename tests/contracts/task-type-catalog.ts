@@ -30,7 +30,6 @@ const TASK_TYPE_OWNER_MAP = {
   [TASK_TYPE.ASSET_HUB_MODIFY]: 'tests/unit/worker/modify-image-reference-description.test.ts',
   [TASK_TYPE.ANALYZE_NOVEL]: 'tests/unit/worker/analyze-novel.test.ts',
   [TASK_TYPE.CLIPS_BUILD]: 'tests/unit/worker/clips-build.test.ts',
-  [TASK_TYPE.SCREENPLAY_CONVERT]: 'tests/unit/worker/screenplay-convert.test.ts',
   [TASK_TYPE.ANALYZE_GLOBAL]: 'tests/unit/worker/analyze-global.test.ts',
   [TASK_TYPE.EDIT_SCREENPLAY_GENERATE]: 'tests/unit/worker/edit-screenplay-generate.test.ts',
   [TASK_TYPE.EDIT_SCREENPLAY_REVISE]: 'tests/unit/worker/edit-screenplay-generate.test.ts',

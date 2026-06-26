@@ -65,7 +65,6 @@ export const TASK_TYPE = {
   ASSET_HUB_MODIFY: 'asset_hub_modify',
   ANALYZE_NOVEL: 'analyze_novel',
   CLIPS_BUILD: 'clips_build',
-  SCREENPLAY_CONVERT: 'screenplay_convert',
   ANALYZE_GLOBAL: 'analyze_global',
   EDIT_SCREENPLAY_GENERATE: 'edit_screenplay_generate',
   EDIT_SCREENPLAY_REVISE: 'edit_screenplay_revise',

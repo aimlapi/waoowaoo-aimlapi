@@ -161,7 +161,7 @@ vi.mock('@openai/agents', () => {
         name: 'generate_edit_screenplay',
         rawItem: {
           id: 'approval-1',
-          callId: 'tool-generate-screenplay-1',
+          callId: 'tool-generate-edit-screenplay-1',
         },
       }]
     }
@@ -761,7 +761,7 @@ describe('project agent runtime deterministic tool injection', () => {
           status: 'consumed',
           operationId: 'generate_edit_screenplay',
           approvalId: 'approval-1',
-          toolCallId: 'tool-generate-screenplay-1',
+          toolCallId: 'tool-generate-edit-screenplay-1',
           runState: 'serialized-state',
         },
         approved: true,

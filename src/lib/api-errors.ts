@@ -26,7 +26,6 @@ const GENERATION_OPERATION_PATTERNS = [
   /\/generate(?:-|\/|$)/,
   /\/regenerate(?:-|\/|$)/,
   /\/analyze(?:-|\/|$)/,
-  /\/screenplay-conversion(?:\/|$)/,
   /\/ai-(?:create|modify)-/,
   /\/modify-storyboard-image(?:\/|$)/,
   /\/modify-render(?:\/|$)/,

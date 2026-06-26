@@ -74,11 +74,6 @@ export const AI_PROMPT_CATALOG: Record<AiPromptId, AiPromptCatalogEntry> = {
     pathStem: 'script/episode-split',
     variableKeys: ['CONTENT'],
   },
-  [AI_PROMPT_IDS.SCRIPT_GENERATE_SCREENPLAY]: {
-    pathStem: 'script/generate-screenplay',
-    variableKeys: ['clip_content', 'locations_lib_name', 'characters_lib_name', 'props_lib_name', 'characters_introduction', 'clip_id'],
-    operationIds: ['write_screenplay'],
-  },
   [AI_PROMPT_IDS.STORYBOARD_PLAN]: {
     pathStem: 'storyboard/plan',
     variableKeys: [

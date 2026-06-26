@@ -25,7 +25,6 @@ import { assertTaskActive } from './utils'
 import { handleAssetHubAIDesignTask } from './handlers/asset-hub-ai-design'
 import { handleClipsBuildTask } from './handlers/clips-build'
 import { handleAnalyzeNovelTask } from './handlers/analyze-novel'
-import { handleScreenplayConvertTask } from './handlers/screenplay-convert'
 import { handleEpisodeSplitTask } from './handlers/episode-split'
 import { handleAnalyzeGlobalTask } from './handlers/analyze-global'
 import { handleAssetHubAIModifyTask } from './handlers/asset-hub-ai-modify'
@@ -672,8 +671,6 @@ async function processTextTask(job: Job<TaskJobData>) {
       return await handleAnalyzeNovelTask(job)
     case TASK_TYPE.CLIPS_BUILD:
       return await handleClipsBuildTask(job)
-    case TASK_TYPE.SCREENPLAY_CONVERT:
-      return await handleScreenplayConvertTask(job)
     case TASK_TYPE.EPISODE_SPLIT_LLM:
       return await handleEpisodeSplitTask(job)
     case TASK_TYPE.ANALYZE_GLOBAL:

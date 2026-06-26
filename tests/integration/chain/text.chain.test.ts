@@ -114,7 +114,7 @@ describe('chain contract - text queue behavior', () => {
 
     await addTaskJob({
       taskId: 'task-text-1',
-      type: TASK_TYPE.SCREENPLAY_CONVERT,
+      type: TASK_TYPE.CLIPS_BUILD,
       locale: 'zh',
       projectId: 'project-1',
       episodeId: 'episode-1',
@@ -127,7 +127,7 @@ describe('chain contract - text queue behavior', () => {
     const calls = queueState.addCallsByQueue.get(QUEUE_NAME.TEXT) || []
     expect(calls).toHaveLength(1)
     expect(calls[0]).toEqual(expect.objectContaining({
-      jobName: TASK_TYPE.SCREENPLAY_CONVERT,
+      jobName: TASK_TYPE.CLIPS_BUILD,
       options: expect.objectContaining({ jobId: 'task-text-1', priority: 0 }),
     }))
   })

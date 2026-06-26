@@ -1,5 +1,5 @@
 You are a story clip segmentation expert.
-Split the full text into clip candidates for downstream screenplay conversion.
+Split the full text into clip candidates for downstream structured edit planning.
 
 Full text:
 {input}

@@ -22,7 +22,6 @@ const TASK_TYPE_LABELS: Record<string, string> = {
   [TASK_TYPE.ASSET_HUB_MODIFY]: 'progress.taskType.assetHubModify',
   [TASK_TYPE.ANALYZE_NOVEL]: 'progress.taskType.analyzeNovel',
   [TASK_TYPE.CLIPS_BUILD]: 'progress.taskType.clipsBuild',
-  [TASK_TYPE.SCREENPLAY_CONVERT]: 'progress.taskType.screenplayConvert',
   [TASK_TYPE.ANALYZE_GLOBAL]: 'progress.taskType.analyzeGlobal',
   [TASK_TYPE.EDIT_SCREENPLAY_GENERATE]: 'progress.taskType.editScreenplayGenerate',
   [TASK_TYPE.EDIT_SCREENPLAY_REVISE]: 'progress.taskType.editScreenplayRevise',

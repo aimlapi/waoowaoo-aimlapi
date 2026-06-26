@@ -16,7 +16,6 @@ export const AI_PROMPT_IDS = {
   PROP_UPDATE_DESCRIPTION: 'prop-update-description',
   SCRIPT_CLIP_SEGMENTS: 'script-clip-segments',
   SCRIPT_EPISODE_SPLIT: 'script-episode-split',
-  SCRIPT_GENERATE_SCREENPLAY: 'script-generate-screenplay',
   STORYBOARD_PLAN: 'storyboard-plan',
   STORYBOARD_REFINE_CINEMATOGRAPHY: 'storyboard-refine-cinematography',
   STORYBOARD_REFINE_ACTING: 'storyboard-refine-acting',

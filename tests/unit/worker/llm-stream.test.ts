@@ -25,7 +25,7 @@ import { createWorkerLLMStreamCallbacks, createWorkerLLMStreamContext } from '@/
 function buildJob(): Job<TaskJobData> {
   const data: TaskJobData = {
     taskId: 'task-1',
-    type: TASK_TYPE.SCREENPLAY_CONVERT,
+    type: TASK_TYPE.EDIT_SCREENPLAY_GENERATE,
     locale: 'zh',
     projectId: 'project-1',
     userId: 'user-1',
@@ -60,7 +60,7 @@ describe('createWorkerLLMStreamCallbacks', () => {
       step: {
         id: 'screenplay_clip_1',
         attempt: 2,
-        title: 'progress.streamStep.screenplayConversion',
+        title: 'progress.streamStep.editScreenplayGenerate',
         index: 1,
         total: 1,
       },
@@ -69,7 +69,7 @@ describe('createWorkerLLMStreamCallbacks', () => {
     callbacks.onComplete?.('final screenplay text', {
       id: 'screenplay_clip_1',
       attempt: 2,
-      title: 'progress.streamStep.screenplayConversion',
+      title: 'progress.streamStep.editScreenplayGenerate',
       index: 1,
       total: 1,
     })
@@ -86,7 +86,7 @@ describe('createWorkerLLMStreamCallbacks', () => {
     expect(payload.output).toBe('final screenplay text')
     expect(payload.stepId).toBe('screenplay_clip_1')
     expect(payload.stepAttempt).toBe(2)
-    expect(payload.stepTitle).toBe('progress.streamStep.screenplayConversion')
+    expect(payload.stepTitle).toBe('progress.streamStep.editScreenplayGenerate')
     expect(payload.stepIndex).toBe(1)
     expect(payload.stepTotal).toBe(1)
   })

@@ -19,7 +19,6 @@ function resolveChainTestByTaskType(taskType: TaskType): string {
   if (
     taskType === 'analyze_novel'
     || taskType === 'clips_build'
-    || taskType === 'screenplay_convert'
     || taskType === 'analyze_global'
     || taskType === 'edit_screenplay_generate'
     || taskType === 'edit_screenplay_revise'
@@ -56,7 +55,6 @@ function resolveApiContractByTaskType(taskType: TaskType): string {
   if (
     taskType === 'analyze_novel'
     || taskType === 'clips_build'
-    || taskType === 'screenplay_convert'
     || taskType === 'analyze_global'
     || taskType === 'ai_modify_appearance'
     || taskType === 'ai_modify_location'
