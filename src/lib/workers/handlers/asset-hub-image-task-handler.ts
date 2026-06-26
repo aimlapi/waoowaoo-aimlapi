@@ -14,7 +14,9 @@ import {
 } from '@/lib/asset-generation/character-candidate-prompts'
 import {
   appendLocationSceneBoardViewRule,
+  buildLocationSceneBoardLayoutPlan,
   buildLocationSceneBoardView,
+  parseLocationSceneBoardLayoutPlan,
   parseLocationSceneBoardPrompt,
   type LocationSceneBoardView,
 } from '@/lib/asset-generation/location-scene-board-prompts'
@@ -125,6 +127,28 @@ async function generateGlobalLocationSceneBoardPrompt(input: {
   return parseLocationSceneBoardPrompt(safeParseJsonObject(completion.text))
 }
 
+async function generateGlobalLocationSceneBoardLayoutPlan(input: {
+  readonly userId: string
+  readonly analysisModel: string
+  readonly draftInstruction: string
+}): Promise<string> {
+  const completion = await executeAiTextStep({
+    userId: input.userId,
+    model: input.analysisModel,
+    messages: [{ role: 'user', content: input.draftInstruction }],
+    temperature: 0.35,
+    projectId: 'global-asset-hub',
+    action: 'global_location_scene_board_layout_plan',
+    meta: {
+      stepId: 'global_location_scene_board_layout_plan',
+      stepTitle: 'Global location spatial layout plan',
+      stepIndex: 1,
+      stepTotal: 1,
+    },
+  })
+  return parseLocationSceneBoardLayoutPlan(safeParseJsonObject(completion.text))
+}
+
 export async function handleAssetHubImageTask(job: Job<TaskJobData>) {
   const db = prisma as unknown as AssetHubImageDb
   const payload = (job.data.payload || {}) as AnyObj
@@ -220,6 +244,24 @@ export async function handleAssetHubImageTask(job: Job<TaskJobData>) {
     const groupedLocationDescription = payload.type === 'location'
       ? targetImages.find((image) => typeof image.description === 'string' && image.description.trim())?.description?.trim() || ''
       : ''
+    const locale = job.data.locale === 'en' ? 'en' : 'zh'
+    const locationLayoutPlan = await (async () => {
+      if (payload.type !== 'location') return null
+      const profileModel = spatialProfileModel
+      if (!profileModel) throw new Error('LOCATION_SPATIAL_PROFILE_MODEL_REQUIRED')
+      const sourceDescription = groupedLocationDescription || targetImages[0]?.description || ''
+      if (!sourceDescription.trim()) return null
+      const layoutView = buildLocationSceneBoardLayoutPlan({
+        description: sourceDescription,
+        locale,
+        styleBible: null,
+      })
+      return await generateGlobalLocationSceneBoardLayoutPlan({
+        userId,
+        analysisModel: profileModel,
+        draftInstruction: layoutView.draftInstruction,
+      })
+    })()
 
     for (const image of targetImages) {
       if (!image.description) continue
@@ -229,12 +271,13 @@ export async function handleAssetHubImageTask(job: Job<TaskJobData>) {
             description: image.description || '',
           })
         }
-        const locale = job.data.locale === 'en' ? 'en' : 'zh'
+        const sourceDescription = groupedLocationDescription || image.description || ''
         const view = buildLocationSceneBoardView({
-          description: groupedLocationDescription || image.description || '',
+          description: sourceDescription,
           locale,
           styleBible: null,
           imageIndex: image.imageIndex,
+          layoutPlan: locationLayoutPlan || sourceDescription,
         })
         const profileModel = spatialProfileModel
         if (!profileModel) throw new Error('LOCATION_SPATIAL_PROFILE_MODEL_REQUIRED')
@@ -248,6 +291,7 @@ export async function handleAssetHubImageTask(job: Job<TaskJobData>) {
             prompt: candidatePrompt,
             locale,
             imageIndex: image.imageIndex,
+            layoutPlan: locationLayoutPlan || sourceDescription,
           }),
           locale,
         })

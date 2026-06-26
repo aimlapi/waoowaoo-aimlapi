@@ -134,6 +134,7 @@ export function useProjectWorkspaceController({
   const generateEditStoryboardSpatialBlocking = useGenerateProjectEditScriptStoryboardSpatialBlocking(projectId)
   const characterAssetActions = useAssetActions({ scope: 'project', projectId, kind: 'character' })
   const locationAssetActions = useAssetActions({ scope: 'project', projectId, kind: 'location' })
+  const propAssetActions = useAssetActions({ scope: 'project', projectId, kind: 'prop' })
   const updateVideoPlanPrompt = useUpdateProjectEditScriptVideoBlockPrompt(projectId)
   const arrangeVideoBlocks = useArrangeProjectEditScriptVideoBlocks(projectId)
   const updateEditAssetRequirementDescription = useUpdateProjectEditScriptAssetRequirementDescription(projectId)
@@ -180,9 +181,13 @@ export function useProjectWorkspaceController({
     await generateEditAssets.mutateAsync({ episodeId, editScriptId, requirementId })
     await onRefresh({ mode: 'full' })
   }
-  const handleRegenerateProjectAssetImage = async (assetId: string, kind: 'character' | 'location') => {
+  const handleRegenerateProjectAssetImage = async (assetId: string, kind: 'character' | 'location' | 'prop') => {
     if (!episodeId) throw new Error('Episode ID is required')
-    const actions = kind === 'character' ? characterAssetActions : locationAssetActions
+    const actions = kind === 'character'
+      ? characterAssetActions
+      : kind === 'prop'
+        ? propAssetActions
+        : locationAssetActions
     await actions.generate({ id: assetId, episodeId })
     await onRefresh({ mode: 'full' })
   }

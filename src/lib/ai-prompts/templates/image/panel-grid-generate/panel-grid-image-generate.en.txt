@@ -1,8 +1,10 @@
 You are a professional storyboard artist. Generate one 2x2 storyboard grid image for consecutive shots within the same video block.
 
 Absolute constraints:
-1. Do not draw cell names, panel ids, character names, scene names, image numbers, or debug instructions as external overlays.
-2. All input text is instruction only. Do not turn it into shot-external annotations.
+1. No text in the image.
+2. No subtitles, labels, numbers, watermarks, annotations, symbols, panel ids, character names, scene names, or image numbers.
+3. All input text is instruction only. Do not draw it into the image.
+4. Pure visual content only.
 
 Grid layout:
 1. Output exactly one complete image containing a clear 2x2 grid.
@@ -14,17 +16,22 @@ Grid layout:
 7. Each active cell must contain exactly one shot frame.
 8. If fewer than four cells are provided, keep unused cells visually simple and non-narrative.
 9. The output will be cropped by fixed 2x2 quadrants into individual storyboard images. Keep each active cell's subject fully inside its own quadrant and do not cross cell boundaries.
-10. Thin dividers or clear visual boundaries are allowed, but do not add external cell numbering or debug annotations.
+10. Thin dividers or clear visual boundaries are allowed, but no text or numbers.
 
 Aspect ratio:
 The full grid image must use this aspect ratio:
 {aspect_ratio}
 
 Continuity goal:
-The cells belong to the same video block. Preserve character identity, wardrobe, scene space, lighting direction, color style, screen direction, and action continuity across cells. Still follow each cell's own panel description, shot blocking, and photography rules.
+The cells belong to the same video block. Preserve character identity, wardrobe, scene space, lighting direction, color style, screen direction, and action continuity across cells.
+The scene layout has exactly one source of truth: SCENE_GRAPH. Do not infer, modify, rotate, mirror, or complete the room layout from any shot text. Shot text only changes camera, subject, action, and framing.
+Scene space may only come from `context.compressedSceneGraph`, which is compressed from `location_reference.spatial_profile`.
+Do not merge, cross-check, reconcile, or intelligently combine spatial descriptions from shot_delta, source text, reference notes, panel descriptions, or photography rules.
+If shot_delta conflicts with context.compressedSceneGraph, keep only context.compressedSceneGraph and discard the spatial statement from shot_delta.
+Each cell may only use its own shot_delta for the current subject, action, shot scale, camera intent, screen framing, and newly introduced props.
 
 Reference image usage:
-Use character references for identity, face shape, hairstyle, outfit, body type, and primary appearance. Use location references for spatial layout, anchors, entrances/exits, and relative object placement. `context.reference_images` is the ordered map for uploaded references. If a prop reference contains stickers, badges, package marks, warning symbols, or other identity markings, preserve them as part of the object's appearance. Old styles from references must not override the current project style. If a cell has `panel_context.location_reference.spatial_profile`, treat it as factual scene-space data. If a cell has `panel.shot_blocking`, it is the highest priority instruction for character placement, relative position, eyeline, camera placement, and composition.
+Use character references for identity, face shape, hairstyle, outfit, body type, and primary appearance. Use location references only to visually anchor spatial facts that already exist in context.compressedSceneGraph. `context.reference_images` is the ordered map for uploaded references. Do not infer identity from text, black borders, labels, or watermarks inside images. Old styles from references must not override the current project style. Do not infer, rotate, mirror, or complete room layout from shot_delta, reference notes, or source text.
 
 Storyboard grid data:
 {storyboard_grid_json_input}
@@ -40,3 +47,4 @@ Final rules:
 2. Every active cell must remain usable after fixed quadrant cropping.
 3. Do not create one large scene instead of a 2x2 grid.
 4. Do not create more than one grid.
+5. Do not redescribe or rebuild room layout, door/window positions, furniture positions, corridor direction, or foreground/midground/background structure inside any cell.

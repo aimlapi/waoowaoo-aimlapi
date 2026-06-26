@@ -22,7 +22,7 @@ import {
   type NovelProjectData,
   type ReferenceImageItem,
 } from '@/lib/workers/handlers/image-task-handler-shared'
-import { buildPanelPromptContext } from '@/lib/workers/handlers/panel-image-prompt'
+import { buildStoryboardStillPromptFacts } from '@/lib/workers/handlers/panel-still-prompt-builder'
 
 describe('reference image item normalization', () => {
   beforeEach(() => {
@@ -234,7 +234,7 @@ describe('reference image item normalization', () => {
     }, { strict: true })).rejects.toThrow('PANEL_REFERENCE_INVALID:prop:催情药剂高脚杯:reference_image_missing')
   })
 
-  it('writes resolved prop identity into panel prompt context', () => {
+  it('writes prop identity into the still prompt prop graph', () => {
     const projectData: NovelProjectData = {
       props: [{
         id: 'prop-cup',
@@ -259,11 +259,9 @@ describe('reference image item normalization', () => {
       }],
     }
 
-    const context = buildPanelPromptContext({
+    const facts = buildStoryboardStillPromptFacts({
       panel: {
         id: 'panel-1',
-        panelIndex: 0,
-        panelNumber: null,
         shotType: 'close-up',
         cameraMove: 'static',
         description: '粉红药液高脚杯',
@@ -280,17 +278,14 @@ describe('reference image item normalization', () => {
       referenceImagesMap: [{ image_no: '图 1', role: 'prop', name: '催情药剂高脚杯' }],
     })
 
-    expect(context.panel.props).toEqual([
+    expect(facts.context.PROP_GRAPH).toEqual([
       expect.objectContaining({
-        propId: 'prop-cup',
-        name: '催情药剂高脚杯',
-        description: '白底居中的高脚杯道具',
-        source: 'requirement',
-        reference_instruction: expect.stringContaining('cropped single-object identity plate'),
+        id: 'pink_wine_glass',
+        visualDescription: expect.stringContaining('neon pink liquid'),
       }),
     ])
-    expect(context.context.prop_references).toEqual(context.panel.props)
-    expect(context.context.reference_images).toEqual([
+    expect(facts.panel.still_frame.visible_props).toEqual(['pink_wine_glass'])
+    expect(facts.context.reference_images).toEqual([
       { image_no: '图 1', role: 'prop', name: '催情药剂高脚杯' },
     ])
   })

@@ -428,7 +428,7 @@ function panelSearchText(panel: PanelLike) {
     panel.description,
     panel.imagePrompt,
     panel.srtSegment,
-  ].filter((item): item is string => typeof item === 'string' && item.trim()).join('\n'))
+  ].filter((item): item is string => typeof item === 'string' && item.trim().length > 0).join('\n'))
 }
 
 function propNameKeywords(name: string) {

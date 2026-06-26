@@ -379,12 +379,13 @@ describe('worker location-image-task-handler behavior', () => {
       'location_scene_board_prompt:quad-grid',
     ])
     const prompts = sharedMock.generateCleanImageToStorage.mock.calls.map((call) => {
-      const input = call[0] as { prompt?: string }
+      const input = (call as unknown as [{ prompt?: string }])[0]
       return input.prompt || ''
     })
     expect(prompts).toHaveLength(1)
-    expect(prompts[0]).toContain('四宫格空间板')
-    expect(prompts[0]).toContain('前方、后方、左侧、右侧')
+    const prompt = prompts[0]
+    expect(prompt).toContain('四宫格空间板')
+    expect(prompt).toContain('前方、后方、左侧、右侧')
   })
 
   it('uses the same aspect ratio as character generation for prop images', async () => {

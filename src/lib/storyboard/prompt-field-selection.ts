@@ -135,6 +135,7 @@ function deletePhotographySubfields(panel: Record<string, unknown>, omitted: Rea
 }
 
 function applyPanelFieldOmissions(panel: Record<string, unknown>, omitted: ReadonlySet<string>) {
+  const stillFrame = cloneRecord(panel.still_frame)
   const directFieldMap: ReadonlyArray<readonly [StoryboardPromptFieldId, string]> = [
     ['panel.panel_id', 'panel_id'],
     ['panel.shot_type', 'shot_type'],
@@ -150,6 +151,16 @@ function applyPanelFieldOmissions(panel: Record<string, unknown>, omitted: Reado
   for (const [fieldId, key] of directFieldMap) {
     if (omitted.has(fieldId)) delete panel[key]
   }
+  if (Object.keys(stillFrame).length > 0) {
+    if (omitted.has('panel.shot_type')) delete stillFrame.shot_scale
+    if (omitted.has('panel.description')) {
+      delete stillFrame.action
+      delete stillFrame.emotion
+    }
+    if (omitted.has('panel.characters')) delete stillFrame.visible_subjects
+    if (omitted.has('panel.photography_rules')) delete stillFrame.static_framing
+    panel.still_frame = stillFrame
+  }
   if (omitted.has('panel.photography_rules')) {
     delete panel.photography_rules
     delete panel.shot_blocking
@@ -159,17 +170,26 @@ function applyPanelFieldOmissions(panel: Record<string, unknown>, omitted: Reado
 }
 
 function applyContextFieldOmissions(context: Record<string, unknown>, omitted: ReadonlySet<string>) {
-  if (omitted.has('context.character_appearances')) delete context.character_appearances
+  if (omitted.has('context.character_appearances')) {
+    delete context.character_appearances
+    delete context.CHARACTER_GRAPH
+  }
   if (omitted.has('context.reference_images')) delete context.reference_images
   if (omitted.has('context.additional_reference_images')) delete context.additional_reference_images
   if (omitted.has('context.location_reference')) {
     delete context.location_reference
+    delete context.compressedSceneGraph
+    delete context.SCENE_GRAPH
     return
   }
   if (omitted.has('context.location_reference.spatial_profile') && isRecord(context.location_reference)) {
     const locationReference = cloneRecord(context.location_reference)
     delete locationReference.spatial_profile
     context.location_reference = locationReference
+  }
+  if (omitted.has('context.location_reference.spatial_profile')) {
+    delete context.compressedSceneGraph
+    delete context.SCENE_GRAPH
   }
 }
 
@@ -215,13 +235,46 @@ export function applyGridPromptFieldOmissions(
     const nextCell = cloneRecord(cell)
     if (omitted.has('cell.cell_index')) delete nextCell.cell_index
     if (omitted.has('cell.cell_position')) delete nextCell.cell_position
-    const panel = cloneRecord(nextCell.panel)
-    applyPanelFieldOmissions(panel, omitted)
-    nextCell.panel = panel
 
-    const panelContext = cloneRecord(nextCell.panel_context)
-    applyContextFieldOmissions(panelContext, omitted)
-    nextCell.panel_context = panelContext
+    if (isRecord(nextCell.panel)) {
+      const panel = cloneRecord(nextCell.panel)
+      applyPanelFieldOmissions(panel, omitted)
+      nextCell.panel = panel
+    }
+    if (isRecord(nextCell.shot_delta)) {
+      const shotDelta = cloneRecord(nextCell.shot_delta)
+      if (omitted.has('panel.panel_id')) delete nextCell.panel_id
+      if (omitted.has('panel.shot_type')) delete shotDelta.shot_type
+      if (omitted.has('panel.shot_type')) delete shotDelta.shot_scale
+      if (omitted.has('panel.camera_move')) {
+        delete shotDelta.camera_move
+        delete shotDelta.camera_relative_to_scene_graph
+        delete shotDelta.camera_framing
+      }
+      if (omitted.has('panel.description')) {
+        delete shotDelta.subject_action
+        delete shotDelta.action
+        delete shotDelta.emotion
+        delete shotDelta.temporary_visual_effect
+      }
+      if (omitted.has('panel.source_text')) delete shotDelta.source_action
+      if (omitted.has('panel.characters')) {
+        delete shotDelta.characters
+        delete shotDelta.visible_subjects
+      }
+      if (omitted.has('panel.photography_rules')) {
+        delete shotDelta.photography_rules
+        delete shotDelta.camera_framing
+      }
+      if (omitted.has('panel.acting_notes')) delete shotDelta.acting_notes
+      nextCell.shot_delta = shotDelta
+    }
+
+    if (isRecord(nextCell.panel_context)) {
+      const panelContext = cloneRecord(nextCell.panel_context)
+      applyContextFieldOmissions(panelContext, omitted)
+      nextCell.panel_context = panelContext
+    }
     return nextCell
   })
 

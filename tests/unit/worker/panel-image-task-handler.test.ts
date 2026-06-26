@@ -110,7 +110,16 @@ const sharedMock = vi.hoisted(() => ({
 }))
 
 const promptMock = vi.hoisted(() => ({
-  buildPrompt: vi.fn(() => 'panel-image-prompt'),
+  buildPrompt: vi.fn((input: { promptId?: string; variables?: Record<string, unknown> }) => {
+    if (input.promptId === 'panel-grid-image-generate') {
+      return [
+        'The scene layout has exactly one source of truth: SCENE_GRAPH. Do not infer, modify, rotate, mirror, or complete the room layout from any shot text. Shot text only changes camera, subject, action, and framing.',
+        String(input.variables?.storyboard_grid_json_input || ''),
+        String(input.variables?.source_text || ''),
+      ].join('\n')
+    }
+    return 'panel-image-prompt'
+  }),
 }))
 
 const outboundImageMock = vi.hoisted(() => ({
@@ -240,7 +249,7 @@ describe('worker panel-image-task-handler behavior', () => {
       expect.anything(),
       expect.objectContaining({
         modelId: 'storyboard-model-1',
-        prompt: 'panel-image-prompt',
+        prompt: expect.stringContaining('Generate one still storyboard frame'),
         allowTaskExternalIdResume: false,
         options: expect.objectContaining({
           referenceImages: ['normalized-sketch', 'normalized-hero', 'normalized-location'],
@@ -256,24 +265,14 @@ describe('worker panel-image-task-handler behavior', () => {
       ]),
       expect.objectContaining({ locale: 'zh' }),
     )
-    expect(promptMock.buildPrompt).toHaveBeenCalledWith(expect.objectContaining({
-      variables: expect.objectContaining({
-        storyboard_text_json_input: expect.stringContaining('"slot": "街道左侧靠墙的留白位置"'),
-      }),
-    }))
-    const promptCalls = promptMock.buildPrompt.mock.calls as unknown as Array<[unknown]>
-    const promptCall = promptCalls[0]?.[0] as {
-      variables?: { storyboard_text_json_input?: string }
-    } | undefined
-    const contextJson = promptCall?.variables?.storyboard_text_json_input || '{}'
-    const context = JSON.parse(contextJson) as {
-      context?: { reference_images?: Array<{ image_no: string; role: string; name: string }> }
-    }
-    expect(context.context?.reference_images).toEqual([
-      { image_no: '图 1', role: 'sketch', name: '分镜草图' },
-      { image_no: '图 2', role: 'character', name: 'Hero', appearance: 'default', slot: '街道左侧靠墙的留白位置' },
-      { image_no: '图 3', role: 'location', name: 'Old Town' },
-    ])
+    const generationCalls = utilsMock.resolveImageSourceFromGeneration.mock.calls as unknown as Array<[unknown, { prompt?: string }]>
+    expect(generationCalls[0]?.[1].prompt).toContain('"slot": "街道左侧靠墙的留白位置"')
+    expect(generationCalls[0]?.[1].prompt).toContain('"image_no": "图 1"')
+    expect(generationCalls[0]?.[1].prompt).toContain('"role": "sketch"')
+    expect(generationCalls[0]?.[1].prompt).toContain('"image_no": "图 2"')
+    expect(generationCalls[0]?.[1].prompt).toContain('"role": "character"')
+    expect(generationCalls[0]?.[1].prompt).toContain('"image_no": "图 3"')
+    expect(generationCalls[0]?.[1].prompt).toContain('"role": "location"')
     expect(prismaMock.projectPanel.update).toHaveBeenCalledWith({
       where: { id: 'panel-1' },
       data: {
@@ -355,7 +354,7 @@ describe('worker panel-image-task-handler behavior', () => {
     expect(result).toEqual(expect.objectContaining({
       promptDebug: expect.objectContaining({
         omittedFields: ['style_bible'],
-        prompt: 'panel-image-prompt',
+        prompt: expect.stringContaining('Generate one still storyboard frame'),
       }),
     }))
   })
@@ -399,19 +398,15 @@ describe('worker panel-image-task-handler behavior', () => {
         }),
       }),
     )
-    expect(promptMock.buildPrompt).toHaveBeenCalledWith(expect.objectContaining({
-      variables: expect.objectContaining({
-        storyboard_text_json_input: expect.stringContaining('"additional_reference_images"'),
+    expect(utilsMock.resolveImageSourceFromGeneration).toHaveBeenCalledWith(
+      expect.anything(),
+      expect.objectContaining({
+        prompt: expect.not.stringContaining('"additional_reference_images"'),
       }),
-    }))
-    expect(promptMock.buildPrompt).toHaveBeenCalledWith(expect.objectContaining({
-      variables: expect.objectContaining({
-        storyboard_text_json_input: expect.stringContaining('Use for continuity and staging'),
-      }),
-    }))
+    )
   })
 
-  it('uses spatial profile and shotBlocking as text context', async () => {
+  it('uses spatial profile and static framing while excluding shotBlocking as still-image layout text', async () => {
     prismaMock.projectPanel.findUnique.mockResolvedValueOnce({
       id: 'panel-1',
       storyboardId: 'storyboard-1',
@@ -453,22 +448,20 @@ describe('worker panel-image-task-handler behavior', () => {
       sketchImageUrl: null,
       imageUrl: null,
     })
-    await handlePanelImageTask(buildJob({ candidateCount: 1 }))
+    const result = await handlePanelImageTask(buildJob({ candidateCount: 1, compareOnly: true }))
 
     expect(prismaMock.projectStoryboardBlockingArtifact.findMany).not.toHaveBeenCalled()
-    const promptCalls = promptMock.buildPrompt.mock.calls as unknown as Array<[{
-      variables?: { storyboard_text_json_input?: string }
-    }]>
-    const contextJson = promptCalls[0]?.[0].variables?.storyboard_text_json_input || '{}'
-    const context = JSON.parse(contextJson) as {
-      panel?: { shot_blocking?: { cameraPlacement?: string } }
+    const promptDebug = result.promptDebug
+    if (!promptDebug) throw new Error('promptDebug missing')
+    const context = JSON.parse(promptDebug.contextJson) as {
+      panel?: { still_frame?: { static_framing?: string } }
       context?: {
-        location_reference?: { spatial_profile?: { anchors?: Array<{ label: string }> } }
+        SCENE_GRAPH?: { anchors?: Array<{ label: string }> }
         reference_images?: Array<{ image_no: string; role: string; name: string }>
       }
     }
-    expect(context.panel?.shot_blocking?.cameraPlacement).toBe('从街道中线偏右拍向左侧墙面')
-    expect(context.context?.location_reference?.spatial_profile?.anchors?.[0]?.label).toBe('左侧墙面')
+    expect(context.panel?.still_frame?.static_framing || '').not.toContain('从街道中线偏右拍向左侧墙面')
+    expect(context.context?.SCENE_GRAPH?.anchors?.[0]?.label).toBe('左侧墙面')
     expect(context.context?.reference_images?.map((item) => item.role)).toEqual(['sketch', 'character', 'location'])
     expect(utilsMock.resolveImageSourceFromGeneration).toHaveBeenCalledWith(
       expect.anything(),
@@ -594,10 +587,22 @@ describe('worker panel-image-task-handler behavior', () => {
       expect.anything(),
       expect.objectContaining({
         modelId: 'storyboard-model-1',
-        prompt: 'panel-image-prompt',
+        prompt: expect.stringContaining('GLOBAL TASK'),
         options: expect.objectContaining({
           aspectRatio: '16:9',
         }),
+      }),
+    )
+    expect(utilsMock.resolveImageSourceFromGeneration).toHaveBeenCalledWith(
+      expect.anything(),
+      expect.objectContaining({
+        prompt: expect.stringContaining('SCENE_GRAPH'),
+      }),
+    )
+    expect(utilsMock.resolveImageSourceFromGeneration).toHaveBeenCalledWith(
+      expect.anything(),
+      expect.objectContaining({
+        prompt: expect.stringContaining('BLOCKING_STATE'),
       }),
     )
     expect(utilsMock.uploadImageSourceToCos).toHaveBeenCalledTimes(3)
@@ -628,19 +633,147 @@ describe('worker panel-image-task-handler behavior', () => {
         imageMediaId: null,
       },
     })
-    expect(promptMock.buildPrompt).toHaveBeenCalledWith(expect.objectContaining({
-      promptId: 'panel-grid-image-generate',
-      variables: expect.objectContaining({
-        storyboard_grid_json_input: expect.stringContaining('"cell_position": "top_left"'),
-      }),
+    const finalPrompt = (utilsMock.resolveImageSourceFromGeneration.mock.calls[0]?.[1] as { prompt?: string } | undefined)?.prompt || ''
+    expect(finalPrompt).toContain('anchor_wall')
+    expect(finalPrompt).toContain('左侧墙面')
+    expect(finalPrompt).not.toContain('Hero stays near the left wall')
+    expect(finalPrompt).not.toContain('right side of the attic')
+    expect(finalPrompt).not.toContain('SHOULD_NOT_APPEAR_IN_GRID_PROMPT')
+  })
+
+  it('grid prompt uses only compressedSceneGraph as spatial source and strips conflicting shot space', async () => {
+    sharedMock.resolveNovelData.mockResolvedValueOnce({
+      videoRatio: '16:9',
+      characters: [],
+      locations: [
+        {
+          name: 'Old Town',
+          images: [
+            {
+              isSelected: true,
+              description: '四宫格空间板槽位：请把窗画在右侧并补全房间布局。',
+              spatialProfileJson: {
+                schemaVersion: 1,
+                sceneSummary: '窗在北墙尽头。',
+                anchors: [{
+                  id: 'north-window',
+                  label: '北墙尽头的窗',
+                  screenArea: '空间最深处',
+                  depthLayer: '背景',
+                  spatialRelations: ['窗只位于北墙尽头'],
+                }],
+                depthLayout: {
+                  foreground: '中央空地',
+                  midground: '主通道',
+                  background: '北墙尽头的窗',
+                },
+                lightingDirection: '光从北墙尽头的窗进入',
+              },
+            },
+          ],
+        },
+      ],
+    })
+    const gridSourceBuffer = await sharp({
+      create: {
+        width: 8,
+        height: 8,
+        channels: 3,
+        background: { r: 240, g: 240, b: 240 },
+      },
+    }).png().toBuffer()
+    const gridSource = `data:image/png;base64,${gridSourceBuffer.toString('base64')}`
+    prismaMock.projectPanel.findMany.mockResolvedValueOnce([
+      {
+        id: 'panel-1',
+        storyboardId: 'storyboard-1',
+        panelIndex: 0,
+        shotType: 'wide',
+        cameraMove: 'static',
+        description: '窗在右侧。主体举起酒杯。',
+        imagePrompt: 'The window is on the right side. A glowing glass is the subject.',
+        videoPrompt: 'Do not appear in grid prompt.',
+        location: 'Old Town',
+        characters: JSON.stringify([{ name: 'Hero', appearance: 'default' }]),
+        srtSegment: '门在左侧。主体后撤。',
+        photographyRules: JSON.stringify({
+          cameraPlan: {
+            cameraPosition: '从右侧窗边拍摄',
+            composition: '房间布局：窗在右侧。主体占画面中心。',
+            axisAndEyeline: '视线看向右侧窗户',
+            lighting: '右侧窗户进光',
+            continuityIn: '从右侧窗户切入',
+            continuityOut: '向左侧门切出',
+            shotBlocking: {
+              absolutePosition: '窗在右侧',
+              relativePosition: '门在左侧',
+              screenPosition: '窗边右侧',
+              cameraPlacement: '右侧窗边',
+              composition: '房间布局由右侧窗户定义',
+            },
+          },
+        }),
+        actingNotes: null,
+        sketchImageUrl: null,
+        imageUrl: null,
+        imageMediaId: null,
+      },
+      {
+        id: 'panel-2',
+        storyboardId: 'storyboard-1',
+        panelIndex: 1,
+        shotType: 'close',
+        cameraMove: 'push',
+        description: '墙在左侧。主体低头。',
+        imagePrompt: 'Door on the left side. Subject lowers head.',
+        videoPrompt: null,
+        location: 'Old Town',
+        characters: JSON.stringify([{ name: 'Hero', appearance: 'default' }]),
+        srtSegment: '主体低头。',
+        photographyRules: null,
+        actingNotes: null,
+        sketchImageUrl: null,
+        imageUrl: null,
+        imageMediaId: null,
+      },
+    ])
+    utilsMock.resolveImageSourceFromGeneration.mockReset()
+    utilsMock.resolveImageSourceFromGeneration.mockResolvedValueOnce(gridSource)
+    utilsMock.uploadImageSourceToCos.mockReset()
+    utilsMock.uploadImageSourceToCos
+      .mockResolvedValueOnce('images/panel-grid.png')
+      .mockResolvedValueOnce('images/panel-1-crop.jpg')
+      .mockResolvedValueOnce('images/panel-2-crop.jpg')
+
+    await handlePanelImageTask(buildJob({
+      referenceImageNotes: ['空间说明：窗在右侧，门在左侧。'],
+      storyboardGrid: {
+        mode: '2x2',
+        sourceVideoBlockId: 'edit-1:videoBlock:1',
+        panelIds: ['panel-1', 'panel-2'],
+      },
     }))
-    const promptCalls = promptMock.buildPrompt.mock.calls as unknown as Array<[
-      { promptId?: string; variables?: { storyboard_grid_json_input?: unknown } },
-    ]>
-    const gridPromptCall = promptCalls.find((call) => call[0]?.promptId === 'panel-grid-image-generate')
-    const gridInput = gridPromptCall?.[0]?.variables?.storyboard_grid_json_input
-    expect(gridInput).toEqual(expect.stringContaining('Hero stays near the left wall'))
-    expect(gridInput).not.toEqual(expect.stringContaining('SHOULD_NOT_APPEAR_IN_GRID_PROMPT'))
+
+    const finalPrompt = (utilsMock.resolveImageSourceFromGeneration.mock.calls[0]?.[1] as { prompt?: string } | undefined)?.prompt || ''
+    const sceneGraphCount = (finalPrompt.match(/SCENE_GRAPH/g) || []).length
+
+    expect(sceneGraphCount).toBe(1)
+    expect(finalPrompt).not.toContain('compressedSceneGraph')
+    expect(finalPrompt).toContain('窗在北墙尽头')
+    expect(finalPrompt).not.toContain('窗在右侧')
+    expect(finalPrompt).not.toContain('门在左侧')
+    expect(finalPrompt).not.toContain('right side')
+    expect(finalPrompt).not.toContain('left side')
+    expect(finalPrompt).not.toContain('四宫格空间板槽位')
+    expect(finalPrompt).not.toContain('房间布局')
+    expect(finalPrompt).not.toContain('从右侧窗边拍摄')
+    expect(finalPrompt).not.toContain('视线看向右侧窗户')
+    expect(finalPrompt).not.toContain('从右侧窗户切入')
+    expect(finalPrompt).not.toContain('向左侧门切出')
+    expect(finalPrompt).not.toContain('Do not appear in grid prompt')
+    expect(finalPrompt).not.toContain('空间说明')
+    expect(finalPrompt).toContain('action: 主体举起酒杯。')
+    expect(finalPrompt).toContain('action: 主体低头。')
   })
 
   it('compare-only grid generation -> uses previous complete grid as serial reference without mutating panel records', async () => {

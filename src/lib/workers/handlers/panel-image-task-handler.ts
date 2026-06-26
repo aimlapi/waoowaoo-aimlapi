@@ -25,8 +25,11 @@ import {
   appendStyleBiblePromptBlock,
   resolveEditScriptStyleBibleForStoryboardTask,
 } from '@/lib/edit-script/style-bible-prompt'
-import { buildPanelPrompt, buildPanelPromptContext } from './panel-image-prompt'
 import { parseStoryboardGridPayload, handlePanelGridImageTask } from './panel-grid-image-handler'
+import {
+  buildStoryboardStillPrompt,
+  buildStoryboardStillPromptFacts,
+} from './panel-still-prompt-builder'
 import {
   applyPanelPromptFieldOmissions,
   parseStoryboardPromptFieldOmissions,
@@ -149,11 +152,9 @@ export async function handlePanelImageTask(job: Job<TaskJobData>) {
     context: 'panel_image',
   })
   const aspectRatio = imageRuntimeOptions.aspectRatio
-  const promptContext = buildPanelPromptContext({
+  const promptContext = buildStoryboardStillPromptFacts({
     panel: {
       id: panel.id,
-      panelIndex: panel.panelIndex,
-      panelNumber: panel.panelNumber,
       shotType: panel.shotType,
       cameraMove: panel.cameraMove,
       description: panel.description,
@@ -161,26 +162,19 @@ export async function handlePanelImageTask(job: Job<TaskJobData>) {
       videoPrompt: panel.videoPrompt,
       location: panel.location,
       characters: panel.characters,
-      props: panel.props,
       srtSegment: panel.srtSegment,
       photographyRules: panel.photographyRules,
       actingNotes: panel.actingNotes,
     },
     projectData,
-    referenceImageNotes,
     referenceImagesMap,
   })
-  const selectedPromptContext = applyPanelPromptFieldOmissions(promptContext, promptFieldOmissions)
+  const selectedPromptContext = applyPanelPromptFieldOmissions(promptContext, promptFieldOmissions) as typeof promptContext
   const contextJson = JSON.stringify(selectedPromptContext, null, 2)
-  const sourceText = promptFieldOmissions.includes('panel.source_text')
-    ? ''
-    : panel.srtSegment || panel.description || ''
-  const promptBase = buildPanelPrompt({
-    locale: job.data.locale,
+  const sourceText = ''
+  const promptBase = buildStoryboardStillPrompt({
     aspectRatio,
-    styleText: '',
-    sourceText,
-    contextJson,
+    facts: selectedPromptContext,
   })
   const styleBible = await resolveEditScriptStyleBibleForStoryboardTask({
     projectId: job.data.projectId,

@@ -15,29 +15,27 @@ import {
   buildImageProviderRuntimeOptions,
   collectPanelReferenceImageItemsWithDiagnostics,
   normalizeReferenceImageItemsForGeneration,
-  parsePanelCharacterReferences,
-  resolvePanelPropAssets,
-  type NumberedReferenceImage,
   type ReferenceImageItem,
+  type NumberedReferenceImage,
   resolveNovelData,
 } from './image-task-handler-shared'
-import { buildPanelGridPrompt } from './panel-image-prompt'
 import {
   normalizeReferenceImagesForGeneration,
   type OutboundImageNormalizationIssue,
 } from '@/lib/media/outbound-image'
 import {
-  appendStyleBiblePromptBlock,
   resolveEditScriptStyleBibleForStoryboardTask,
 } from '@/lib/edit-script/style-bible-prompt'
 import {
   applyGridPromptFieldOmissions,
   parseStoryboardPromptFieldOmissions,
 } from '@/lib/storyboard/prompt-field-selection'
+import {
+  buildStoryboardGridPrompt,
+  buildStoryboardGridPromptFacts,
+} from './panel-grid-prompt-builder'
 
 const GRID_CELL_COUNT = 4
-const GRID_TEXT_LIMIT = 520
-const GRID_JSON_TEXT_LIMIT = 900
 
 type StoryboardGridPayload = {
   mode: '2x2'
@@ -49,7 +47,6 @@ export type GridPanel = {
   id: string
   storyboardId: string
   panelIndex: number
-  panelNumber?: number | null
   shotType: string | null
   cameraMove: string | null
   description: string | null
@@ -84,38 +81,6 @@ function normalizeStringArray(input: unknown): string[] {
     .filter(Boolean)))
 }
 
-function compactText(value: unknown, maxLength = GRID_TEXT_LIMIT): string | null {
-  const normalized = normalizeString(value)
-  if (!normalized) return null
-  if (normalized.length <= maxLength) return normalized
-  return `${normalized.slice(0, maxLength).trim()}...`
-}
-
-function toRecord(value: unknown): Record<string, unknown> | null {
-  if (!value || typeof value !== 'object' || Array.isArray(value)) return null
-  return value as Record<string, unknown>
-}
-
-function parseJsonRecord(value: string | null | undefined): Record<string, unknown> | null {
-  const raw = normalizeString(value)
-  if (!raw) return null
-  try {
-    return toRecord(JSON.parse(raw))
-  } catch {
-    return null
-  }
-}
-
-function compactJsonValue(value: unknown, maxLength = GRID_JSON_TEXT_LIMIT): string | null {
-  if (value === undefined || value === null || value === '') return null
-  if (typeof value === 'string') return compactText(value, maxLength)
-  try {
-    return compactText(JSON.stringify(value), maxLength)
-  } catch {
-    return null
-  }
-}
-
 export function parseStoryboardGridPayload(input: unknown): StoryboardGridPayload | null {
   if (!input || typeof input !== 'object' || Array.isArray(input)) return null
   const record = input as Record<string, unknown>
@@ -144,100 +109,10 @@ function assertGridPanels(input: {
   return panels
 }
 
-function readReferenceImageNotes(payload: AnyObj): string[] {
-  return Array.isArray(payload.referenceImageNotes)
-    ? payload.referenceImageNotes
-      .map((item) => (typeof item === 'string' ? item.trim() : ''))
-      .filter(Boolean)
-      .slice(0, 16)
-    : []
-}
-
 function readPreviousGridImageUrl(payload: AnyObj): string | null {
   return typeof payload.previousGridImageUrl === 'string' && payload.previousGridImageUrl.trim()
     ? payload.previousGridImageUrl.trim()
     : null
-}
-
-function compactPhotographyRules(raw: string | null): Record<string, string> | null {
-  const rules = parseJsonRecord(raw)
-  if (!rules) return null
-  const consistencyMetadata = toRecord(rules.consistencyMetadata)
-  const cameraPlan = toRecord(rules.cameraPlan) || toRecord(consistencyMetadata?.cameraPlan)
-  const compact: Record<string, string> = {}
-  const shotBlocking = cameraPlan?.shotBlocking ?? rules.shotBlocking
-  const entries: Array<[string, unknown]> = [
-    ['shot_blocking', shotBlocking],
-    ['lighting', rules.lighting],
-    ['characters', rules.characters],
-    ['depth_of_field', rules.depth_of_field],
-    ['color_tone', rules.color_tone],
-  ]
-  for (const [key, value] of entries) {
-    const text = compactJsonValue(value)
-    if (text) compact[key] = text
-  }
-  return Object.keys(compact).length > 0 ? compact : null
-}
-
-function compactActingNotes(raw: string | null): string | null {
-  const parsed = parseJsonRecord(raw)
-  return parsed ? compactJsonValue(parsed) : compactText(raw, GRID_JSON_TEXT_LIMIT)
-}
-
-function compactSpatialProfile(value: unknown): Record<string, unknown> | string | null {
-  const record = toRecord(value)
-  if (!record) return compactJsonValue(value)
-  const anchors = Array.isArray(record.anchors)
-    ? record.anchors
-      .map((anchor) => {
-        const item = toRecord(anchor)
-        if (!item) return null
-        return {
-          label: compactText(item.label, 80),
-          screenArea: compactText(item.screenArea, 80),
-          depthLayer: compactText(item.depthLayer, 80),
-          spatialRelations: Array.isArray(item.spatialRelations)
-            ? item.spatialRelations
-              .map((relation) => compactText(relation, 120))
-              .filter((relation): relation is string => Boolean(relation))
-              .slice(0, 3)
-            : [],
-        }
-      })
-      .filter((anchor): anchor is {
-        label: string | null
-        screenArea: string | null
-        depthLayer: string | null
-        spatialRelations: string[]
-      } => Boolean(anchor))
-      .slice(0, 6)
-    : []
-  return {
-    sceneSummary: compactText(record.sceneSummary),
-    anchors,
-    depthLayout: compactJsonValue(record.depthLayout),
-    lightingDirection: compactText(record.lightingDirection),
-  }
-}
-
-function resolveCompactLocationReference(input: {
-  readonly projectData: Awaited<ReturnType<typeof resolveNovelData>>
-  readonly location: string | null
-}) {
-  if (!input.location) return null
-  const matchedLocation = (input.projectData.locations || []).find(
-    (item) => item.name.toLowerCase() === input.location!.toLowerCase(),
-  )
-  if (!matchedLocation) return null
-  const selectedImage = (matchedLocation.images || []).find((item) => item.isSelected) || matchedLocation.images?.[0]
-  return {
-    name: matchedLocation.name,
-    description: compactText(selectedImage?.description || null),
-    spatial_profile: compactSpatialProfile(selectedImage && 'spatialProfileJson' in selectedImage
-      ? selectedImage.spatialProfileJson
-      : null),
-  }
 }
 
 async function collectGridReferenceImages(input: {
@@ -297,68 +172,6 @@ async function collectPreviousGridReferenceImage(input: {
         ? 'previous complete storyboard grid'
         : '上一张完整分镜套图',
     })),
-  }
-}
-
-export function buildCompactGridCell(input: {
-  readonly panel: GridPanel
-  readonly index: number
-  readonly projectData: Awaited<ReturnType<typeof resolveNovelData>>
-}) {
-  return {
-    cell_index: input.index,
-    cell_position: ['top_left', 'top_right', 'bottom_left', 'bottom_right'][input.index],
-    panel: {
-      panel_id: input.panel.id,
-      shot_type: compactText(input.panel.shotType, 120),
-      camera_move: compactText(input.panel.cameraMove, 120),
-      description: compactText(input.panel.description),
-      image_prompt: compactText(input.panel.imagePrompt, 720),
-      location: compactText(input.panel.location, 160),
-      characters: parsePanelCharacterReferences(input.panel.characters),
-      props: resolvePanelPropAssets(input.projectData, input.panel).map((prop) => ({
-        propId: prop.id,
-        name: prop.name,
-        description: compactText(prop.description, 320),
-        source: prop.source,
-      })),
-      source_text: compactText(input.panel.srtSegment, 320),
-      photography_rules: compactPhotographyRules(input.panel.photographyRules),
-      acting_notes: compactActingNotes(input.panel.actingNotes),
-    },
-    panel_context: {
-      location_reference: resolveCompactLocationReference({
-        projectData: input.projectData,
-        location: input.panel.location,
-      }),
-    },
-  }
-}
-
-export function buildGridPromptContext(input: {
-  readonly panels: readonly GridPanel[]
-  readonly projectData: Awaited<ReturnType<typeof resolveNovelData>>
-  readonly referenceImageNotes: readonly string[]
-  readonly referenceImagesMap: readonly NumberedReferenceImage[]
-  readonly sourceVideoBlockId: string
-}) {
-  return {
-    grid: {
-      mode: '2x2',
-      source_video_block_id: input.sourceVideoBlockId,
-      cells: input.panels.map((panel, index) => buildCompactGridCell({
-        panel,
-        index,
-        projectData: input.projectData,
-      })),
-    },
-    context: {
-      reference_images: input.referenceImagesMap,
-      additional_reference_images: input.referenceImageNotes.map((note, index) => ({
-        reference_image_order: index + 1,
-        note,
-      })),
-    },
   }
 }
 
@@ -448,43 +261,32 @@ export async function handlePanelGridImageTask(
     ...baseReferences.referenceImagesMap,
     ...previousGridReference.referenceImagesMap,
   ]
-  const referenceImageNotes = readReferenceImageNotes(payload)
-  const promptContext = buildGridPromptContext({
-    panels,
-    projectData,
-    referenceImageNotes,
-    referenceImagesMap,
-    sourceVideoBlockId: grid.sourceVideoBlockId,
-  })
-  const selectedPromptContext = applyGridPromptFieldOmissions(promptContext, promptFieldOmissions)
-  const contextJson = JSON.stringify(selectedPromptContext, null, 2)
-  const sourceText = promptFieldOmissions.includes('panel.source_text')
-    ? ''
-    : panels.map((panel) => panel.srtSegment || panel.description || '').filter(Boolean).join('\n')
+  const sourceText = ''
   const imageRuntimeOptions = buildImageProviderRuntimeOptions({
     generationOptions: payload.generationOptions,
     context: 'panel_grid_image',
-  })
-  const promptBase = buildPanelGridPrompt({
-    locale: job.data.locale,
-    aspectRatio: imageRuntimeOptions.aspectRatio,
-    sourceText,
-    contextJson,
-    styleText: '',
   })
   const styleBible = await resolveEditScriptStyleBibleForStoryboardTask({
     projectId: job.data.projectId,
     episodeId: job.data.episodeId,
     storyboardId: panels[0].storyboardId,
   })
-  const prompt = promptFieldOmissions.includes('style_bible')
-    ? promptBase
-    : appendStyleBiblePromptBlock({
-      prompt: promptBase,
-      styleBible,
-      usage: 'storyboardImage',
-      locale: job.data.locale,
-    })
+  const promptContext = buildStoryboardGridPromptFacts({
+    panels,
+    projectData,
+    referenceImagesMap,
+    sourceVideoBlockId: grid.sourceVideoBlockId,
+    styleBible: promptFieldOmissions.includes('style_bible') ? null : styleBible,
+  })
+  const selectedPromptContext = applyGridPromptFieldOmissions(
+    promptContext,
+    promptFieldOmissions,
+  ) as typeof promptContext
+  const contextJson = JSON.stringify(selectedPromptContext, null, 2)
+  const prompt = buildStoryboardGridPrompt({
+    aspectRatio: imageRuntimeOptions.aspectRatio,
+    facts: selectedPromptContext,
+  })
 
   const logger = createScopedLogger({
     module: 'worker.panel-grid-image',

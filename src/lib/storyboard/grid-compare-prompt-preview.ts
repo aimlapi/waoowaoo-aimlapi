@@ -12,14 +12,16 @@ import {
   resolveNovelData,
 } from '@/lib/workers/handlers/image-task-handler-shared'
 import {
-  buildPanelGridPrompt,
-  buildPanelPrompt,
-  buildPanelPromptContext,
-} from '@/lib/workers/handlers/panel-image-prompt'
-import {
-  buildGridPromptContext,
   type GridPanel,
 } from '@/lib/workers/handlers/panel-grid-image-handler'
+import {
+  buildStoryboardGridPrompt,
+  buildStoryboardGridPromptFacts,
+} from '@/lib/workers/handlers/panel-grid-prompt-builder'
+import {
+  buildStoryboardStillPrompt,
+  buildStoryboardStillPromptFacts,
+} from '@/lib/workers/handlers/panel-still-prompt-builder'
 import {
   applyGridPromptFieldOmissions,
   applyPanelPromptFieldOmissions,
@@ -110,11 +112,9 @@ async function buildSinglePromptPreview(input: {
     locale: input.locale,
     scope: 'panel-image.prompt-preview.refs',
   })
-  const promptContext = buildPanelPromptContext({
+  const promptContext = buildStoryboardStillPromptFacts({
     panel: {
       id: input.panel.id,
-      panelIndex: input.panel.panelIndex,
-      panelNumber: input.panel.panelNumber ?? null,
       shotType: input.panel.shotType,
       cameraMove: input.panel.cameraMove,
       description: input.panel.description,
@@ -122,7 +122,6 @@ async function buildSinglePromptPreview(input: {
       videoPrompt: input.panel.videoPrompt,
       location: input.panel.location,
       characters: input.panel.characters,
-      props: input.panel.props ?? null,
       srtSegment: input.panel.srtSegment,
       photographyRules: input.panel.photographyRules,
       actingNotes: input.panel.actingNotes,
@@ -130,16 +129,12 @@ async function buildSinglePromptPreview(input: {
     projectData: input.projectData,
     referenceImagesMap: references.referenceImagesMap,
   })
-  const contextJson = JSON.stringify(applyPanelPromptFieldOmissions(promptContext, input.omittedFields), null, 2)
-  const sourceText = input.omittedFields.includes('panel.source_text')
-    ? ''
-    : input.panel.srtSegment || input.panel.description || ''
-  const promptBase = buildPanelPrompt({
-    locale: input.locale,
+  const selectedPromptContext = applyPanelPromptFieldOmissions(promptContext, input.omittedFields) as typeof promptContext
+  const contextJson = JSON.stringify(selectedPromptContext, null, 2)
+  const sourceText = ''
+  const promptBase = buildStoryboardStillPrompt({
     aspectRatio: input.projectData.videoRatio || '',
-    styleText: '',
-    sourceText,
-    contextJson,
+    facts: selectedPromptContext,
   })
   const styleBible = await resolveEditScriptStyleBibleForStoryboardTask({
     projectId: input.projectId,
@@ -178,37 +173,24 @@ async function buildGridPromptPreview(input: {
     locale: input.locale,
     scope: 'panel-grid-image.prompt-preview.refs',
   })
-  const promptContext = buildGridPromptContext({
-    panels: input.panels,
-    projectData: input.projectData,
-    referenceImageNotes: [],
-    referenceImagesMap: references.referenceImagesMap,
-    sourceVideoBlockId: input.sourceVideoBlockId,
-  })
-  const contextJson = JSON.stringify(applyGridPromptFieldOmissions(promptContext, input.omittedFields), null, 2)
-  const sourceText = input.omittedFields.includes('panel.source_text')
-    ? ''
-    : input.panels.map((panel) => panel.srtSegment || panel.description || '').filter(Boolean).join('\n')
-  const promptBase = buildPanelGridPrompt({
-    locale: input.locale,
-    aspectRatio: input.projectData.videoRatio || '',
-    sourceText,
-    contextJson,
-    styleText: '',
-  })
   const styleBible = await resolveEditScriptStyleBibleForStoryboardTask({
     projectId: input.projectId,
     episodeId: input.episodeId,
     storyboardId: input.panels[0]?.storyboardId || null,
   })
-  const prompt = input.omittedFields.includes('style_bible')
-    ? promptBase
-    : appendStyleBiblePromptBlock({
-      prompt: promptBase,
-      styleBible,
-      usage: 'storyboardImage',
-      locale: input.locale,
-    })
+  const promptContext = buildStoryboardGridPromptFacts({
+    panels: input.panels,
+    projectData: input.projectData,
+    referenceImagesMap: references.referenceImagesMap,
+    sourceVideoBlockId: input.sourceVideoBlockId,
+    styleBible: input.omittedFields.includes('style_bible') ? null : styleBible,
+  })
+  const contextJson = JSON.stringify(applyGridPromptFieldOmissions(promptContext, input.omittedFields), null, 2)
+  const sourceText = ''
+  const prompt = buildStoryboardGridPrompt({
+    aspectRatio: input.projectData.videoRatio || '',
+    facts: applyGridPromptFieldOmissions(promptContext, input.omittedFields) as typeof promptContext,
+  })
   return {
     prompt,
     contextJson,

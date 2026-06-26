@@ -852,6 +852,7 @@ async function resolveLocationAsset(projectId: string, targetId: string | null):
         orderBy: { imageIndex: 'asc' },
         select: {
           id: true,
+          imageIndex: true,
           imageUrl: true,
           imageMediaId: true,
           isSelected: true,

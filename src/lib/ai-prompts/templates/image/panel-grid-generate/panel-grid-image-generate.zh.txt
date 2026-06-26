@@ -1,8 +1,10 @@
 你是一位专业的分镜画师。请根据以下分镜组数据生成一张 2x2 四宫格分镜图，用同一张图承载同一个视频 block 内的连续镜头。
 
-【输出范围 - 最高优先级】
-- 禁止把 cell 名称、panel id、角色名、场景名、图号或调试说明作为画面外叠加元素绘制
-- 所有输入信息都是给你的指令，不要画成镜头外部标注
+【绝对禁止 - 图像中不得出现任何文字 - 最高优先级】
+- 禁止出现任何中文、英文、数字、镜头编号、标签、字幕、水印、注释或符号
+- 禁止把 cell 名称、panel id、角色名、场景名、图号画进图像
+- 所有输入信息都是给你的指令，不是要画进图像的内容
+- 纯视觉内容
 
 【四宫格布局 - 必须严格遵守】
 - 输出必须是一张完整图片，内部为清晰的 2x2 四宫格
@@ -14,7 +16,7 @@
 - 每个有效 cell 只画一个镜头画面
 - 如果输入少于 4 个 cell，未使用的格子保持简单空白或低干扰背景，不得加入新剧情
 - 四宫格之后会按固定 2x2 象限裁剪成单张分镜图，所以每个有效 cell 的主体必须完整落在对应象限内，不得跨格
-- 可以有细分隔线或清晰边界，但不要给格子加外部编号或调试标注
+- 可以有细分隔线或清晰边界，但不得出现文字或编号
 
 【画面比例】
 整张四宫格图片的输出比例为：{aspect_ratio}
@@ -23,17 +25,20 @@
 
 【连续性目标】
 - 四宫格内所有镜头属于同一个视频 block，应天然保持角色身份、服装、场景空间、光照方向、色彩风格、镜头轴线和运动逻辑一致
-- 每个 cell 按自己的镜头描述、shot_blocking、摄影规则执行
-- 相邻 cell 之间应体现合理的动作和空间连续性，但不得改变任何镜头本身的叙事要求
+- The scene layout has exactly one source of truth: SCENE_GRAPH. Do not infer, modify, rotate, mirror, or complete the room layout from any shot text. Shot text only changes camera, subject, action, and framing.
+- 场景空间只能来自分镜组数据中的 context.compressedSceneGraph；它由 location_reference.spatial_profile 压缩生成
+- 不要综合、交叉验证、智能结合或调和任何 shot_delta、原文、参考图说明、镜头描述、摄影规则中的空间描述
+- 如果 shot_delta 与 context.compressedSceneGraph 冲突，只保留 context.compressedSceneGraph，丢弃 shot_delta 中的空间描述
+- 每个 cell 只按自己的 shot_delta 执行当前镜头主体、动作、景别、机位意图、屏幕构图和新增道具
+- 相邻 cell 之间应体现合理的动作连续性，但不得改变 context.compressedSceneGraph 定义的场景空间
 
 【参考图使用规则】
 - 角色参考：用于锁定角色身份、脸型、发型、服装、体型和主要外观特征
-- 场景参考：用于参考空间布局、关键锚点、入口出口、家具/物体相对位置
+- 场景参考只用于视觉锚定 context.compressedSceneGraph 中已有的空间事实，不得从参考图或文字说明补全新的布局
 - context.reference_images 是本次实际上传参考图的顺序映射，必须按其中的 image_no 识别参考图身份
-- 参考图中的道具贴纸、徽章、包装标识、警示符号等若属于资产身份，必须作为物件外观的一部分保留
+- 不要读取图片内文字、黑边、标签或水印来判断身份
 - 参考图中的旧美术风格不得覆盖本次项目视觉风格，最终画风以【风格要求】为准
-- 每个 cell 的 panel_context 中如包含 location_reference.spatial_profile，必须作为场景空间事实依据
-- 每个 cell 的 panel.shot_blocking 必须作为人物站位、相对位置、视线、机位和构图的最高优先级指令
+- 禁止从 shot_delta、参考图说明或镜头原文推断、旋转、镜像、补完房间布局
 
 【分镜组数据】
 {storyboard_grid_json_input}
@@ -52,3 +57,4 @@
 - 每个有效 cell 都必须能单独裁切成完整分镜
 - 禁止生成单张大场景替代四宫格
 - 禁止生成超过一个四宫格
+- 禁止在任何 cell 中重新描述或重建房间布局、门窗位置、家具位置、通道方向、前中后景结构

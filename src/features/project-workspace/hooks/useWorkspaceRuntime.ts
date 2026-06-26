@@ -69,7 +69,7 @@ interface UseWorkspaceRuntimeParams {
   handleRenderFinalVideo: () => Promise<void>
   handleGenerateEditAssets: (editScriptId: string, requirementId?: string) => Promise<void>
   handleGenerateEditCinematographyShotPlan: (editScriptId: string) => Promise<void>
-  handleRegenerateProjectAssetImage: (assetId: string, kind: 'character' | 'location') => Promise<void>
+  handleRegenerateProjectAssetImage: (assetId: string, kind: 'character' | 'location' | 'prop') => Promise<void>
   handleGenerateEditStoryboard: (editScriptId: string) => Promise<void>
   handleGenerateEditStoryboardSpatialBlocking: (editScriptId: string) => Promise<void>
   handleUpdateVideoPrompt: (

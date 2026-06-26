@@ -35,7 +35,10 @@ describe('location image slot descriptions', () => {
       descriptionMode: 'scene-board',
     })
 
-    const createArg = prismaMock.locationImage.createMany.mock.calls[0]?.[0] as
+    const createCall = prismaMock.locationImage.createMany.mock.calls[0] as unknown as
+      | [{ data: Array<{ imageIndex: number; description: string }> }]
+      | undefined
+    const createArg = createCall?.[0] as
       | { data: Array<{ imageIndex: number; description: string }> }
       | undefined
     expect(createArg?.data).toHaveLength(1)

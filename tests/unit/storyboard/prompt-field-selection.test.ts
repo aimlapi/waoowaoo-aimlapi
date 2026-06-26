@@ -132,4 +132,44 @@ describe('storyboard prompt field selection', () => {
     expect(panel.acting_notes).toBeUndefined()
     expect(context.reference_images).toBeUndefined()
   })
+
+  it('removes selected still-frame graph fields without mutating the source context', () => {
+    const source = {
+      panel: {
+        panel_id: 'panel-1',
+        shot_type: 'medium shot',
+        still_frame: {
+          shot_scale: 'medium shot',
+          static_framing: 'balanced composition',
+          visible_subjects: ['Hero'],
+          action: 'Hero looks tense.',
+          emotion: 'tense',
+        },
+      },
+      context: {
+        reference_images: [{ image_no: '图 1', role: 'character' }],
+        SCENE_GRAPH: { summary: 'street layout' },
+        CHARACTER_GRAPH: { characters: [{ name: 'Hero' }] },
+      },
+    }
+
+    const filtered = applyPanelPromptFieldOmissions(source, [
+      'panel.description',
+      'panel.photography_rules',
+      'context.character_appearances',
+      'context.location_reference.spatial_profile',
+    ])
+
+    const output = asRecord(filtered)
+    const panel = asRecord(output.panel)
+    const stillFrame = asRecord(panel.still_frame)
+    const context = asRecord(output.context)
+    expect(stillFrame.action).toBeUndefined()
+    expect(stillFrame.emotion).toBeUndefined()
+    expect(stillFrame.static_framing).toBeUndefined()
+    expect(stillFrame.shot_scale).toBe('medium shot')
+    expect(context.CHARACTER_GRAPH).toBeUndefined()
+    expect(context.SCENE_GRAPH).toBeUndefined()
+    expect(source.panel.still_frame.action).toBe('Hero looks tense.')
+  })
 })

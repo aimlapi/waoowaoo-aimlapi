@@ -8,6 +8,7 @@ import type {
   StoryboardConsistencySourceVideoBlock,
   StoryboardPanelPromptDraft,
 } from './types'
+import { resolvePanelCharacterRequirementIds } from './panel-character-resolution'
 
 interface StoryboardCharacterRef {
   readonly characterId: string
@@ -241,15 +242,22 @@ function buildPanelDrafts(input: {
   return input.snapshot.shots.map((shot, index) => {
     const block = blockForShot(input.snapshot, shot.shotNumber)
     const generated = generatedByShotNumber.get(shot.shotNumber)
-    const characterRefs = input.snapshot.assets
-      .filter((asset) => asset.kind === 'character' && asset.shotNumbers.includes(shot.shotNumber))
-      .map((asset) => input.characterRefsByRequirementId.get(asset.requirementId))
-      .filter((reference): reference is StoryboardCharacterRef => Boolean(reference))
     const location = locationForShot(input.snapshot, shot.shotNumber)
     const srtStart = cursor
     const srtEnd = cursor + shot.durationSec
     cursor = srtEnd
     if (!generated) throw new Error(`EDIT_SCRIPT_STORYBOARD_FINAL_PROMPT_MISSING:${shot.shotNumber}`)
+    const cinematography = cinematographyForShot(input.snapshot, shot.shotNumber)
+    const characterRequirementIds = resolvePanelCharacterRequirementIds({
+      assets: input.snapshot.assets,
+      shot,
+      block,
+      cinematographyShot: cinematography,
+      generated,
+    })
+    const characterRefs = characterRequirementIds
+      .map((requirementId) => input.characterRefsByRequirementId.get(requirementId))
+      .filter((reference): reference is StoryboardCharacterRef => Boolean(reference))
     const source = {
       sourceType: 'editScriptShot',
       editScriptId: input.snapshot.sourceEditScriptId,
@@ -264,8 +272,8 @@ function buildPanelDrafts(input: {
     return {
       panelIndex: index,
       panelNumber: shot.shotNumber,
-      shotType: cinematographyForShot(input.snapshot, shot.shotNumber).shotScale,
-      cameraMove: cinematographyForShot(input.snapshot, shot.shotNumber).movement,
+      shotType: cinematography.shotScale,
+      cameraMove: cinematography.movement,
       description: shot.visibleAction,
       location: location?.name ?? null,
       characters: characterRefs.length > 0 ? JSON.stringify(characterRefs) : null,

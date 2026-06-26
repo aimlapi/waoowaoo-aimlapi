@@ -149,7 +149,7 @@ export type WorkspaceCanvasNodeAction =
   | { readonly type: 'generate_bgm_score' }
   | { readonly type: 'generate_edit_assets'; readonly editScriptId: string }
   | { readonly type: 'generate_edit_asset'; readonly editScriptId: string; readonly requirementId: string }
-  | { readonly type: 'regenerate_edit_asset_image'; readonly assetId: string; readonly kind: 'character' | 'location' }
+  | { readonly type: 'regenerate_edit_asset_image'; readonly assetId: string; readonly kind: 'character' | 'location' | 'prop' }
   | { readonly type: 'generate_edit_storyboard'; readonly editScriptId: string }
   | { readonly type: 'generate_edit_storyboard_spatial_blocking'; readonly editScriptId: string }
 
@@ -390,7 +390,7 @@ export interface WorkspaceCanvasVideoPlanDetails {
   readonly assetReferences?: readonly {
     readonly id: string
     readonly name: string
-    readonly kind: 'character' | 'location'
+    readonly kind: 'character' | 'location' | 'prop'
     readonly imageUrl?: string | null
     readonly shotNumbers: readonly number[]
   }[]
@@ -400,7 +400,7 @@ export interface WorkspaceCanvasVideoPlanDetails {
 export interface WorkspaceCanvasEditAssetDetails {
   readonly editScriptId: string
   readonly requirementId: string
-  readonly kind: 'character' | 'location'
+  readonly kind: 'character' | 'location' | 'prop'
   readonly description: string
   readonly shotNumbers: readonly number[]
   readonly targetId?: string | null
