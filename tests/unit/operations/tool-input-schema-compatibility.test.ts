@@ -118,9 +118,11 @@ describe('tool input schema compatibility', () => {
     expect(violations).toEqual([])
   })
 
-  it('hides the forbidden prompt field of generate_edit_script from the model but still rejects it at execution', () => {
+  it('removes the old edit-table operation and keeps direct storyboard input prompt-free', () => {
     const registry = createProjectAgentOperationRegistry()
-    const operation = registry.generate_edit_script
+    expect(registry.generate_edit_script).toBeUndefined()
+
+    const operation = registry.generate_edit_script_storyboard
     expect(operation).toBeDefined()
     expect(Object.keys(operation.toolInputSchema.properties)).not.toContain('prompt')
     expect(operation.toolInputSchema.required).not.toContain('prompt')
@@ -128,13 +130,11 @@ describe('tool input schema compatibility', () => {
     const parsed = operation.inputSchema.safeParse({
       confirmed: true,
       prompt: 'should be rejected',
-      screenplayId: 'screenplay-1',
     })
     expect(parsed.success).toBe(false)
 
     const parsedWithoutPrompt = operation.inputSchema.safeParse({
       confirmed: true,
-      screenplayId: 'screenplay-1',
     })
     expect(parsedWithoutPrompt.success).toBe(true)
   })

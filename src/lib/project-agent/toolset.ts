@@ -182,7 +182,7 @@ function isEditFirstChoiceOperationEnabled(params: {
     return params.workflow.stage === 'needs_style_choice'
   }
   if (params.operationId === EDIT_FIRST_CHOICE_TOOL_IDS.asset_review) {
-    return params.workflow.stage === 'assets_ready_for_review'
+    return false
   }
   return false
 }

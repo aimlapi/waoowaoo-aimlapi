@@ -53,7 +53,7 @@ describe('assistant permission mode', () => {
     expect(shouldRequireAssistantToolApproval({
       mode: 'ask',
       operation: makeTestOperation({
-        id: 'generate_edit_script',
+        id: 'generate_edit_script_storyboard',
         intent: 'act',
         effects: EFFECTS_BILLABLE,
         confirmation: { required: true },

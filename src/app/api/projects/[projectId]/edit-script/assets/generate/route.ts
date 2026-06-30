@@ -1,9 +1,13 @@
 import { NextRequest, NextResponse } from 'next/server'
+import { z } from 'zod'
 import { apiHandler, ApiError } from '@/lib/api-errors'
 import { isErrorResponse, requireProjectAuth } from '@/lib/api-auth'
 import { resolveRequiredTaskLocale } from '@/lib/task/resolve-locale'
-import { generateProjectEditScriptAssets } from '@/lib/edit-script/service'
-import { generateEditAssetsRequestSchema } from '@/lib/edit-script/types'
+import { generateScreenplayAssets } from '@/lib/screenplay-storyboard/assets'
+
+const generateScreenplayAssetsRequestSchema = z.object({
+  episodeId: z.string().trim().min(1),
+}).strict()
 
 export const POST = apiHandler(async (
   request: NextRequest,
@@ -14,23 +18,18 @@ export const POST = apiHandler(async (
   if (isErrorResponse(authResult)) return authResult
 
   const body = await request.json().catch(() => ({})) as unknown
-  const parsed = generateEditAssetsRequestSchema.safeParse(body)
+  const parsed = generateScreenplayAssetsRequestSchema.safeParse(body)
   if (!parsed.success) {
     throw new ApiError('INVALID_PARAMS')
   }
 
-  const result = await generateProjectEditScriptAssets({
+  const result = await generateScreenplayAssets({
     request,
     projectId,
     episodeId: parsed.data.episodeId,
     userId: authResult.session.user.id,
     locale: resolveRequiredTaskLocale(request, body),
-    editScriptId: parsed.data.editScriptId,
-    requirementId: parsed.data.requirementId,
   })
 
-  return NextResponse.json({
-    editScript: result.editScript,
-    submittedTasks: result.submittedTasks,
-  })
+  return NextResponse.json(result)
 })

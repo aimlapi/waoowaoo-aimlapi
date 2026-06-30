@@ -3,7 +3,7 @@ import type {
   TaskBatchSubmittedPartData,
   TaskSubmittedPartData,
 } from '@/lib/project-agent/types'
-import { TASK_EVENT_TYPE, TASK_SSE_EVENT_TYPE, TASK_TYPE, type SSEEvent } from '@/lib/task/types'
+import { TASK_EVENT_TYPE, TASK_SSE_EVENT_TYPE, type SSEEvent } from '@/lib/task/types'
 
 type UnknownRecord = Record<string, unknown>
 
@@ -255,13 +255,6 @@ export function createTaskSubmittedDataFromOperationPayload(params: {
   const taskType = readNonEmptyString(result.taskType)
   const targetType = readNonEmptyString(result.targetType)
   const targetId = readNonEmptyString(result.targetId)
-  const inferredEditScriptTarget = params.operationId === 'generate_edit_script' && episodeId
-    ? {
-        taskType: TASK_TYPE.EDIT_SCRIPT_GENERATE,
-        targetType: 'ProjectEpisode',
-        targetId: episodeId,
-      }
-    : null
   return {
     operationId: params.operationId,
     taskId,
@@ -271,9 +264,9 @@ export function createTaskSubmittedDataFromOperationPayload(params: {
     ...(mutationBatchId !== undefined ? { mutationBatchId } : {}),
     projectId,
     episodeId,
-    taskType: taskType ?? inferredEditScriptTarget?.taskType,
-    targetType: targetType ?? inferredEditScriptTarget?.targetType,
-    targetId: targetId ?? inferredEditScriptTarget?.targetId,
+    ...(taskType ? { taskType } : {}),
+    ...(targetType ? { targetType } : {}),
+    ...(targetId ? { targetId } : {}),
   }
 }
 

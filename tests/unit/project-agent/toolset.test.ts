@@ -103,22 +103,22 @@ describe('project agent live toolset registration', () => {
 })
 
 describe('project agent live operation enablement', () => {
-  it('enables only the current stage operations plus the next action', () => {
+  it('enables only the current direct workflow operation plus the next action', () => {
     const toolset = resolveProjectAgentToolset({
       registry: registry(),
       context: { episodeId: 'episode-1' },
     })
-    const current = workflow('ready_to_generate_director_decoupage', ['generate_edit_director_decoupage'])
+    const current = workflow('ready_to_generate_assets', ['generate_edit_script_assets'])
 
     expect(isProjectAgentOperationEnabled({
       toolset,
       workflow: current,
-      operationId: 'generate_edit_director_decoupage',
+      operationId: 'generate_edit_script_assets',
     })).toBe(true)
     expect(isProjectAgentOperationEnabled({
       toolset,
       workflow: current,
-      operationId: 'generate_edit_script',
+      operationId: 'generate_edit_script_storyboard',
     })).toBe(false)
     expect(isProjectAgentOperationEnabled({
       toolset,
@@ -131,27 +131,27 @@ describe('project agent live operation enablement', () => {
     const toolset = resolveProjectAgentToolset({
       registry: registry(),
       context: { episodeId: 'episode-1' },
-      resumeOperationId: 'generate_edit_director_decoupage',
+      resumeOperationId: 'generate_edit_script_assets',
     })
 
-    const beforeDecoupage = workflow('ready_to_generate_director_decoupage', ['generate_edit_director_decoupage'])
+    const beforeAssets = workflow('ready_to_generate_assets', ['generate_edit_script_assets'])
     expect(isProjectAgentOperationEnabled({
       toolset,
-      workflow: beforeDecoupage,
-      operationId: 'generate_edit_script',
+      workflow: beforeAssets,
+      operationId: 'generate_edit_script_storyboard',
     })).toBe(false)
 
-    // The decoupage operation completed inside this run and advanced the stage:
-    // the edit-script tool must light up without re-registering the toolset.
-    const afterDecoupage = workflow('ready_to_generate_edit_script', ['generate_edit_script'])
+    // The asset operation completed inside this run and advanced the stage:
+    // direct storyboard generation must light up without re-registering the toolset.
+    const afterAssets = workflow('ready_to_generate_storyboard', ['generate_edit_script_storyboard'])
     expect(isProjectAgentOperationEnabled({
       toolset,
-      workflow: afterDecoupage,
-      operationId: 'generate_edit_script',
+      workflow: afterAssets,
+      operationId: 'generate_edit_script_storyboard',
     })).toBe(true)
     expect(isProjectAgentOperationEnabled({
       toolset,
-      workflow: afterDecoupage,
+      workflow: afterAssets,
       operationId: 'generate_edit_screenplay',
     })).toBe(false)
   })
@@ -230,26 +230,21 @@ describe('project agent live operation enablement', () => {
     expect(isProjectAgentOperationEnabled({
       toolset,
       workflow: review,
-      operationId: 'generate_edit_director_decoupage',
+      operationId: 'generate_edit_script_storyboard',
     })).toBe(false)
   })
 
-  it('enables asset revision but not missing-asset generation while asset review is waiting on feedback', () => {
+  it('does not enable asset review choice in the direct storyboard workflow', () => {
     const toolset = resolveProjectAgentToolset({
       registry: registry(),
       context: { episodeId: 'episode-1' },
     })
-    const assetReview = workflow('assets_ready_for_review', ['revise_edit_script_assets'])
+    const storyboardReady = workflow('ready_to_generate_storyboard', ['generate_edit_script_storyboard'])
 
     expect(isProjectAgentOperationEnabled({
       toolset,
-      workflow: assetReview,
-      operationId: 'revise_edit_script_assets',
-    })).toBe(true)
-    expect(isProjectAgentOperationEnabled({
-      toolset,
-      workflow: assetReview,
-      operationId: 'generate_edit_script_assets',
+      workflow: storyboardReady,
+      operationId: 'request_edit_asset_review_choice',
     })).toBe(false)
   })
 })

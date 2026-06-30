@@ -37,9 +37,6 @@ export type WorkspaceCanvasNodeAction =
       readonly durationTier: EditFirstDurationTier
       readonly aspectRatio: EditScriptVideoRatio
     }
-  | { readonly type: 'generate_edit_director_decoupage'; readonly screenplayId?: string }
-  | { readonly type: 'generate_edit_script'; readonly screenplayId?: string }
-  | { readonly type: 'generate_edit_cinematography_shot_plan'; readonly editScriptId: string }
   | { readonly type: 'regenerate_storyboard_text'; readonly storyboardId: string }
   | { readonly type: 'update_clip'; readonly clipId: string; readonly data: Record<string, unknown> }
   | { readonly type: 'open_asset_library'; readonly characterId?: string | null }
@@ -150,8 +147,6 @@ export type WorkspaceCanvasNodeAction =
   | { readonly type: 'generate_edit_assets'; readonly editScriptId: string }
   | { readonly type: 'generate_edit_asset'; readonly editScriptId: string; readonly requirementId: string }
   | { readonly type: 'regenerate_edit_asset_image'; readonly assetId: string; readonly kind: 'character' | 'location' | 'prop' }
-  | { readonly type: 'generate_edit_storyboard'; readonly editScriptId: string }
-  | { readonly type: 'generate_edit_storyboard_spatial_blocking'; readonly editScriptId: string }
 
 export type WorkspaceCanvasNodeActionHandler = (
   action: WorkspaceCanvasNodeAction,

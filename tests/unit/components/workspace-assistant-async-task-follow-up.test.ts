@@ -118,14 +118,14 @@ describe('workspace assistant async task follow-up', () => {
     })
   })
 
-  it('creates edit-script task submission data from confirmed operation payload', () => {
+  it('creates direct storyboard task submission data from confirmed operation payload', () => {
     const data = createTaskSubmittedDataFromOperationPayload({
-      operationId: 'generate_edit_script',
+      operationId: 'generate_edit_script_storyboard',
       projectId: 'project-1',
       episodeId: 'episode-1',
       payload: {
         success: true,
-        operationId: 'generate_edit_script',
+        operationId: 'generate_edit_script_storyboard',
         result: {
           success: true,
           async: true,
@@ -134,21 +134,24 @@ describe('workspace assistant async task follow-up', () => {
           runId: null,
           deduped: false,
           episodeId: 'episode-1',
+          taskType: TASK_TYPE.EDIT_SCRIPT_STORYBOARD_CAMERA_PLAN,
+          targetType: 'ProjectEditScreenplay',
+          targetId: 'screenplay-1',
         },
       },
     })
 
     expect(data).toEqual({
-      operationId: 'generate_edit_script',
+      operationId: 'generate_edit_script_storyboard',
       taskId: 'task-1',
       status: 'queued',
       runId: null,
       deduped: false,
       projectId: 'project-1',
       episodeId: 'episode-1',
-      taskType: TASK_TYPE.EDIT_SCRIPT_GENERATE,
-      targetType: 'ProjectEpisode',
-      targetId: 'episode-1',
+      taskType: TASK_TYPE.EDIT_SCRIPT_STORYBOARD_CAMERA_PLAN,
+      targetType: 'ProjectEditScreenplay',
+      targetId: 'screenplay-1',
     })
   })
 

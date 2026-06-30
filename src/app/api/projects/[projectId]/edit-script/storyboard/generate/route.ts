@@ -1,9 +1,13 @@
 import { NextRequest, NextResponse } from 'next/server'
+import { z } from 'zod'
 import { apiHandler, ApiError } from '@/lib/api-errors'
 import { isErrorResponse, requireProjectAuth } from '@/lib/api-auth'
 import { resolveRequiredTaskLocale } from '@/lib/task/resolve-locale'
-import { submitEditScriptStoryboardPanels } from '@/lib/edit-script/storyboard-consistency/service'
-import { generateEditStoryboardRequestSchema } from '@/lib/edit-script/types'
+import { submitScreenplayStoryboardTask } from '@/lib/screenplay-storyboard/service'
+
+const submitScreenplayStoryboardRequestSchema = z.object({
+  episodeId: z.string().trim().min(1),
+}).strict()
 
 export const POST = apiHandler(async (
   request: NextRequest,
@@ -14,15 +18,14 @@ export const POST = apiHandler(async (
   if (isErrorResponse(authResult)) return authResult
 
   const body = await request.json().catch(() => ({})) as unknown
-  const parsed = generateEditStoryboardRequestSchema.safeParse(body)
+  const parsed = submitScreenplayStoryboardRequestSchema.safeParse(body)
   if (!parsed.success) {
     throw new ApiError('INVALID_PARAMS')
   }
 
-  const result = await submitEditScriptStoryboardPanels({
+  const result = await submitScreenplayStoryboardTask({
     projectId,
     episodeId: parsed.data.episodeId,
-    editScriptId: parsed.data.editScriptId,
     userId: authResult.session.user.id,
     locale: resolveRequiredTaskLocale(request, body),
     requestId: request.headers.get('x-request-id'),

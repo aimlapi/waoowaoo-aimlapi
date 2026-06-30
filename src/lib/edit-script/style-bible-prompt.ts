@@ -201,31 +201,14 @@ function renderVisualLines(styleBible: EditScriptStyleBible, locale: Locale, usa
 
 function renderCameraLines(styleBible: EditScriptStyleBible, locale: Locale, usage: StyleBiblePromptUsage): string[] {
   const camera = styleBible.stylePolicy.camera
-  if (locale === 'en') {
-    const base = [
-      `Camera movement: ${camera.movementPrompt}`,
-      `Lens and depth: ${camera.lensAndDepthPrompt}`,
-      usage === 'video' ? `Video rhythm: ${camera.videoRhythmPrompt}` : null,
-    ]
-    return base.filter((line): line is string => typeof line === 'string')
-  }
-  const base = [
-    `运镜：${camera.movementPrompt}`,
-    `镜头与景深：${camera.lensAndDepthPrompt}`,
-  ]
-  if (usage === 'video') base.push(`视频节奏：${camera.videoRhythmPrompt}`)
-  return base
-}
-
-function renderSoundLines(styleBible: EditScriptStyleBible, locale: Locale): string[] {
-  const sound = styleBible.stylePolicy.sound
+  if (usage !== 'storyboardImage') return []
   if (locale === 'en') {
     return [
-      `Sound filter: ${sound.soundFilterPrompt}`,
+      `Lens and depth: ${camera.lensAndDepthPrompt}`,
     ]
   }
   return [
-    `声音滤镜：${sound.soundFilterPrompt}`,
+    `镜头与景深：${camera.lensAndDepthPrompt}`,
   ]
 }
 
@@ -241,12 +224,12 @@ export function renderStyleBiblePromptBlock(input: {
   const usageLine = (() => {
     if (locale === 'en') {
       if (usage === 'assetImage') return 'Usage: asset image generation. Apply these visual rules to the generated asset itself.'
-      if (usage === 'storyboardImage') return 'Usage: storyboard image generation. Apply these visual and camera rules to the whole frame.'
-      return 'Usage: final video generation. Apply these visual, camera, and sound-filter rules to the generated video.'
+      if (usage === 'storyboardImage') return 'Usage: storyboard image generation. Apply these visual rules and lens/depth feel to the whole frame.'
+      return 'Usage: final video generation. Apply these visual rules to the generated video.'
     }
     if (usage === 'assetImage') return '用途：资产图生成。将这些视觉规则应用到资产本身。'
-    if (usage === 'storyboardImage') return '用途：分镜图生成。将这些视觉与镜头规则应用到整张画面。'
-    return '用途：最终视频生成。将这些视觉、镜头与声音滤镜规则应用到生成视频。'
+    if (usage === 'storyboardImage') return '用途：分镜图生成。将这些视觉规则与镜头景深质感应用到整张画面。'
+    return '用途：最终视频生成。将这些视觉规则应用到生成视频。'
   })()
 
   const lines = [
@@ -254,7 +237,6 @@ export function renderStyleBiblePromptBlock(input: {
     usageLine,
     ...renderVisualLines(styleBible, locale, usage),
     ...(usage === 'assetImage' ? [] : renderCameraLines(styleBible, locale, usage)),
-    ...(usage === 'video' ? renderSoundLines(styleBible, locale) : []),
   ]
 
   return joinLines(lines)

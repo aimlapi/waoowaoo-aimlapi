@@ -36,7 +36,7 @@ function workflow(
     active: true,
     stage,
     blocking: {
-      kind: stage === 'needs_style_choice' || stage === 'assets_ready_for_review' ? 'needs_user_choice' : 'needs_confirmation',
+      kind: stage === 'needs_style_choice' ? 'needs_user_choice' : 'needs_confirmation',
       reason: null,
     },
     nextAction,
@@ -58,7 +58,8 @@ describe('edit-first assistant choice cards', () => {
     expect(readEditFirstDurationTier('我选择一分钟')).toBe('medium')
     expect(readEditFirstDurationTier('make it 90 seconds')).toBe('long')
     expect(readEditFirstDurationTier('make it 2 minutes')).toBe('long')
-    expect(readEditFirstDurationTier('make it 180 seconds')).toBeNull()
+    expect(readEditFirstDurationTier('make it 15 minutes')).toBe('fifteen_min')
+    expect(readEditFirstDurationTier('make it 20 minutes')).toBeNull()
     expect(readEditFirstAspectRatio('我选择 16:9')).toBe('16:9')
   })
 
@@ -94,7 +95,7 @@ describe('edit-first assistant choice cards', () => {
         projectId: 'project-1',
       },
     })
-    expect(card.groups[0]?.options.map((option) => option.value)).toEqual(['short', 'medium', 'long'])
+    expect(card.groups[0]?.options.map((option) => option.value)).toEqual(['short', 'medium', 'long', 'fifteen_min'])
     expect(card.groups[1]?.options.map((option) => option.value)).toEqual(['9:16', '16:9', '21:9'])
     expect(prismaState.screenplayFindFirst).not.toHaveBeenCalled()
   })
@@ -274,13 +275,13 @@ describe('edit-first assistant choice cards', () => {
     })).rejects.toThrow('EDIT_FIRST_STYLE_PREVIEW_NOT_READY:stage=style_preview_generating')
   })
 
-  it('builds an asset review card with revision notes after required assets are ready', async () => {
+  it('builds an asset review card with revision notes before storyboard panels when explicitly requested', async () => {
     const card = await buildEditFirstAssistantChoiceCard({
       projectId: 'project-1',
       userId: 'user-1',
       episodeId: 'episode-1',
       locale: 'zh',
-      workflow: workflow('assets_ready_for_review'),
+      workflow: workflow('ready_to_generate_storyboard'),
       choiceType: 'asset_review',
       toolCallId: 'tool-call-1',
     })
@@ -303,16 +304,16 @@ describe('edit-first assistant choice cards', () => {
     })
   })
 
-  it('rejects asset review cards outside the asset review stage', async () => {
+  it('rejects asset review cards outside the storyboard-ready stage', async () => {
     await expect(buildEditFirstAssistantChoiceCard({
       projectId: 'project-1',
       userId: 'user-1',
       episodeId: 'episode-1',
       locale: 'zh',
-      workflow: workflow('ready_to_generate_cinematography'),
+      workflow: workflow('ready_to_generate_assets'),
       choiceType: 'asset_review',
       toolCallId: 'tool-call-1',
-    })).rejects.toThrow('EDIT_FIRST_CHOICE_NOT_ALLOWED:choiceType=asset_review:stage=ready_to_generate_cinematography')
+    })).rejects.toThrow('EDIT_FIRST_CHOICE_NOT_ALLOWED:choiceType=asset_review:stage=ready_to_generate_assets')
   })
 
 })

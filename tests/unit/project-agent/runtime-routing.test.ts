@@ -813,7 +813,7 @@ describe('project agent runtime deterministic tool injection', () => {
       },
     })
     expect(choiceResult).not.toBeNull()
-    phaseState.editFirstWorkflow = buildWorkflow('assets_ready_for_review', ['revise_edit_script_assets'])
+    phaseState.editFirstWorkflow = buildWorkflow('ready_to_generate_storyboard', ['revise_edit_script_assets'])
 
     const response = await createProjectAgentChatResponse({
       request: buildRequest(),
@@ -862,15 +862,15 @@ describe('project agent runtime deterministic tool injection', () => {
     expect(streamState.capturedEnabledToolNames).not.toContain('generate_episode_videos')
   })
 
-  it('enables spatial blocking but not storyboard panels immediately after cinematography', async () => {
-    phaseState.editFirstWorkflow = buildWorkflow('ready_to_generate_storyboard_spatial_blocking', [
-      'generate_edit_script_storyboard_spatial_blocking',
+  it('enables direct storyboard panels after assets and spatial facts are ready', async () => {
+    phaseState.editFirstWorkflow = buildWorkflow('ready_to_generate_storyboard', [
+      'generate_edit_script_storyboard',
     ])
 
     await runAssistant({ text: '继续生成下一步' })
 
-    expect(streamState.capturedEnabledToolNames).toContain('generate_edit_script_storyboard_spatial_blocking')
-    expect(streamState.capturedEnabledToolNames).not.toContain('generate_edit_script_storyboard')
+    expect(streamState.capturedEnabledToolNames).toContain('generate_edit_script_storyboard')
+    expect(streamState.capturedEnabledToolNames).not.toContain('generate_edit_script_storyboard_images')
   })
 
   it('enables video generation only after storyboard images are ready', async () => {
@@ -922,16 +922,16 @@ describe('project agent runtime deterministic tool injection', () => {
   })
 
   it('injects the immediate workflow operation on the single assistant path', async () => {
-    phaseState.editFirstWorkflow = buildWorkflow('ready_to_generate_edit_script', ['generate_edit_script'])
+    phaseState.editFirstWorkflow = buildWorkflow('ready_to_generate_storyboard', ['generate_edit_script_storyboard'])
 
     await runAssistant({
       context: { episodeId: 'episode-1' },
-      text: '继续生成剪辑表',
+      text: '继续生成分镜',
     })
 
     expect(streamState.capturedToolNames).toContain('get_project_phase')
     expect(streamState.capturedToolNames).toContain(EDIT_FIRST_CHOICE_TOOL_IDS.style)
-    expect(streamState.capturedToolNames).toContain('generate_edit_script')
+    expect(streamState.capturedToolNames).toContain('generate_edit_script_storyboard')
   })
 
   it('logs and marks the run failed when the UI stream fails before finish', async () => {
@@ -964,17 +964,17 @@ describe('project agent runtime deterministic tool injection', () => {
   })
 
   it('fails loudly when live workflow refresh fails after a tool mutates state', async () => {
-    phaseState.editFirstWorkflow = buildWorkflow('ready_to_generate_director_decoupage', [
-      'generate_edit_director_decoupage',
+    phaseState.editFirstWorkflow = buildWorkflow('ready_to_generate_assets', [
+      'generate_edit_script_assets',
     ])
     streamState.simulateSecondTurnAfterFirstWorkflowTool = true
     workflowRefreshState.resolveEditFirstWorkflowState.mockRejectedValueOnce(new Error('DB_WORKFLOW_REFRESH_FAILED'))
 
-    await expect(runAssistant({ text: '继续生成导演拆镜' })).rejects.toThrow(
+    await expect(runAssistant({ text: '继续生成资产' })).rejects.toThrow(
       /PROJECT_AGENT_RUN_FAILED requestId=req-1: DB_WORKFLOW_REFRESH_FAILED/,
     )
 
-    expect(streamState.executedToolNames).toEqual(['generate_edit_director_decoupage'])
+    expect(streamState.executedToolNames).toEqual(['generate_edit_script_assets'])
     expect(streamState.capturedEnabledToolNamesAfterExecution).toEqual([])
     expect(runState.safelyUpdateProjectAgentRunStatus).toHaveBeenCalledWith(expect.objectContaining({
       runId: 'run-user_turn',

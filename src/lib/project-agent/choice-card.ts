@@ -55,8 +55,8 @@ function buildDurationAndAspectRatioChoiceCard(params: {
     autoSubmitOnReady: true,
     title: isEnglish ? 'Choose Duration and Aspect Ratio' : '选择短片时长和画面比例',
     description: isEnglish
-      ? 'Choose both before screenplay generation. The current test launch supports edit-first videos up to 120 seconds.'
-      : '生成剧本前先同时确认这两项。当前测试上线支持生成两分钟以内的剪辑先行短片。',
+      ? 'Choose both before screenplay generation. The current test launch supports edit-first screenplays from short clips to 15-minute drafts.'
+      : '生成剧本前先同时确认这两项。当前测试上线支持从短片到 15 分钟草稿的剪辑先行剧本。',
     groups: [
       {
         key: 'durationTier',
@@ -181,8 +181,8 @@ async function buildStyleAndRatioChoiceCard(params: {
     choiceType: 'style',
     title: isEnglish ? 'Choose Visual Style' : '选择视觉风格',
     description: isEnglish
-      ? `Choose one style candidate before generating the director decoupage. The selected aspect ratio is ${selectedAspectRatio}.`
-      : `请先选择一个风格候选，再继续生成导演拆镜。已选画面比例为 ${selectedAspectRatio}。`,
+      ? `Choose one style candidate before generating project assets. The selected aspect ratio is ${selectedAspectRatio}.`
+      : `请先选择一个风格候选，再继续生成项目资产。已选画面比例为 ${selectedAspectRatio}。`,
     groups: [
       {
         key: 'stylePreviewId',
@@ -241,7 +241,7 @@ function buildAssetReviewChoiceCard(params: {
   workflow: EditFirstWorkflowState
   toolCallId: string
 }): ProjectAgentChoiceCardPartData {
-  if (params.workflow.stage !== 'assets_ready_for_review') {
+  if (params.workflow.stage !== 'ready_to_generate_storyboard') {
     throw new Error(`EDIT_FIRST_CHOICE_NOT_ALLOWED:choiceType=asset_review:stage=${params.workflow.stage}`)
   }
   const isEnglish = params.locale === 'en'
@@ -252,8 +252,8 @@ function buildAssetReviewChoiceCard(params: {
     variant: 'confirm_or_reply',
     title: isEnglish ? 'Review Required Assets' : '审核分镜资产',
     description: isEnglish
-      ? 'Check the generated characters, locations, and spatial profiles. Continue only when the required assets look ready for shot planning.'
-      : '请检查已生成的人物、场景和空间档案。确认满意后将继续生成摄影 shot plan。',
+      ? 'Check the generated characters, locations, and spatial profiles. Continue only when the required assets look ready for storyboard panels.'
+      : '请检查已生成的人物、场景和空间档案。确认满意后将继续生成分镜面板。',
     groups: [],
     submitLabel: isEnglish ? 'Assets Look Good' : '资产满意，继续',
     submit: {

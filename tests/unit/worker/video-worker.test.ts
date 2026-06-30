@@ -424,7 +424,7 @@ describe('worker video processor behavior', () => {
     }))
     expect(utilsMock.resolveVideoSourceFromGeneration).toHaveBeenCalledWith(expect.anything(), expect.objectContaining({
       options: expect.objectContaining({
-        prompt: expect.stringContaining('声音滤镜：低噪、近自然声场、不过度压缩。'),
+        prompt: expect.not.stringContaining('声音滤镜：'),
       }),
     }))
   })
@@ -912,7 +912,7 @@ describe('worker video processor behavior', () => {
       expect.anything(),
       expect.objectContaining({
         options: expect.objectContaining({
-          prompt: expect.stringContaining('声音滤镜：低噪、近自然声场、不过度压缩。'),
+          prompt: expect.not.stringContaining('声音滤镜：'),
         }),
       }),
     )

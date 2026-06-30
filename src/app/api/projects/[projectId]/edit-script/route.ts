@@ -2,8 +2,6 @@ import { NextRequest, NextResponse } from 'next/server'
 import { apiHandler, ApiError } from '@/lib/api-errors'
 import { isErrorResponse, requireProjectAuth, requireProjectAuthLight } from '@/lib/api-auth'
 import { resolveRequiredTaskLocale } from '@/lib/task/resolve-locale'
-import { submitOperationTask } from '@/lib/operations/submit-operation-task'
-import { TASK_TYPE } from '@/lib/task/types'
 import {
   readProjectEditScript,
   updateProjectEditScriptAssetRequirementDescription,
@@ -13,7 +11,6 @@ import { arrangeProjectEditScriptVideoBlocks } from '@/lib/edit-script/video-blo
 import { mergeProjectEditScriptVideoBlocks } from '@/lib/edit-script/video-block-merge'
 import {
   arrangeEditScriptVideoBlocksRequestSchema,
-  createEditScriptRequestSchema,
   getEditScriptRequestSchema,
   mergeEditScriptVideoBlocksRequestSchema,
   updateEditScriptAssetRequirementDescriptionRequestSchema,
@@ -41,52 +38,6 @@ export const GET = apiHandler(async (
     episodeId: parsed.data.episodeId,
   })
   return NextResponse.json({ editScript })
-})
-
-export const POST = apiHandler(async (
-  request: NextRequest,
-  context: { params: Promise<{ projectId: string }> },
-) => {
-  const { projectId } = await context.params
-  const authResult = await requireProjectAuth(projectId)
-  if (isErrorResponse(authResult)) return authResult
-
-  const body = await request.json().catch(() => ({})) as unknown
-  const parsed = createEditScriptRequestSchema.safeParse(body)
-  if (!parsed.success) {
-    throw new ApiError('INVALID_PARAMS')
-  }
-  if (body && typeof body === 'object' && !Array.isArray(body) && Object.prototype.hasOwnProperty.call(body, 'artStyle')) {
-    throw new ApiError('INVALID_PARAMS', {
-      code: 'LEGACY_ART_STYLE_REMOVED',
-      field: 'artStyle',
-      message: 'artStyle is no longer supported; use the AI-generated Style Bible workflow.',
-    })
-  }
-
-  const result = await submitOperationTask({
-    request,
-    projectId,
-    userId: authResult.session.user.id,
-    episodeId: parsed.data.episodeId,
-    type: TASK_TYPE.EDIT_SCRIPT_GENERATE,
-    targetType: 'ProjectEpisode',
-    targetId: parsed.data.episodeId,
-    operationId: 'generate_edit_script',
-    source: 'project-ui',
-    confirmed: true,
-    payload: {
-      episodeId: parsed.data.episodeId,
-      ...(parsed.data.screenplayId ? { screenplayId: parsed.data.screenplayId } : {}),
-      ...(parsed.data.videoRatio ? { videoRatio: parsed.data.videoRatio } : {}),
-      displayMode: 'detail',
-    },
-    dedupeKey: `edit_script_generate:${projectId}:${parsed.data.episodeId}`,
-    billingInfo: null,
-    locale: resolveRequiredTaskLocale(request, body),
-  })
-
-  return NextResponse.json(result)
 })
 
 export const PATCH = apiHandler(async (

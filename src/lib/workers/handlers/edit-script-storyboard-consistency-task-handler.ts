@@ -16,6 +16,7 @@ import {
   upsertEditScriptStoryboardShell,
   upsertStoryboardPanelsFromPrompts,
 } from '@/lib/edit-script/storyboard-consistency/persistence'
+import { generateScreenplayStoryboardPanels } from '@/lib/screenplay-storyboard/service'
 
 interface ParsedPayload {
   readonly editScriptId: string
@@ -42,6 +43,13 @@ function readString(value: unknown): string | null {
   if (typeof value !== 'string') return null
   const trimmed = value.trim()
   return trimmed || null
+}
+
+function isDirectScreenplayStoryboardPayload(value: unknown): boolean {
+  return !!value
+    && typeof value === 'object'
+    && !Array.isArray(value)
+    && (value as Record<string, unknown>).mode === 'direct_screenplay_storyboard'
 }
 
 function parsePayload(job: Job<TaskJobData>): ParsedPayload {
@@ -270,6 +278,24 @@ export async function handleEditScriptStoryboardPrepareTask(job: Job<TaskJobData
 }
 
 export async function handleEditScriptStoryboardCameraPlanTask(job: Job<TaskJobData>) {
+  if (isDirectScreenplayStoryboardPayload(job.data.payload)) {
+    await reportTaskProgress(job, 20, { stage: 'screenplay_storyboard_panels' })
+    if (!job.data.episodeId) throw new Error('SCREENPLAY_STORYBOARD_EPISODE_REQUIRED')
+    const result = await generateScreenplayStoryboardPanels({
+      projectId: job.data.projectId,
+      userId: job.data.userId,
+      episodeId: job.data.episodeId,
+      locale: job.data.locale,
+      requestId: job.data.trace?.requestId || null,
+    })
+    return {
+      storyboardId: result.storyboardId,
+      panelCount: result.panelCount,
+      panelIds: result.panelIds,
+      imageTaskIds: result.imageTaskIds,
+    }
+  }
+
   const payload = readRecord(job.data.payload)
   const storyboardId = readString(payload.storyboardId) || job.data.targetId
   if (!storyboardId) throw new Error('EDIT_SCRIPT_STORYBOARD_ID_REQUIRED')

@@ -154,6 +154,44 @@ const assetRevisionMock = vi.hoisted(() => ({
   })),
 }))
 
+const screenplayAssetsMock = vi.hoisted(() => ({
+  generateScreenplayAssets: vi.fn(async () => ({
+    success: true,
+    async: true,
+    total: 1,
+    taskIds: ['task-asset-1'],
+    submittedTasks: [{
+      kind: 'character',
+      name: 'Pilot',
+      taskId: 'task-asset-1',
+      status: 'queued',
+      runId: null,
+      deduped: false,
+      taskType: 'image_character',
+      targetType: 'CharacterAppearance',
+      targetId: 'appearance-1',
+    }],
+    assets: [{
+      kind: 'character',
+      name: 'Pilot',
+      targetId: 'character-1',
+      status: 'generating',
+    }],
+  })),
+}))
+
+const screenplayStoryboardMock = vi.hoisted(() => ({
+  submitScreenplayStoryboardTask: vi.fn(async () => ({
+    success: true,
+    async: true,
+    taskId: 'task-panels-1',
+    runId: null,
+    status: 'queued',
+    deduped: false,
+    screenplayId: 'screenplay-1',
+  })),
+}))
+
 const taskSubmissionMock = vi.hoisted(() => ({
   submitProjectEditScreenplayGenerationTask: vi.fn(async () => ({
     success: true,
@@ -198,6 +236,8 @@ const taskSubmissionMock = vi.hoisted(() => ({
 
 vi.mock('@/lib/edit-script/service', () => serviceMock)
 vi.mock('@/lib/edit-script/asset-revision', () => assetRevisionMock)
+vi.mock('@/lib/screenplay-storyboard/assets', () => screenplayAssetsMock)
+vi.mock('@/lib/screenplay-storyboard/service', () => screenplayStoryboardMock)
 vi.mock('@/lib/edit-script/task-submission', async () => {
   const actual = await vi.importActual<typeof import('@/lib/edit-script/task-submission')>('@/lib/edit-script/task-submission')
   return {
@@ -341,16 +381,12 @@ describe('edit-script operations', () => {
     vi.clearAllMocks()
   })
 
-  it('exposes edit-first artifacts as independent operations', () => {
+  it('exposes the direct edit-first storyboard chain without legacy planning operations', () => {
     const operations = createEditScriptOperations()
     const expectedOperationIds = [
-      'generate_edit_cinematography_shot_plan',
-      'generate_edit_director_decoupage',
       'generate_edit_screenplay',
-      'generate_edit_script',
       'generate_edit_script_assets',
       'generate_edit_script_storyboard',
-      'generate_edit_script_storyboard_spatial_blocking',
       'generate_edit_style_previews',
       ...EDIT_FIRST_CHOICE_OPERATION_IDS,
       'revise_edit_script_assets',
@@ -358,8 +394,12 @@ describe('edit-script operations', () => {
     ].sort()
 
     expect(Object.keys(operations).sort()).toEqual(expectedOperationIds)
-    expect(operations.generate_edit_script?.summary).toContain('director decoupage')
-    expect(operations.generate_edit_script?.confirmation?.required).toBe(true)
+    expect(operations.generate_edit_director_decoupage).toBeUndefined()
+    expect(operations.generate_edit_script).toBeUndefined()
+    expect(operations.generate_edit_cinematography_shot_plan).toBeUndefined()
+    expect(operations.generate_edit_script_storyboard_spatial_blocking).toBeUndefined()
+    expect(operations.generate_edit_script_storyboard?.summary).toContain('Does not require director decoupage')
+    expect(operations.generate_edit_script_storyboard?.confirmation?.required).toBe(true)
     expect(operations.generate_edit_style_previews?.confirmation?.required).toBe(false)
     for (const operationId of EDIT_FIRST_CHOICE_OPERATION_IDS) {
       expect(operations[operationId]?.intent).toBe('query')
@@ -476,6 +516,12 @@ describe('edit-script operations', () => {
       aspectRatio: '4:3',
       confirmed: true,
     }).success).toBe(false)
+    expect(operations.generate_edit_screenplay.inputSchema.safeParse({
+      prompt: 'make a 15-minute short drama',
+      durationTier: 'fifteen_min',
+      aspectRatio: '16:9',
+      confirmed: true,
+    }).success).toBe(true)
     expect(operations.generate_edit_screenplay.inputSchema.safeParse({
       prompt: 'make a short film',
       durationTier: 'medium',
@@ -659,11 +705,11 @@ describe('edit-script operations', () => {
     const operations = createEditScriptOperations()
     const writerEvents: Record<string, unknown>[] = []
     const result = await operations.generate_edit_script_assets.execute(buildContext(createTestWriter(writerEvents)), {
-      editScriptId: 'edit-1',
       confirmed: true,
     }) as {
-      results: Array<{
-        refId: string
+      submittedTasks: Array<{
+        kind: string
+        name: string
         taskId: string
         taskType: string
         targetType: string
@@ -676,21 +722,21 @@ describe('edit-script operations', () => {
       async: true,
       total: 1,
       taskIds: ['task-asset-1'],
-      editScript: expect.objectContaining({
-        id: 'edit-1',
-        requirements: [expect.objectContaining({
-          id: 'req-1',
-          status: 'generating',
-        })],
-      }),
+      assets: [expect.objectContaining({
+        kind: 'character',
+        name: 'Pilot',
+        targetId: 'character-1',
+        status: 'generating',
+      })],
     }))
-    expect(result.results).toEqual([{
-      refId: 'req-1',
+    expect(result.submittedTasks).toEqual([expect.objectContaining({
+      kind: 'character',
+      name: 'Pilot',
       taskId: 'task-asset-1',
       taskType: TASK_TYPE.IMAGE_CHARACTER,
       targetType: 'CharacterAppearance',
       targetId: 'appearance-1',
-    }])
+    })])
     expect(writerEvents).toEqual([
       expect.objectContaining({
         type: 'data-task-batch-submitted',
@@ -698,7 +744,7 @@ describe('edit-script operations', () => {
           operationId: 'generate_edit_script_assets',
           taskIds: ['task-asset-1'],
           results: [{
-            refId: 'req-1',
+            refId: 'appearance-1',
             taskId: 'task-asset-1',
             taskType: TASK_TYPE.IMAGE_CHARACTER,
             targetType: 'CharacterAppearance',
@@ -707,30 +753,18 @@ describe('edit-script operations', () => {
         }),
       }),
     ])
-    expect(serviceMock.generateProjectEditScriptAssets).toHaveBeenCalledWith(expect.objectContaining({
+    expect(screenplayAssetsMock.generateScreenplayAssets).toHaveBeenCalledWith(expect.objectContaining({
       projectId: 'project-1',
       userId: 'user-1',
       episodeId: 'episode-1',
       locale: 'zh',
-      editScriptId: 'edit-1',
     }))
   })
 
-  it('rejects wildcard edit asset requirement ids so all-assets generation omits the field', () => {
+  it('does not require an edit table id for screenplay asset generation', () => {
     const operations = createEditScriptOperations()
 
     expect(operations.generate_edit_script_assets.inputSchema.safeParse({
-      editScriptId: 'edit-1',
-      requirementId: '*',
-      confirmed: true,
-    }).success).toBe(false)
-    expect(operations.generate_edit_script_assets.inputSchema.safeParse({
-      editScriptId: 'edit-1',
-      confirmed: true,
-    }).success).toBe(true)
-    expect(operations.generate_edit_script_assets.inputSchema.safeParse({
-      editScriptId: 'edit-1',
-      requirementId: 'req-1',
       confirmed: true,
     }).success).toBe(true)
   })
@@ -803,180 +837,10 @@ describe('edit-script operations', () => {
     }).success).toBe(true)
   })
 
-  it('submits director decoupage generation as an async screenplay task', async () => {
+  it('submits direct screenplay storyboard panel generation as an async production task', async () => {
     const operations = createEditScriptOperations()
     const writerEvents: Record<string, unknown>[] = []
-    const result = await operations.generate_edit_director_decoupage.execute(buildContext(createTestWriter(writerEvents)), {
-      screenplayId: 'screenplay-1',
-      confirmed: true,
-    })
-
-    expect(result).toEqual(expect.objectContaining({
-      success: true,
-      async: true,
-      taskId: 'task-edit-script-1',
-      episodeId: 'episode-1',
-      screenplayId: 'screenplay-1',
-      taskType: TASK_TYPE.EDIT_DIRECTOR_DECOUPAGE_GENERATE,
-      targetType: 'ProjectEditScreenplay',
-      targetId: 'screenplay-1',
-    }))
-    expect(serviceMock.generateProjectEditDirectorDecoupage).not.toHaveBeenCalled()
-    expect(serviceMock.resolveEditDirectorDecoupageTaskTarget).toHaveBeenCalledWith({
-      projectId: 'project-1',
-      episodeId: 'episode-1',
-      screenplayId: 'screenplay-1',
-    })
-    expect(submitOperationTaskMock.submitOperationTask).toHaveBeenCalledWith(expect.objectContaining({
-      projectId: 'project-1',
-      userId: 'user-1',
-      episodeId: 'episode-1',
-      type: TASK_TYPE.EDIT_DIRECTOR_DECOUPAGE_GENERATE,
-      targetType: 'ProjectEditScreenplay',
-      targetId: 'screenplay-1',
-      operationId: 'generate_edit_director_decoupage',
-      source: 'assistant-panel',
-      confirmed: true,
-      locale: 'zh',
-      payload: expect.objectContaining({
-        episodeId: 'episode-1',
-        screenplayId: 'screenplay-1',
-        displayMode: 'detail',
-      }),
-      dedupeKey: 'edit_director_decoupage_generate:project-1:screenplay-1',
-    }))
-    expect(writerEvents).toEqual([
-      expect.objectContaining({
-        type: 'data-task-submitted',
-        data: expect.objectContaining({
-          operationId: 'generate_edit_director_decoupage',
-          taskId: 'task-edit-script-1',
-          taskType: TASK_TYPE.EDIT_DIRECTOR_DECOUPAGE_GENERATE,
-          targetType: 'ProjectEditScreenplay',
-          targetId: 'screenplay-1',
-        }),
-      }),
-    ])
-  })
-
-  it('submits edit script generation as an async episode task', async () => {
-    const operations = createEditScriptOperations()
-    const result = await operations.generate_edit_script.execute(buildContext(), {
-      screenplayId: 'screenplay-1',
-      confirmed: true,
-    })
-
-    expect(result).toEqual(expect.objectContaining({
-      success: true,
-      async: true,
-      taskId: 'task-edit-script-1',
-      episodeId: 'episode-1',
-    }))
-    expect(serviceMock.generateProjectEditScript).not.toHaveBeenCalled()
-    expect(submitOperationTaskMock.submitOperationTask).toHaveBeenCalledWith(expect.objectContaining({
-      projectId: 'project-1',
-      userId: 'user-1',
-      episodeId: 'episode-1',
-      type: TASK_TYPE.EDIT_SCRIPT_GENERATE,
-      targetType: 'ProjectEpisode',
-      targetId: 'episode-1',
-      operationId: 'generate_edit_script',
-      confirmed: true,
-      payload: expect.objectContaining({
-        episodeId: 'episode-1',
-        screenplayId: 'screenplay-1',
-        analysisModel: 'openrouter::anthropic/claude-sonnet-4.6',
-        maxInputTokens: 12_000,
-      }),
-    }))
-    expect(submitOperationTaskMock.submitOperationTask).toHaveBeenCalledWith(expect.objectContaining({
-      payload: expect.not.objectContaining({
-        prompt: expect.anything(),
-      }),
-    }))
-  })
-
-  it('does not forward free-form artStyle from agent edit script generation into task payload', async () => {
-    const operations = createEditScriptOperations()
-    await operations.generate_edit_script.execute(buildContext(), {
-      screenplayId: 'screenplay-1',
-      confirmed: true,
-      artStyle: 'cyberpunk',
-    })
-
-    expect(submitOperationTaskMock.submitOperationTask).toHaveBeenCalledWith(expect.objectContaining({
-      payload: expect.objectContaining({
-        episodeId: 'episode-1',
-        screenplayId: 'screenplay-1',
-      }),
-    }))
-    expect(submitOperationTaskMock.submitOperationTask).toHaveBeenCalledWith(expect.objectContaining({
-      payload: expect.not.objectContaining({
-        artStyle: expect.anything(),
-      }),
-    }))
-  })
-
-  it('submits cinematography shot plan generation as an async edit-script task', async () => {
-    const operations = createEditScriptOperations()
-    const writerEvents: Record<string, unknown>[] = []
-    const result = await operations.generate_edit_cinematography_shot_plan.execute(buildContext(createTestWriter(writerEvents)), {
-      editScriptId: 'edit-1',
-      confirmed: true,
-    })
-
-    expect(result).toEqual(expect.objectContaining({
-      success: true,
-      async: true,
-      taskId: 'task-edit-script-1',
-      episodeId: 'episode-1',
-      editScriptId: 'edit-1',
-      taskType: TASK_TYPE.EDIT_CINEMATOGRAPHY_SHOT_PLAN_GENERATE,
-      targetType: 'ProjectEditScript',
-      targetId: 'edit-1',
-    }))
-    expect(serviceMock.generateProjectEditCinematographyShotPlan).not.toHaveBeenCalled()
-    expect(serviceMock.resolveEditCinematographyShotPlanTaskTarget).toHaveBeenCalledWith({
-      projectId: 'project-1',
-      episodeId: 'episode-1',
-      editScriptId: 'edit-1',
-    })
-    expect(submitOperationTaskMock.submitOperationTask).toHaveBeenCalledWith(expect.objectContaining({
-      projectId: 'project-1',
-      userId: 'user-1',
-      episodeId: 'episode-1',
-      type: TASK_TYPE.EDIT_CINEMATOGRAPHY_SHOT_PLAN_GENERATE,
-      targetType: 'ProjectEditScript',
-      targetId: 'edit-1',
-      operationId: 'generate_edit_cinematography_shot_plan',
-      source: 'assistant-panel',
-      confirmed: true,
-      locale: 'zh',
-      payload: expect.objectContaining({
-        episodeId: 'episode-1',
-        editScriptId: 'edit-1',
-        displayMode: 'detail',
-      }),
-      dedupeKey: 'edit_cinematography_shot_plan_generate:project-1:edit-1',
-    }))
-    expect(writerEvents).toEqual([
-      expect.objectContaining({
-        type: 'data-task-submitted',
-        data: expect.objectContaining({
-          operationId: 'generate_edit_cinematography_shot_plan',
-          taskId: 'task-edit-script-1',
-          taskType: TASK_TYPE.EDIT_CINEMATOGRAPHY_SHOT_PLAN_GENERATE,
-          targetType: 'ProjectEditScript',
-          targetId: 'edit-1',
-        }),
-      }),
-    ])
-  })
-
-  it('submits storyboard panel generation as an async production task', async () => {
-    const operations = createEditScriptOperations()
-    const result = await operations.generate_edit_script_storyboard.execute(buildContext(), {
-      editScriptId: 'edit-1',
+    const result = await operations.generate_edit_script_storyboard.execute(buildContext(createTestWriter(writerEvents)), {
       confirmed: true,
     })
 
@@ -986,40 +850,26 @@ describe('edit-script operations', () => {
       taskId: 'task-panels-1',
       episodeId: 'episode-1',
       taskType: TASK_TYPE.EDIT_SCRIPT_STORYBOARD_CAMERA_PLAN,
-      targetType: 'ProjectStoryboard',
-      targetId: 'storyboard-1',
+      targetType: 'ProjectEditScreenplay',
+      targetId: 'screenplay-1',
     }))
-    expect(storyboardConsistencyServiceMock.submitEditScriptStoryboardPanels).toHaveBeenCalledWith(expect.objectContaining({
+    expect(screenplayStoryboardMock.submitScreenplayStoryboardTask).toHaveBeenCalledWith(expect.objectContaining({
       projectId: 'project-1',
       userId: 'user-1',
       episodeId: 'episode-1',
-      editScriptId: 'edit-1',
       locale: 'zh',
     }))
-  })
-
-  it('submits storyboard spatial blocking as the prerequisite async production task', async () => {
-    const operations = createEditScriptOperations()
-    const result = await operations.generate_edit_script_storyboard_spatial_blocking.execute(buildContext(), {
-      editScriptId: 'edit-1',
-      confirmed: true,
-    })
-
-    expect(result).toEqual(expect.objectContaining({
-      success: true,
-      async: true,
-      taskId: 'task-storyboard-1',
-      episodeId: 'episode-1',
-      taskType: TASK_TYPE.EDIT_SCRIPT_STORYBOARD_PREPARE,
-      targetType: 'ProjectEditScript',
-      targetId: 'edit-1',
-    }))
-    expect(storyboardConsistencyServiceMock.submitEditScriptSpatialBlockingStoryboard).toHaveBeenCalledWith(expect.objectContaining({
-      projectId: 'project-1',
-      userId: 'user-1',
-      episodeId: 'episode-1',
-      editScriptId: 'edit-1',
-      locale: 'zh',
-    }))
+    expect(writerEvents).toEqual([
+      expect.objectContaining({
+        type: 'data-task-submitted',
+        data: expect.objectContaining({
+          operationId: 'generate_edit_script_storyboard',
+          taskId: 'task-panels-1',
+          taskType: TASK_TYPE.EDIT_SCRIPT_STORYBOARD_CAMERA_PLAN,
+          targetType: 'ProjectEditScreenplay',
+          targetId: 'screenplay-1',
+        }),
+      }),
+    ])
   })
 })

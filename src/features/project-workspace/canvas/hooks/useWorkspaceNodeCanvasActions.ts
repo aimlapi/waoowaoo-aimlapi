@@ -27,21 +27,6 @@ export function useWorkspaceNodeCanvasActions() {
       return
     }
 
-    if (action.type === 'generate_edit_director_decoupage') {
-      await runtime.onGenerateEditDirectorDecoupage(action.screenplayId)
-      return
-    }
-
-    if (action.type === 'generate_edit_script') {
-      await runtime.onGenerateEditScript(action.screenplayId)
-      return
-    }
-
-    if (action.type === 'generate_edit_cinematography_shot_plan') {
-      await runtime.onGenerateEditCinematographyShotPlan(action.editScriptId)
-      return
-    }
-
     if (action.type === 'regenerate_storyboard_text') {
       await runtime.onRegenerateStoryboardText(action.storyboardId)
       return
@@ -196,13 +181,5 @@ export function useWorkspaceNodeCanvasActions() {
       return
     }
 
-    if (action.type === 'generate_edit_storyboard') {
-      await runtime.onGenerateEditStoryboard(action.editScriptId)
-      return
-    }
-
-    if (action.type === 'generate_edit_storyboard_spatial_blocking') {
-      await runtime.onGenerateEditStoryboardSpatialBlocking(action.editScriptId)
-    }
   }, [runtime])
 }

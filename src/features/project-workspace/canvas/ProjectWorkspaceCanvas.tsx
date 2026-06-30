@@ -274,7 +274,6 @@ function ProjectWorkspaceCanvasContent({
       : editScript
   ), [editScript, editScriptGenerationActive])
   const effectiveEditScriptPending = editScriptPending
-    || activeAssistantOperationId === 'generate_edit_script'
     || (editScriptGenerationActive && !editScript)
   const nodeRunningStatusLabel = useCallback((node: WorkspaceCanvasFlowNode): string => (
     node.data.kind === 'finalTimeline'

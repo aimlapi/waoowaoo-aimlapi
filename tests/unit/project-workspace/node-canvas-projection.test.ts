@@ -388,12 +388,10 @@ describe('workspace node canvas projection', () => {
       'edit-screenplay:screenplay-1',
       'edit-process:episode-1',
       'edit-script:episode-1',
-      'edit-cinematography-shot-plan:edit-script:edit-video',
     ])
     expect(projection.edges.map((edge) => `${edge.source}->${edge.target}`)).toEqual([
       'edit-screenplay:screenplay-1->edit-process:episode-1',
       'edit-process:episode-1->edit-script:episode-1',
-      'edit-script:episode-1->edit-cinematography-shot-plan:edit-script:edit-video',
     ])
 
     const screenplayNode = projection.nodes.find((node) => node.id === 'edit-screenplay:screenplay-1')
@@ -429,7 +427,7 @@ describe('workspace node canvas projection', () => {
     })
   })
 
-  it('adds a stable director decoupage pending node when a ready screenplay has no edit script yet', () => {
+  it('does not offer legacy director decoupage from a ready screenplay', () => {
     const editScreenplay = createEditScreenplay()
     const projection = buildWorkspaceNodeCanvasProjection({
       episodeId: 'episode-1',
@@ -443,23 +441,10 @@ describe('workspace node canvas projection', () => {
     })
 
     const screenplayNode = projection.nodes.find((node) => node.id === 'edit-screenplay:screenplay-1')
-    expect(screenplayNode?.data.actionLabel).toBe('actions.generateEditDirectorDecoupage')
-    expect(screenplayNode?.data.action).toEqual({
-      type: 'generate_edit_director_decoupage',
-      screenplayId: 'screenplay-1',
-    })
+    expect(screenplayNode?.data.actionLabel).toBeUndefined()
+    expect(screenplayNode?.data.action).toBeUndefined()
     const directorNode = projection.nodes.find((node) => node.id === 'edit-director-decoupage:screenplay:screenplay-1')
-    expect(directorNode?.data.targetType).toBe('editScreenplay')
-    expect(directorNode?.data.targetId).toBe('screenplay-1')
-    expect(directorNode?.data.statusLabel).toBe('status.pending')
-    expect(directorNode?.data.action).toEqual({
-      type: 'generate_edit_director_decoupage',
-      screenplayId: 'screenplay-1',
-    })
-    expect(projection.edges).toContainEqual(expect.objectContaining({
-      source: 'edit-screenplay:screenplay-1',
-      target: 'edit-director-decoupage:screenplay:screenplay-1',
-    }))
+    expect(directorNode).toBeUndefined()
   })
 
   it('projects legacy edit screenplay rows without a user prompt', () => {
@@ -570,13 +555,11 @@ describe('workspace node canvas projection', () => {
       'edit-style-bible:screenplay-1',
       'edit-process:episode-1',
       'edit-script:episode-1',
-      'edit-cinematography-shot-plan:edit-script:edit-video',
     ])
     expect(projection.edges.map((edge) => `${edge.source}->${edge.target}`)).toEqual([
       'edit-screenplay:screenplay-1->edit-style-bible:screenplay-1',
       'edit-style-bible:screenplay-1->edit-process:episode-1',
       'edit-process:episode-1->edit-script:episode-1',
-      'edit-script:episode-1->edit-cinematography-shot-plan:edit-script:edit-video',
     ])
 
     const styleNode = projection.nodes.find((node) => node.id === 'edit-style-bible:screenplay-1')
@@ -1643,7 +1626,6 @@ describe('workspace node canvas projection', () => {
       'edit-process:episode-1',
       'edit-script:episode-1',
       'edit-asset-group:edit-1',
-      'edit-cinematography-shot-plan:edit-script:edit-1',
     ])
     const editNode = projection.nodes.find((node) => node.id === 'edit-script:episode-1')
     expect(editNode?.data.kind).toBe('editScript')
@@ -2252,29 +2234,10 @@ describe('workspace node canvas projection', () => {
     })
 
     const editNode = projection.nodes.find((node) => node.id === 'edit-script:episode-1')
-    expect(editNode?.data.action).toEqual({
-      type: 'generate_edit_cinematography_shot_plan',
-      editScriptId: 'edit-ready',
-    })
+    expect(editNode?.data.action).toBeUndefined()
     expect(editNode?.data.actionDisabled).toBe(false)
     const cinematographyNode = projection.nodes.find((node) => node.id === 'edit-cinematography-shot-plan:edit-script:edit-ready')
-    expect(cinematographyNode?.data.kind).toBe('editCinematographyShotPlan')
-    expect(cinematographyNode?.data.layoutNodeType).toBe('editCinematographyShotPlan')
-    expect(cinematographyNode?.data.action).toEqual({
-      type: 'generate_edit_cinematography_shot_plan',
-      editScriptId: 'edit-ready',
-    })
-    expect(cinematographyNode?.data.actionDisabled).toBe(false)
-    expect(projection.edges).toContainEqual(expect.objectContaining({
-      id: 'edge:edit-script-cinematography-shot-plan:edit-ready',
-      source: 'edit-script:episode-1',
-      target: 'edit-cinematography-shot-plan:edit-script:edit-ready',
-    }))
-    expect(projection.edges).toContainEqual(expect.objectContaining({
-      id: 'edge:edit-asset-cinematography-shot-plan:edit-asset-group:edit-ready',
-      source: 'edit-asset-group:edit-ready',
-      target: 'edit-cinematography-shot-plan:edit-script:edit-ready',
-    }))
+    expect(cinematographyNode).toBeUndefined()
     expect(projection.nodes.some((node) => node.id === 'video-plan:edit-ready:1')).toBe(false)
     const consistencyNode = projection.nodes.find((node) => node.id === 'space-consistency:edit-script:edit-ready')
     expect(consistencyNode).toBeUndefined()
@@ -2309,9 +2272,7 @@ describe('workspace node canvas projection', () => {
 
     const cinematographyNode = projection.nodes.find((node) => node.id === 'edit-cinematography-shot-plan:edit-script:edit-cinematography-running')
     const editNode = projection.nodes.find((node) => node.id === 'edit-script:episode-1')
-    expect(cinematographyNode?.data.statusLabel).toBe('status.processing')
-    expect(cinematographyNode?.data.isRunning).toBe(true)
-    expect(cinematographyNode?.data.action).toBeUndefined()
+    expect(cinematographyNode).toBeUndefined()
     expect(editNode?.data.action).toBeUndefined()
   })
 
@@ -2393,9 +2354,7 @@ describe('workspace node canvas projection', () => {
     })
 
     const spaceNode = projection.nodes.find((node) => node.id === 'space-consistency:edit-script:edit-spatial-running')
-    expect(spaceNode?.data.statusLabel).toBe('status.processing')
-    expect(spaceNode?.data.isRunning).toBe(true)
-    expect(spaceNode?.data.action).toBeUndefined()
+    expect(spaceNode).toBeUndefined()
   })
 
   it('uses a storyboard panel generation node instead of marking space consistency running', () => {
@@ -2605,10 +2564,7 @@ describe('workspace node canvas projection', () => {
     const shotNode = projection.nodes.find((node) => node.id === 'shot:panel-spatial-1')
     expect(spaceNode?.data.kind).toBe('spaceConsistency')
     expect(spaceNode?.data.previewImageUrl).toBeNull()
-    expect(spaceNode?.data.action).toEqual({
-      type: 'generate_edit_storyboard_spatial_blocking',
-      editScriptId: 'edit-spatial',
-    })
+    expect(spaceNode?.data.action).toBeUndefined()
     expect(spaceNode && editNode ? spaceNode.position.x : 0).toBeGreaterThan(
       editNode ? editNode.position.x + editNode.data.width : 0,
     )
@@ -2731,19 +2687,13 @@ describe('workspace node canvas projection', () => {
     const spaceNode = projection.nodes.find((node) => node.id === 'space-consistency:storyboard-spatial-ready')
     const panelGenerationNode = projection.nodes.find((node) => node.id === 'storyboard-panel-generation:storyboard-spatial-ready')
     const editScriptNode = projection.nodes.find((node) => node.id === 'edit-script:episode-1')
-    expect(spaceNode?.data.actionLabel).toBe('actions.regenerateSpatialBlocking')
-    expect(spaceNode?.data.action).toEqual({
-      type: 'generate_edit_storyboard_spatial_blocking',
-      editScriptId: 'edit-spatial-ready',
-    })
+    expect(spaceNode?.data.actionLabel).toBeUndefined()
+    expect(spaceNode?.data.action).toBeUndefined()
     expect(spaceNode?.data.secondaryActionLabel).toBeUndefined()
     expect(spaceNode?.data.secondaryAction).toBeUndefined()
     expect(panelGenerationNode?.data.kind).toBe('storyboardPanelGeneration')
-    expect(panelGenerationNode?.data.actionLabel).toBe('actions.generateStoryboard')
-    expect(panelGenerationNode?.data.action).toEqual({
-      type: 'generate_edit_storyboard',
-      editScriptId: 'edit-spatial-ready',
-    })
+    expect(panelGenerationNode?.data.actionLabel).toBeUndefined()
+    expect(panelGenerationNode?.data.action).toBeUndefined()
     expect(editScriptNode?.data.action?.type).not.toBe('generate_edit_storyboard')
     expect(projection.edges).toContainEqual(expect.objectContaining({
       id: 'edge:space-consistency-storyboard-panel-generation:storyboard-spatial-ready',

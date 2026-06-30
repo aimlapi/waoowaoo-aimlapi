@@ -11,18 +11,14 @@ const CHOICE_STAGE_BY_TYPE: Record<EditFirstChoiceType, EditFirstWorkflowStage> 
   duration_and_aspect_ratio: 'ready_to_generate_screenplay',
   screenplay_review: 'screenplay_ready_for_review',
   style: 'needs_style_choice',
-  asset_review: 'assets_ready_for_review',
+  asset_review: 'ready_to_generate_storyboard',
 }
 
 const OPERATION_STAGE_BY_ID: Readonly<Record<string, EditFirstWorkflowStage>> = {
   generate_edit_screenplay: 'ready_to_generate_screenplay',
   revise_edit_screenplay: 'screenplay_ready_for_review',
   generate_edit_style_previews: 'screenplay_ready_for_review',
-  generate_edit_director_decoupage: 'ready_to_generate_director_decoupage',
-  generate_edit_script: 'ready_to_generate_edit_script',
   generate_edit_script_assets: 'ready_to_generate_assets',
-  generate_edit_cinematography_shot_plan: 'ready_to_generate_cinematography',
-  generate_edit_script_storyboard_spatial_blocking: 'ready_to_generate_storyboard_spatial_blocking',
   generate_edit_script_storyboard: 'ready_to_generate_storyboard',
   generate_edit_script_storyboard_images: 'ready_to_generate_storyboard_images',
   generate_episode_videos: 'ready_to_generate_videos',
