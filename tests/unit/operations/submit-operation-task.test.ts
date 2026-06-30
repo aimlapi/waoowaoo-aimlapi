@@ -78,6 +78,7 @@ describe('submitOperationTask', () => {
       dedupeKey: 'music:project-1',
       priority: 7,
       maxAttempts: 4,
+      parentTaskId: null,
       billingInfo,
       operationId: 'generate_project_music',
       operationSource: 'assistant-confirmation',

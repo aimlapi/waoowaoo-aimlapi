@@ -43,6 +43,7 @@ describe('provider scope', () => {
     expect(Object.keys(openRouterAdapter).sort()).toEqual([
       'completeLlm',
       'completeVision',
+      'image',
       'languageModel',
       'providerKey',
       'streamLlm',

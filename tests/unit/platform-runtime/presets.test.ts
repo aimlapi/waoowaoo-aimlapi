@@ -61,7 +61,7 @@ describe('platform runtime presets', () => {
     process.env.PLATFORM_MUSIC_OUTPUT_FORMAT = 'mp3'
 
     expect(getPlatformCapabilityDefaults()).toMatchObject({
-      'fal::gpt-image-2': {
+      'openrouter::openai/gpt-image-2': {
         resolution: '1024x1024',
         quality: 'high',
       },

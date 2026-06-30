@@ -6,8 +6,9 @@ describe('ai prompt cacheable content blocks', () => {
   it('keeps rendered prompt text unchanged while marking large variables as cacheable blocks', () => {
     const variables = {
       user_request: '生成一个科幻短片',
-      duration_guidance: '约 60 秒',
+      duration_seconds: '60',
       aspect_ratio: '16:9',
+      screenplay_blueprint_json: '{"schemaVersion":9}',
     }
     const content = buildAiPromptContent({
       promptId: AI_PROMPT_IDS.EDIT_SCRIPT_SCREENPLAY,
@@ -39,8 +40,9 @@ describe('ai prompt cacheable content blocks', () => {
       locale: 'zh',
       variables: {
         user_request: '短',
-        duration_guidance: '约 60 秒',
+        duration_seconds: '60',
         aspect_ratio: '16:9',
+        screenplay_blueprint_json: '{"schemaVersion":9}',
       },
       cacheVariableKeys: ['user_request'],
       minCacheChars: 10,

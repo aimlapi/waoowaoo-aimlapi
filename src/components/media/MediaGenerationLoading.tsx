@@ -1,5 +1,6 @@
 'use client'
 
+import React from 'react'
 import { useTranslations } from 'next-intl'
 import { BrandLoading } from '@/components/ui/BrandLoading'
 import { AppIcon } from '@/components/ui/icons'
