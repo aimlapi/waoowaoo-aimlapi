@@ -34,6 +34,10 @@ import {
   buildStoryboardGridPrompt,
   buildStoryboardGridPromptFacts,
 } from './panel-grid-prompt-builder'
+import {
+  parseStoryboardSceneReferencePolicy,
+  type StoryboardSceneReferencePolicy,
+} from '@/lib/storyboard/scene-reference-policy'
 
 const GRID_CELL_COUNT = 4
 
@@ -119,11 +123,15 @@ async function collectGridReferenceImages(input: {
   readonly projectData: Awaited<ReturnType<typeof resolveNovelData>>
   readonly panels: readonly GridPanel[]
   readonly job: Job<TaskJobData>
+  readonly sceneReferencePolicy?: StoryboardSceneReferencePolicy | null
 }) {
   const referenceImageItems: ReferenceImageItem[] = []
   const normalizationIssues: OutboundImageNormalizationIssue[] = []
   for (const panel of input.panels) {
-    const collection = await collectPanelReferenceImageItemsWithDiagnostics(input.projectData, panel, { strict: true })
+    const collection = await collectPanelReferenceImageItemsWithDiagnostics(input.projectData, panel, {
+      strict: true,
+      sceneReferencePolicy: input.sceneReferencePolicy,
+    })
     referenceImageItems.push(...collection.items)
   }
   const normalized = await normalizeReferenceImageItemsForGeneration(referenceImageItems, {
@@ -247,7 +255,17 @@ export async function handlePanelGridImageTask(
     orderBy: { panelIndex: 'asc' },
   })
   const panels = assertGridPanels({ panels: rawPanels, grid })
-  const baseReferences = await collectGridReferenceImages({ projectData, panels, job })
+  const storyboard = await prisma.projectStoryboard.findUnique({
+    where: { id: panels[0].storyboardId },
+    select: { photographyPlan: true },
+  })
+  const sceneReferencePolicy = parseStoryboardSceneReferencePolicy(storyboard?.photographyPlan)
+  const baseReferences = await collectGridReferenceImages({
+    projectData,
+    panels,
+    job,
+    sceneReferencePolicy,
+  })
   const previousGridReference = await collectPreviousGridReferenceImage({
     payload,
     job,
@@ -277,6 +295,7 @@ export async function handlePanelGridImageTask(
     referenceImagesMap,
     sourceVideoBlockId: grid.sourceVideoBlockId,
     styleBible: promptFieldOmissions.includes('style_bible') ? null : styleBible,
+    sceneReferencePolicy,
   })
   const selectedPromptContext = applyGridPromptFieldOmissions(
     promptContext,

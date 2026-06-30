@@ -9,6 +9,10 @@ import {
   type NovelProjectData,
   type NumberedReferenceImage,
 } from './image-task-handler-shared'
+import {
+  pickStoryboardPrimarySceneImage,
+  type StoryboardSceneReferencePolicy,
+} from '@/lib/storyboard/scene-reference-policy'
 
 const GRID_TEXT_LIMIT = 420
 const GRID_LONG_TEXT_LIMIT = 760
@@ -344,6 +348,7 @@ function mergeSceneGraphs(graphs: readonly SceneGraph[]): SceneGraph | null {
 function resolveSceneGraph(input: {
   readonly panels: readonly StoryboardGridPromptPanel[]
   readonly projectData: NovelProjectData
+  readonly sceneReferencePolicy?: StoryboardSceneReferencePolicy | null
 }): SceneGraph | null {
   const locations = Array.from(new Set(input.panels.map((panel) => normalizeString(panel.location)).filter(Boolean)))
   const graphs = locations
@@ -351,7 +356,7 @@ function resolveSceneGraph(input: {
       const matchedLocation = (input.projectData.locations || []).find(
         (item) => item.name.toLowerCase() === location.toLowerCase(),
       )
-      const selectedImage = (matchedLocation?.images || []).find((item) => item.isSelected) || matchedLocation?.images?.[0]
+      const selectedImage = pickStoryboardPrimarySceneImage(matchedLocation, input.sceneReferencePolicy)
       return buildSceneGraph(selectedImage && 'spatialProfileJson' in selectedImage ? selectedImage.spatialProfileJson : null)
     })
     .filter((graph): graph is SceneGraph => Boolean(graph))
@@ -605,10 +610,12 @@ export function buildStoryboardGridPromptFacts(input: {
   readonly referenceImagesMap: readonly NumberedReferenceImage[]
   readonly sourceVideoBlockId: string
   readonly styleBible: EditScriptStyleBible | null
+  readonly sceneReferencePolicy?: StoryboardSceneReferencePolicy | null
 }): StoryboardGridPromptFacts {
   const sceneGraph = resolveSceneGraph({
     panels: input.panels,
     projectData: input.projectData,
+    sceneReferencePolicy: input.sceneReferencePolicy,
   })
   const blockingState = buildBlockingState(input.panels, sceneGraph)
   const characterGraph = buildCharacterGraph(input.referenceImagesMap, buildCharacterAppearances({
@@ -670,6 +677,14 @@ function stringifyCharacterGraph(characterGraph: CharacterGraph): string {
   return stringifyList([...referenceLines, ...characterLines])
 }
 
+function stringifyReferenceImages(referenceImages: readonly NumberedReferenceImage[]): string {
+  return stringifyList(referenceImages.map((item) => [
+    `${item.image_no}: ${item.role} ${item.name}`,
+    item.appearance ? `appearance=${item.appearance}` : null,
+    item.slot ? `slot=${item.slot}` : null,
+  ].filter((part): part is string => Boolean(part)).join(', ')))
+}
+
 function stringifyPropGraph(propGraph: PropGraph): string {
   return propGraph.length > 0
     ? propGraph.map((prop) => [
@@ -722,6 +737,9 @@ export function buildStoryboardGridPrompt(input: {
     '',
     'SCENE_GRAPH',
     stringifySceneGraph(facts.context.SCENE_GRAPH),
+    '',
+    'REFERENCE_IMAGES',
+    stringifyReferenceImages(facts.context.reference_images),
     '',
     'BLOCKING_STATE',
     stringifyBlockingState(facts.context.BLOCKING_STATE),

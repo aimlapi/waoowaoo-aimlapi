@@ -23,6 +23,12 @@ import {
   readImageRuntimeGenerationOptions,
   requireImageRuntimeAspectRatio,
 } from '@/lib/image-generation/runtime-options'
+import {
+  findMissingStoryboardSceneReferenceIndexes,
+  pickStoryboardAuxiliarySceneImages,
+  pickStoryboardPrimarySceneImage,
+  type StoryboardSceneReferencePolicy,
+} from '@/lib/storyboard/scene-reference-policy'
 
 export type AnyObj = Record<string, unknown>
 
@@ -649,7 +655,10 @@ export async function normalizeReferenceImageItemsForGeneration(
 export async function collectPanelReferenceImageItemsWithDiagnostics(
   projectData: NovelProjectData,
   panel: PanelLike,
-  options: { strict?: boolean } = {},
+  options: {
+    strict?: boolean
+    sceneReferencePolicy?: StoryboardSceneReferencePolicy | null
+  } = {},
 ): Promise<PanelReferenceImageItemCollection> {
   const collection: PanelReferenceImageItemCollection = {
     items: [],
@@ -764,14 +773,36 @@ export async function collectPanelReferenceImageItemsWithDiagnostics(
   if (panel.location) {
     const location = (projectData.locations || []).find((loc) => loc.name.toLowerCase() === panel.location!.toLowerCase())
     if (location) {
-      const images = location.images || []
-      const selected = images.find((img) => img.isSelected) || images[0]
+      const missingIndexes = findMissingStoryboardSceneReferenceIndexes(location, options.sceneReferencePolicy)
+      if (missingIndexes.length > 0) {
+        throw new Error(`PANEL_LOCATION_REFERENCE_POLICY_IMAGE_MISSING:${location.name}:${missingIndexes.join(',')}`)
+      }
+      const selected = pickStoryboardPrimarySceneImage(location, options.sceneReferencePolicy)
       const signed = toSignedUrlIfCos(selected?.imageUrl, 3600)
       if (signed) {
         pushReferenceImageItem(
           collection,
           { kind: 'location', inputIndex: null, name: location.name, sourceUrl: selected?.imageUrl || null },
-          { url: signed, role: 'location', name: location.name },
+          {
+            url: signed,
+            role: 'location',
+            name: location.name,
+            slot: selected?.imageIndex === undefined || selected.imageIndex === null ? null : `primary_scene_image_index_${selected.imageIndex}`,
+          },
+        )
+      }
+      for (const auxiliary of pickStoryboardAuxiliarySceneImages(location, options.sceneReferencePolicy)) {
+        const auxiliarySigned = toSignedUrlIfCos(auxiliary.imageUrl, 3600)
+        if (!auxiliarySigned) continue
+        pushReferenceImageItem(
+          collection,
+          { kind: 'location', inputIndex: null, name: location.name, sourceUrl: auxiliary.imageUrl || null },
+          {
+            url: auxiliarySigned,
+            role: 'location',
+            name: `${location.name} auxiliary scene reference`,
+            slot: auxiliary.imageIndex === undefined || auxiliary.imageIndex === null ? null : `auxiliary_scene_image_index_${auxiliary.imageIndex}`,
+          },
         )
       }
     }

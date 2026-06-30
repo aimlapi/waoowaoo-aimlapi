@@ -218,4 +218,61 @@ describe('panel-grid-prompt-builder', () => {
       'panel-4',
     ])
   })
+
+  it('uses 720 panorama spatial profile as the only scene graph source when auxiliary scene references exist', () => {
+    const facts = buildStoryboardGridPromptFacts({
+      panels: panels.slice(0, 2),
+      projectData: {
+        ...projectData,
+        locations: [{
+          name: '“心动法则”西餐厅',
+          selectedImageId: 'quad-scene',
+          images: [{
+            id: 'quad-scene',
+            isSelected: true,
+            imageUrl: 'images/quad-scene.png',
+            imageIndex: 0,
+            description: '四宫格空间板槽位：窗在右侧。',
+            spatialProfileJson: { sceneSummary: '四宫格空间板槽位空间，不应进入 SCENE_GRAPH。' },
+          }, {
+            id: 'panorama-scene',
+            isSelected: false,
+            imageUrl: 'images/panorama-scene.png',
+            imageIndex: 1,
+            description: '720度全景主参考',
+            spatialProfileJson: { sceneSummary: '720度全景餐厅空间，是唯一场景空间事实源。' },
+          }, {
+            id: 'single-scene',
+            isSelected: false,
+            imageUrl: 'images/single-scene.png',
+            imageIndex: 2,
+            description: '局部质感辅助参考',
+            spatialProfileJson: { sceneSummary: '单图质感空间，不应进入 SCENE_GRAPH。' },
+          }],
+        }],
+      },
+      referenceImagesMap: [
+        { image_no: '图 1', role: 'location', name: '“心动法则”西餐厅', slot: 'primary_scene_image_index_1' },
+        { image_no: '图 2', role: 'location', name: '“心动法则”西餐厅 auxiliary scene reference', slot: 'auxiliary_scene_image_index_0' },
+        { image_no: '图 3', role: 'location', name: '“心动法则”西餐厅 auxiliary scene reference', slot: 'auxiliary_scene_image_index_2' },
+      ],
+      sourceVideoBlockId: 'edit-script-1:videoBlock:1',
+      styleBible: null,
+      sceneReferencePolicy: {
+        primaryLocationImageIndex: 1,
+        auxiliaryLocationImageIndexes: [0, 2],
+      },
+    })
+    const prompt = buildStoryboardGridPrompt({
+      aspectRatio: '16:9',
+      facts,
+    })
+
+    expect(prompt).toContain('720度全景餐厅空间，是唯一场景空间事实源。')
+    expect(prompt).not.toContain('四宫格空间板槽位空间')
+    expect(prompt).not.toContain('单图质感空间')
+    expect(prompt).toContain('primary_scene_image_index_1')
+    expect(prompt).toContain('auxiliary_scene_image_index_0')
+    expect(prompt).toContain('auxiliary_scene_image_index_2')
+  })
 })
