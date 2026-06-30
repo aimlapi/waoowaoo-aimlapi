@@ -34,7 +34,6 @@ import {
   applyPanelPromptFieldOmissions,
   parseStoryboardPromptFieldOmissions,
 } from '@/lib/storyboard/prompt-field-selection'
-import { parseStoryboardSceneReferencePolicy } from '@/lib/storyboard/scene-reference-policy'
 
 const EMPTY_PANEL_REFERENCE_COLLECTION = {
   items: [],
@@ -62,12 +61,6 @@ export async function handlePanelImageTask(job: Job<TaskJobData>) {
 
   if (!panel) throw new Error('Panel not found')
 
-  const storyboard = await prisma.projectStoryboard.findUnique({
-    where: { id: panel.storyboardId },
-    select: { photographyPlan: true },
-  })
-  const sceneReferencePolicy = parseStoryboardSceneReferencePolicy(storyboard?.photographyPlan)
-
   const projectData = await resolveNovelData(job.data.projectId, job.data.userId)
   const modelConfig = await getProjectModels(job.data.projectId, job.data.userId)
   const modelKey = modelConfig.storyboardModel
@@ -77,10 +70,7 @@ export async function handlePanelImageTask(job: Job<TaskJobData>) {
   const referenceMode = payload.referenceMode === 'storyboard' ? 'storyboard' : 'asset'
   const refCollection = referenceMode === 'storyboard'
     ? EMPTY_PANEL_REFERENCE_COLLECTION
-    : await collectPanelReferenceImageItemsWithDiagnostics(projectData, panel, {
-        strict: true,
-        sceneReferencePolicy,
-      })
+    : await collectPanelReferenceImageItemsWithDiagnostics(projectData, panel, { strict: true })
   const referenceImageItems: ReferenceImageItem[] = [...refCollection.items]
   if (Array.isArray(payload.referencePanelImageUrls)) {
     for (const [index, url] of payload.referencePanelImageUrls.entries()) {
@@ -178,7 +168,6 @@ export async function handlePanelImageTask(job: Job<TaskJobData>) {
     },
     projectData,
     referenceImagesMap,
-    sceneReferencePolicy,
   })
   const selectedPromptContext = applyPanelPromptFieldOmissions(promptContext, promptFieldOmissions) as typeof promptContext
   const contextJson = JSON.stringify(selectedPromptContext, null, 2)

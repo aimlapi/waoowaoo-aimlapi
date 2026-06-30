@@ -23,7 +23,6 @@ import {
   type ReferenceImageItem,
 } from '@/lib/workers/handlers/image-task-handler-shared'
 import { buildStoryboardStillPromptFacts } from '@/lib/workers/handlers/panel-still-prompt-builder'
-import type { StoryboardSceneReferencePolicy } from '@/lib/storyboard/scene-reference-policy'
 
 describe('reference image item normalization', () => {
   beforeEach(() => {
@@ -202,123 +201,6 @@ describe('reference image item normalization', () => {
     expect(result.items).toEqual([
       { url: '/signed/images/prop-reference-crop-prop-cup-test.jpg', role: 'prop', name: '催情药剂高脚杯' },
     ])
-  })
-
-  it('uses panorama scene reference policy to include primary 720 image plus auxiliary scene references', async () => {
-    const policy: StoryboardSceneReferencePolicy = {
-      primaryLocationImageIndex: 1,
-      auxiliaryLocationImageIndexes: [0, 2],
-    }
-    const projectData: NovelProjectData = {
-      locations: [{
-        id: 'location-main',
-        name: '极简会议大厅',
-        selectedImageId: 'location-quad',
-        images: [{
-          id: 'location-quad',
-          imageIndex: 0,
-          imageUrl: 'images/location-quad.png',
-          description: '四宫格辅助预览',
-          isSelected: true,
-        }, {
-          id: 'location-panorama',
-          imageIndex: 1,
-          imageUrl: 'images/location-panorama.png',
-          description: '720度全景主参考',
-          isSelected: false,
-        }, {
-          id: 'location-single',
-          imageIndex: 2,
-          imageUrl: 'images/location-single.png',
-          description: '单图质感辅助参考',
-          isSelected: false,
-        }],
-      }],
-    }
-
-    const result = await collectPanelReferenceImageItemsWithDiagnostics(projectData, {
-      location: '极简会议大厅',
-      panelIndex: 0,
-    }, {
-      strict: true,
-      sceneReferencePolicy: policy,
-    })
-
-    expect(result.items).toEqual([
-      {
-        url: '/signed/images/location-panorama.png',
-        role: 'location',
-        name: '极简会议大厅',
-        slot: 'primary_scene_image_index_1',
-      },
-      {
-        url: '/signed/images/location-quad.png',
-        role: 'location',
-        name: '极简会议大厅 auxiliary scene reference',
-        slot: 'auxiliary_scene_image_index_0',
-      },
-      {
-        url: '/signed/images/location-single.png',
-        role: 'location',
-        name: '极简会议大厅 auxiliary scene reference',
-        slot: 'auxiliary_scene_image_index_2',
-      },
-    ])
-  })
-
-  it('builds still scene graph only from the panorama primary spatial profile under scene reference policy', () => {
-    const policy: StoryboardSceneReferencePolicy = {
-      primaryLocationImageIndex: 1,
-      auxiliaryLocationImageIndexes: [0, 2],
-    }
-    const projectData: NovelProjectData = {
-      locations: [{
-        id: 'location-main',
-        name: '极简会议大厅',
-        selectedImageId: 'location-quad',
-        images: [{
-          id: 'location-quad',
-          imageIndex: 0,
-          imageUrl: 'images/location-quad.png',
-          isSelected: true,
-          spatialProfileJson: { sceneSummary: '四宫格空间板槽位，不应进入主空间图。' },
-        }, {
-          id: 'location-panorama',
-          imageIndex: 1,
-          imageUrl: 'images/location-panorama.png',
-          isSelected: false,
-          spatialProfileJson: { sceneSummary: '720度全景空间主事实源。' },
-        }, {
-          id: 'location-single',
-          imageIndex: 2,
-          imageUrl: 'images/location-single.png',
-          isSelected: false,
-          spatialProfileJson: { sceneSummary: '单图局部质感，不应定义空间。' },
-        }],
-      }],
-    }
-
-    const facts = buildStoryboardStillPromptFacts({
-      panel: {
-        id: 'panel-1',
-        shotType: 'wide shot',
-        cameraMove: null,
-        description: '角色站在大厅内。',
-        imagePrompt: null,
-        videoPrompt: null,
-        location: '极简会议大厅',
-        characters: null,
-        props: null,
-        srtSegment: null,
-        photographyRules: null,
-        actingNotes: null,
-      },
-      projectData,
-      referenceImagesMap: [],
-      sceneReferencePolicy: policy,
-    })
-
-    expect(facts.context.SCENE_GRAPH?.summary).toBe('720度全景空间主事实源。')
   })
 
   it('fails explicitly when a required prop has no selected reference image', async () => {

@@ -5,10 +5,6 @@ import {
   type StoryboardPanelCharacterReference,
 } from '@/lib/storyboard-character-bindings'
 import { parsePanelCharacterReferences } from './image-task-handler-shared'
-import {
-  pickStoryboardPrimarySceneImage,
-  type StoryboardSceneReferencePolicy,
-} from '@/lib/storyboard/scene-reference-policy'
 
 const STILL_TEXT_LIMIT = 420
 
@@ -155,13 +151,12 @@ function readCameraPlan(panel: StoryboardStillPromptPanel): Record<string, unkno
 function readSpatialProfile(input: {
   readonly panel: StoryboardStillPromptPanel
   readonly projectData: NovelProjectData
-  readonly sceneReferencePolicy?: StoryboardSceneReferencePolicy | null
 }): unknown | null {
   if (!input.panel.location) return null
   const matchedLocation = (input.projectData.locations || []).find(
     (item) => item.name.toLowerCase() === input.panel.location!.toLowerCase(),
   )
-  const selectedImage = pickStoryboardPrimarySceneImage(matchedLocation, input.sceneReferencePolicy)
+  const selectedImage = (matchedLocation?.images || []).find((item) => item.isSelected) || matchedLocation?.images?.[0]
   return selectedImage?.spatialProfileJson ?? null
 }
 
@@ -314,7 +309,6 @@ export function buildStoryboardStillPromptFacts(input: {
   readonly panel: StoryboardStillPromptPanel
   readonly projectData: NovelProjectData
   readonly referenceImagesMap: readonly NumberedReferenceImage[]
-  readonly sceneReferencePolicy?: StoryboardSceneReferencePolicy | null
 }): StoryboardStillPromptFacts {
   const sanitized = sanitizePanelForStillImagePrompt(input.panel)
   const propGraph = buildPropGraph(input.panel)
@@ -337,7 +331,6 @@ export function buildStoryboardStillPromptFacts(input: {
       SCENE_GRAPH: buildSceneGraph(readSpatialProfile({
         panel: input.panel,
         projectData: input.projectData,
-        sceneReferencePolicy: input.sceneReferencePolicy,
       })),
       CHARACTER_GRAPH: buildCharacterGraph(input),
       PROP_GRAPH: propGraph,
