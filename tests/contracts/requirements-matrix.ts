@@ -94,7 +94,7 @@ export const REQUIREMENTS_MATRIX: ReadonlyArray<RequirementCoverageEntry> = [
       'tests/integration/api/contract/llm-observe-routes.test.ts',
       'tests/integration/chain/text.chain.test.ts',
       'tests/unit/worker/clips-build.test.ts',
-      'tests/unit/worker/screenplay-convert.test.ts',
+      'tests/unit/worker/edit-screenplay-generate.test.ts',
     ],
   },
   {
