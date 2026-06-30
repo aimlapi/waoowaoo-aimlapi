@@ -39,7 +39,14 @@ const sharedMock = vi.hoisted(() => ({
 }))
 
 const textEngineMock = vi.hoisted(() => ({
-  executeAiTextStep: vi.fn(async (input: { messages?: Array<{ content?: string }> }) => {
+  executeAiTextStep: vi.fn(async (input: { action?: string; messages?: Array<{ content?: string }> }) => {
+    if (input.action === 'global_location_scene_board_layout_plan') {
+      return {
+        text: JSON.stringify({
+          layoutPlan: '全局锁定布局：主入口在 0 度，长桌在中央，玻璃幕墙沿 180 度展开。',
+        }),
+      }
+    }
     const content = input.messages?.[0]?.content || ''
     if (content.includes('"prompts"')) {
       return {
@@ -52,7 +59,7 @@ const textEngineMock = vi.hoisted(() => ({
         }),
       }
     }
-    return { text: JSON.stringify({ prompt: '全局场景空间板 prompt，同一地点独立视角' }) }
+    return { text: JSON.stringify({ prompt: '全局场景720全景 prompt，同一地点连续环视' }) }
   }),
 }))
 
@@ -202,12 +209,25 @@ describe('asset hub character image prompt suffix regression', () => {
       imageCount: 1,
     })
     expect(sharedMock.generateCleanImageToStorage).toHaveBeenCalledTimes(1)
-    expect(textEngineMock.executeAiTextStep).toHaveBeenCalledTimes(1)
+    expect(textEngineMock.executeAiTextStep).toHaveBeenCalledTimes(2)
+    expect(textEngineMock.executeAiTextStep).toHaveBeenCalledWith(expect.objectContaining({
+      action: 'global_location_scene_board_layout_plan',
+      meta: expect.objectContaining({
+        stepId: 'global_location_scene_board_layout_plan',
+      }),
+    }))
     expect(textEngineMock.executeAiTextStep).toHaveBeenCalledWith(expect.objectContaining({
       action: 'global_location_scene_board_prompt',
       meta: expect.objectContaining({
-        stepId: 'global_location_scene_board_prompt:establishing',
+        stepId: 'global_location_scene_board_prompt:panorama-720',
       }),
+    }))
+    expect(sharedMock.generateCleanImageToStorage).toHaveBeenCalledWith(expect.objectContaining({
+      prompt: expect.stringContaining('720 度全景空间图'),
+      options: expect.objectContaining({ aspectRatio: LOCATION_IMAGE_RATIO }),
+    }))
+    expect(sharedMock.generateCleanImageToStorage).toHaveBeenCalledWith(expect.objectContaining({
+      prompt: expect.not.stringContaining('四宫格空间板'),
     }))
     expect(prismaMock.globalLocationImage.update).toHaveBeenCalledTimes(1)
     expect(prismaMock.globalLocationImage.update).toHaveBeenCalledWith({

@@ -17,18 +17,18 @@ function buildLocationImageSlotDescription(input: {
     return [
       input.fallbackDescription,
       '',
-      `Scene-board slot: ${view.enLabel}.`,
+      `Scene panorama slot: ${view.enLabel}.`,
       view.enCoverage,
-      'This slot must be visually distinct from the other spatial-board views while preserving the same physical location identity.',
+      'This slot must preserve the same physical location identity as one reusable panoramic scene reference for later storyboard generation.',
     ].join('\n')
   }
 
   return [
     input.fallbackDescription,
     '',
-    `场景空间板槽位：${view.zhLabel}。`,
+    `场景全景槽位：${view.zhLabel}。`,
     view.zhCoverage,
-    '这个槽位必须与其他空间板视角形成明确视觉差异，同时保持同一个真实地点的身份和空间锚点。',
+    '这个槽位必须保持同一个真实地点的身份和空间锚点，作为后续分镜生成复用的全景场景参考。',
   ].join('\n')
 }
 

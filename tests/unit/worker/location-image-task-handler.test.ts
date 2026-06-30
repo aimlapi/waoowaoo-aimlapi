@@ -67,7 +67,7 @@ const textEngineMock = vi.hoisted(() => ({
       }
     }
     return {
-      text: JSON.stringify({ prompt: '雨夜街道空间板最终 prompt，同一地点独立视角' }),
+      text: JSON.stringify({ prompt: '雨夜街道720度全景最终 prompt，同一地点连续环视' }),
     }
   }),
 }))
@@ -171,19 +171,19 @@ describe('worker location-image-task-handler behavior', () => {
 
     expect(sharedMock.generateCleanImageToStorage).toHaveBeenCalledWith(
       expect.objectContaining({
-        prompt: expect.stringContaining('雨夜街道空间板最终 prompt'),
+        prompt: expect.stringContaining('雨夜街道720度全景最终 prompt'),
         targetId: 'location-image-1',
         options: expect.objectContaining({ aspectRatio: LOCATION_IMAGE_RATIO }),
       }),
     )
     expect(sharedMock.generateCleanImageToStorage).toHaveBeenCalledWith(
       expect.objectContaining({
-        prompt: expect.stringContaining('四宫格空间板'),
+        prompt: expect.stringContaining('720 度全景空间图'),
       }),
     )
     expect(sharedMock.generateCleanImageToStorage).toHaveBeenCalledWith(
       expect.objectContaining({
-        prompt: expect.stringContaining('前方、后方、左侧、右侧'),
+        prompt: expect.stringContaining('两到三条横向全景带'),
       }),
     )
     expect(sharedMock.generateCleanImageToStorage).toHaveBeenCalledWith(
@@ -193,7 +193,7 @@ describe('worker location-image-task-handler behavior', () => {
     )
     expect(sharedMock.generateCleanImageToStorage).toHaveBeenCalledWith(
       expect.objectContaining({
-        prompt: expect.stringContaining('必须以指定的场景空间板机位方向作为构图最高优先级'),
+        prompt: expect.stringContaining('必须以指定的全景场景参考格式作为构图最高优先级'),
       }),
     )
     expect(sharedMock.generateCleanImageToStorage).toHaveBeenCalledWith(
@@ -223,7 +223,7 @@ describe('worker location-image-task-handler behavior', () => {
         model: 'analysis-model-1',
         action: 'location_scene_board_prompt',
         meta: expect.objectContaining({
-          stepId: 'location_scene_board_prompt:quad-grid',
+          stepId: 'location_scene_board_prompt:panorama-720',
         }),
       }),
     )
@@ -240,8 +240,8 @@ describe('worker location-image-task-handler behavior', () => {
         stage: 'persist_location_image_prompt',
         imageId: 'location-image-1',
         imageIndex: 0,
-        view: 'quad-grid',
-        finalPrompt: expect.stringContaining('雨夜街道空间板最终 prompt'),
+        view: 'panorama-720',
+        finalPrompt: expect.stringContaining('雨夜街道720度全景最终 prompt'),
       }),
     }))
     expect(taskPublisherMock.publishTaskEvent).toHaveBeenCalledWith(expect.objectContaining({
@@ -358,7 +358,7 @@ describe('worker location-image-task-handler behavior', () => {
     })
   })
 
-  it('generates one quad-grid spatial-board image for grouped location image slots', async () => {
+  it('generates one panorama spatial reference image for grouped location image slots', async () => {
     prismaMock.locationImage.findUnique.mockResolvedValueOnce(null)
     prismaMock.projectLocation.findUnique.mockResolvedValueOnce({
       id: 'location-1',
@@ -376,7 +376,7 @@ describe('worker location-image-task-handler behavior', () => {
     })
     expect(stepIds).toEqual([
       'location_scene_board_layout_plan',
-      'location_scene_board_prompt:quad-grid',
+      'location_scene_board_prompt:panorama-720',
     ])
     const prompts = sharedMock.generateCleanImageToStorage.mock.calls.map((call) => {
       const input = (call as unknown as [{ prompt?: string }])[0]
@@ -384,8 +384,9 @@ describe('worker location-image-task-handler behavior', () => {
     })
     expect(prompts).toHaveLength(1)
     const prompt = prompts[0]
-    expect(prompt).toContain('四宫格空间板')
-    expect(prompt).toContain('前方、后方、左侧、右侧')
+    expect(prompt).toContain('720 度全景空间图')
+    expect(prompt).toContain('两到三条横向全景带')
+    expect(prompt).not.toContain('四宫格空间板')
   })
 
   it('uses the same aspect ratio as character generation for prop images', async () => {

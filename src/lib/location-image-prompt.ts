@@ -11,8 +11,8 @@ export function buildLocationImagePromptCore(params: {
     : '必须以场景描述为最高优先级，保留核心场景身份、可见物体、材质、时代感和空间关系，不要替换成其他场景类型。'
 
   const spatialConstraints = params.locale === 'en'
-    ? 'Use the requested spatial-board camera direction as the composition authority. Clearly show the main structure, foreground/midground/background, and visible spatial boundaries from that direction. Do not generate a generic partial background, cropped anchor, ambiguous layout, or a different viewpoint than requested.'
-    : '必须以指定的场景空间板机位方向作为构图最高优先级，从该方向清楚展示主要结构、前景/中景/背景和空间边界。禁止生成局部裁切、锚点缺失、空间关系模糊的泛化背景，或生成成其他视角。'
+    ? 'Use the requested panoramic spatial reference format as the composition authority. Clearly show the main structure, foreground/midground/background, visible spatial boundaries, and continuous room circumference. Do not generate a generic partial background, cropped anchor, ambiguous layout, unrelated collage, or a single ordinary shot view.'
+    : '必须以指定的全景场景参考格式作为构图最高优先级，清楚展示主要结构、前景/中景/背景、空间边界和连续环视空间。禁止生成局部裁切、锚点缺失、空间关系模糊的泛化背景、无关拼贴，或普通单镜头视角。'
 
   const noMarkConstraints = params.locale === 'en'
     ? 'Do not add artificial layout aids such as arrows, guide lines, marking lines, outline placeholders, UI markers, map callouts, or blueprint graphics. In-world markings on plausible scene objects such as shop signs, street signs, door numbers, posters, packaging, or screens are allowed when they belong to the described environment.'

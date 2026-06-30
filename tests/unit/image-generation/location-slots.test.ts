@@ -24,7 +24,7 @@ describe('location image slot descriptions', () => {
     vi.clearAllMocks()
   })
 
-  it('writes one quad-grid scene-board description for location generation', async () => {
+  it('writes one panorama scene reference description for location generation', async () => {
     prismaMock.locationImage.findMany.mockResolvedValue([])
 
     await ensureProjectLocationImageSlots({
@@ -43,8 +43,10 @@ describe('location image slot descriptions', () => {
       | undefined
     expect(createArg?.data).toHaveLength(1)
     expect(createArg?.data.map((item) => item.imageIndex)).toEqual([0])
-    expect(createArg?.data[0]?.description).toContain('四宫格空间板')
-    expect(createArg?.data[0]?.description).toContain('前方、后方、左侧、右侧')
+    expect(createArg?.data[0]?.description).toContain('场景全景槽位')
+    expect(createArg?.data[0]?.description).toContain('720度全景空间图')
+    expect(createArg?.data[0]?.description).toContain('连续横向展开')
+    expect(createArg?.data[0]?.description).not.toContain('四宫格空间板')
   })
 
   it('refreshes existing scene-board slot descriptions before regeneration', async () => {
@@ -63,7 +65,7 @@ describe('location image slot descriptions', () => {
 
     expect(prismaMock.locationImage.updateMany).toHaveBeenCalledWith({
       where: { locationId: 'location-1', imageIndex: 0 },
-      data: { description: expect.stringContaining('四宫格空间板') },
+      data: { description: expect.stringContaining('720度全景空间图') },
     })
     expect(prismaMock.locationImage.deleteMany).toHaveBeenCalledWith({
       where: { locationId: 'location-1', imageIndex: { gte: 1 } },

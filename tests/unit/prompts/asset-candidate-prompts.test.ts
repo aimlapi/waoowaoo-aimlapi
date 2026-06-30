@@ -28,7 +28,7 @@ describe('asset candidate prompt builders', () => {
     })).toEqual(['身份轮廓版', '服装材质版', '分镜可用性版'])
   })
 
-  it('builds one 2x2 location scene-board prompt with fixed spatial semantics', () => {
+  it('builds one 720-degree panorama location prompt with fixed spatial semantics', () => {
     const views = Array.from({ length: LOCATION_SCENE_BOARD_VIEW_COUNT }, (_value, imageIndex) => (
       buildLocationSceneBoardView({
         description: '午夜办公室只剩一排工位亮着，角落传来已故同事的键盘声。',
@@ -39,19 +39,22 @@ describe('asset candidate prompt builders', () => {
       })
     ))
 
-    expect(views.map((view) => view.id)).toEqual(['quad-grid'])
-    expect(views.every((view) => view.aspectRatio === '1:1')).toBe(true)
-    expect(views[0]?.draftInstruction).toContain('四宫格空间板')
-    expect(views[0]?.draftInstruction).toContain('前方、后方、左侧、右侧')
+    expect(views.map((view) => view.id)).toEqual(['panorama-720'])
+    expect(views.every((view) => view.aspectRatio === '16:9')).toBe(true)
+    expect(views[0]?.draftInstruction).toContain('720度全景空间图')
+    expect(views[0]?.draftInstruction).toContain('连续 360 度展开环视')
+    expect(views[0]?.draftInstruction).not.toContain('四宫格空间板')
     const finalPrompt = appendLocationSceneBoardViewRule({
       prompt: '旧办公室空场景',
       locale: 'zh',
       imageIndex: 0,
       layoutPlan: '前方是玻璃门，后方是吧台，左侧是卡座，右侧是操作台。',
     })
-    expect(finalPrompt).toContain('四宫格空间板')
-    expect(finalPrompt).toContain('左上=前，右上=后，左下=左，右下=右')
-    expect(finalPrompt).toContain('结果不得是一张全屏单透视室内图')
+    expect(finalPrompt).toContain('720 度全景空间图')
+    expect(finalPrompt).toContain('16:9 横版')
+    expect(finalPrompt).toContain('两到三条横向全景带')
+    expect(finalPrompt).toContain('不得生成 2x2 网格')
+    expect(finalPrompt).not.toContain('左上=前，右上=后，左下=左，右下=右')
     expect(parseLocationSceneBoardPrompt({ prompt: '最终场景 prompt' })).toBe('最终场景 prompt')
   })
 

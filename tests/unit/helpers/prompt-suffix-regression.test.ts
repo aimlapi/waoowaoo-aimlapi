@@ -33,8 +33,8 @@ describe('character prompt suffix regression', () => {
     expect(PROP_IMAGE_RATIO).toBe('3:2')
   })
 
-  it('uses 4:3 for complete reusable location asset images', () => {
-    expect(LOCATION_IMAGE_RATIO).toBe('4:3')
+  it('uses 16:9 for reusable 720-degree panoramic location asset images', () => {
+    expect(LOCATION_IMAGE_RATIO).toBe('16:9')
   })
 
   it('removes suffix text from prompt', () => {

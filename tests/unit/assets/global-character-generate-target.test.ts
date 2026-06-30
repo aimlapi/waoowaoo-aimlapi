@@ -121,7 +121,7 @@ describe('global character generate task target', () => {
     }))
   })
 
-  it('uses one quad-grid spatial-board slot for global location generation', async () => {
+  it('uses one panorama scene-reference slot for global location generation', async () => {
     const { submitAssetGenerateTask } = await import('@/lib/assets/services/asset-actions')
 
     await submitAssetGenerateTask({
@@ -159,7 +159,7 @@ describe('global character generate task target', () => {
     }))
   })
 
-  it('submits one quad-grid task for project location spatial-board generation', async () => {
+  it('submits one panorama task for project location reference generation', async () => {
     const { submitAssetGenerateTask } = await import('@/lib/assets/services/asset-actions')
 
     const result = await submitAssetGenerateTask({

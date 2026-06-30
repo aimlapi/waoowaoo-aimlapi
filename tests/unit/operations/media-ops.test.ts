@@ -107,7 +107,7 @@ describe('media operations', () => {
     }))
   })
 
-  it('regenerate_group -> submits one quad-grid spatial-board task for locations', async () => {
+  it('regenerate_group -> submits one panorama scene-reference task for locations', async () => {
     const ops = createMediaOperations()
     const ctx = buildCtx()
     const result = await ops.regenerate_group.execute(ctx as never, {
