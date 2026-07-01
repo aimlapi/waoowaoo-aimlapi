@@ -264,12 +264,12 @@ describe('reference image item normalization', () => {
         id: 'panel-1',
         shotType: 'close-up',
         cameraMove: 'static',
-        description: '粉红药液高脚杯',
+        description: '桌面上有关键道具。',
         imagePrompt: 'wine glass with pink liquid',
         videoPrompt: null,
         location: null,
         characters: null,
-        props: null,
+        props: JSON.stringify(['催情药剂高脚杯']),
         srtSegment: '高脚杯中盛着耀眼粉红的荧色药液。',
         photographyRules: null,
         actingNotes: null,
@@ -280,11 +280,13 @@ describe('reference image item normalization', () => {
 
     expect(facts.context.PROP_GRAPH).toEqual([
       expect.objectContaining({
-        id: 'pink_wine_glass',
-        visualDescription: expect.stringContaining('neon pink liquid'),
+        id: '催情药剂高脚杯',
+        name: '催情药剂高脚杯',
+        visualDescription: '白底居中的高脚杯道具',
+        referenceImage: '图 1',
       }),
     ])
-    expect(facts.panel.still_frame.visible_props).toEqual(['pink_wine_glass'])
+    expect(facts.panel.still_frame.visible_props).toEqual(['催情药剂高脚杯'])
     expect(facts.context.reference_images).toEqual([
       { image_no: '图 1', role: 'prop', name: '催情药剂高脚杯' },
     ])

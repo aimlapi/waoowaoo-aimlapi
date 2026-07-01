@@ -181,7 +181,10 @@ function renderVisualLines(styleBible: EditScriptStyleBible, locale: Locale, usa
       `Lighting: ${visual.lightingPrompt}`,
       `Color: ${visual.colorPrompt}`,
       usage === 'assetImage' ? `Texture: ${visual.texturePrompt}` : null,
-      usage === 'video' ? null : `Composition: ${visual.compositionPrompt}`,
+      usage === 'assetImage' ? `Composition: ${visual.compositionPrompt}` : null,
+      usage === 'storyboardImage'
+        ? `Optional composition style: ${visual.compositionPrompt}. Use only when it supports SHOT_PRIORITY; never override shot_scale, subject readability, or required visible assets.`
+        : null,
       renderNegativeConstraintsLine(styleBible, locale),
       renderHardBansLine(styleBible, locale),
     ]
@@ -192,7 +195,10 @@ function renderVisualLines(styleBible: EditScriptStyleBible, locale: Locale, usa
     `光线：${visual.lightingPrompt}`,
     `色彩：${visual.colorPrompt}`,
     usage === 'assetImage' ? `质感：${visual.texturePrompt}` : null,
-    usage === 'video' ? null : `构图：${visual.compositionPrompt}`,
+    usage === 'assetImage' ? `构图：${visual.compositionPrompt}` : null,
+    usage === 'storyboardImage'
+      ? `可选构图风格：${visual.compositionPrompt}。仅在支持 SHOT_PRIORITY 时使用，不得覆盖 shot_scale、主体可读性或必须出现的可见资产。`
+      : null,
     renderNegativeConstraintsLine(styleBible, locale),
     renderHardBansLine(styleBible, locale),
   ]
@@ -204,11 +210,11 @@ function renderCameraLines(styleBible: EditScriptStyleBible, locale: Locale, usa
   if (usage !== 'storyboardImage') return []
   if (locale === 'en') {
     return [
-      `Lens and depth: ${camera.lensAndDepthPrompt}`,
+      `Optional lens and depth feel: ${camera.lensAndDepthPrompt}. Use only when it does not conflict with the panel shot scale, required background simplification, or subject readability.`,
     ]
   }
   return [
-    `镜头与景深：${camera.lensAndDepthPrompt}`,
+    `可选镜头与景深质感：${camera.lensAndDepthPrompt}。仅在不冲突当前 panel 景别、背景简化和主体可读性时使用。`,
   ]
 }
 

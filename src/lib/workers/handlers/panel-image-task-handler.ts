@@ -162,6 +162,7 @@ export async function handlePanelImageTask(job: Job<TaskJobData>) {
       videoPrompt: panel.videoPrompt,
       location: panel.location,
       characters: panel.characters,
+      props: panel.props,
       srtSegment: panel.srtSegment,
       photographyRules: panel.photographyRules,
       actingNotes: panel.actingNotes,

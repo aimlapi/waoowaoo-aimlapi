@@ -12,6 +12,7 @@ export const STORYBOARD_PROMPT_FIELD_DEFINITIONS = [
   { id: 'panel.video_prompt', en: 'Video prompt', zh: '视频提示词', scope: 'single' },
   { id: 'panel.location', en: 'Location name', zh: '场景名称', scope: 'both' },
   { id: 'panel.characters', en: 'Panel characters', zh: '出场角色', scope: 'both' },
+  { id: 'panel.props', en: 'Panel props', zh: '出场道具', scope: 'both' },
   { id: 'panel.source_text', en: 'Panel source text', zh: '分镜原文片段', scope: 'both' },
   { id: 'panel.photography_rules', en: 'Photography rules', zh: '摄影规则', scope: 'both' },
   { id: 'panel.photography_rules.shot_blocking', en: 'Shot blocking', zh: '文字 blocking / 站位构图', scope: 'both' },
@@ -145,6 +146,7 @@ function applyPanelFieldOmissions(panel: Record<string, unknown>, omitted: Reado
     ['panel.video_prompt', 'video_prompt'],
     ['panel.location', 'location'],
     ['panel.characters', 'characters'],
+    ['panel.props', 'props'],
     ['panel.source_text', 'source_text'],
     ['panel.acting_notes', 'acting_notes'],
   ]
@@ -157,7 +159,12 @@ function applyPanelFieldOmissions(panel: Record<string, unknown>, omitted: Reado
       delete stillFrame.action
       delete stillFrame.emotion
     }
+    if (omitted.has('panel.image_prompt')) {
+      delete stillFrame.explicit_image_prompt
+      delete stillFrame.shot_priority
+    }
     if (omitted.has('panel.characters')) delete stillFrame.visible_subjects
+    if (omitted.has('panel.props')) delete stillFrame.visible_props
     if (omitted.has('panel.photography_rules')) delete stillFrame.static_framing
     panel.still_frame = stillFrame
   }
@@ -176,10 +183,13 @@ function applyContextFieldOmissions(context: Record<string, unknown>, omitted: R
   }
   if (omitted.has('context.reference_images')) delete context.reference_images
   if (omitted.has('context.additional_reference_images')) delete context.additional_reference_images
+  if (omitted.has('panel.props')) delete context.PROP_GRAPH
   if (omitted.has('context.location_reference')) {
     delete context.location_reference
     delete context.compressedSceneGraph
     delete context.SCENE_GRAPH
+    delete context.LOCATION_ZONE
+    delete context.GLOBAL_SCENE_LOCK
     return
   }
   if (omitted.has('context.location_reference.spatial_profile') && isRecord(context.location_reference)) {
@@ -190,6 +200,8 @@ function applyContextFieldOmissions(context: Record<string, unknown>, omitted: R
   if (omitted.has('context.location_reference.spatial_profile')) {
     delete context.compressedSceneGraph
     delete context.SCENE_GRAPH
+    delete context.LOCATION_ZONE
+    delete context.GLOBAL_SCENE_LOCK
   }
 }
 

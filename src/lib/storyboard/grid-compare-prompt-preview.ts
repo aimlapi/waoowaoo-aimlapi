@@ -122,6 +122,7 @@ async function buildSinglePromptPreview(input: {
       videoPrompt: input.panel.videoPrompt,
       location: input.panel.location,
       characters: input.panel.characters,
+      props: input.panel.props,
       srtSegment: input.panel.srtSegment,
       photographyRules: input.panel.photographyRules,
       actingNotes: input.panel.actingNotes,

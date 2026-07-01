@@ -323,7 +323,13 @@ describe('worker panel-image-task-handler behavior', () => {
     expect(utilsMock.resolveImageSourceFromGeneration).toHaveBeenCalledWith(
       expect.anything(),
       expect.objectContaining({
-        prompt: expect.stringContaining('镜头与景深：35mm镜头，中浅景深，自然透视。'),
+        prompt: expect.stringContaining('可选镜头与景深质感：35mm镜头，中浅景深，自然透视。'),
+      }),
+    )
+    expect(utilsMock.resolveImageSourceFromGeneration).toHaveBeenCalledWith(
+      expect.anything(),
+      expect.objectContaining({
+        prompt: expect.stringContaining('SHOT_PRIORITY'),
       }),
     )
     expect(utilsMock.resolveImageSourceFromGeneration).toHaveBeenCalledWith(
@@ -456,12 +462,13 @@ describe('worker panel-image-task-handler behavior', () => {
     const context = JSON.parse(promptDebug.contextJson) as {
       panel?: { still_frame?: { static_framing?: string } }
       context?: {
-        SCENE_GRAPH?: { anchors?: Array<{ label: string }> }
+        GLOBAL_SCENE_LOCK?: { stable_background?: string[] }
+        LOCATION_ZONE?: { zone_name?: string | null }
         reference_images?: Array<{ image_no: string; role: string; name: string }>
       }
     }
     expect(context.panel?.still_frame?.static_framing || '').not.toContain('从街道中线偏右拍向左侧墙面')
-    expect(context.context?.SCENE_GRAPH?.anchors?.[0]?.label).toBe('左侧墙面')
+    expect(context.context?.GLOBAL_SCENE_LOCK?.stable_background?.[0]).toBe('左侧墙面')
     expect(context.context?.reference_images?.map((item) => item.role)).toEqual(['sketch', 'character', 'location'])
     expect(utilsMock.resolveImageSourceFromGeneration).toHaveBeenCalledWith(
       expect.anything(),

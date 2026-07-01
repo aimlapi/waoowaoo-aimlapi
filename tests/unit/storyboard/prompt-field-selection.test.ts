@@ -141,7 +141,10 @@ describe('storyboard prompt field selection', () => {
         still_frame: {
           shot_scale: 'medium shot',
           static_framing: 'balanced composition',
+          shot_priority: ['Use explicit image prompt.'],
+          explicit_image_prompt: 'Hero portrait.',
           visible_subjects: ['Hero'],
+          visible_props: ['Badge'],
           action: 'Hero looks tense.',
           emotion: 'tense',
         },
@@ -149,12 +152,17 @@ describe('storyboard prompt field selection', () => {
       context: {
         reference_images: [{ image_no: '图 1', role: 'character' }],
         SCENE_GRAPH: { summary: 'street layout' },
+        LOCATION_ZONE: { zone_name: 'street corner' },
+        GLOBAL_SCENE_LOCK: { summary: 'street layout' },
         CHARACTER_GRAPH: { characters: [{ name: 'Hero' }] },
+        PROP_GRAPH: [{ name: 'Badge' }],
       },
     }
 
     const filtered = applyPanelPromptFieldOmissions(source, [
       'panel.description',
+      'panel.image_prompt',
+      'panel.props',
       'panel.photography_rules',
       'context.character_appearances',
       'context.location_reference.spatial_profile',
@@ -167,9 +175,15 @@ describe('storyboard prompt field selection', () => {
     expect(stillFrame.action).toBeUndefined()
     expect(stillFrame.emotion).toBeUndefined()
     expect(stillFrame.static_framing).toBeUndefined()
+    expect(stillFrame.shot_priority).toBeUndefined()
+    expect(stillFrame.explicit_image_prompt).toBeUndefined()
+    expect(stillFrame.visible_props).toBeUndefined()
     expect(stillFrame.shot_scale).toBe('medium shot')
     expect(context.CHARACTER_GRAPH).toBeUndefined()
+    expect(context.PROP_GRAPH).toBeUndefined()
     expect(context.SCENE_GRAPH).toBeUndefined()
+    expect(context.LOCATION_ZONE).toBeUndefined()
+    expect(context.GLOBAL_SCENE_LOCK).toBeUndefined()
     expect(source.panel.still_frame.action).toBe('Hero looks tense.')
   })
 })

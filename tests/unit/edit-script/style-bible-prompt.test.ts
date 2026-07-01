@@ -33,7 +33,10 @@ describe('style-bible-prompt', () => {
     })
 
     expect(block).toContain('用途：分镜图生成')
-    expect(block).toContain('镜头与景深：35mm镜头，中浅景深，自然透视。')
+    expect(block).toContain('可选构图风格：留白克制，人物与空间保持安静距离。')
+    expect(block).toContain('不得覆盖 shot_scale、主体可读性或必须出现的可见资产')
+    expect(block).toContain('可选镜头与景深质感：35mm镜头，中浅景深，自然透视。')
+    expect(block).toContain('不冲突当前 panel 景别')
     expect(block).not.toContain('运镜：')
     expect(block).not.toContain('视频节奏：')
     expect(block).not.toContain('声音正向风格：')
