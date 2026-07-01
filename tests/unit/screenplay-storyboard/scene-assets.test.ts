@@ -70,6 +70,46 @@ describe('screenplay storyboard scene asset validation', () => {
     })).toThrow('SCREENPLAY_STORYBOARD_PANEL_MISSING_REQUIRED_SCENE_CHARACTER:panel_1:林曼')
   })
 
+  it('rejects a non-detail panel that explicitly omits scene assets', () => {
+    expect(() => validateSceneAssetSegments({
+      segments: [segment()],
+      panels: [panel({
+        shotType: '远景',
+        characterNames: [],
+        propNames: [],
+        omittedSceneAssets: [
+          { kind: 'character', name: '强哥', reason: '远景空镜中强哥暂时处于画外' },
+          { kind: 'character', name: '林曼', reason: '远景空镜中林曼暂时处于画外' },
+          { kind: 'prop', name: '手机', reason: '远景空镜中手机暂时处于画外' },
+          { kind: 'prop', name: '铸铁椅', reason: '远景空镜中椅子暂时处于画外' },
+        ],
+      })],
+      characters,
+      props,
+      locations,
+    })).toThrow('SCREENPLAY_STORYBOARD_PANEL_NON_DETAIL_OMITS_SCENE_ASSET:panel_1:强哥')
+  })
+
+  it('rejects a detail panel that contains no visible scene asset', () => {
+    expect(() => validateSceneAssetSegments({
+      segments: [segment()],
+      panels: [panel({
+        shotType: '特写',
+        characterNames: [],
+        propNames: [],
+        omittedSceneAssets: [
+          { kind: 'character', name: '强哥', reason: '手机特写裁掉强哥本人' },
+          { kind: 'character', name: '林曼', reason: '手机特写裁掉林曼本人' },
+          { kind: 'prop', name: '手机', reason: '手机不作为可见资产登记' },
+          { kind: 'prop', name: '铸铁椅', reason: '手机特写裁掉铸铁椅主体' },
+        ],
+      })],
+      characters,
+      props,
+      locations,
+    })).toThrow('SCREENPLAY_STORYBOARD_PANEL_DETAIL_WITHOUT_VISIBLE_SCENE_ASSET:panel_1')
+  })
+
   it('allows a tight detail shot to focus on a subset only when omissions are explicit', () => {
     expect(() => validateSceneAssetSegments({
       segments: [segment()],

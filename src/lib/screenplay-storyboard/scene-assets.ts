@@ -62,6 +62,12 @@ function assertSubset(input: {
   }
 }
 
+const TIGHT_DETAIL_SHOT_PATTERN = /(?:极近景|大特写|特写|细节|插入|close[-\s]?up|extreme\s+close|insert|detail|macro)/iu
+
+function isTightDetailShot(shotType: string): boolean {
+  return TIGHT_DETAIL_SHOT_PATTERN.test(shotType)
+}
+
 export function validateSceneAssetSegments(input: {
   readonly segments: readonly SceneAssetSegment[]
   readonly panels: readonly PanelSceneAssetBinding[]
@@ -158,6 +164,18 @@ export function validateSceneAssetSegments(input: {
     for (const name of omittedProps) {
       if (panel.propNames.includes(name)) {
         throw new Error(`SCREENPLAY_STORYBOARD_PANEL_OMITTED_PROP_STILL_VISIBLE:panel_${panel.panelNumber}:${name}`)
+      }
+    }
+
+    const isTightDetail = isTightDetailShot(panel.shotType)
+    const omittedNames = [...omittedCharacters, ...omittedProps]
+    if (!isTightDetail && omittedNames.length > 0) {
+      throw new Error(`SCREENPLAY_STORYBOARD_PANEL_NON_DETAIL_OMITS_SCENE_ASSET:panel_${panel.panelNumber}:${omittedNames[0]}`)
+    }
+    if (isTightDetail && segment.characterNames.length + segment.propNames.length > 0) {
+      const visibleSceneAssetCount = panel.characterNames.length + panel.propNames.length
+      if (visibleSceneAssetCount === 0) {
+        throw new Error(`SCREENPLAY_STORYBOARD_PANEL_DETAIL_WITHOUT_VISIBLE_SCENE_ASSET:panel_${panel.panelNumber}`)
       }
     }
 
