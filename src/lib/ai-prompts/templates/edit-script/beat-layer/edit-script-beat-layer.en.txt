@@ -25,12 +25,12 @@ Aspect ratio: {{aspect_ratio}}
 
 Core principles:
 - Beat Layer is the fourth layer after Scene Layer.
-- You must inherit Scene Layer sceneLayerPackage, sceneLocationKey, sceneGoal, sceneAntagonist, outcome, turningPoint, and dramaticPhases.
+- You must inherit Scene Layer sceneLayerPackage, sceneGoal, sceneAntagonist, approach, outcome, externalValueTurn, internalValueTurn, turningPoint, informationFunction, crisisSceneDesign, and beatDesignContract.
 - You must inherit 015 Value-Sequence Loop lockedValueSwingSystem and lockedRiskRewardSystem. Each beat's valuePressure must serve the parent scene and parent sequence value/stakes pressure.
 - You must inherit 016 Character Identity & Voice Bible. actor, strategy, intent, and subtextSeed must fit character identity, taste, behavior, mirroring pressure, and voice principles.
-- Do not overturn Screenplay Skeleton Layer story origin, protagonist, dual value oppositions, crisis choice, or ending quadrant.
+- Do not overturn Screenplay Skeleton Layer story origin, protagonist, dual value oppositions, crisis choice, ending quadrant, or total scene count.
 - Do not overturn Sequence Layer sequence order, sequence function, value progression, risk/reward escalation, or crisis sequence design.
-- Do not overturn Scene Layer actual-location boundaries, sceneLocationKey, scene order, scene goals, blocking forces, or dramaticPhases.
+- Do not overturn Scene Layer scene count, scene order, scene goals, blocking forces, value turns, crisis scene, or Beat contracts.
 - Do not rewrite the story. This layer only turns Scene Layer into Beat Layer.
 - Do not write dialogue, camera language, storyboards, or literary screenplay prose; only action.intent and reaction.intent may contain very short visible micro-action phrases.
 - A Beat is not an event slice. It is a strategic tug-of-war between opposing forces.
@@ -44,7 +44,7 @@ Core principles:
 - Information setup must not be background exposition. It must serve strategy change.
 - At the scene climax, setup/payoff, partial_reveal, full_reveal, or misdirect must be punctured and cause a tacticalShift.
 - Every scene must contain at least one explicit tacticalShift.
-- Crisis beats must stay inside the corresponding actual-location scene and dramaticPhase while pressuring both externalChoice and internalChoice.
+- The crisis scene must inherit sceneLayerPackage.crisisSceneDesign and pressure both externalChoice and internalChoice.
 - Beat Layer only provides semantic and strategic basis for Dialogue Layer. Do not write dialogue early.
 
 Machine validation contract (highest priority):

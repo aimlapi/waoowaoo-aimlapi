@@ -14,11 +14,11 @@ Screenplay Blueprint：
 硬性职责边界：
 - 禁止直接根据 Premise 写剧本。
 - 必须按 Screenplay Blueprint 中的层级执行：Screenplay Skeleton Layer -> Value-Sequence Loop -> Character Identity & Voice Bible -> Sequence Layer -> Scene Layer -> Beat Layer -> Dramatic Interaction Layer -> Dialogue Layer -> Screenplay。
-- Screenplay Skeleton Layer 提供 skeletonPremise、centralDramaticQuestion、storyCoreEngine、storyOriginDiagnosis 与 storyStructureBlueprint；它是全片第一结构承诺。
+- Screenplay Skeleton Layer 提供 skeletonPremise、centralDramaticQuestion、storyOriginDiagnosis、storyStructureBlueprint 与 sceneSkeleton；它是全片第一结构承诺。
 - Value-Sequence Loop 提供 lockedValueSwingSystem、lockedRiskRewardSystem 与 lockedSequenceSpine；它是价值系统、赌注系统和段落系统的前置权威来源。
 - Character Identity & Voice Bible 提供角色身份、品味、兴趣爱好、心理防御、行为习惯、mirroringMap 与 unique voice；它是后续场景、Beat 和对白的角色权威来源。
 - Sequence Layer 提供 sequenceStrategy、actSequenceMap、sequences、crisisSequenceDesign 与 sceneLayerContract；它决定三幕骨架如何推进为连续的戏剧序列。
-- Scene Layer 决定真实发生场景的 sceneLocationKey、地点、时间段、sceneGoal、sceneAntagonist、outcome、turningPoint 与 dramaticPhases。
+- Scene Layer 决定每场戏的 sceneGoal、sceneAntagonist、approach、outcome、externalValueTurn、internalValueTurn、turningPoint、crisisSceneDesign 与 beatDesignContract。
 - Beat Layer 决定 action -> reaction -> strategyChange -> informationChange -> newCondition 的策略对撞链条。
 - Dramatic Interaction Layer 决定 spokenSurface、hiddenLayer、subtextPlan、informationControl、dialogueTactics、behavioralExpression、microTurn 与 dialogueConstraint。
 - Dialogue Layer 决定关键 Beat 的 speakerName、characterWant、tactic、subtext、dialogue、voiceExecution、surfaceTopic、realConflict、dramaticPurpose，并负责人物声音、潜台词、地域/方言质感和对白节奏。
@@ -26,12 +26,12 @@ Screenplay Blueprint：
 - 你只能把这些层翻译成标准剧本文本。
 
 执行规则：
-- 剧本必须首先执行 Screenplay Skeleton Layer 的故事出发点诊断、双层价值对立、crisisMoment 和三幕结果；不得按场数配额拆场。
+- 剧本必须首先执行 Screenplay Skeleton Layer 的故事出发点诊断、场数、双层价值对立、crisisMoment 和三幕结果；不得增加、删除或替换骨架场景。
 - 剧本必须执行 Value-Sequence Loop 的 lockedValueSwingSystem、lockedRiskRewardSystem 与 lockedSequenceSpine；每个序列和场景都必须体现价值翻转与风险/回报变化。
 - 剧本必须执行 Character Identity & Voice Bible；角色的品味、兴趣、身份、行为和声音差异必须进入场景细节与对白，不得只在角色表里说明。
 - 剧本必须执行 Sequence Layer 的 sequenceQuestion、turningPoint、riskRewardEscalation 与 crisisSequenceDesign；如果最终故事绕过序列推进而只剩普通社会议题，说明执行失败。
-- 每个真实发生场景必须执行 Scene Layer 的 sceneLocationKey、sceneGoal、sceneAntagonist、outcome、turningPoint 与 dramaticPhases。
-- 同一个 sceneLocationKey 在最终剧本里只能出现一次；dramaticPhases 要写在同一个场景标题下面，不能拆成“续”场。
+- 每场戏必须体现 Scene Layer 的外在价值转向与内在价值转向。
+- 每场戏必须执行 Scene Layer 的 informationFunction、setupPayoffUsage、regionalTextureRequirement 与 beatDesignContract：提出问题、埋下线索、制造误导、揭示部分真相、完整揭示、产生新问题、打破观众预期或迫使角色进入更难选择。
 - 每场戏必须出现价值变化；如果场景没有价值变化，不要把它写进剧本。
 - crisisSceneDesign 对应的危机场景必须在剧本中清楚呈现外在选择、内在选择、不可逆代价和如何推向结尾。
 - 每个 Beat 必须体现 action -> reaction -> strategyChange -> informationChange -> newCondition，不要写连续解释或连续信息输出。
@@ -78,11 +78,9 @@ Screenplay Blueprint：
 
 写作要求：
 - 适合目标时长，不要写成长篇故事。
-- 场景标题只以 Scene Layer 的 sceneLocationKey 为准；剧情阶段只能留在同一发生场景内部。
+- 场景数量以 Scene Layer 为准。
 - 角色数量以 Skeleton、Scene、Beat、Interaction 和 Dialogue Layer 为准，不要引入无关角色。
-- 必须使用统一场景标题格式：“场景 N｜内景/外景. 地点 - 时间”。N 从 1 连续递增，且每个 sceneLocationKey 只能对应一个标题。
-- 禁止使用“（续）”“续”“continued”“same location continued”。
-- 禁止同一地点同一时间段连续出现多个场景标题；如果剧情仍发生在同一地点同一时间段，必须继续写在同一个场景标题下面。
+- 必须使用统一场景标题格式：“场景 N｜内景/外景. 地点 - 时间”。N 从 1 连续递增。
 - 每个新场景必须先写场景标题，再写动作或对白。
 - 动作段落只写可见、可表演、可由后续资产、风格案例和分镜拆解的剧情事实；不要写心理解释、主题总结或导演说明。
 - 对白段落只写角色实际说出口的话；如果需要语气、停顿或表演方式，放在角色名后的圆括号中，例如“凯尔（压低声音）：”。

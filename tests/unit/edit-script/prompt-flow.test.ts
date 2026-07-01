@@ -53,7 +53,7 @@ describe('edit script block-first prompt flow', () => {
         user_request: '生成一条连续短片',
         screenplay_blueprint_json: JSON.stringify({
           schemaVersion: 10,
-          screenplaySkeleton: { storyCoreEngine: {}, storyOriginDiagnosis: {}, storyStructureBlueprint: {} },
+          screenplaySkeleton: { sceneSkeleton: [] },
           valueSequenceLoop: {
             lockedValueSwingSystem: {},
             lockedRiskRewardSystem: {},
@@ -87,7 +87,7 @@ describe('edit script block-first prompt flow', () => {
     expect(screenplayPrompt).toContain('每个 Beat 必须体现 action -> reaction -> strategyChange -> informationChange -> newCondition')
     expect(screenplayPrompt).toContain('对白必须遵循 Dialogue Layer，不要把 subtext 直接说出口')
     expect(screenplayPrompt).toContain('角色名：2-3 个稳定视觉特征 + 关键身份/状态 + 来自 Dialogue Layer 的必要说话气质')
-    expect(screenplayPrompt).toContain('场景标题只以 Scene Layer 的 sceneLocationKey 为准')
+    expect(screenplayPrompt).toContain('场景数量以 Scene Layer 为准')
     expect(screenplayPrompt).toContain('不要出现“镜头”“特写”“推镜”“剪切”“CUT TO”')
     expect(screenplayPrompt).not.toContain('duration_guidance')
     expect(screenplayPrompt).not.toContain('项目风格输入')
@@ -189,7 +189,7 @@ describe('edit script block-first prompt flow', () => {
       locale: 'zh',
       variables: {
         user_request: '生成一条连续短片',
-        screenplay_skeleton_json: JSON.stringify({ screenplaySkeleton: { storyCoreEngine: {}, storyOriginDiagnosis: {}, storyStructureBlueprint: {} } }),
+        screenplay_skeleton_json: JSON.stringify({ screenplaySkeleton: { sceneSkeleton: [] } }),
         value_sequence_loop_json: JSON.stringify({ valueSequenceLoop: { lockedSequenceSpine: [] } }),
         character_identity_voice_bible_json: JSON.stringify({ characterIdentityVoiceBible: { characterProfiles: [] } }),
         sequence_layer_json: JSON.stringify({ sequenceLayer: { sequences: [] } }),
@@ -412,7 +412,7 @@ describe('edit script block-first prompt flow', () => {
       locale: 'en',
       variables: {
         user_request: 'Create a continuous short film',
-        screenplay_skeleton_json: JSON.stringify({ screenplaySkeleton: { storyCoreEngine: {}, storyOriginDiagnosis: {}, storyStructureBlueprint: {} } }),
+        screenplay_skeleton_json: JSON.stringify({ screenplaySkeleton: { sceneSkeleton: [] } }),
         value_sequence_loop_json: JSON.stringify({ valueSequenceLoop: { lockedSequenceSpine: [] } }),
         character_identity_voice_bible_json: JSON.stringify({ characterIdentityVoiceBible: { characterProfiles: [] } }),
         sequence_layer_json: JSON.stringify({ sequenceLayer: { sequences: [] } }),

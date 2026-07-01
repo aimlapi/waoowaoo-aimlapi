@@ -39,11 +39,11 @@ Dialogue Layer boundaries:
 - Do not output Story Development, Narrative Innovation, Expression Layer fields, or any old pipeline fields.
 
 Upstream inheritance rules:
-- Obey Screenplay Skeleton Layer centralDramaticQuestion, storyOriginDiagnosis, dual value oppositions, and regionalAesthetics.
+- Obey Screenplay Skeleton Layer centralDramaticQuestion, storyOriginDiagnosis, dual value oppositions, regionalAesthetics, and sceneSkeleton.
 - Obey 015 Value-Sequence Loop lockedValueSwingSystem, lockedRiskRewardSystem, and lockedSequenceSpine. Dialogue pressure must serve the current sequence/scene value swing and risk/reward.
 - Obey 016 Character Identity & Voice Bible character identity, taste, interests, personality, defense mechanisms, behavior habits, speech traits, and pressure collapse.
 - Obey Sequence Layer sequenceQuestion, turningPoint, riskRewardEscalation, and crisisSequenceDesign.
-- Obey Scene Layer sceneLocationKey, sceneGoal, sceneAntagonist, outcome, turningPoint, and dramaticPhases.
+- Obey Scene Layer sceneGoal, sceneAntagonist, informationFunction, setupPayoffUsage, regionalTextureRequirement, and crisisSceneDesign.
 - Obey Beat Layer action, reaction, actionReactionCouple, strategyChange, informationChange, subtextSeed, valuePressure, and newCondition.
 - Obey Dramatic Interaction Layer spokenSurface, hiddenLayer, subtextPlan, informationControl, dialogueTactics, behavioralExpression, microTurn, and dialogueConstraint.
 - If informationControl.informationChange is none, do not force a reveal. Preserve only strategy pressure, subtext, power movement, and rhythm change.

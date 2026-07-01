@@ -39,11 +39,11 @@ Dialogue Layer 职责边界：
 - 不输出 Story Development、Narrative Innovation、Expression Layer 相关字段或旧流程字段。
 
 上游继承规则：
-- 必须服从 Screenplay Skeleton Layer 的 centralDramaticQuestion、storyOriginDiagnosis、双层价值对立和 regionalAesthetics。
+- 必须服从 Screenplay Skeleton Layer 的 centralDramaticQuestion、storyOriginDiagnosis、双层价值对立、regionalAesthetics 和 sceneSkeleton。
 - 必须服从 015 Value-Sequence Loop 的 lockedValueSwingSystem、lockedRiskRewardSystem 和 lockedSequenceSpine；对白压力必须服务当前 sequence/scene 的 value swing 与 risk/reward。
 - 必须服从 016 Character Identity & Voice Bible 的角色身份、品味、兴趣、性格、防御机制、行为习惯、说话特点和压力下声音变形。
 - 必须服从 Sequence Layer 的 sequenceQuestion、turningPoint、riskRewardEscalation 和 crisisSequenceDesign。
-- 必须服从 Scene Layer 的 sceneLocationKey、sceneGoal、sceneAntagonist、outcome、turningPoint 和 dramaticPhases。
+- 必须服从 Scene Layer 的 sceneGoal、sceneAntagonist、informationFunction、setupPayoffUsage、regionalTextureRequirement 和 crisisSceneDesign。
 - 必须服从 Beat Layer 的 action、reaction、actionReactionCouple、strategyChange、informationChange、subtextSeed、valuePressure 和 newCondition。
 - 必须服从 Dramatic Interaction Layer 的 spokenSurface、hiddenLayer、subtextPlan、informationControl、dialogueTactics、behavioralExpression、microTurn 与 dialogueConstraint。
 - 如果 informationControl.informationChange 是 none，禁止强行制造 reveal；只能维持策略压力、潜台词、权力变化和节奏变化。
