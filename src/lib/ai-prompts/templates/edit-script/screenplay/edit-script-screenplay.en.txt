@@ -14,11 +14,11 @@ Aspect ratio: {{aspect_ratio}}
 Hard boundaries:
 - Do not write the screenplay directly from the premise.
 - Execute the blueprint in this order: Screenplay Skeleton Layer -> Value-Sequence Loop -> Character Identity & Voice Bible -> Sequence Layer -> Scene Layer -> Beat Layer -> Dramatic Interaction Layer -> Dialogue Layer -> Screenplay.
-- Screenplay Skeleton Layer provides skeletonPremise, centralDramaticQuestion, storyOriginDiagnosis, storyStructureBlueprint, and sceneSkeleton. It is the first structural commitment.
+- Screenplay Skeleton Layer provides skeletonPremise, centralDramaticQuestion, storyCoreEngine, storyOriginDiagnosis, and storyStructureBlueprint. It is the first structural commitment.
 - Value-Sequence Loop provides lockedValueSwingSystem, lockedRiskRewardSystem, and lockedSequenceSpine. It is the authority source for value, stakes, and sequence progression.
 - Character Identity & Voice Bible provides identity, taste, interests, psychological defense, behavior, mirroringMap, and unique voice. It is the authority source for character behavior and dialogue.
 - Sequence Layer provides sequenceStrategy, actSequenceMap, sequences, crisisSequenceDesign, and sceneLayerContract. It turns the three-act skeleton into dramatic sequences.
-- Scene Layer defines each scene's sceneGoal, sceneAntagonist, approach, outcome, externalValueTurn, internalValueTurn, turningPoint, crisisSceneDesign, and beatDesignContract.
+- Scene Layer defines actual-location scenes: sceneLocationKey, location, time span, sceneGoal, sceneAntagonist, outcome, turningPoint, and dramaticPhases.
 - Beat Layer defines the action -> reaction -> strategyChange -> informationChange -> newCondition strategy-collision chain.
 - Dramatic Interaction Layer defines spokenSurface, hiddenLayer, subtextPlan, informationControl, dialogueTactics, behavioralExpression, microTurn, and dialogueConstraint.
 - Dialogue Layer defines key beats' speakerName, characterWant, tactic, subtext, dialogue, voiceExecution, surfaceTopic, realConflict, and dramaticPurpose, and it handles character voice, subtext, regional/dialect texture, and dialogue rhythm.
@@ -26,12 +26,12 @@ Hard boundaries:
 - Only translate these layers into standard screenplay text.
 
 Execution rules:
-- First execute Screenplay Skeleton Layer story-origin diagnosis, scene count, dual value oppositions, crisisMoment, and three-act result. Do not add, delete, or replace skeleton scenes.
+- First execute Screenplay Skeleton Layer story-origin diagnosis, dual value oppositions, crisisMoment, and three-act result. Do not split scenes by scene-count quota.
 - Execute Value-Sequence Loop lockedValueSwingSystem, lockedRiskRewardSystem, and lockedSequenceSpine. Every sequence and scene must dramatize value movement and risk/reward movement.
 - Execute Character Identity & Voice Bible. Taste, interests, identity, behavior, and voice differences must enter scene detail and dialogue, not only character descriptions.
 - Execute Sequence Layer sequenceQuestion, turningPoint, riskRewardEscalation, and crisisSequenceDesign. If the final story bypasses sequence progression and becomes a generic social issue, execution has failed.
-- Every scene must express the Scene Layer external and internal value turns.
-- Every scene must execute Scene Layer informationFunction, setupPayoffUsage, regionalTextureRequirement, and beatDesignContract: raising questions, planting clues, misdirecting, revealing partial truth, fully revealing, creating new questions, reversing expectations, or forcing harder choices.
+- Every actual-location scene must execute Scene Layer sceneLocationKey, sceneGoal, sceneAntagonist, outcome, turningPoint, and dramaticPhases.
+- The same sceneLocationKey may appear only once in the final screenplay. dramaticPhases must be written under that one scene heading, not split into continued scenes.
 - Every scene must contain a value change. If a scene has no value change, do not write it.
 - The crisisSceneDesign scene must clearly show the external choice, internal choice, irreversible cost, and how it forces the ending.
 - Every beat must express action -> reaction -> strategyChange -> informationChange -> newCondition. Do not write continuous explanation or continuous information output.
@@ -78,9 +78,11 @@ Off-screen dialogue.
 
 Writing requirements:
 - Fit the target duration. Do not write a feature-length story.
-- Scene count follows Scene Layer.
+- Scene headings follow Scene Layer sceneLocationKey only. Dramatic phases must stay inside the same actual-location scene.
 - Character count follows Skeleton, Scene, Beat, Interaction, and Dialogue Layer. Do not introduce unrelated characters.
-- Use one stable scene heading format: "Scene N | INT/EXT. Location - Time". N starts at 1 and increases continuously.
+- Use one stable scene heading format: "Scene N | INT/EXT. Location - Time". N starts at 1 and increases continuously, and each sceneLocationKey may map to only one heading.
+- Do not use "(continued)", "continued", or "same location continued".
+- Do not output multiple consecutive headings with the same location and time span. If the story still happens in the same location/time, continue under the same heading.
 - Every new scene must start with a scene heading, then action or dialogue.
 - Action paragraphs must contain visible, performable story facts that downstream assets, style references, and storyboards can parse. Avoid psychological explanation, theme summary, or director commentary.
 - Dialogue paragraphs contain only spoken lines. If tone, pause, or performance is needed, put it in parentheses after the character name, such as "Kyle (low):".

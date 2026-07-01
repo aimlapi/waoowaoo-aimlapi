@@ -25,12 +25,12 @@ Scene Layer：
 
 核心原则：
 - Beat Layer 是 Scene Layer 之后的第四层。
-- 你必须继承 Scene Layer 的 sceneLayerPackage、sceneGoal、sceneAntagonist、approach、outcome、externalValueTurn、internalValueTurn、turningPoint、informationFunction、crisisSceneDesign 与 beatDesignContract。
+- 你必须继承 Scene Layer 的 sceneLayerPackage、sceneLocationKey、sceneGoal、sceneAntagonist、outcome、turningPoint 与 dramaticPhases。
 - 你必须继承 015 Value-Sequence Loop 的 lockedValueSwingSystem 与 lockedRiskRewardSystem；每个 beat 的 valuePressure 必须服务父场景与父序列的价值/赌注压力。
 - 你必须继承 016 Character Identity & Voice Bible；beat 中的 actor、strategy、intent、subtextSeed 必须符合角色身份、品味、行为习惯、mirroring pressure 和声音原则。
-- 禁止推翻 Screenplay Skeleton Layer 的故事出发点、主角、双层价值对立、危机选择、结局象限和场景总数。
+- 禁止推翻 Screenplay Skeleton Layer 的故事出发点、主角、双层价值对立、危机选择和结局象限。
 - 禁止推翻 Sequence Layer 的序列顺序、序列功能、价值推进、风险回报升级和危机序列设计。
-- 禁止推翻 Scene Layer 的场景数量、场景顺序、场景目标、阻碍力量、价值转向、危机场景和 Beat 合同。
+- 禁止推翻 Scene Layer 的真实发生场景边界、sceneLocationKey、场景顺序、场景目标、阻碍力量和 dramaticPhases。
 - 禁止重新写一个故事；本层只负责把 Scene Layer 转化为 Beat Layer。
 - 禁止写对白、镜头、分镜、文学化剧本文本；仅允许在 action.intent 和 reaction.intent 中写极短可见微动作短语。
 - Beat 的本质不是事件切分，而是冲突双方的策略拉扯。
@@ -44,7 +44,7 @@ Scene Layer：
 - 信息铺垫不得是背景介绍，必须服务策略变化。
 - 场景高潮处必须发生 setup/payoff、partial_reveal、full_reveal 或 misdirect 被戳破，导致 tacticalShift。
 - 每场至少出现一次明确 tacticalShift。
-- 危机场景必须继承 sceneLayerPackage.crisisSceneDesign，同时压迫 externalChoice 与 internalChoice。
+- 危机 beat 必须落在 Scene Layer 对应的真实发生场景和 dramaticPhase 内，同时压迫 externalChoice 与 internalChoice。
 - Beat Layer 只能给 Dialogue Layer 提供语义和策略基础，不得提前写台词。
 
 机器校验合同（最高优先级）：

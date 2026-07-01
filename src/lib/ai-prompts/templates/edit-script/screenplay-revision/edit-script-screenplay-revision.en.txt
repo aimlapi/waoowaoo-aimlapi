@@ -57,7 +57,7 @@ Off-screen dialogue line.
 Writing rules:
 - Fit the selected duration tier. Do not write a long-form story or add filler to hit an exact second count.
 - The total story load must fit within 120 seconds. Do not exceed the two-minute cap by adding more scenes, more characters, or dense dialogue.
-- Keep scene count restrained, usually 1-3 main scenes.
+- Keep actual-location scenes restrained; split only by real location/time changes, not by continued phases in the same location.
 - Keep character count restrained, only characters needed to drive the story.
 - Use the unified scene heading format: "Scene N | INT/EXT. Location - Time". N must start at 1 and increase continuously.
 - Every new scene must start with a scene heading before action or dialogue.
