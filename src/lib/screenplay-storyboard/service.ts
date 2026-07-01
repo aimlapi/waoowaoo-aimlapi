@@ -22,6 +22,11 @@ import {
   validateStoryboardPanelGroups,
   type ValidatedStoryboardPanelGroup,
 } from './panel-groups'
+import {
+  sceneAssetSegmentSchema,
+  validateSceneAssetSegments,
+  type SceneAssetSegment,
+} from './scene-assets'
 
 export interface GenerateScreenplayStoryboardInput {
   readonly projectId: string
@@ -60,9 +65,19 @@ interface LocationAsset {
   readonly spatialProfileStatus: string | null
 }
 
+interface PropAsset {
+  readonly propId: string
+  readonly name: string
+  readonly summary: string | null
+  readonly selectedImageId: string | null
+  readonly imageUrl: string | null
+  readonly imageDescription: string | null
+}
+
 interface PanelDraft {
   readonly panelIndex: number
   readonly panelNumber: number
+  readonly sceneSegmentId: string
   readonly description: string
   readonly location: string
   readonly locationId: string
@@ -84,6 +99,7 @@ interface PanelDraft {
 
 const directPanelSchema = z.object({
   panelNumber: z.number().int().positive(),
+  sceneSegmentId: z.string().trim().min(1),
   sourceText: z.string().trim().min(1),
   description: z.string().trim().min(8),
   locationId: z.string().trim().min(1),
@@ -100,6 +116,7 @@ const directPanelSchema = z.object({
 }).strict()
 
 const directStoryboardOutputSchema = z.object({
+  sceneSegments: z.array(sceneAssetSegmentSchema).min(1).max(80),
   sceneZones: z.array(sceneZoneSchema).min(1).max(80),
   panels: z.array(directPanelSchema).min(1).max(120),
   panelGroups: z.array(storyboardPanelGroupSchema).min(1).max(120),
@@ -223,6 +240,42 @@ async function loadLocationAssets(projectId: string): Promise<LocationAsset[]> {
   })
 }
 
+async function loadPropAssets(projectId: string): Promise<PropAsset[]> {
+  const props = await prisma.projectLocation.findMany({
+    where: { projectId, assetKind: 'prop' },
+    orderBy: { createdAt: 'asc' },
+    select: {
+      id: true,
+      name: true,
+      summary: true,
+      selectedImageId: true,
+      images: {
+        orderBy: { imageIndex: 'asc' },
+        select: {
+          id: true,
+          imageUrl: true,
+          description: true,
+          isSelected: true,
+        },
+      },
+    },
+  })
+  return props.map((prop): PropAsset => {
+    const selectedImage = prop.images.find((image) => image.id === prop.selectedImageId)
+      ?? prop.images.find((image) => image.isSelected)
+      ?? prop.images.find((image) => Boolean(image.imageUrl))
+      ?? null
+    return {
+      propId: prop.id,
+      name: prop.name,
+      summary: prop.summary,
+      selectedImageId: selectedImage?.id ?? null,
+      imageUrl: selectedImage?.imageUrl ?? null,
+      imageDescription: selectedImage?.description ?? null,
+    }
+  })
+}
+
 function characterPromptAssets(characters: readonly CharacterAsset[]) {
   return characters.map((character) => ({
     characterId: character.characterId,
@@ -255,6 +308,17 @@ function locationPromptAssets(locations: readonly LocationAsset[]) {
   }))
 }
 
+function propPromptAssets(props: readonly PropAsset[]) {
+  return props.map((prop) => ({
+    propId: prop.propId,
+    name: prop.name,
+    summary: prop.summary,
+    selectedImageId: prop.selectedImageId,
+    hasImage: Boolean(prop.imageUrl),
+    imageDescription: prop.imageDescription,
+  }))
+}
+
 function visualStylePromptBlock(styleBibleJson: unknown): Record<string, unknown> {
   const styleBible = parseNullableEditScriptStyleBible(styleBibleJson)
   if (!styleBible) return {}
@@ -274,6 +338,7 @@ function buildPrompt(input: {
   readonly panelLimit: number
   readonly characters: readonly CharacterAsset[]
   readonly locations: readonly LocationAsset[]
+  readonly props: readonly PropAsset[]
 }) {
   return [
     '你是直接分镜 Panel Agent。禁止生成或依赖导演拆镜、剪辑表、edit table、shotsJson、videoBlocksJson 或独立摄影指导方案。',
@@ -283,10 +348,15 @@ function buildPrompt(input: {
     '输出严格 JSON，不要 Markdown。',
     '',
     'JSON 格式：',
-    '{"sceneZones":[{"sceneZoneId":"","locationId":"","name":"","overallPosition":"","fixedAnchors":[""]}],"panels":[{"panelNumber":1,"sourceText":"","description":"","locationId":"","sceneZoneId":"","characters":[""],"props":[""],"shotType":"","cameraMove":"","duration":4,"imagePrompt":"","videoPrompt":"","shotBlocking":{"sceneZoneId":"","subjectPosition":"","cameraPosition":"","screenComposition":"","characterPlacements":[{"characterName":"","subjectPosition":"","facing":"","eyeline":""}]},"actingNotes":""}],"panelGroups":[{"groupNumber":1,"panelNumbers":[1,2],"sceneZoneIds":[""],"continuityRule":""}]}',
+    '{"sceneSegments":[{"sceneSegmentId":"","order":1,"locationId":"","environment":"","characterNames":[""],"propNames":[""]}],"sceneZones":[{"sceneZoneId":"","locationId":"","name":"","overallPosition":"","fixedAnchors":[""]}],"panels":[{"panelNumber":1,"sceneSegmentId":"","sourceText":"","description":"","locationId":"","sceneZoneId":"","characters":[""],"props":[""],"shotType":"","cameraMove":"","duration":4,"imagePrompt":"","videoPrompt":"","shotBlocking":{"sceneZoneId":"","subjectPosition":"","cameraPosition":"","screenComposition":"","characterPlacements":[{"characterName":"","subjectPosition":"","facing":"","eyeline":""}]},"actingNotes":""}],"panelGroups":[{"groupNumber":1,"panelNumbers":[1,2],"sceneZoneIds":[""],"continuityRule":""}]}',
     '',
     '字段要求：',
     '- panelNumber 从 1 连续递增。',
+    '- sceneSegments 必须先按剧本时间顺序切分：同一连续环境、同一现实空间、同一出场资产池为一个 sceneSegment。',
+    '- sceneSegments.characterNames / propNames 是该场景段会出现的项目资产清单；characterNames 只能使用项目角色资产中的 name，propNames 只能写剧本中真实出现的道具名。',
+    '- panel.sceneSegmentId 必须引用 sceneSegments 中的 sceneSegmentId。',
+    '- 每个 panel 的 characters / props 是该镜头选择入画的资产，必须来自所属 sceneSegment 的 characterNames / propNames，不得跨场景段借人或借物。',
+    '- 除极近景、大特写、细节、插入镜头外，每个 panel 的 characters / props 必须覆盖所属 sceneSegment 的 characterNames / propNames；若做电话两端、异地反应，必须拆成不同 sceneSegment。',
     '- sourceText 必须来自剧本开头对应段落，可压缩但不能改写剧情事实。',
     '- description 写画面里实际可见的动作、人物位置、情绪和空间关系。',
     '- characters 只能使用项目角色资产中的 name；没有出现角色就空数组。',
@@ -319,6 +389,9 @@ function buildPrompt(input: {
     '',
     '项目角色资产：',
     stringifyForPrompt(characterPromptAssets(input.characters)),
+    '',
+    '项目道具资产：',
+    stringifyForPrompt(propPromptAssets(input.props)),
     '',
     '项目场景资产与轻量空间事实：',
     stringifyForPrompt(locationPromptAssets(input.locations)),
@@ -415,6 +488,7 @@ function buildPanelDrafts(input: {
       sourceType: 'directScreenplayStoryboardPanel',
       screenplayId: input.screenplayId,
       panelNumber: panel.panelNumber,
+      sceneSegmentId: panel.sceneSegmentId,
       sourceVideoBlockKind: group.panelNumbers.length > 1 ? 'group' : 'single',
       sourceVideoBlockId,
       locationId: panel.locationId,
@@ -432,6 +506,7 @@ function buildPanelDrafts(input: {
     return {
       panelIndex: index,
       panelNumber: index + 1,
+      sceneSegmentId: panel.sceneSegmentId,
       description: panel.description,
       location: location.name,
       locationId: panel.locationId,
@@ -472,6 +547,7 @@ async function upsertDirectStoryboard(input: {
   readonly title: string
   readonly userPrompt: string
   readonly panelDrafts: readonly PanelDraft[]
+  readonly sceneSegments: readonly SceneAssetSegment[]
   readonly sceneZones: readonly SceneZone[]
   readonly panelGroups: readonly ValidatedStoryboardPanelGroup[]
 }): Promise<{ readonly storyboardId: string; readonly panelIds: readonly string[] }> {
@@ -509,9 +585,11 @@ async function upsertDirectStoryboard(input: {
     sourceType: 'directScreenplayStoryboard',
     screenplayId: input.screenplayId,
     title: input.title,
+    sceneSegments: input.sceneSegments,
     sceneZones: formatSceneZonesForStorage(input.sceneZones),
     panels: input.panelDrafts.map((panel) => ({
       panelNumber: panel.panelNumber,
+      sceneSegmentId: panel.sceneSegmentId,
       description: panel.description,
       location: panel.location,
       locationId: panel.locationId,
@@ -530,6 +608,7 @@ async function upsertDirectStoryboard(input: {
     consistencyMode: 'direct_screenplay_storyboard',
     currentStage: 'panel_prompts_ready',
     screenplayId: input.screenplayId,
+    sceneSegments: input.sceneSegments,
     sceneZones: formatSceneZonesForStorage(input.sceneZones),
     panelGroups: input.panelGroups,
   })
@@ -641,7 +720,7 @@ async function upsertDirectStoryboard(input: {
 
 export async function generateScreenplayStoryboardPanels(input: GenerateScreenplayStoryboardInput): Promise<GenerateScreenplayStoryboardResult> {
   const panelLimit = normalizePanelLimit(input.panelLimit)
-  const [project, screenplay, config, characters, locations] = await Promise.all([
+  const [project, screenplay, config, characters, locations, props] = await Promise.all([
     prisma.project.findFirst({
       where: { id: input.projectId, userId: input.userId },
       select: { id: true, videoRatio: true },
@@ -664,6 +743,7 @@ export async function generateScreenplayStoryboardPanels(input: GenerateScreenpl
     getProjectModelConfig(input.projectId, input.userId),
     loadCharacterAssets(input.projectId),
     loadLocationAssets(input.projectId),
+    loadPropAssets(input.projectId),
   ])
   if (!project || !screenplay) throw new ApiError('NOT_FOUND')
   if (!config.analysisModel) {
@@ -688,6 +768,7 @@ export async function generateScreenplayStoryboardPanels(input: GenerateScreenpl
     panelLimit,
     characters,
     locations,
+    props,
   })
   const completion = await executeAiTextStep({
     userId: input.userId,
@@ -711,6 +792,20 @@ export async function generateScreenplayStoryboardPanels(input: GenerateScreenpl
   const panelGroups = validateStoryboardPanelGroups({
     groups: parsed.panelGroups,
     panelNumbers: parsed.panels.map((panel) => panel.panelNumber),
+  })
+  const sceneSegments = validateSceneAssetSegments({
+    segments: parsed.sceneSegments,
+    characters,
+    props,
+    locations,
+    panels: parsed.panels.map((panel) => ({
+      panelNumber: panel.panelNumber,
+      sceneSegmentId: panel.sceneSegmentId,
+      locationId: panel.locationId,
+      shotType: panel.shotType,
+      characterNames: panel.characters,
+      propNames: panel.props,
+    })),
   })
   validateSceneContinuity({
     sceneZones: parsed.sceneZones,
@@ -743,6 +838,7 @@ export async function generateScreenplayStoryboardPanels(input: GenerateScreenpl
     title,
     userPrompt: screenplay.userPrompt,
     panelDrafts,
+    sceneSegments,
     sceneZones: parsed.sceneZones,
     panelGroups,
   })
