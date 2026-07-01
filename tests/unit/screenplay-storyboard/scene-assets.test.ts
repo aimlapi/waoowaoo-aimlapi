@@ -41,6 +41,7 @@ function panel(input: Partial<PanelSceneAssetBinding> = {}): PanelSceneAssetBind
     shotType: input.shotType ?? 'Medium Shot',
     characterNames: input.characterNames ?? ['强哥', '林曼'],
     propNames: input.propNames ?? ['手机', '铸铁椅'],
+    omittedSceneAssets: input.omittedSceneAssets ?? [],
   }
 }
 
@@ -69,18 +70,36 @@ describe('screenplay storyboard scene asset validation', () => {
     })).toThrow('SCREENPLAY_STORYBOARD_PANEL_MISSING_REQUIRED_SCENE_CHARACTER:panel_1:林曼')
   })
 
-  it('allows a tight detail shot to focus on a subset of scene assets', () => {
+  it('allows a tight detail shot to focus on a subset only when omissions are explicit', () => {
     expect(() => validateSceneAssetSegments({
       segments: [segment()],
       panels: [panel({
         shotType: 'Extreme Close-up',
         characterNames: ['强哥'],
         propNames: ['手机'],
+        omittedSceneAssets: [
+          { kind: 'character', name: '林曼', reason: '极近景只拍强哥手部动作' },
+          { kind: 'prop', name: '铸铁椅', reason: '极近景构图裁掉椅子主体' },
+        ],
       })],
       characters,
       props,
       locations,
     })).not.toThrow()
+  })
+
+  it('rejects an omitted scene asset that is still declared visible', () => {
+    expect(() => validateSceneAssetSegments({
+      segments: [segment()],
+      panels: [panel({
+        omittedSceneAssets: [
+          { kind: 'character', name: '林曼', reason: '错误地同时声明可见和省略' },
+        ],
+      })],
+      characters,
+      props,
+      locations,
+    })).toThrow('SCREENPLAY_STORYBOARD_PANEL_OMITTED_CHARACTER_STILL_VISIBLE:panel_1:林曼')
   })
 
   it('rejects cross-environment panels instead of silently borrowing assets across scenes', () => {

@@ -11,6 +11,14 @@ export const sceneAssetSegmentSchema = z.object({
 
 export type SceneAssetSegment = z.infer<typeof sceneAssetSegmentSchema>
 
+export const omittedSceneAssetSchema = z.object({
+  name: z.string().trim().min(1),
+  kind: z.enum(['character', 'prop']),
+  reason: z.string().trim().min(8),
+}).strict()
+
+export type OmittedSceneAsset = z.infer<typeof omittedSceneAssetSchema>
+
 export interface SceneAssetCharacter {
   readonly name: string
 }
@@ -30,6 +38,7 @@ export interface PanelSceneAssetBinding {
   readonly shotType: string
   readonly characterNames: readonly string[]
   readonly propNames: readonly string[]
+  readonly omittedSceneAssets: readonly OmittedSceneAsset[]
 }
 
 function assertUniqueStrings(values: readonly string[], context: string): void {
@@ -51,22 +60,6 @@ function assertSubset(input: {
       throw new Error(`${input.code}:${input.context}:${value}`)
     }
   }
-}
-
-function isTightDetailShot(shotType: string): boolean {
-  const normalized = shotType.trim().toLowerCase()
-  return [
-    'extreme close-up',
-    'extreme close up',
-    'insert',
-    'detail',
-    'macro',
-    '特写',
-    '极近景',
-    '大特写',
-    '细节',
-    '插入镜头',
-  ].some((token) => normalized.includes(token))
 }
 
 export function validateSceneAssetSegments(input: {
@@ -137,17 +130,46 @@ export function validateSceneAssetSegments(input: {
       context: `panel_${panel.panelNumber}`,
     })
 
-    if (isTightDetailShot(panel.shotType)) continue
+    const omittedCharacters = panel.omittedSceneAssets
+      .filter((asset) => asset.kind === 'character')
+      .map((asset) => asset.name)
+    const omittedProps = panel.omittedSceneAssets
+      .filter((asset) => asset.kind === 'prop')
+      .map((asset) => asset.name)
+    assertUniqueStrings(omittedCharacters, `panel_${panel.panelNumber}:omitted_characters`)
+    assertUniqueStrings(omittedProps, `panel_${panel.panelNumber}:omitted_props`)
+    assertSubset({
+      values: omittedCharacters,
+      allowed: segmentCharacters,
+      code: 'SCREENPLAY_STORYBOARD_PANEL_OMITTED_CHARACTER_OUTSIDE_SCENE_ASSET_SEGMENT',
+      context: `panel_${panel.panelNumber}`,
+    })
+    assertSubset({
+      values: omittedProps,
+      allowed: segmentProps,
+      code: 'SCREENPLAY_STORYBOARD_PANEL_OMITTED_PROP_OUTSIDE_SCENE_ASSET_SEGMENT',
+      context: `panel_${panel.panelNumber}`,
+    })
+    for (const name of omittedCharacters) {
+      if (panel.characterNames.includes(name)) {
+        throw new Error(`SCREENPLAY_STORYBOARD_PANEL_OMITTED_CHARACTER_STILL_VISIBLE:panel_${panel.panelNumber}:${name}`)
+      }
+    }
+    for (const name of omittedProps) {
+      if (panel.propNames.includes(name)) {
+        throw new Error(`SCREENPLAY_STORYBOARD_PANEL_OMITTED_PROP_STILL_VISIBLE:panel_${panel.panelNumber}:${name}`)
+      }
+    }
 
     assertSubset({
       values: segment.characterNames,
-      allowed: new Set(panel.characterNames),
+      allowed: new Set([...panel.characterNames, ...omittedCharacters]),
       code: 'SCREENPLAY_STORYBOARD_PANEL_MISSING_REQUIRED_SCENE_CHARACTER',
       context: `panel_${panel.panelNumber}`,
     })
     assertSubset({
       values: segment.propNames,
-      allowed: new Set(panel.propNames),
+      allowed: new Set([...panel.propNames, ...omittedProps]),
       code: 'SCREENPLAY_STORYBOARD_PANEL_MISSING_REQUIRED_SCENE_PROP',
       context: `panel_${panel.panelNumber}`,
     })

@@ -24,7 +24,9 @@ import {
 } from './panel-groups'
 import {
   sceneAssetSegmentSchema,
+  omittedSceneAssetSchema,
   validateSceneAssetSegments,
+  type OmittedSceneAsset,
   type SceneAssetSegment,
 } from './scene-assets'
 
@@ -84,6 +86,7 @@ interface PanelDraft {
   readonly sceneZoneId: string
   readonly characters: string | null
   readonly props: string | null
+  readonly omittedSceneAssets: readonly OmittedSceneAsset[]
   readonly srtSegment: string
   readonly srtStart: number
   readonly srtEnd: number
@@ -106,6 +109,7 @@ const directPanelSchema = z.object({
   sceneZoneId: z.string().trim().min(1),
   characters: z.array(z.string().trim().min(1)).default([]),
   props: z.array(z.string().trim().min(1)).default([]),
+  omittedSceneAssets: z.array(omittedSceneAssetSchema).default([]),
   shotType: z.string().trim().min(1),
   cameraMove: z.string().trim().min(1),
   duration: z.number().positive().max(12),
@@ -348,15 +352,19 @@ function buildPrompt(input: {
     '输出严格 JSON，不要 Markdown。',
     '',
     'JSON 格式：',
-    '{"sceneSegments":[{"sceneSegmentId":"","order":1,"locationId":"","environment":"","characterNames":[""],"propNames":[""]}],"sceneZones":[{"sceneZoneId":"","locationId":"","name":"","overallPosition":"","fixedAnchors":[""]}],"panels":[{"panelNumber":1,"sceneSegmentId":"","sourceText":"","description":"","locationId":"","sceneZoneId":"","characters":[""],"props":[""],"shotType":"","cameraMove":"","duration":4,"imagePrompt":"","videoPrompt":"","shotBlocking":{"sceneZoneId":"","subjectPosition":"","cameraPosition":"","screenComposition":"","characterPlacements":[{"characterName":"","subjectPosition":"","facing":"","eyeline":""}]},"actingNotes":""}],"panelGroups":[{"groupNumber":1,"panelNumbers":[1,2],"sceneZoneIds":[""],"continuityRule":""}]}',
+    '{"sceneSegments":[{"sceneSegmentId":"","order":1,"locationId":"","environment":"","characterNames":[""],"propNames":[""]}],"sceneZones":[{"sceneZoneId":"","locationId":"","name":"","overallPosition":"","fixedAnchors":[""]}],"panels":[{"panelNumber":1,"sceneSegmentId":"","sourceText":"","description":"","locationId":"","sceneZoneId":"","characters":[""],"props":[""],"omittedSceneAssets":[{"name":"","kind":"character","reason":""}],"shotType":"","cameraMove":"","duration":4,"imagePrompt":"","videoPrompt":"","shotBlocking":{"sceneZoneId":"","subjectPosition":"","cameraPosition":"","screenComposition":"","characterPlacements":[{"characterName":"","subjectPosition":"","facing":"","eyeline":""}]},"actingNotes":""}],"panelGroups":[{"groupNumber":1,"panelNumbers":[1,2],"sceneZoneIds":[""],"continuityRule":""}]}',
     '',
     '字段要求：',
     '- panelNumber 从 1 连续递增。',
     '- sceneSegments 必须先按剧本时间顺序切分：同一连续环境、同一现实空间、同一出场资产池为一个 sceneSegment。',
     '- sceneSegments.characterNames / propNames 是该场景段会出现的项目资产清单；characterNames 只能使用项目角色资产中的 name，propNames 只能写剧本中真实出现的道具名。',
     '- panel.sceneSegmentId 必须引用 sceneSegments 中的 sceneSegmentId。',
-    '- 每个 panel 的 characters / props 是该镜头选择入画的资产，必须来自所属 sceneSegment 的 characterNames / propNames，不得跨场景段借人或借物。',
-    '- 除极近景、大特写、细节、插入镜头外，每个 panel 的 characters / props 必须覆盖所属 sceneSegment 的 characterNames / propNames；若做电话两端、异地反应，必须拆成不同 sceneSegment。',
+    '- sceneSegment 的 characterNames / propNames 默认每张 panel 都应入画。',
+    '- 每个 panel 的 characters / props 是该镜头实际入画的资产，必须来自所属 sceneSegment 的 characterNames / propNames，不得跨场景段借人或借物。',
+    '- 如果某个 sceneSegment 资产因景别、遮挡、画外声、构图裁切等原因没有出现在当前 panel，必须逐项写入 omittedSceneAssets，并给出具体 reason。',
+    '- omittedSceneAssets 只能包含所属 sceneSegment 的资产；已经写入 characters / props 的资产不能再写入 omittedSceneAssets。',
+    '- characters / props 与 omittedSceneAssets 合并后，必须完整覆盖所属 sceneSegment 的 characterNames / propNames；没有显式 omission 就视为漏资产。',
+    '- 若做电话两端、异地反应，必须拆成不同 sceneSegment，不得在同一个 sceneSegment 中用 omission 混过。',
     '- sourceText 必须来自剧本开头对应段落，可压缩但不能改写剧情事实。',
     '- description 写画面里实际可见的动作、人物位置、情绪和空间关系。',
     '- characters 只能使用项目角色资产中的 name；没有出现角色就空数组。',
@@ -500,6 +508,7 @@ function buildPanelDrafts(input: {
         overallPosition: sceneZone.overallPosition,
         fixedAnchors: sceneZone.fixedAnchors,
       },
+      omittedSceneAssets: panel.omittedSceneAssets,
       shotBlocking: panel.shotBlocking,
       continuityRule: group.continuityRule,
     }
@@ -517,6 +526,7 @@ function buildPanelDrafts(input: {
         panelNumber: panel.panelNumber,
       }),
       props: panel.props.length > 0 ? JSON.stringify(panel.props) : null,
+      omittedSceneAssets: panel.omittedSceneAssets,
       srtSegment: panel.sourceText,
       srtStart,
       srtEnd,
@@ -596,6 +606,7 @@ async function upsertDirectStoryboard(input: {
       sceneZoneId: panel.sceneZoneId,
       characters: panel.characters,
       props: panel.props,
+      omittedSceneAssets: panel.omittedSceneAssets,
       sourceText: panel.srtSegment,
       duration: panel.duration,
       shotBlocking: panel.shotBlocking,
@@ -805,6 +816,7 @@ export async function generateScreenplayStoryboardPanels(input: GenerateScreenpl
       shotType: panel.shotType,
       characterNames: panel.characters,
       propNames: panel.props,
+      omittedSceneAssets: panel.omittedSceneAssets,
     })),
   })
   validateSceneContinuity({
