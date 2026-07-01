@@ -52,8 +52,18 @@ describe('edit script block-first prompt flow', () => {
       variables: {
         user_request: '生成一条连续短片',
         screenplay_blueprint_json: JSON.stringify({
-          schemaVersion: 9,
+          schemaVersion: 10,
           screenplaySkeleton: { sceneSkeleton: [] },
+          valueSequenceLoop: {
+            lockedValueSwingSystem: {},
+            lockedRiskRewardSystem: {},
+            lockedSequenceSpine: [],
+          },
+          characterIdentityVoiceBible: {
+            characterRoster: [],
+            mirroringMap: {},
+            characterProfiles: [],
+          },
           sequenceLayer: { sequences: [] },
           sceneLayerPackage: { sceneLayer: [] },
           beatLayerPackage: { sceneBeatBlocks: [] },
@@ -67,11 +77,13 @@ describe('edit script block-first prompt flow', () => {
 
     expect(screenplayPrompt).toContain('Screenplay Generator')
     expect(screenplayPrompt).toContain('七层剧本蓝图')
-    expect(screenplayPrompt).toContain('Screenplay Skeleton Layer -> Sequence Layer -> Scene Layer -> Beat Layer -> Dramatic Interaction Layer -> Dialogue Layer -> Screenplay')
+    expect(screenplayPrompt).toContain('Screenplay Skeleton Layer -> Value-Sequence Loop -> Character Identity & Voice Bible -> Sequence Layer -> Scene Layer -> Beat Layer -> Dramatic Interaction Layer -> Dialogue Layer -> Screenplay')
     expect(screenplayPrompt).toContain('目标总时长：60 秒')
     expect(screenplayPrompt).toContain('画幅：16:9')
     expect(screenplayPrompt).not.toContain('aspect_ratio')
-    expect(screenplayPrompt).toContain('"schemaVersion":9')
+    expect(screenplayPrompt).toContain('"schemaVersion":10')
+    expect(screenplayPrompt).toContain('lockedValueSwingSystem')
+    expect(screenplayPrompt).toContain('Character Identity & Voice Bible')
     expect(screenplayPrompt).toContain('每个 Beat 必须体现 action -> reaction -> strategyChange -> informationChange -> newCondition')
     expect(screenplayPrompt).toContain('对白必须遵循 Dialogue Layer，不要把 subtext 直接说出口')
     expect(screenplayPrompt).toContain('角色名：2-3 个稳定视觉特征 + 关键身份/状态 + 来自 Dialogue Layer 的必要说话气质')

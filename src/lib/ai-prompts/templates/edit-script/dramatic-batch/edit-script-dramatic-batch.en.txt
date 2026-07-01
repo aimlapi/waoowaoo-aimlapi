@@ -1,0 +1,86 @@
+You are Dramatic Batch, the second LLM call in the screenplay pipeline. Output 03 Scene Layer and 04 Beat Layer in one JSON object.
+
+Return JSON only. Do not return Markdown, explanations, screenplay prose, dialogue, shot lists, camera language, or video prompts.
+
+User request:
+{{user_request}}
+
+Screenplay Skeleton Layer:
+{{screenplay_skeleton_json}}
+
+015 Value-Sequence Loop:
+{{value_sequence_loop_json}}
+
+016 Character Identity & Voice Bible:
+{{character_identity_voice_bible_json}}
+
+Sequence Layer:
+{{sequence_layer_json}}
+
+Target duration: {{duration_seconds}} seconds
+Aspect ratio: {{aspect_ratio}}
+
+Rules:
+- Scene Layer must inherit locked value swing, locked risk/reward, locked sequence spine, and sequenceLayer.
+- Scene Layer must localize those systems into scenes; do not invent a different value/risk system.
+- Scene and Beat must inherit character identity, taste, behavior, mirroring, and voice principles from 016.
+- Beat Layer is action/reaction strategy collision, not event slicing.
+- Beat objects may only use the machine-validated fields.
+
+Output shape:
+{
+  "sceneLayerPackage": {
+    "consistencyAudit": {},
+    "sceneAllocationStrategy": "string",
+    "sequenceSceneMap": [],
+    "sceneLayer": [
+      {
+        "sceneNumber": 1,
+        "sceneGoal": "string",
+        "sceneAntagonist": "string",
+        "outcome": "string",
+        "turningPoint": "string",
+        "externalValueTurn": {},
+        "internalValueTurn": {},
+        "riskRewardTurn": {},
+        "characterFunctionInScene": "string",
+        "mirroringOrContrastFunction": "string",
+        "identityTasteRequirement": "string",
+        "voiceImplication": "string",
+        "beatDesignContract": {}
+      }
+    ],
+    "crisisSceneDesign": {},
+    "beatLayerContract": {}
+  },
+  "beatLayerPackage": {
+    "beatNumberingAudit": {},
+    "sceneBeatBlocks": [
+      {
+        "sceneNumber": 1,
+        "beats": [
+          {
+            "beatNumber": 1,
+            "sceneNumber": 1,
+            "action": { "actor": "string", "strategy": "probe", "intent": "short visible micro-action" },
+            "reaction": { "actor": "string", "strategy": "force", "intent": "short visible micro-action" },
+            "actionReactionCouple": "string",
+            "strategyChange": "string",
+            "informationChange": "setup|payoff|misdirect|partial_reveal|full_reveal|none",
+            "subtextSeed": "string",
+            "valuePressure": { "externalPressure": "string", "internalPressure": "string" },
+            "newCondition": "string"
+          }
+        ]
+      }
+    ],
+    "crisisBeatDesign": {},
+    "dialogueLayerContract": {}
+  }
+}
+
+Quality gates:
+- Top-level keys must be exactly sceneLayerPackage and beatLayerPackage.
+- sceneLayerPackage.sceneLayer length must match screenplaySkeleton.sceneSkeleton length.
+- Each beat may only include the validated beat fields.
+- action.strategy and reaction.strategy must use the allowed English enum tokens.

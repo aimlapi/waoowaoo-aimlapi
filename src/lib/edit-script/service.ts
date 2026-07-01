@@ -66,13 +66,18 @@ import {
   assertScreenplaySkeletonSceneCount,
   beatLayerPackageSchema,
   buildInteractionLayerPackageFromBeatLayer,
+  characterIdentityVoiceBiblePackageSchema,
   dialogueLayerPackageSchema,
+  dramaticBatchPackageSchema,
+  expressionBatchPackageSchema,
   interactionLayerPackageSchema,
   sceneLayerPackageSchema,
   screenplayDevelopmentDraftPackageSchema,
   screenplayDevelopmentPackageSchema,
   screenplaySkeletonPackageSchema,
   sequenceLayerPackageSchema,
+  structureLoopBatchPackageSchema,
+  valueSequenceLoopPackageSchema,
   type ScreenplayDevelopmentDraftPackage,
   type ScreenplayDevelopmentPackage,
 } from './screenplay-development'
@@ -177,10 +182,13 @@ interface UpdateEditScriptAssetRequirementDescriptionInput {
 
 type PromptStepId =
   | typeof AI_PROMPT_IDS.EDIT_SCRIPT_STYLE_PREVIEW_OPTIONS
+  | typeof AI_PROMPT_IDS.EDIT_SCRIPT_STRUCTURE_LOOP_BATCH
   | typeof AI_PROMPT_IDS.EDIT_SCRIPT_SCREENPLAY_SKELETON
+  | typeof AI_PROMPT_IDS.EDIT_SCRIPT_DRAMATIC_BATCH
   | typeof AI_PROMPT_IDS.EDIT_SCRIPT_SEQUENCE_LAYER
   | typeof AI_PROMPT_IDS.EDIT_SCRIPT_SCENE_LAYER
   | typeof AI_PROMPT_IDS.EDIT_SCRIPT_BEAT_LAYER
+  | typeof AI_PROMPT_IDS.EDIT_SCRIPT_EXPRESSION_BATCH
   | typeof AI_PROMPT_IDS.EDIT_SCRIPT_DIALOGUE_LAYER
   | typeof AI_PROMPT_IDS.EDIT_SCRIPT_SCREENPLAY
   | typeof AI_PROMPT_IDS.EDIT_SCRIPT_SCREENPLAY_REVISION
@@ -316,6 +324,7 @@ const EDIT_SCREENPLAY_STATUS_STYLE_PREVIEW_GENERATING = 'style_preview_generatin
 const EDIT_SCREENPLAY_STATUS_STYLE_PREVIEW_READY = 'style_preview_ready'
 const EDIT_SCREENPLAY_STATUS_FAILED = 'failed'
 const EDIT_FIRST_TEXT_MAX_OUTPUT_TOKENS = 8192
+const EDIT_FIRST_LONG_FORM_TEXT_MAX_OUTPUT_TOKENS = 24_000
 const EDIT_SCREENPLAY_JSON_OBJECT_SYSTEM_PROMPT = [
   'You are a JSON API for a screenplay development pipeline.',
   'Return exactly one valid JSON object and nothing else.',
@@ -323,6 +332,12 @@ const EDIT_SCREENPLAY_JSON_OBJECT_SYSTEM_PROMPT = [
   'The first non-whitespace character must be { and the last non-whitespace character must be }.',
   'Use double-quoted JSON keys and string values. Do not use trailing commas.',
 ].join(' ')
+
+function resolveEditFirstScreenplayMaxOutputTokens(durationTier: EditFirstDurationTier): number {
+  return durationTier === 'fifteen_min'
+    ? EDIT_FIRST_LONG_FORM_TEXT_MAX_OUTPUT_TOKENS
+    : EDIT_FIRST_TEXT_MAX_OUTPUT_TOKENS
+}
 const EDIT_SCRIPT_ASSET_REVIEW_PENDING = 'pending'
 const EDIT_SCRIPT_ASSET_REVIEW_APPROVED = 'approved'
 
@@ -469,6 +484,7 @@ function parsePersistedStoryDevelopment(
   value: Prisma.JsonValue | null | undefined,
 ): ScreenplayDevelopmentDraftPackage | ScreenplayDevelopmentPackage | null {
   if (value === null || value === undefined) return null
+  if (!isRecord(value) || value.schemaVersion !== 10) return null
   const screenplayDevelopment = screenplayDevelopmentPackageSchema.safeParse(value)
   if (screenplayDevelopment.success) return screenplayDevelopment.data
 
@@ -481,6 +497,18 @@ function parsePersistedStoryDevelopment(
 function normalizeScreenplaySkeletonPackage(value: unknown) {
   const parsed = screenplaySkeletonPackageSchema.safeParse(value)
   if (!parsed.success) throw new Error('EDIT_SCREENPLAY_SKELETON_INVALID')
+  return parsed.data
+}
+
+function normalizeValueSequenceLoopPackage(value: unknown) {
+  const parsed = valueSequenceLoopPackageSchema.safeParse(value)
+  if (!parsed.success) throw new Error('EDIT_SCREENPLAY_VALUE_SEQUENCE_LOOP_INVALID')
+  return parsed.data
+}
+
+function normalizeCharacterIdentityVoiceBiblePackage(value: unknown) {
+  const parsed = characterIdentityVoiceBiblePackageSchema.safeParse(value)
+  if (!parsed.success) throw new Error('EDIT_SCREENPLAY_CHARACTER_IDENTITY_VOICE_BIBLE_INVALID')
   return parsed.data
 }
 
@@ -514,6 +542,24 @@ function normalizeInteractionLayerPackage(value: unknown) {
   return parsed.data
 }
 
+function normalizeStructureLoopBatchPackage(value: unknown) {
+  const parsed = structureLoopBatchPackageSchema.safeParse(value)
+  if (!parsed.success) throw new Error('EDIT_SCREENPLAY_STRUCTURE_LOOP_BATCH_INVALID')
+  return parsed.data
+}
+
+function normalizeDramaticBatchPackage(value: unknown) {
+  const parsed = dramaticBatchPackageSchema.safeParse(value)
+  if (!parsed.success) throw new Error('EDIT_SCREENPLAY_DRAMATIC_BATCH_INVALID')
+  return parsed.data
+}
+
+function normalizeExpressionBatchPackage(value: unknown) {
+  const parsed = expressionBatchPackageSchema.safeParse(value)
+  if (!parsed.success) throw new Error('EDIT_SCREENPLAY_EXPRESSION_BATCH_INVALID')
+  return parsed.data
+}
+
 function normalizeScreenplayDevelopmentPackage(value: unknown): ScreenplayDevelopmentPackage {
   const parsed = screenplayDevelopmentPackageSchema.safeParse(value)
   if (!parsed.success) throw new Error('EDIT_SCREENPLAY_BLUEPRINT_INVALID')
@@ -533,7 +579,7 @@ function readReusableScreenplayDevelopment(
   if (!screenplay || screenplay.status !== 'generating') return null
   if (screenplay.userPrompt !== userPrompt) return null
   const parsed = parsePersistedStoryDevelopment(screenplay.storyDevelopmentJson)
-  if (!parsed || parsed.schemaVersion !== 9) return null
+  if (!parsed || parsed.schemaVersion !== 10) return null
   return parsed
 }
 
@@ -561,15 +607,6 @@ function buildInteractionLayerPackageFromDevelopment(
   if (!development.interactionLayerPackage) return null
   return normalizeInteractionLayerPackage({
     interactionLayerPackage: development.interactionLayerPackage,
-  })
-}
-
-function buildDialogueLayerPackageFromDevelopment(
-  development: ScreenplayDevelopmentDraftPackage | ScreenplayDevelopmentPackage,
-) {
-  if (!development.dialogueLayer) return null
-  return normalizeDialogueLayerPackage({
-    dialogueLayer: development.dialogueLayer,
   })
 }
 
@@ -1645,66 +1682,59 @@ export async function generateProjectEditScreenplay(input: GenerateEditScreenpla
     await getPersistedEditScreenplay(input.projectId, input.episodeId),
     structuredUserPrompt,
   )
-  const reusableScreenplaySkeleton = reusableDevelopment?.screenplaySkeleton ?? null
-  const screenplaySkeleton = reusableScreenplaySkeleton ?? normalizeScreenplaySkeletonPackage(await runPromptStep({
+  const reusableStructureBatch = reusableDevelopment?.screenplaySkeleton
+    && reusableDevelopment.valueSequenceLoop
+    && reusableDevelopment.characterIdentityVoiceBible
+    && reusableDevelopment.sequenceLayer
+    ? {
+        screenplaySkeleton: reusableDevelopment.screenplaySkeleton,
+        valueSequenceLoop: reusableDevelopment.valueSequenceLoop,
+        characterIdentityVoiceBible: reusableDevelopment.characterIdentityVoiceBible,
+        sequenceLayer: reusableDevelopment.sequenceLayer,
+      }
+    : null
+  const structureBatch = reusableStructureBatch ?? normalizeStructureLoopBatchPackage(await runPromptStep({
     userId: input.userId,
     projectId: input.projectId,
     model,
     locale,
-    promptId: AI_PROMPT_IDS.EDIT_SCRIPT_SCREENPLAY_SKELETON,
+    promptId: AI_PROMPT_IDS.EDIT_SCRIPT_STRUCTURE_LOOP_BATCH,
     variables: {
       user_request: structuredUserPrompt,
       duration_seconds: durationSeconds,
       aspect_ratio: input.aspectRatio,
     },
-    stepTitle: 'Screenplay skeleton',
+    stepTitle: 'Structure loop batch',
     stepIndex: 1,
-    stepTotal: 7,
-  })).screenplaySkeleton
+    stepTotal: 3,
+  }))
+  const screenplaySkeleton = normalizeScreenplaySkeletonPackage({
+    screenplaySkeleton: structureBatch.screenplaySkeleton,
+  }).screenplaySkeleton
+  const valueSequenceLoop = normalizeValueSequenceLoopPackage({
+    valueSequenceLoop: structureBatch.valueSequenceLoop,
+  }).valueSequenceLoop
+  const characterIdentityVoiceBible = normalizeCharacterIdentityVoiceBiblePackage({
+    characterIdentityVoiceBible: structureBatch.characterIdentityVoiceBible,
+  }).characterIdentityVoiceBible
+  const sequenceLayer = normalizeSequenceLayerPackage({
+    sequenceLayer: structureBatch.sequenceLayer,
+  }).sequenceLayer
   assertScreenplaySkeletonSceneCount({
     screenplaySkeleton,
     durationTier: input.durationTier,
   })
-  if (!reusableScreenplaySkeleton) {
+  if (!reusableStructureBatch) {
     await persistScreenplayDevelopmentDraft({
       projectId: input.projectId,
       episodeId: input.episodeId,
       userPrompt: structuredUserPrompt,
       development: normalizeScreenplayDevelopmentDraftPackage({
-        schemaVersion: 9,
-        developmentStage: 'screenplaySkeleton',
-        screenplaySkeleton,
-      }),
-      status: 'generating',
-    })
-  }
-
-  const reusableSequenceLayer = reusableDevelopment?.sequenceLayer ?? null
-  const sequenceLayer = reusableSequenceLayer ?? normalizeSequenceLayerPackage(await runPromptStep({
-    userId: input.userId,
-    projectId: input.projectId,
-    model,
-    locale,
-    promptId: AI_PROMPT_IDS.EDIT_SCRIPT_SEQUENCE_LAYER,
-    variables: {
-      user_request: structuredUserPrompt,
-      screenplay_skeleton_json: stringifyForPrompt(screenplaySkeleton),
-      duration_seconds: durationSeconds,
-      aspect_ratio: input.aspectRatio,
-    },
-    stepTitle: 'Sequence layer',
-    stepIndex: 2,
-    stepTotal: 7,
-  })).sequenceLayer
-  if (!reusableSequenceLayer) {
-    await persistScreenplayDevelopmentDraft({
-      projectId: input.projectId,
-      episodeId: input.episodeId,
-      userPrompt: structuredUserPrompt,
-      development: normalizeScreenplayDevelopmentDraftPackage({
-        schemaVersion: 9,
+        schemaVersion: 10,
         developmentStage: 'sequenceLayer',
         screenplaySkeleton,
+        valueSequenceLoop,
+        characterIdentityVoiceBible,
         sequenceLayer,
       }),
       status: 'generating',
@@ -1712,67 +1742,49 @@ export async function generateProjectEditScreenplay(input: GenerateEditScreenpla
   }
 
   const reusableSceneLayerPackage = reusableDevelopment ? buildSceneLayerPackageFromDevelopment(reusableDevelopment) : null
-  const sceneLayerPackage = reusableSceneLayerPackage ?? normalizeSceneLayerPackage(await runPromptStep({
-    userId: input.userId,
-    projectId: input.projectId,
-    model,
-    locale,
-    promptId: AI_PROMPT_IDS.EDIT_SCRIPT_SCENE_LAYER,
-    variables: {
-      user_request: structuredUserPrompt,
-      screenplay_skeleton_json: stringifyForPrompt(screenplaySkeleton),
-      sequence_layer_json: stringifyForPrompt(sequenceLayer),
-      duration_seconds: durationSeconds,
-      aspect_ratio: input.aspectRatio,
-    },
-    stepTitle: 'Scene layer',
-    stepIndex: 3,
-    stepTotal: 7,
-  }))
-  if (!reusableSceneLayerPackage) {
-    await persistScreenplayDevelopmentDraft({
-      projectId: input.projectId,
-      episodeId: input.episodeId,
-      userPrompt: structuredUserPrompt,
-      development: normalizeScreenplayDevelopmentDraftPackage({
-        schemaVersion: 9,
-        developmentStage: 'sceneLayer',
-        screenplaySkeleton,
-        sequenceLayer,
-        sceneLayerPackage: sceneLayerPackage.sceneLayerPackage,
-      }),
-      status: 'generating',
-    })
-  }
-
   const reusableBeatLayerPackage = reusableDevelopment ? buildBeatLayerPackageFromDevelopment(reusableDevelopment) : null
-  const beatLayerPackage = reusableBeatLayerPackage ?? normalizeBeatLayerPackage(await runPromptStep({
+  const reusableDramaticBatch = reusableSceneLayerPackage && reusableBeatLayerPackage
+    ? {
+        sceneLayerPackage: reusableSceneLayerPackage.sceneLayerPackage,
+        beatLayerPackage: reusableBeatLayerPackage.beatLayerPackage,
+      }
+    : null
+  const dramaticBatch = reusableDramaticBatch ?? normalizeDramaticBatchPackage(await runPromptStep({
     userId: input.userId,
     projectId: input.projectId,
     model,
     locale,
-    promptId: AI_PROMPT_IDS.EDIT_SCRIPT_BEAT_LAYER,
+    promptId: AI_PROMPT_IDS.EDIT_SCRIPT_DRAMATIC_BATCH,
     variables: {
       user_request: structuredUserPrompt,
       screenplay_skeleton_json: stringifyForPrompt(screenplaySkeleton),
+      value_sequence_loop_json: stringifyForPrompt(valueSequenceLoop),
+      character_identity_voice_bible_json: stringifyForPrompt(characterIdentityVoiceBible),
       sequence_layer_json: stringifyForPrompt(sequenceLayer),
-      scene_layer_json: stringifyForPrompt(sceneLayerPackage),
       duration_seconds: durationSeconds,
       aspect_ratio: input.aspectRatio,
     },
-    stepTitle: 'Beat layer',
-    stepIndex: 4,
-    stepTotal: 7,
+    stepTitle: 'Dramatic batch',
+    stepIndex: 2,
+    stepTotal: 3,
   }))
-  if (!reusableBeatLayerPackage) {
+  const sceneLayerPackage = normalizeSceneLayerPackage({
+    sceneLayerPackage: dramaticBatch.sceneLayerPackage,
+  })
+  const beatLayerPackage = normalizeBeatLayerPackage({
+    beatLayerPackage: dramaticBatch.beatLayerPackage,
+  })
+  if (!reusableDramaticBatch) {
     await persistScreenplayDevelopmentDraft({
       projectId: input.projectId,
       episodeId: input.episodeId,
       userPrompt: structuredUserPrompt,
       development: normalizeScreenplayDevelopmentDraftPackage({
-        schemaVersion: 9,
+        schemaVersion: 10,
         developmentStage: 'beatLayer',
         screenplaySkeleton,
+        valueSequenceLoop,
+        characterIdentityVoiceBible,
         sequenceLayer,
         sceneLayerPackage: sceneLayerPackage.sceneLayerPackage,
         beatLayerPackage: beatLayerPackage.beatLayerPackage,
@@ -1791,9 +1803,11 @@ export async function generateProjectEditScreenplay(input: GenerateEditScreenpla
       episodeId: input.episodeId,
       userPrompt: structuredUserPrompt,
       development: normalizeScreenplayDevelopmentDraftPackage({
-        schemaVersion: 9,
+        schemaVersion: 10,
         developmentStage: 'dramaticInteractionLayer',
         screenplaySkeleton,
+        valueSequenceLoop,
+        characterIdentityVoiceBible,
         sequenceLayer,
         sceneLayerPackage: sceneLayerPackage.sceneLayerPackage,
         beatLayerPackage: beatLayerPackage.beatLayerPackage,
@@ -1803,16 +1817,17 @@ export async function generateProjectEditScreenplay(input: GenerateEditScreenpla
     })
   }
 
-  const reusableDialogueLayerPackage = reusableDevelopment ? buildDialogueLayerPackageFromDevelopment(reusableDevelopment) : null
-  const dialogueLayerPackage = reusableDialogueLayerPackage ?? normalizeDialogueLayerPackage(await runPromptStep({
+  const expressionBatch = normalizeExpressionBatchPackage(await runPromptStep({
     userId: input.userId,
     projectId: input.projectId,
     model,
     locale,
-    promptId: AI_PROMPT_IDS.EDIT_SCRIPT_DIALOGUE_LAYER,
+    promptId: AI_PROMPT_IDS.EDIT_SCRIPT_EXPRESSION_BATCH,
     variables: {
       user_request: structuredUserPrompt,
       screenplay_skeleton_json: stringifyForPrompt(screenplaySkeleton),
+      value_sequence_loop_json: stringifyForPrompt(valueSequenceLoop),
+      character_identity_voice_bible_json: stringifyForPrompt(characterIdentityVoiceBible),
       sequence_layer_json: stringifyForPrompt(sequenceLayer),
       scene_layer_json: stringifyForPrompt(sceneLayerPackage),
       beat_layer_json: stringifyForPrompt(beatLayerPackage),
@@ -1820,54 +1835,27 @@ export async function generateProjectEditScreenplay(input: GenerateEditScreenpla
       duration_seconds: durationSeconds,
       aspect_ratio: input.aspectRatio,
     },
-    stepTitle: 'Dialogue layer',
-    stepIndex: 6,
-    stepTotal: 7,
+    stepTitle: 'Expression batch',
+    stepIndex: 3,
+    stepTotal: 3,
+    maxOutputTokens: resolveEditFirstScreenplayMaxOutputTokens(input.durationTier),
   }))
-  if (!reusableDialogueLayerPackage) {
-    await persistScreenplayDevelopmentDraft({
-      projectId: input.projectId,
-      episodeId: input.episodeId,
-      userPrompt: structuredUserPrompt,
-      development: normalizeScreenplayDevelopmentDraftPackage({
-        schemaVersion: 9,
-        developmentStage: 'dialogueLayer',
-        screenplaySkeleton,
-        sequenceLayer,
-        sceneLayerPackage: sceneLayerPackage.sceneLayerPackage,
-        beatLayerPackage: beatLayerPackage.beatLayerPackage,
-        interactionLayerPackage: interactionLayerPackage.interactionLayerPackage,
-        dialogueLayer: dialogueLayerPackage.dialogueLayer,
-      }),
-      status: 'generating',
-    })
-  }
+  const dialogueLayerPackage = normalizeDialogueLayerPackage({
+    dialogueLayer: expressionBatch.dialogueLayer,
+  })
+  const screenplayText = expressionBatch.screenplayText
+  if (!screenplayText) throw new Error('EDIT_SCREENPLAY_TEXT_MISSING')
 
   const screenplayDevelopment = normalizeScreenplayDevelopmentPackage({
-    schemaVersion: 9,
+    schemaVersion: 10,
     screenplaySkeleton,
+    valueSequenceLoop,
+    characterIdentityVoiceBible,
     sequenceLayer,
     sceneLayerPackage: sceneLayerPackage.sceneLayerPackage,
     beatLayerPackage: beatLayerPackage.beatLayerPackage,
     interactionLayerPackage: interactionLayerPackage.interactionLayerPackage,
     dialogueLayer: dialogueLayerPackage.dialogueLayer,
-  })
-  const screenplayText = await runPromptTextStep({
-    userId: input.userId,
-    projectId: input.projectId,
-    model,
-    locale,
-    promptId: AI_PROMPT_IDS.EDIT_SCRIPT_SCREENPLAY,
-    variables: {
-      user_request: structuredUserPrompt,
-      screenplay_blueprint_json: stringifyForPrompt(screenplayDevelopment),
-      duration_seconds: durationSeconds,
-      aspect_ratio: input.aspectRatio,
-    },
-    stepTitle: 'Edit screenplay',
-    stepIndex: 7,
-    stepTotal: 7,
-    maxOutputTokens: EDIT_FIRST_TEXT_MAX_OUTPUT_TOKENS,
   })
   const saved = await persistScreenplayDevelopmentDraft({
     projectId: input.projectId,
@@ -1943,7 +1931,7 @@ export async function reviseProjectEditScreenplay(input: ReviseEditScreenplayInp
     stepTitle: 'Revise edit screenplay',
     stepIndex: 1,
     stepTotal: 1,
-    maxOutputTokens: EDIT_FIRST_TEXT_MAX_OUTPUT_TOKENS,
+    maxOutputTokens: resolveEditFirstScreenplayMaxOutputTokens(input.durationTier),
   })
 
   await prisma.projectEditScreenplay.update({

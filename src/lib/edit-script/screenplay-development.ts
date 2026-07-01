@@ -22,6 +22,41 @@ export const sequenceLayerPackageSchema = z.object({
   }),
 }).strict()
 
+export const valueSequenceLoopPackageSchema = z.object({
+  valueSequenceLoop: jsonRecordSchema.extend({
+    defaultLoopCount: z.literal(1),
+    maxLoopCount: z.literal(2),
+    noInfiniteLoop: z.literal(true),
+    draftValueSwingSystem: jsonRecordSchema,
+    draftRiskRewardSystem: jsonRecordSchema,
+    draftSequenceSpine: z.array(jsonRecordSchema).min(1),
+    auditRound1: jsonRecordSchema,
+    repairRound1: jsonRecordSchema,
+    lockedValueSwingSystem: jsonRecordSchema,
+    lockedRiskRewardSystem: jsonRecordSchema,
+    lockedSequenceSpine: z.array(jsonRecordSchema).min(1),
+  }),
+}).strict()
+
+export const characterIdentityVoiceBiblePackageSchema = z.object({
+  characterIdentityVoiceBible: jsonRecordSchema.extend({
+    characterRoster: z.array(jsonRecordSchema.extend({
+      characterName: z.string().trim().min(1),
+      dramaticFunction: z.string().trim().min(1),
+    })).min(1),
+    mirroringMap: jsonRecordSchema,
+    characterProfiles: z.array(jsonRecordSchema.extend({
+      characterName: z.string().trim().min(1),
+      identityProfile: jsonRecordSchema,
+      tasteProfile: jsonRecordSchema,
+      psychologicalProfile: jsonRecordSchema,
+      behaviorProfile: jsonRecordSchema,
+      voiceProfile: jsonRecordSchema,
+      relationshipVoiceShifts: jsonRecordSchema,
+    })).min(1),
+  }),
+}).strict()
+
 export const sceneLayerPackageSchema = z.object({
   sceneLayerPackage: jsonRecordSchema.extend({
     sceneLayer: z.array(jsonRecordSchema.extend({
@@ -136,10 +171,29 @@ export const dialogueLayerPackageSchema = z.object({
   })).min(1),
 }).strict()
 
+export const structureLoopBatchPackageSchema = z.object({
+  screenplaySkeleton: screenplaySkeletonPackageSchema.shape.screenplaySkeleton,
+  valueSequenceLoop: valueSequenceLoopPackageSchema.shape.valueSequenceLoop,
+  characterIdentityVoiceBible: characterIdentityVoiceBiblePackageSchema.shape.characterIdentityVoiceBible,
+  sequenceLayer: sequenceLayerPackageSchema.shape.sequenceLayer,
+}).strict()
+
+export const dramaticBatchPackageSchema = z.object({
+  sceneLayerPackage: sceneLayerPackageSchema.shape.sceneLayerPackage,
+  beatLayerPackage: beatLayerPackageSchema.shape.beatLayerPackage,
+}).strict()
+
+export const expressionBatchPackageSchema = z.object({
+  dialogueLayer: dialogueLayerPackageSchema.shape.dialogueLayer,
+  screenplayText: z.string().trim().min(1),
+}).strict()
+
 export const screenplayDevelopmentDraftPackageSchema = z.object({
-  schemaVersion: z.literal(9),
+  schemaVersion: z.literal(10),
   developmentStage: z.enum([
     'screenplaySkeleton',
+    'valueSequenceLoop',
+    'characterIdentityVoiceBible',
     'sequenceLayer',
     'sceneLayer',
     'beatLayer',
@@ -147,6 +201,8 @@ export const screenplayDevelopmentDraftPackageSchema = z.object({
     'dialogueLayer',
   ]),
   screenplaySkeleton: screenplaySkeletonPackageSchema.shape.screenplaySkeleton.optional(),
+  valueSequenceLoop: valueSequenceLoopPackageSchema.shape.valueSequenceLoop.optional(),
+  characterIdentityVoiceBible: characterIdentityVoiceBiblePackageSchema.shape.characterIdentityVoiceBible.optional(),
   sequenceLayer: sequenceLayerPackageSchema.shape.sequenceLayer.optional(),
   sceneLayerPackage: sceneLayerPackageSchema.shape.sceneLayerPackage.optional(),
   beatLayerPackage: beatLayerPackageSchema.shape.beatLayerPackage.optional(),
@@ -155,8 +211,10 @@ export const screenplayDevelopmentDraftPackageSchema = z.object({
 }).strict()
 
 export const screenplayDevelopmentPackageSchema = z.object({
-  schemaVersion: z.literal(9),
+  schemaVersion: z.literal(10),
   screenplaySkeleton: screenplaySkeletonPackageSchema.shape.screenplaySkeleton,
+  valueSequenceLoop: valueSequenceLoopPackageSchema.shape.valueSequenceLoop,
+  characterIdentityVoiceBible: characterIdentityVoiceBiblePackageSchema.shape.characterIdentityVoiceBible,
   sequenceLayer: sequenceLayerPackageSchema.shape.sequenceLayer,
   sceneLayerPackage: sceneLayerPackageSchema.shape.sceneLayerPackage,
   beatLayerPackage: beatLayerPackageSchema.shape.beatLayerPackage,
@@ -165,6 +223,8 @@ export const screenplayDevelopmentPackageSchema = z.object({
 }).strict()
 
 export type ScreenplaySkeleton = z.infer<typeof screenplaySkeletonPackageSchema>['screenplaySkeleton']
+export type ValueSequenceLoop = z.infer<typeof valueSequenceLoopPackageSchema>['valueSequenceLoop']
+export type CharacterIdentityVoiceBible = z.infer<typeof characterIdentityVoiceBiblePackageSchema>['characterIdentityVoiceBible']
 export type SequenceLayer = z.infer<typeof sequenceLayerPackageSchema>['sequenceLayer']
 export type SceneLayerPackage = z.infer<typeof sceneLayerPackageSchema>['sceneLayerPackage']
 export type BeatLayerPackage = z.infer<typeof beatLayerPackageSchema>['beatLayerPackage']
@@ -172,6 +232,9 @@ export type InteractionLayerPackage = z.infer<typeof interactionLayerPackageSche
 export type DialogueLayer = z.infer<typeof dialogueLayerPackageSchema>['dialogueLayer']
 export type ScreenplayDevelopmentDraftPackage = z.infer<typeof screenplayDevelopmentDraftPackageSchema>
 export type ScreenplayDevelopmentPackage = z.infer<typeof screenplayDevelopmentPackageSchema>
+export type StructureLoopBatchPackage = z.infer<typeof structureLoopBatchPackageSchema>
+export type DramaticBatchPackage = z.infer<typeof dramaticBatchPackageSchema>
+export type ExpressionBatchPackage = z.infer<typeof expressionBatchPackageSchema>
 
 export function assertScreenplaySkeletonSceneCount(input: {
   readonly screenplaySkeleton: ScreenplaySkeleton

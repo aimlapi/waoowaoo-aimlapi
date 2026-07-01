@@ -1,0 +1,189 @@
+你是 Dramatic Batch（戏剧展开批次）。这是剧本生成链路的第二轮 LLM 调用。你必须一次性输出 03 Scene Layer 和 04 Beat Layer。
+
+只输出 JSON，不输出 Markdown、解释、剧本文本、对白、分镜、镜头表或视频提示词。
+
+用户原始需求：
+{{user_request}}
+
+Screenplay Skeleton Layer：
+{{screenplay_skeleton_json}}
+
+015 Value-Sequence Loop：
+{{value_sequence_loop_json}}
+
+016 Character Identity & Voice Bible：
+{{character_identity_voice_bible_json}}
+
+Sequence Layer：
+{{sequence_layer_json}}
+
+目标总时长：{{duration_seconds}} 秒
+画幅：{{aspect_ratio}}
+
+核心原则：
+- Scene Layer 必须继承 lockedValueSwingSystem、lockedRiskRewardSystem、lockedSequenceSpine 和 sequenceLayer。
+- Scene Layer 不得重新发明 value/risk，只能把 015 的 locked 系统局部化为每场戏。
+- Scene Layer 必须继承 016 的角色身份、品味、行为、镜像关系和声音原则。
+- Beat Layer 必须继承每场 scene 的 value turn、risk/reward turn、角色功能和 mirroring pressure。
+- Beat 的核心是 action/reaction 策略对撞，不是事件切分。
+- Beat 对象必须遵守机器校验合同，不得新增未授权字段。
+
+输出 JSON Schema：
+{
+  "sceneLayerPackage": {
+    "consistencyAudit": {
+      "skeletonSceneCount": 5,
+      "sequenceCount": 4,
+      "conflicts": [],
+      "governingRule": "string"
+    },
+    "sceneAllocationStrategy": "string",
+    "sequenceSceneMap": [
+      {
+        "sequenceNumber": 1,
+        "sceneNumbers": [1],
+        "allocationReason": "string",
+        "sequenceFunctionPreserved": "string"
+      }
+    ],
+    "sceneLayer": [
+      {
+        "sceneNumber": 1,
+        "sourceSkeletonSceneNumber": 1,
+        "sourceSequenceNumber": 1,
+        "sceneTitle": "string",
+        "inheritedSequenceFunction": "string",
+        "inheritedSkeletonFunction": "string",
+        "sceneFunction": "string",
+        "sceneGoal": "string",
+        "sceneAntagonist": "string",
+        "approach": "string",
+        "sceneQuestion": "string",
+        "outcomeType": "gain|failure",
+        "outcome": "string",
+        "irreversibleChange": "string",
+        "nextSceneTrigger": "string",
+        "externalValueTurn": { "valueAtStart": "string", "valueAtEnd": "string", "turnReason": "string" },
+        "internalValueTurn": { "valueAtStart": "string", "valueAtEnd": "string", "turnReason": "string" },
+        "riskRewardTurn": { "risk": "string", "reward": "string", "symmetry": "string" },
+        "pressureMechanism": { "force": "string", "block": "string", "trap": "string" },
+        "turningPoint": "string",
+        "characterFunctionInScene": "string",
+        "mirroringOrContrastFunction": "string",
+        "identityTasteRequirement": "string",
+        "voiceImplication": "string",
+        "informationFunction": "raise_question|plant_clue|misdirect|reveal_partial_truth|full_reveal|create_new_question|reverse_expectation|force_harder_choice",
+        "setupPayoffUsage": "string",
+        "regionalTextureRequirement": "string",
+        "beatDesignContract": {
+          "minimumBeatCount": 2,
+          "maximumBeatCount": 6,
+          "beatProgressionRequirement": "string",
+          "forbiddenBeatBehavior": "string"
+        }
+      }
+    ],
+    "crisisSceneDesign": {
+      "crisisSceneNumber": 4,
+      "sourceCrisisSequenceNumber": 3,
+      "inheritedCrisisMoment": "string",
+      "externalChoice": "string",
+      "internalChoice": "string",
+      "whyThisSceneIsIrreversible": "string",
+      "resultingValueQuadrant": "win_win|tragic_victory|noble_sacrifice|total_destruction",
+      "howItForcesResolution": "string"
+    },
+    "beatLayerContract": {
+      "beatNumberingRule": "string",
+      "sceneBoundaryRule": "string",
+      "valueTurnRule": "string",
+      "characterIdentityInheritanceRule": "string",
+      "dialogueBoundaryRule": "string",
+      "forbiddenBeatBehavior": "string"
+    }
+  },
+  "beatLayerPackage": {
+    "beatNumberingAudit": {
+      "totalSceneCount": 3,
+      "totalBeatCount": 12,
+      "firstBeatNumber": 1,
+      "lastBeatNumber": 12,
+      "numberingRule": "string"
+    },
+    "sceneBeatBlocks": [
+      {
+        "sceneNumber": 1,
+        "sourceSceneGoal": "string",
+        "sourceSceneAntagonist": "string",
+        "sourceSceneOutcome": "string",
+        "sourceInformationFunction": "raise_question|plant_clue|misdirect|reveal_partial_truth|full_reveal|create_new_question|reverse_expectation|force_harder_choice",
+        "sourceExternalValueTurn": { "valueAtStart": "string", "valueAtEnd": "string", "turnReason": "string" },
+        "sourceInternalValueTurn": { "valueAtStart": "string", "valueAtEnd": "string", "turnReason": "string" },
+        "sourceRiskRewardTurn": { "risk": "string", "reward": "string", "symmetry": "string" },
+        "sourceCharacterVoicePrinciple": "string",
+        "sourceMirroringPressure": "string",
+        "sceneConflictFormula": { "x": "string", "xGoal": "string", "y": "string", "yBlock": "string" },
+        "layeredInfoPlan": {
+          "hiddenInfoLayer1": "string",
+          "hiddenInfoLayer2": "string",
+          "setupBeatNumbers": [1],
+          "payoffBeatNumber": 2,
+          "revealEffect": "string"
+        },
+        "beatArc": {
+          "openingStrategy": "string",
+          "midSceneTacticalShift": "string",
+          "climaxStrategy": "string",
+          "sceneOutcomeBridge": "string"
+        },
+        "beats": [
+          {
+            "beatNumber": 1,
+            "sceneNumber": 1,
+            "action": {
+              "actor": "string",
+              "strategy": "show|mask|concede|force|drop|fight|demand|refuse|blackmail|threaten|plead|ignore|probe|evade|confess|deny|lure|expose|bargain|raise_cost|humiliate|defend|soothe|provoke|submit|seize_control",
+              "intent": "可见微动作短语"
+            },
+            "reaction": {
+              "actor": "string",
+              "strategy": "show|mask|concede|force|drop|fight|demand|refuse|blackmail|threaten|plead|ignore|probe|evade|confess|deny|lure|expose|bargain|raise_cost|humiliate|defend|soothe|provoke|submit|seize_control",
+              "intent": "可见微动作短语"
+            },
+            "actionReactionCouple": "string",
+            "strategyChange": "string",
+            "informationChange": "setup|payoff|misdirect|partial_reveal|full_reveal|none",
+            "subtextSeed": "string",
+            "valuePressure": {
+              "externalPressure": "string",
+              "internalPressure": "string"
+            },
+            "newCondition": "string"
+          }
+        ]
+      }
+    ],
+    "crisisBeatDesign": {
+      "crisisSceneNumber": 3,
+      "crisisBeatNumbers": [9],
+      "externalChoicePressure": "string",
+      "internalChoicePressure": "string",
+      "irreversibleBeatNumber": 9,
+      "howBeatsForceResolution": "string"
+    },
+    "dialogueLayerContract": {
+      "dialogueMustFollowActionReaction": "string",
+      "subtextRule": "string",
+      "revealRule": "string",
+      "voiceDifferentiationRule": "string",
+      "forbiddenDialogueBehavior": "string"
+    }
+  }
+}
+
+质量要求：
+- 顶层只能包含 sceneLayerPackage 和 beatLayerPackage。
+- sceneLayer.length 必须等于 screenplaySkeleton.sceneSkeleton.length。
+- beatLayerPackage.sceneBeatBlocks.length 必须等于 sceneLayerPackage.sceneLayer.length。
+- 每个 Beat 只能包含 beatNumber、sceneNumber、action、reaction、actionReactionCouple、strategyChange、informationChange、subtextSeed、valuePressure、newCondition。
+- action.strategy 与 reaction.strategy 必须使用枚举英文 token。
