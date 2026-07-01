@@ -186,8 +186,6 @@ function applyContextFieldOmissions(context: Record<string, unknown>, omitted: R
   if (omitted.has('panel.props')) delete context.PROP_GRAPH
   if (omitted.has('context.location_reference')) {
     delete context.location_reference
-    delete context.compressedSceneGraph
-    delete context.SCENE_GRAPH
     delete context.LOCATION_ZONE
     delete context.GLOBAL_SCENE_LOCK
     return
@@ -198,8 +196,6 @@ function applyContextFieldOmissions(context: Record<string, unknown>, omitted: R
     context.location_reference = locationReference
   }
   if (omitted.has('context.location_reference.spatial_profile')) {
-    delete context.compressedSceneGraph
-    delete context.SCENE_GRAPH
     delete context.LOCATION_ZONE
     delete context.GLOBAL_SCENE_LOCK
   }
@@ -247,39 +243,12 @@ export function applyGridPromptFieldOmissions(
     const nextCell = cloneRecord(cell)
     if (omitted.has('cell.cell_index')) delete nextCell.cell_index
     if (omitted.has('cell.cell_position')) delete nextCell.cell_position
+    if (omitted.has('panel.panel_id')) delete nextCell.panel_id
 
     if (isRecord(nextCell.panel)) {
       const panel = cloneRecord(nextCell.panel)
       applyPanelFieldOmissions(panel, omitted)
       nextCell.panel = panel
-    }
-    if (isRecord(nextCell.shot_delta)) {
-      const shotDelta = cloneRecord(nextCell.shot_delta)
-      if (omitted.has('panel.panel_id')) delete nextCell.panel_id
-      if (omitted.has('panel.shot_type')) delete shotDelta.shot_type
-      if (omitted.has('panel.shot_type')) delete shotDelta.shot_scale
-      if (omitted.has('panel.camera_move')) {
-        delete shotDelta.camera_move
-        delete shotDelta.camera_relative_to_scene_graph
-        delete shotDelta.camera_framing
-      }
-      if (omitted.has('panel.description')) {
-        delete shotDelta.subject_action
-        delete shotDelta.action
-        delete shotDelta.emotion
-        delete shotDelta.temporary_visual_effect
-      }
-      if (omitted.has('panel.source_text')) delete shotDelta.source_action
-      if (omitted.has('panel.characters')) {
-        delete shotDelta.characters
-        delete shotDelta.visible_subjects
-      }
-      if (omitted.has('panel.photography_rules')) {
-        delete shotDelta.photography_rules
-        delete shotDelta.camera_framing
-      }
-      if (omitted.has('panel.acting_notes')) delete shotDelta.acting_notes
-      nextCell.shot_delta = shotDelta
     }
 
     if (isRecord(nextCell.panel_context)) {

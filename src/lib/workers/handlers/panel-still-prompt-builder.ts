@@ -165,7 +165,7 @@ function splitSentences(value: unknown): string[] {
 }
 
 const VIDEO_TIME_PATTERN = /(?:video_prompt|视频提示|视频|运镜|镜头运动|duration|时长|fps|帧率|srtStart|srtEnd|sound|声音|音效|配乐|bgm|旁白|voiceover|continuityIn|continuityOut|转场|切入|切出|镜头从|镜头随后|随后|推轨|横向轨道|轨道|推进|后撤|摇移|跟拍|拉远|推近|crane|dolly|track|tracking|truck|pan shot|camera move|camera path|motion trail|camera\s+(?:push(?:es|ing)?|pull(?:s|ing)?|track(?:s|ing)?|move(?:s|ing)?|pan(?:s|ning)?|tilt(?:s|ing)?|doll(?:y|ies|ying)))/iu
-const SPATIAL_LAYOUT_PATTERN = /(?:空间板槽位|空间布局|房间布局|室内布局|门窗|北墙|南墙|东墙|西墙|通道方向|前中后景结构|窗在|门在|window on|door on|room layout|spatial layout|north wall|south wall|east wall|west wall)/iu
+const SPATIAL_LAYOUT_PATTERN = /(?:空间板槽位|空间布局|房间布局|室内布局|门窗|北墙|南墙|东墙|西墙|通道方向|前中后景结构|窗在|门在|墙在|窗边|门边|左侧窗|右侧窗|左侧门|右侧门|window on|window is on|door on|door is on|wall on|wall is on|left side|right side|room layout|spatial layout|north wall|south wall|east wall|west wall)/iu
 const STYLE_OR_NEGATIVE_PATTERN = /(?:style bible|风格|负向约束|negative prompt|hard ban|watermark|no subtitles|no text)/iu
 
 function sanitizeStillAction(value: unknown, maxLength = STILL_TEXT_LIMIT): string | null {
@@ -407,6 +407,7 @@ function buildShotPriority(input: {
   readonly omittedSceneAssets: readonly SceneAssetOmission[]
 }): readonly string[] {
   const imagePrompt = sanitizeStillAction(input.panel.imagePrompt, 360)
+  const formatOmissionReason = (reason: string) => /[。.!?！？]$/u.test(reason) ? reason : `${reason}.`
   const priorities = [
     imagePrompt ? `Primary image intent: ${imagePrompt}` : null,
     input.visibleSubjects.length > 0
@@ -416,7 +417,7 @@ function buildShotPriority(input: {
       ? `Visible props must be present and readable: ${input.visibleProps.join(', ')}.`
       : null,
     ...input.omittedSceneAssets.map((asset) =>
-      `Do not show ${asset.kind} "${asset.name}" because: ${asset.reason}.`),
+      `Do not show ${asset.kind} "${asset.name}" because: ${formatOmissionReason(asset.reason)}`),
     'Freeze any action wording into a single readable still state; no motion blur, no speed lines unless explicitly requested as graphic style.',
   ].filter((item): item is string => item !== null)
   return priorities

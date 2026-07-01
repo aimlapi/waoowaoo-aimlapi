@@ -111,13 +111,7 @@ const sharedMock = vi.hoisted(() => ({
 
 const promptMock = vi.hoisted(() => ({
   buildPrompt: vi.fn((input: { promptId?: string; variables?: Record<string, unknown> }) => {
-    if (input.promptId === 'panel-grid-image-generate') {
-      return [
-        'The scene layout has exactly one source of truth: SCENE_GRAPH. Do not infer, modify, rotate, mirror, or complete the room layout from any shot text. Shot text only changes camera, subject, action, and framing.',
-        String(input.variables?.storyboard_grid_json_input || ''),
-        String(input.variables?.source_text || ''),
-      ].join('\n')
-    }
+    void input
     return 'panel-image-prompt'
   }),
 }))
@@ -159,7 +153,6 @@ vi.mock('@/lib/workers/handlers/image-task-handler-shared', async () => {
 vi.mock('@/lib/ai-prompts', () => ({
   AI_PROMPT_IDS: {
     PANEL_IMAGE_GENERATE: 'panel-image-generate',
-    PANEL_GRID_IMAGE_GENERATE: 'panel-grid-image-generate',
   },
   buildAiPrompt: promptMock.buildPrompt,
 }))
@@ -603,13 +596,13 @@ describe('worker panel-image-task-handler behavior', () => {
     expect(utilsMock.resolveImageSourceFromGeneration).toHaveBeenCalledWith(
       expect.anything(),
       expect.objectContaining({
-        prompt: expect.stringContaining('SCENE_GRAPH'),
+        prompt: expect.stringContaining('LOCATION_ZONE'),
       }),
     )
     expect(utilsMock.resolveImageSourceFromGeneration).toHaveBeenCalledWith(
       expect.anything(),
       expect.objectContaining({
-        prompt: expect.stringContaining('BLOCKING_STATE'),
+        prompt: expect.stringContaining('SHOT_PRIORITY'),
       }),
     )
     expect(utilsMock.uploadImageSourceToCos).toHaveBeenCalledTimes(3)
@@ -641,14 +634,13 @@ describe('worker panel-image-task-handler behavior', () => {
       },
     })
     const finalPrompt = (utilsMock.resolveImageSourceFromGeneration.mock.calls[0]?.[1] as { prompt?: string } | undefined)?.prompt || ''
-    expect(finalPrompt).toContain('anchor_wall')
     expect(finalPrompt).toContain('左侧墙面')
     expect(finalPrompt).not.toContain('Hero stays near the left wall')
     expect(finalPrompt).not.toContain('right side of the attic')
     expect(finalPrompt).not.toContain('SHOULD_NOT_APPEAR_IN_GRID_PROMPT')
   })
 
-  it('grid prompt uses only compressedSceneGraph as spatial source and strips conflicting shot space', async () => {
+  it('grid prompt uses per-panel location zones and strips conflicting old spatial text', async () => {
     sharedMock.resolveNovelData.mockResolvedValueOnce({
       videoRatio: '16:9',
       characters: [],
@@ -704,6 +696,17 @@ describe('worker panel-image-task-handler behavior', () => {
         characters: JSON.stringify([{ name: 'Hero', appearance: 'default' }]),
         srtSegment: '门在左侧。主体后撤。',
         photographyRules: JSON.stringify({
+          sceneZone: {
+            sceneZoneId: 'zone-subject-glass',
+            name: '主体酒杯局部',
+            overallPosition: '只拍主体和酒杯所在局部，不重建整间房。',
+            fixedAnchors: ['主体手部', '发光酒杯'],
+          },
+          shotBlocking: {
+            subjectPosition: '主体与酒杯位于画面中央。',
+            cameraPosition: '正面低机位。',
+            screenComposition: '主体和酒杯占据中心。',
+          },
           cameraPlan: {
             cameraPosition: '从右侧窗边拍摄',
             composition: '房间布局：窗在右侧。主体占画面中心。',
@@ -737,7 +740,14 @@ describe('worker panel-image-task-handler behavior', () => {
         location: 'Old Town',
         characters: JSON.stringify([{ name: 'Hero', appearance: 'default' }]),
         srtSegment: '主体低头。',
-        photographyRules: null,
+        photographyRules: JSON.stringify({
+          sceneZone: {
+            sceneZoneId: 'zone-subject-head',
+            name: '主体脸部局部',
+            overallPosition: '只拍主体脸部和肩线。',
+            fixedAnchors: ['主体肩线'],
+          },
+        }),
         actingNotes: null,
         sketchImageUrl: null,
         imageUrl: null,
@@ -762,11 +772,16 @@ describe('worker panel-image-task-handler behavior', () => {
     }))
 
     const finalPrompt = (utilsMock.resolveImageSourceFromGeneration.mock.calls[0]?.[1] as { prompt?: string } | undefined)?.prompt || ''
-    const sceneGraphCount = (finalPrompt.match(/SCENE_GRAPH/g) || []).length
+    const locationZoneCount = (finalPrompt.match(/^LOCATION_ZONE$/gm) || []).length
 
-    expect(sceneGraphCount).toBe(1)
+    expect(locationZoneCount).toBe(2)
+    expect(finalPrompt).not.toContain('SCENE_GRAPH')
+    expect(finalPrompt).not.toContain('BLOCKING_STATE')
+    expect(finalPrompt).not.toContain('shot_delta')
     expect(finalPrompt).not.toContain('compressedSceneGraph')
-    expect(finalPrompt).toContain('窗在北墙尽头')
+    expect(finalPrompt).toContain('主体酒杯局部')
+    expect(finalPrompt).toContain('主体脸部局部')
+    expect(finalPrompt).toContain('北墙尽头的窗')
     expect(finalPrompt).not.toContain('窗在右侧')
     expect(finalPrompt).not.toContain('门在左侧')
     expect(finalPrompt).not.toContain('right side')
@@ -779,8 +794,8 @@ describe('worker panel-image-task-handler behavior', () => {
     expect(finalPrompt).not.toContain('向左侧门切出')
     expect(finalPrompt).not.toContain('Do not appear in grid prompt')
     expect(finalPrompt).not.toContain('空间说明')
-    expect(finalPrompt).toContain('action: 主体举起酒杯。')
-    expect(finalPrompt).toContain('action: 主体低头。')
+    expect(finalPrompt).toContain('"action": "主体举起酒杯。"')
+    expect(finalPrompt).toContain('"action": "主体低头。"')
   })
 
   it('compare-only grid generation -> uses previous complete grid as serial reference without mutating panel records', async () => {

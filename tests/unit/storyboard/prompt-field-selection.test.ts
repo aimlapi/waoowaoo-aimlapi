@@ -151,7 +151,6 @@ describe('storyboard prompt field selection', () => {
       },
       context: {
         reference_images: [{ image_no: '图 1', role: 'character' }],
-        SCENE_GRAPH: { summary: 'street layout' },
         LOCATION_ZONE: { zone_name: 'street corner' },
         GLOBAL_SCENE_LOCK: { summary: 'street layout' },
         CHARACTER_GRAPH: { characters: [{ name: 'Hero' }] },
@@ -181,7 +180,6 @@ describe('storyboard prompt field selection', () => {
     expect(stillFrame.shot_scale).toBe('medium shot')
     expect(context.CHARACTER_GRAPH).toBeUndefined()
     expect(context.PROP_GRAPH).toBeUndefined()
-    expect(context.SCENE_GRAPH).toBeUndefined()
     expect(context.LOCATION_ZONE).toBeUndefined()
     expect(context.GLOBAL_SCENE_LOCK).toBeUndefined()
     expect(source.panel.still_frame.action).toBe('Hero looks tense.')

@@ -11,6 +11,8 @@ const referenceImages: readonly NumberedReferenceImage[] = [
   { image_no: '图 1', role: 'location', name: '“心动法则”西餐厅' },
   { image_no: '图 2', role: 'character', name: '施雨', appearance: 'primary' },
   { image_no: '图 3', role: 'character', name: '顾严', appearance: 'primary' },
+  { image_no: '图 4', role: 'prop', name: '粉红药液高脚杯' },
+  { image_no: '图 5', role: 'prop', name: '金色飞鹰徽章' },
 ]
 
 const projectData: NovelProjectData = {
@@ -79,6 +81,23 @@ const projectData: NovelProjectData = {
       },
     }],
   }],
+  props: [
+    {
+      name: '粉红药液高脚杯',
+      summary: '透明高脚杯，杯中有粉红色药液。',
+      images: [],
+    },
+    {
+      name: '金色飞鹰徽章',
+      summary: '顾严衣襟上的小型金色飞鹰徽章。',
+      images: [],
+    },
+    {
+      name: '心动检测脖环',
+      summary: '金属脖环，带红色电子倒计时。',
+      images: [],
+    },
+  ],
 }
 
 const panels: readonly StoryboardGridPromptPanel[] = [
@@ -93,9 +112,21 @@ const panels: readonly StoryboardGridPromptPanel[] = [
     videoPrompt: 'video_prompt forbidden duration 3 fps 24',
     location: '“心动法则”西餐厅',
     characters: JSON.stringify([]),
-    props: null,
+    props: JSON.stringify(['粉红药液高脚杯', '焦痕纸质菜单']),
     srtSegment: '焦痕纸质菜单保持在桌面中央偏前区域。',
-    photographyRules: null,
+    photographyRules: JSON.stringify({
+      sceneZone: {
+        sceneZoneId: 'zone-table-left-front',
+        name: '黑金餐桌左前局部',
+        overallPosition: '只拍桌面左前角，不重建整间餐厅。',
+        fixedAnchors: ['黑金桌面左前边缘', '杯脚阴影'],
+      },
+      shotBlocking: {
+        subjectPosition: '粉红药液高脚杯位于画面中央偏左。',
+        cameraPosition: '低机位贴近桌面。',
+        screenComposition: '只保留桌面左前角和杯子。',
+      },
+    }),
     actingNotes: null,
   },
   {
@@ -112,9 +143,15 @@ const panels: readonly StoryboardGridPromptPanel[] = [
       { characterId: 'character-gu-yan', name: '顾严', appearanceId: 'appearance-gu-yan', appearance: 'primary' },
       { characterId: 'character-shi-yu', name: '施雨', appearanceId: 'appearance-shi-yu', appearance: 'primary' },
     ]),
-    props: null,
+    props: JSON.stringify(['金色飞鹰徽章']),
     srtSegment: null,
     photographyRules: JSON.stringify({
+      sceneZone: {
+        sceneZoneId: 'zone-table-two-shot',
+        name: '餐桌对峙局部',
+        overallPosition: '只拍同一张餐桌两侧人物关系。',
+        fixedAnchors: ['黑金餐桌边缘', '右后方霓虹卡座'],
+      },
       cameraPlan: {
         shotScale: 'medium shot',
         composition: '房间布局：窗在右侧。严格对称构图。',
@@ -142,9 +179,21 @@ const panels: readonly StoryboardGridPromptPanel[] = [
     characters: JSON.stringify([
       { characterId: 'character-gu-yan', name: '顾严', appearanceId: 'appearance-gu-yan', appearance: 'primary' },
     ]),
-    props: null,
     srtSegment: null,
-    photographyRules: null,
+    props: JSON.stringify(['心动检测脖环']),
+    photographyRules: JSON.stringify({
+      sceneZone: {
+        sceneZoneId: 'zone-gu-yan-neck',
+        name: '顾严颈部特写区',
+        overallPosition: '只拍顾严颈部与衣领局部。',
+        fixedAnchors: ['灰色衣领', '红色倒计时光'],
+      },
+      omittedSceneAssets: [{
+        name: '施雨',
+        kind: 'character',
+        reason: '颈部特写裁掉对面人物。',
+      }],
+    }),
     actingNotes: null,
   },
   {
@@ -161,9 +210,16 @@ const panels: readonly StoryboardGridPromptPanel[] = [
       { characterId: 'character-gu-yan', name: '顾严', appearanceId: 'appearance-gu-yan', appearance: 'primary' },
       { characterId: 'character-shi-yu', name: '施雨', appearanceId: 'appearance-shi-yu', appearance: 'primary' },
     ]),
-    props: null,
+    props: JSON.stringify(['金色飞鹰徽章']),
     srtSegment: null,
-    photographyRules: null,
+    photographyRules: JSON.stringify({
+      sceneZone: {
+        sceneZoneId: 'zone-table-two-shot',
+        name: '餐桌对峙局部',
+        overallPosition: '只拍同一张餐桌两侧人物关系。',
+        fixedAnchors: ['黑金餐桌边缘', '右后方霓虹卡座'],
+      },
+    }),
     actingNotes: null,
   },
 ]
@@ -173,7 +229,7 @@ function countSection(prompt: string, section: string): number {
 }
 
 describe('panel-grid-prompt-builder', () => {
-  it('builds compact graph-based storyboard grid prompt with stable cell mapping', () => {
+  it('builds grid prompt from per-panel still facts without the old graph inference chain', () => {
     const facts = buildStoryboardGridPromptFacts({
       panels,
       projectData,
@@ -187,10 +243,15 @@ describe('panel-grid-prompt-builder', () => {
     })
     const cellText = prompt.slice(prompt.indexOf('CELL 1 TOP_LEFT'), prompt.indexOf('NEGATIVE'))
 
-    expect(countSection(prompt, 'SCENE_GRAPH')).toBe(1)
-    expect(countSection(prompt, 'BLOCKING_STATE')).toBe(1)
-    expect(countSection(prompt, 'CHARACTER_GRAPH')).toBe(1)
-    expect(countSection(prompt, 'PROP_GRAPH')).toBe(1)
+    expect(countSection(prompt, 'REFERENCE_IMAGES')).toBe(1)
+    expect(countSection(prompt, 'CHARACTER_GRAPH')).toBe(4)
+    expect(countSection(prompt, 'PROP_GRAPH')).toBe(4)
+    expect(countSection(prompt, 'LOCATION_ZONE')).toBe(4)
+    expect(countSection(prompt, 'STILL_FRAME')).toBe(4)
+    expect(prompt).not.toContain('SCENE_GRAPH')
+    expect(prompt).not.toContain('BLOCKING_STATE')
+    expect(prompt).not.toContain('shot_delta')
+    expect(prompt).not.toContain('pink_wine_glass')
     expect(cellText).not.toContain('四宫格空间板槽位')
     expect(cellText).not.toContain('纵向延伸的西餐厅长廊')
     expect(cellText).not.toContain('door on the left')
@@ -198,10 +259,12 @@ describe('panel-grid-prompt-builder', () => {
     expect(prompt).not.toContain('track shot video movement')
     expect(prompt).not.toContain('horizontal track')
     expect(prompt).not.toContain('横向轨道')
-    expect(prompt).not.toContain('运镜')
+    expect(cellText).not.toContain('运镜')
     expect(prompt).not.toContain('空间板槽位')
-    expect(prompt).toContain('do not create a second pink liquid wine glass unless a panel explicitly asks for two')
-    expect(prompt).toContain('Gu Yan / 顾严 remains screen left; Shi Yu / 施雨 remains screen right')
+    expect(prompt).toContain('Visible props must be present and readable: 粉红药液高脚杯, 焦痕纸质菜单.')
+    expect(prompt).toContain('"source": "panel.props"')
+    expect(prompt).toContain('"zone_name": "黑金餐桌左前局部"')
+    expect(prompt).toContain('Do not show character \\"施雨\\" because: 颈部特写裁掉对面人物。')
     expect(prompt).toContain('central 70% safe area')
     expect(prompt).toContain('Use inner padding')
     expect(prompt).toContain('No subject, limb, prop, light beam, or divider crosses cell boundaries')
