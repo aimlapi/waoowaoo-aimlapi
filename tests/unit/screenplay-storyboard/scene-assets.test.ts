@@ -170,4 +170,69 @@ describe('screenplay storyboard scene asset validation', () => {
       locations,
     })).toThrow('SCREENPLAY_STORYBOARD_PANEL_SCENE_ASSET_LOCATION_MISMATCH:panel_2:warehouse:office')
   })
+
+  it('rejects splitting the same continuous story scene only because visible characters or props change', () => {
+    expect(() => validateSceneAssetSegments({
+      segments: [
+        segment({
+          sceneSegmentId: 'scene-1',
+          order: 1,
+          locationId: 'warehouse',
+          environment: '废弃造船厂空铁房内的绑架勒索现场',
+          characterNames: ['强哥', '林曼'],
+          propNames: ['铸铁椅'],
+        }),
+        segment({
+          sceneSegmentId: 'scene-2',
+          order: 2,
+          locationId: 'warehouse',
+          environment: ' 废弃造船厂空铁房内的绑架勒索现场 ',
+          characterNames: ['强哥', '林曼'],
+          propNames: ['手机', '铸铁椅'],
+        }),
+      ],
+      panels: [panel({ panelNumber: 1, sceneSegmentId: 'scene-1', propNames: ['铸铁椅'] })],
+      characters,
+      props,
+      locations,
+    })).toThrow('SCREENPLAY_STORYBOARD_SCENE_SEGMENT_DUPLICATE_CONTINUOUS_SCENE:scene-2:warehouse')
+  })
+
+  it('allows returning to the same location after the story has moved to another current scene', () => {
+    expect(() => validateSceneAssetSegments({
+      segments: [
+        segment({ sceneSegmentId: 'scene-1', order: 1, locationId: 'warehouse' }),
+        segment({
+          sceneSegmentId: 'scene-2',
+          order: 2,
+          locationId: 'office',
+          environment: '徐伟所在的明亮办公室电话另一端',
+          characterNames: ['徐伟'],
+          propNames: ['办公桌电话'],
+        }),
+        segment({
+          sceneSegmentId: 'scene-3',
+          order: 3,
+          locationId: 'warehouse',
+          environment: '废弃造船厂空铁房内的绑架勒索现场',
+          characterNames: ['强哥', '林曼'],
+          propNames: ['手机', '铸铁椅'],
+        }),
+      ],
+      panels: [
+        panel({ panelNumber: 1, sceneSegmentId: 'scene-1' }),
+        panel({
+          panelNumber: 2,
+          sceneSegmentId: 'scene-2',
+          locationId: 'office',
+          characterNames: ['徐伟'],
+          propNames: ['办公桌电话'],
+        }),
+        panel({ panelNumber: 3, sceneSegmentId: 'scene-3' }),
+      ],
+      characters,
+      props,
+      locations,
+    })).not.toThrow()
+  })
 })

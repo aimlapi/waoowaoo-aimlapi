@@ -68,6 +68,10 @@ function isTightDetailShot(shotType: string): boolean {
   return TIGHT_DETAIL_SHOT_PATTERN.test(shotType)
 }
 
+function normalizeSceneEnvironment(value: string): string {
+  return value.trim().replace(/\s+/g, '').toLowerCase()
+}
+
 export function validateSceneAssetSegments(input: {
   readonly segments: readonly SceneAssetSegment[]
   readonly panels: readonly PanelSceneAssetBinding[]
@@ -84,6 +88,7 @@ export function validateSceneAssetSegments(input: {
   const projectLocationIds = new Set(input.locations.map((location) => location.locationId))
   const segmentById = new Map<string, SceneAssetSegment>()
 
+  let previousSegment: SceneAssetSegment | null = null
   for (const [index, segment] of input.segments.entries()) {
     const expectedOrder = index + 1
     if (segment.order !== expectedOrder) {
@@ -109,7 +114,15 @@ export function validateSceneAssetSegments(input: {
       code: 'SCREENPLAY_STORYBOARD_SCENE_ASSET_PROP_NOT_FOUND',
       context: segment.sceneSegmentId,
     })
+    if (
+      previousSegment
+      && previousSegment.locationId === segment.locationId
+      && normalizeSceneEnvironment(previousSegment.environment) === normalizeSceneEnvironment(segment.environment)
+    ) {
+      throw new Error(`SCREENPLAY_STORYBOARD_SCENE_SEGMENT_DUPLICATE_CONTINUOUS_SCENE:${segment.sceneSegmentId}:${segment.locationId}`)
+    }
     segmentById.set(segment.sceneSegmentId, segment)
+    previousSegment = segment
   }
 
   for (const panel of input.panels) {
