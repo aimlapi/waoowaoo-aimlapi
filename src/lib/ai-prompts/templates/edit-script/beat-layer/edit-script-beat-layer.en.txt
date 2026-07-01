@@ -8,6 +8,12 @@ User original request:
 Screenplay Skeleton Layer:
 {{screenplay_skeleton_json}}
 
+015 Value-Sequence Loop:
+{{value_sequence_loop_json}}
+
+016 Character Identity & Voice Bible:
+{{character_identity_voice_bible_json}}
+
 Sequence Layer:
 {{sequence_layer_json}}
 
@@ -20,6 +26,8 @@ Aspect ratio: {{aspect_ratio}}
 Core principles:
 - Beat Layer is the fourth layer after Scene Layer.
 - You must inherit Scene Layer sceneLayerPackage, sceneGoal, sceneAntagonist, approach, outcome, externalValueTurn, internalValueTurn, turningPoint, informationFunction, crisisSceneDesign, and beatDesignContract.
+- You must inherit 015 Value-Sequence Loop lockedValueSwingSystem and lockedRiskRewardSystem. Each beat's valuePressure must serve the parent scene and parent sequence value/stakes pressure.
+- You must inherit 016 Character Identity & Voice Bible. actor, strategy, intent, and subtextSeed must fit character identity, taste, behavior, mirroring pressure, and voice principles.
 - Do not overturn Screenplay Skeleton Layer story origin, protagonist, dual value oppositions, crisis choice, ending quadrant, or total scene count.
 - Do not overturn Sequence Layer sequence order, sequence function, value progression, risk/reward escalation, or crisis sequence design.
 - Do not overturn Scene Layer scene count, scene order, scene goals, blocking forces, value turns, crisis scene, or Beat contracts.

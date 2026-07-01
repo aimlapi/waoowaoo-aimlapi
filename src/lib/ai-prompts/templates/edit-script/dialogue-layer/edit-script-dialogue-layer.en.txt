@@ -8,6 +8,12 @@ User original request:
 Screenplay Skeleton Layer:
 {{screenplay_skeleton_json}}
 
+015 Value-Sequence Loop:
+{{value_sequence_loop_json}}
+
+016 Character Identity & Voice Bible:
+{{character_identity_voice_bible_json}}
+
 Sequence Layer:
 {{sequence_layer_json}}
 
@@ -34,6 +40,8 @@ Dialogue Layer boundaries:
 
 Upstream inheritance rules:
 - Obey Screenplay Skeleton Layer centralDramaticQuestion, storyOriginDiagnosis, dual value oppositions, regionalAesthetics, and sceneSkeleton.
+- Obey 015 Value-Sequence Loop lockedValueSwingSystem, lockedRiskRewardSystem, and lockedSequenceSpine. Dialogue pressure must serve the current sequence/scene value swing and risk/reward.
+- Obey 016 Character Identity & Voice Bible character identity, taste, interests, personality, defense mechanisms, behavior habits, speech traits, and pressure collapse.
 - Obey Sequence Layer sequenceQuestion, turningPoint, riskRewardEscalation, and crisisSequenceDesign.
 - Obey Scene Layer sceneGoal, sceneAntagonist, informationFunction, setupPayoffUsage, regionalTextureRequirement, and crisisSceneDesign.
 - Obey Beat Layer action, reaction, actionReactionCouple, strategyChange, informationChange, subtextSeed, valuePressure, and newCondition.

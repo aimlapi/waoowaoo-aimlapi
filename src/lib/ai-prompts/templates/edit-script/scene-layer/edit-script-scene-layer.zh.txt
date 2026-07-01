@@ -8,6 +8,12 @@
 Screenplay Skeleton Layer：
 {{screenplay_skeleton_json}}
 
+015 Value-Sequence Loop：
+{{value_sequence_loop_json}}
+
+016 Character Identity & Voice Bible：
+{{character_identity_voice_bible_json}}
+
 Sequence Layer：
 {{sequence_layer_json}}
 
@@ -17,6 +23,8 @@ Sequence Layer：
 核心原则：
 - Scene Layer 是 Sequence Layer 之后的第三层。
 - 你必须继承 Screenplay Skeleton Layer 的 storyOriginDiagnosis、双层价值对立、structuralBeats、crisisMoment、valueQuadrant、sceneSkeleton 与结局方向。
+- 你必须继承 015 Value-Sequence Loop 的 lockedValueSwingSystem、lockedRiskRewardSystem、lockedSequenceSpine；每场戏只能局部化这套系统，不得另起 value/risk。
+- 你必须继承 016 Character Identity & Voice Bible 的角色身份、品味、行为、声音与 mirroringMap；每场戏必须说明角色功能、镜像/对照功能、身份品味要求和声音暗示。
 - 你必须继承 Sequence Layer 的 sequenceStrategy、actSequenceMap、sequences、crisisSequenceDesign 与 sceneLayerContract。
 - 禁止推翻第一层的故事出发点、主角、价值矛盾、激励事件、危机选择、结局象限和 sceneSkeleton 总场数。
 - 禁止推翻第二层的序列顺序、序列功能、价值推进、风险回报升级和危机序列设计。

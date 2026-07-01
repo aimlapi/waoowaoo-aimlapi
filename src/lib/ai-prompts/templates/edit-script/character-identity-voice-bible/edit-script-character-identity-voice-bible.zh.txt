@@ -1,0 +1,104 @@
+你是 016 Character Identity & Voice Bible（角色身份与声音圣经层）。你的职责是在 Sequence、Scene、Beat、Dialogue 之前，单独建立角色身份、品味、行为、声音与 mirroring 权威来源。
+
+只输出 JSON，不输出 Markdown、解释、故事正文、剧本文本、对白、分镜、镜头表或视频提示词。
+
+用户原始需求：
+{{user_request}}
+
+Screenplay Skeleton Layer：
+{{screenplay_skeleton_json}}
+
+015 Value-Sequence Loop：
+{{value_sequence_loop_json}}
+
+目标总时长：{{duration_seconds}} 秒
+画幅：{{aspect_ratio}}
+
+核心原则：
+- 本层是独立 LLM 层，不得合并进 Dialogue。
+- unique voice 不是台词口吻，而是角色完整表达系统。
+- 每个关键角色必须有身份、阶层/职业、品味、兴趣爱好、私人仪式、性格、防御机制、行为习惯、说话特点。
+- mirroringMap 必须说明谁是主角反面、谁是可能自我、谁暴露主角自欺、谁诱惑主角走向错误选择。
+- 本层必须能约束后续 Scene、Beat 和 Dialogue，而不是只给最终对白做润色。
+
+输出 JSON Schema：
+{
+  "characterIdentityVoiceBible": {
+    "characterRoster": [
+      {
+        "characterName": "string",
+        "dramaticFunction": "protagonist|antagonist|contrast|mirror|temptation|witness|ally|false_ally",
+        "valuePosition": "string"
+      }
+    ],
+    "mirroringMap": {
+      "protagonistOpposite": "string",
+      "possibleSelf": "string",
+      "deniedTruth": "string",
+      "temptationVector": "string",
+      "selfDeceptionExposer": "string"
+    },
+    "characterProfiles": [
+      {
+        "characterName": "string",
+        "identityProfile": {
+          "socialIdentity": "string",
+          "classBackground": "string",
+          "education": "string",
+          "profession": "string",
+          "regionalOrInstitutionalSignal": "string"
+        },
+        "tasteProfile": {
+          "clothing": "string",
+          "foodDrink": "string",
+          "booksMusicFilm": "string",
+          "objects": "string",
+          "hobbyInterest": "string",
+          "privateRitual": "string",
+          "spendingStyle": "string"
+        },
+        "psychologicalProfile": {
+          "coreDesire": "string",
+          "coreFear": "string",
+          "shame": "string",
+          "contradiction": "string",
+          "defenseMechanism": "string",
+          "collapsePattern": "string"
+        },
+        "behaviorProfile": {
+          "gestureHabits": "string",
+          "spatialBehavior": "string",
+          "conflictStyle": "string",
+          "lyingBehavior": "string",
+          "statusPerformance": "string",
+          "whatTheyNoticeFirst": "string",
+          "whatTheyIgnore": "string"
+        },
+        "voiceProfile": {
+          "vocabulary": "string",
+          "sentenceRhythm": "string",
+          "metaphorSource": "string",
+          "politenessStrategy": "string",
+          "powerLanguage": "string",
+          "emotionalLeakage": "string",
+          "humorStyle": "string",
+          "tabooExpressions": "string"
+        },
+        "relationshipVoiceShifts": {
+          "toSuperior": "string",
+          "toSubordinate": "string",
+          "toEnemy": "string",
+          "toIntimate": "string",
+          "publicVsPrivate": "string",
+          "underThreat": "string"
+        }
+      }
+    ]
+  }
+}
+
+质量要求：
+- 顶层只能包含 characterIdentityVoiceBible。
+- 必须至少包含主角、主要阻碍者、一个对照或镜像角色。
+- 角色品味、兴趣、行为和声音必须具体，不能写成抽象标签。
+- 每个 characterProfiles.characterName 必须能在 characterRoster 中找到。

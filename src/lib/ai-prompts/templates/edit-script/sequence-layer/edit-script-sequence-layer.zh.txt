@@ -8,12 +8,20 @@
 Screenplay Skeleton Layer：
 {{screenplay_skeleton_json}}
 
+015 Value-Sequence Loop：
+{{value_sequence_loop_json}}
+
+016 Character Identity & Voice Bible：
+{{character_identity_voice_bible_json}}
+
 目标总时长：{{duration_seconds}} 秒
 画幅：{{aspect_ratio}}
 
 核心原则：
 - Sequence Layer 是第一层之后的第二层。
 - 你必须继承 Screenplay Skeleton Layer 的 skeletonPremise、centralDramaticQuestion、storyOriginDiagnosis、双层价值对立、valueQuadrant、structuralBeats、crisisMoment、causalityChain、sceneSkeleton 与结局方向。
+- 你必须继承 015 Value-Sequence Loop 的 lockedValueSwingSystem、lockedRiskRewardSystem、lockedSequenceSpine。Sequence Layer 必须是 lockedSequenceSpine 的正式展开，不得重新发明价值系统或赌注系统。
+- 你必须继承 016 Character Identity & Voice Bible 的角色功能、mirroringMap、角色身份和声音原则，作为 sequence antagonist、contrast、temptation、witness 的设计约束。
 - 禁止推翻第一层的故事出发点、主角、核心价值矛盾、激励事件、危机选择和结局象限。
 - 禁止重新写一个故事；本层只负责把第一层的宏观结构组织成序列。
 - 禁止直接进入具体场景、对白、动作、镜头或剧本文本。

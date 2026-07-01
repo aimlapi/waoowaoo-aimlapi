@@ -171,23 +171,6 @@ export const dialogueLayerPackageSchema = z.object({
   })).min(1),
 }).strict()
 
-export const structureLoopBatchPackageSchema = z.object({
-  screenplaySkeleton: screenplaySkeletonPackageSchema.shape.screenplaySkeleton,
-  valueSequenceLoop: valueSequenceLoopPackageSchema.shape.valueSequenceLoop,
-  characterIdentityVoiceBible: characterIdentityVoiceBiblePackageSchema.shape.characterIdentityVoiceBible,
-  sequenceLayer: sequenceLayerPackageSchema.shape.sequenceLayer,
-}).strict()
-
-export const dramaticBatchPackageSchema = z.object({
-  sceneLayerPackage: sceneLayerPackageSchema.shape.sceneLayerPackage,
-  beatLayerPackage: beatLayerPackageSchema.shape.beatLayerPackage,
-}).strict()
-
-export const expressionBatchPackageSchema = z.object({
-  dialogueLayer: dialogueLayerPackageSchema.shape.dialogueLayer,
-  screenplayText: z.string().trim().min(1),
-}).strict()
-
 export const screenplayDevelopmentDraftPackageSchema = z.object({
   schemaVersion: z.literal(10),
   developmentStage: z.enum([
@@ -232,9 +215,6 @@ export type InteractionLayerPackage = z.infer<typeof interactionLayerPackageSche
 export type DialogueLayer = z.infer<typeof dialogueLayerPackageSchema>['dialogueLayer']
 export type ScreenplayDevelopmentDraftPackage = z.infer<typeof screenplayDevelopmentDraftPackageSchema>
 export type ScreenplayDevelopmentPackage = z.infer<typeof screenplayDevelopmentPackageSchema>
-export type StructureLoopBatchPackage = z.infer<typeof structureLoopBatchPackageSchema>
-export type DramaticBatchPackage = z.infer<typeof dramaticBatchPackageSchema>
-export type ExpressionBatchPackage = z.infer<typeof expressionBatchPackageSchema>
 
 export function assertScreenplaySkeletonSceneCount(input: {
   readonly screenplaySkeleton: ScreenplaySkeleton

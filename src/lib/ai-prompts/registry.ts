@@ -170,56 +170,33 @@ export const AI_PROMPT_CATALOG: Record<AiPromptId, AiPromptCatalogEntry> = {
     pathStem: 'edit-script/style-preview-options',
     variableKeys: ['user_request', 'screenplay_text', 'duration_guidance', 'style_direction', 'style_preview_count'],
   },
-  [AI_PROMPT_IDS.EDIT_SCRIPT_STRUCTURE_LOOP_BATCH]: {
-    pathStem: 'edit-script/structure-loop-batch',
-    variableKeys: ['user_request', 'duration_seconds', 'aspect_ratio'],
-  },
   [AI_PROMPT_IDS.EDIT_SCRIPT_SCREENPLAY_SKELETON]: {
     pathStem: 'edit-script/screenplay-skeleton',
     variableKeys: ['user_request', 'duration_seconds', 'aspect_ratio'],
   },
-  [AI_PROMPT_IDS.EDIT_SCRIPT_DRAMATIC_BATCH]: {
-    pathStem: 'edit-script/dramatic-batch',
-    variableKeys: [
-      'user_request',
-      'screenplay_skeleton_json',
-      'value_sequence_loop_json',
-      'character_identity_voice_bible_json',
-      'sequence_layer_json',
-      'duration_seconds',
-      'aspect_ratio',
-    ],
+  [AI_PROMPT_IDS.EDIT_SCRIPT_VALUE_SEQUENCE_LOOP]: {
+    pathStem: 'edit-script/value-sequence-loop',
+    variableKeys: ['user_request', 'screenplay_skeleton_json', 'duration_seconds', 'aspect_ratio'],
+  },
+  [AI_PROMPT_IDS.EDIT_SCRIPT_CHARACTER_IDENTITY_VOICE_BIBLE]: {
+    pathStem: 'edit-script/character-identity-voice-bible',
+    variableKeys: ['user_request', 'screenplay_skeleton_json', 'value_sequence_loop_json', 'duration_seconds', 'aspect_ratio'],
   },
   [AI_PROMPT_IDS.EDIT_SCRIPT_SEQUENCE_LAYER]: {
     pathStem: 'edit-script/sequence-layer',
-    variableKeys: ['user_request', 'screenplay_skeleton_json', 'duration_seconds', 'aspect_ratio'],
+    variableKeys: ['user_request', 'screenplay_skeleton_json', 'value_sequence_loop_json', 'character_identity_voice_bible_json', 'duration_seconds', 'aspect_ratio'],
   },
   [AI_PROMPT_IDS.EDIT_SCRIPT_SCENE_LAYER]: {
     pathStem: 'edit-script/scene-layer',
-    variableKeys: ['user_request', 'screenplay_skeleton_json', 'sequence_layer_json', 'duration_seconds', 'aspect_ratio'],
+    variableKeys: ['user_request', 'screenplay_skeleton_json', 'value_sequence_loop_json', 'character_identity_voice_bible_json', 'sequence_layer_json', 'duration_seconds', 'aspect_ratio'],
   },
   [AI_PROMPT_IDS.EDIT_SCRIPT_BEAT_LAYER]: {
     pathStem: 'edit-script/beat-layer',
-    variableKeys: ['user_request', 'screenplay_skeleton_json', 'sequence_layer_json', 'scene_layer_json', 'duration_seconds', 'aspect_ratio'],
-  },
-  [AI_PROMPT_IDS.EDIT_SCRIPT_EXPRESSION_BATCH]: {
-    pathStem: 'edit-script/expression-batch',
-    variableKeys: [
-      'user_request',
-      'screenplay_skeleton_json',
-      'value_sequence_loop_json',
-      'character_identity_voice_bible_json',
-      'sequence_layer_json',
-      'scene_layer_json',
-      'beat_layer_json',
-      'interaction_layer_json',
-      'duration_seconds',
-      'aspect_ratio',
-    ],
+    variableKeys: ['user_request', 'screenplay_skeleton_json', 'value_sequence_loop_json', 'character_identity_voice_bible_json', 'sequence_layer_json', 'scene_layer_json', 'duration_seconds', 'aspect_ratio'],
   },
   [AI_PROMPT_IDS.EDIT_SCRIPT_DIALOGUE_LAYER]: {
     pathStem: 'edit-script/dialogue-layer',
-    variableKeys: ['user_request', 'screenplay_skeleton_json', 'sequence_layer_json', 'scene_layer_json', 'beat_layer_json', 'interaction_layer_json', 'duration_seconds', 'aspect_ratio'],
+    variableKeys: ['user_request', 'screenplay_skeleton_json', 'value_sequence_loop_json', 'character_identity_voice_bible_json', 'sequence_layer_json', 'scene_layer_json', 'beat_layer_json', 'interaction_layer_json', 'duration_seconds', 'aspect_ratio'],
   },
   [AI_PROMPT_IDS.EDIT_SCRIPT_SCREENPLAY]: {
     pathStem: 'edit-script/screenplay',

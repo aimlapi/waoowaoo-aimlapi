@@ -8,6 +8,12 @@ User original request:
 Screenplay Skeleton Layer:
 {{screenplay_skeleton_json}}
 
+015 Value-Sequence Loop:
+{{value_sequence_loop_json}}
+
+016 Character Identity & Voice Bible:
+{{character_identity_voice_bible_json}}
+
 Sequence Layer:
 {{sequence_layer_json}}
 
@@ -17,6 +23,8 @@ Aspect ratio: {{aspect_ratio}}
 Core principles:
 - Scene Layer is the third layer after Sequence Layer.
 - You must inherit Screenplay Skeleton Layer storyOriginDiagnosis, dual value oppositions, structuralBeats, crisisMoment, valueQuadrant, sceneSkeleton, and ending direction.
+- You must inherit 015 Value-Sequence Loop lockedValueSwingSystem, lockedRiskRewardSystem, and lockedSequenceSpine. Each scene may only localize that system; do not invent a different value/risk system.
+- You must inherit 016 Character Identity & Voice Bible identity, taste, behavior, voice, and mirroringMap. Each scene must state character function, mirroring/contrast function, identity/taste requirement, and voice implication when relevant.
 - You must inherit Sequence Layer sequenceStrategy, actSequenceMap, sequences, crisisSequenceDesign, and sceneLayerContract.
 - Do not overturn the first layer story origin, protagonist, value conflicts, inciting event, crisis choice, ending quadrant, or total sceneSkeleton count.
 - Do not overturn the second layer sequence order, sequence function, value progression, risk/reward escalation, or crisis sequence design.

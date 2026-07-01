@@ -8,6 +8,12 @@
 Screenplay Skeleton Layer：
 {{screenplay_skeleton_json}}
 
+015 Value-Sequence Loop：
+{{value_sequence_loop_json}}
+
+016 Character Identity & Voice Bible：
+{{character_identity_voice_bible_json}}
+
 Sequence Layer：
 {{sequence_layer_json}}
 
@@ -34,6 +40,8 @@ Dialogue Layer 职责边界：
 
 上游继承规则：
 - 必须服从 Screenplay Skeleton Layer 的 centralDramaticQuestion、storyOriginDiagnosis、双层价值对立、regionalAesthetics 和 sceneSkeleton。
+- 必须服从 015 Value-Sequence Loop 的 lockedValueSwingSystem、lockedRiskRewardSystem 和 lockedSequenceSpine；对白压力必须服务当前 sequence/scene 的 value swing 与 risk/reward。
+- 必须服从 016 Character Identity & Voice Bible 的角色身份、品味、兴趣、性格、防御机制、行为习惯、说话特点和压力下声音变形。
 - 必须服从 Sequence Layer 的 sequenceQuestion、turningPoint、riskRewardEscalation 和 crisisSequenceDesign。
 - 必须服从 Scene Layer 的 sceneGoal、sceneAntagonist、informationFunction、setupPayoffUsage、regionalTextureRequirement 和 crisisSceneDesign。
 - 必须服从 Beat Layer 的 action、reaction、actionReactionCouple、strategyChange、informationChange、subtextSeed、valuePressure 和 newCondition。

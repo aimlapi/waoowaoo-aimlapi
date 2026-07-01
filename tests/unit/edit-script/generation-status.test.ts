@@ -309,6 +309,10 @@ function mockSuccessfulScreenplayDevelopmentSteps() {
             },
           ],
         },
+      }),
+    })
+    .mockResolvedValueOnce({
+      text: JSON.stringify({
         valueSequenceLoop: {
           defaultLoopCount: 1,
           maxLoopCount: 2,
@@ -328,6 +332,10 @@ function mockSuccessfulScreenplayDevelopmentSteps() {
             { sequenceNumber: 2, actPosition: 'act3', structuralTurnAnnotation: 'climax_reversal', sequenceFunction: '回应信号', valueSwing: '恐惧到选择', riskRewardShift: '以生存换回应', outcome: '改变航向', nextSequenceTrigger: '故事结束' },
           ],
         },
+      }),
+    })
+    .mockResolvedValueOnce({
+      text: JSON.stringify({
         characterIdentityVoiceBible: {
           characterRoster: [
             { characterName: '操作员', dramaticFunction: 'protagonist', valuePosition: '回应未知' },
@@ -346,6 +354,10 @@ function mockSuccessfulScreenplayDevelopmentSteps() {
             },
           ],
         },
+      }),
+    })
+    .mockResolvedValueOnce({
+      text: JSON.stringify({
         sequenceLayer: {
           sequences: [
             { sequenceNumber: 1, sequenceGoal: '发现异常并进入核心舱' },
@@ -381,6 +393,10 @@ function mockSuccessfulScreenplayDevelopmentSteps() {
             },
           ],
         },
+      }),
+    })
+    .mockResolvedValueOnce({
+      text: JSON.stringify({
         beatLayerPackage: {
           sceneBeatBlocks: [
             {
@@ -421,8 +437,10 @@ function mockSuccessfulScreenplayDevelopmentSteps() {
             ],
           },
         ],
-        screenplayText: '标题：《科幻短片》\n\n故事梗概：一条安静信号唤醒空间站。',
       }),
+    })
+    .mockResolvedValueOnce({
+      text: '标题：《科幻短片》\n\n故事梗概：一条安静信号唤醒空间站。',
     })
 }
 
@@ -611,15 +629,15 @@ describe('edit script generation status persistence', () => {
     expect(screenplay.styleBible).toBeNull()
     expect(screenplay.status).toBe('screenplay_ready')
     expect(screenplay.stylePreviews).toHaveLength(0)
-    expect(aiExecMock.executeAiTextStep).toHaveBeenCalledTimes(3)
+    expect(aiExecMock.executeAiTextStep).toHaveBeenCalledTimes(8)
     expect(aiExecMock.executeAiTextStep).toHaveBeenNthCalledWith(1, expect.objectContaining({
-      action: AI_PROMPT_IDS.EDIT_SCRIPT_STRUCTURE_LOOP_BATCH,
+      action: AI_PROMPT_IDS.EDIT_SCRIPT_SCREENPLAY_SKELETON,
       temperature: 0.2,
       maxTokens: undefined,
       meta: expect.objectContaining({
-        stepId: AI_PROMPT_IDS.EDIT_SCRIPT_STRUCTURE_LOOP_BATCH,
+        stepId: AI_PROMPT_IDS.EDIT_SCRIPT_SCREENPLAY_SKELETON,
         stepIndex: 1,
-        stepTotal: 3,
+        stepTotal: 8,
       }),
     }))
     const firstAiCall = aiExecMock.executeAiTextStep.mock.calls[0]?.[0] as {
@@ -631,14 +649,14 @@ describe('edit script generation status persistence', () => {
     })
     expect(firstAiCall?.messages?.[1]).toEqual(expect.objectContaining({
       role: 'user',
-      content: expect.stringContaining('Structure Loop Batch'),
+      content: expect.stringContaining('Screenplay Skeleton Layer'),
     }))
-    expect(aiExecMock.executeAiTextStep).toHaveBeenNthCalledWith(3, expect.objectContaining({
-      action: AI_PROMPT_IDS.EDIT_SCRIPT_EXPRESSION_BATCH,
+    expect(aiExecMock.executeAiTextStep).toHaveBeenNthCalledWith(8, expect.objectContaining({
+      action: AI_PROMPT_IDS.EDIT_SCRIPT_SCREENPLAY,
       meta: expect.objectContaining({
-        stepId: AI_PROMPT_IDS.EDIT_SCRIPT_EXPRESSION_BATCH,
-        stepIndex: 3,
-        stepTotal: 3,
+        stepId: AI_PROMPT_IDS.EDIT_SCRIPT_SCREENPLAY,
+        stepIndex: 8,
+        stepTotal: 8,
       }),
     }))
     expect(prismaMock.projectEditScreenplay.upsert).toHaveBeenCalledWith(expect.objectContaining({

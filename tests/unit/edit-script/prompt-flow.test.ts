@@ -76,7 +76,7 @@ describe('edit script block-first prompt flow', () => {
     })
 
     expect(screenplayPrompt).toContain('Screenplay Generator')
-    expect(screenplayPrompt).toContain('七层剧本蓝图')
+    expect(screenplayPrompt).toContain('多层剧本蓝图')
     expect(screenplayPrompt).toContain('Screenplay Skeleton Layer -> Value-Sequence Loop -> Character Identity & Voice Bible -> Sequence Layer -> Scene Layer -> Beat Layer -> Dramatic Interaction Layer -> Dialogue Layer -> Screenplay')
     expect(screenplayPrompt).toContain('目标总时长：60 秒')
     expect(screenplayPrompt).toContain('画幅：16:9')
@@ -190,6 +190,8 @@ describe('edit script block-first prompt flow', () => {
       variables: {
         user_request: '生成一条连续短片',
         screenplay_skeleton_json: JSON.stringify({ screenplaySkeleton: { sceneSkeleton: [] } }),
+        value_sequence_loop_json: JSON.stringify({ valueSequenceLoop: { lockedSequenceSpine: [] } }),
+        character_identity_voice_bible_json: JSON.stringify({ characterIdentityVoiceBible: { characterProfiles: [] } }),
         sequence_layer_json: JSON.stringify({ sequenceLayer: { sequences: [] } }),
         scene_layer_json: JSON.stringify({ sceneLayerPackage: { sceneLayer: [] } }),
         duration_seconds: '60',
@@ -411,6 +413,8 @@ describe('edit script block-first prompt flow', () => {
       variables: {
         user_request: 'Create a continuous short film',
         screenplay_skeleton_json: JSON.stringify({ screenplaySkeleton: { sceneSkeleton: [] } }),
+        value_sequence_loop_json: JSON.stringify({ valueSequenceLoop: { lockedSequenceSpine: [] } }),
+        character_identity_voice_bible_json: JSON.stringify({ characterIdentityVoiceBible: { characterProfiles: [] } }),
         sequence_layer_json: JSON.stringify({ sequenceLayer: { sequences: [] } }),
         scene_layer_json: JSON.stringify({ sceneLayerPackage: { sceneLayer: [] } }),
         duration_seconds: '60',

@@ -8,12 +8,20 @@ User request:
 Screenplay Skeleton Layer:
 {{screenplay_skeleton_json}}
 
+015 Value-Sequence Loop:
+{{value_sequence_loop_json}}
+
+016 Character Identity & Voice Bible:
+{{character_identity_voice_bible_json}}
+
 Target duration: {{duration_seconds}} seconds
 Aspect ratio: {{aspect_ratio}}
 
 Core principles:
 - Sequence Layer is the second layer after the Screenplay Skeleton Layer.
 - You must inherit the Screenplay Skeleton Layer skeletonPremise, centralDramaticQuestion, storyOriginDiagnosis, dual value oppositions, valueQuadrant, structuralBeats, crisisMoment, causalityChain, sceneSkeleton, and ending direction.
+- You must inherit 015 Value-Sequence Loop lockedValueSwingSystem, lockedRiskRewardSystem, and lockedSequenceSpine. Sequence Layer is the formal expansion of lockedSequenceSpine; do not invent a new value or stakes system.
+- You must inherit 016 Character Identity & Voice Bible character functions, mirroringMap, identity, and voice principles as constraints for antagonists, contrasts, temptation, and witnesses.
 - Do not overturn the first layer's story origin, protagonist, core value conflict, inciting incident, crisis choice, or ending quadrant.
 - Do not rewrite the story. This layer only organizes the first layer's macro structure into sequences.
 - Do not enter concrete scenes, dialogue, physical action, shots, or screenplay text.

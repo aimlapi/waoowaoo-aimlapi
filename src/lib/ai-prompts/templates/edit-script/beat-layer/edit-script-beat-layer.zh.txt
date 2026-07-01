@@ -8,6 +8,12 @@
 Screenplay Skeleton Layer：
 {{screenplay_skeleton_json}}
 
+015 Value-Sequence Loop：
+{{value_sequence_loop_json}}
+
+016 Character Identity & Voice Bible：
+{{character_identity_voice_bible_json}}
+
 Sequence Layer：
 {{sequence_layer_json}}
 
@@ -20,6 +26,8 @@ Scene Layer：
 核心原则：
 - Beat Layer 是 Scene Layer 之后的第四层。
 - 你必须继承 Scene Layer 的 sceneLayerPackage、sceneGoal、sceneAntagonist、approach、outcome、externalValueTurn、internalValueTurn、turningPoint、informationFunction、crisisSceneDesign 与 beatDesignContract。
+- 你必须继承 015 Value-Sequence Loop 的 lockedValueSwingSystem 与 lockedRiskRewardSystem；每个 beat 的 valuePressure 必须服务父场景与父序列的价值/赌注压力。
+- 你必须继承 016 Character Identity & Voice Bible；beat 中的 actor、strategy、intent、subtextSeed 必须符合角色身份、品味、行为习惯、mirroring pressure 和声音原则。
 - 禁止推翻 Screenplay Skeleton Layer 的故事出发点、主角、双层价值对立、危机选择、结局象限和场景总数。
 - 禁止推翻 Sequence Layer 的序列顺序、序列功能、价值推进、风险回报升级和危机序列设计。
 - 禁止推翻 Scene Layer 的场景数量、场景顺序、场景目标、阻碍力量、价值转向、危机场景和 Beat 合同。
