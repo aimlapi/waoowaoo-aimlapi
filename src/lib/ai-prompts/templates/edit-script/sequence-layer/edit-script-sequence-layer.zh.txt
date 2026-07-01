@@ -19,7 +19,7 @@ Screenplay Skeleton Layer：
 
 核心原则：
 - Sequence Layer 是第一层之后的第二层。
-- 你必须继承 Screenplay Skeleton Layer 的 skeletonPremise、centralDramaticQuestion、storyOriginDiagnosis、双层价值对立、valueQuadrant、structuralBeats、crisisMoment、causalityChain、sceneSkeleton 与结局方向。
+- 你必须继承 Screenplay Skeleton Layer 的 skeletonPremise、centralDramaticQuestion、storyCoreEngine、storyOriginDiagnosis、价值对立、valueQuadrant、structuralBeats、crisisMoment、causalityChain 与结局方向。
 - 你必须继承 015 Value-Sequence Loop 的 lockedValueSwingSystem、lockedRiskRewardSystem、lockedSequenceSpine。Sequence Layer 必须是 lockedSequenceSpine 的正式展开，不得重新发明价值系统或赌注系统。
 - 你必须继承 016 Character Identity & Voice Bible 的角色功能、mirroringMap、角色身份和声音原则，作为 sequence antagonist、contrast、temptation、witness 的设计约束。
 - 禁止推翻第一层的故事出发点、主角、核心价值矛盾、激励事件、危机选择和结局象限。
@@ -31,7 +31,7 @@ Screenplay Skeleton Layer：
 - 每个 sequence 必须体现第一层的外在价值对立 A1 vs B1 与内在价值对立 A2 vs B2。
 - 每个 sequence 的风险与回报必须同步升级，且程度对等。
 - Sequence Layer 必须为后续 Scene Layer 提供清晰拆场依据，但不能替代 Scene Layer。
-- Sequence Layer 可以建议场景分配，但不得改变 Screenplay Skeleton Layer 的 sceneSkeleton 总场数；若序列拆场建议与第一层场数冲突，后续 Scene Layer 必须以第一层 sceneSkeleton 为准。
+- Sequence Layer 可以建议场景分配，但不得生成具体 scene 单位；Scene Layer 是场景数量和场景拆分的唯一权威。
 
 序列数量原则：
 - 目标总时长小于等于 90 秒：默认 2 个 sequence。
@@ -39,7 +39,7 @@ Screenplay Skeleton Layer：
 - 目标总时长大于 5 分钟且小于等于 20 分钟：默认 4 个 sequence。
 - 目标总时长大于 20 分钟且小于等于 60 分钟：默认 6 个 sequence。
 - 目标总时长大于 60 分钟：默认 8 个 sequence。
-- 可以根据第一层 sceneSkeleton 的规模微调，但必须说明 sequenceCountReason。
+- 可以根据目标时长、storyCoreEngine 和 lockedSequenceSpine 微调，但必须说明 sequenceCountReason。
 - sequence 数量不得少于 2，不得多于 8。
 
 字段定义：
@@ -158,7 +158,7 @@ Screenplay Skeleton Layer：
 - sequenceCount 必须等于 sequences.length。
 - sequenceNumber 必须从 1 连续递增。
 - actSequenceMap 中的 sequenceNumbers 必须覆盖所有 sequence，且不得重复。
-- 每个 sequence 必须继承第一层 structuralBeats、causalityChain 或 sceneSkeleton 中的结构压力。
+- 每个 sequence 必须继承第一层 storyCoreEngine、structuralBeats 或 causalityChain 中的结构压力。
 - 每个 sequence 必须有明确 sequenceGoal、sequenceAntagonist、sequenceOutcome、irreversibleChange。
 - sequenceGoal 必须是阶段性可执行目标，不能写成抽象愿望。
 - sequenceAntagonist 必须是具体阻碍，不能只写“内心冲突”四个字。

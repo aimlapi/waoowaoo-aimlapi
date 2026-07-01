@@ -19,6 +19,7 @@ Rules:
 - Unique voice is not just dialogue wording; it is the character's full expression system.
 - Each key character needs identity, class/profession, taste, interests, private rituals, psychology, behavior, and speech patterns.
 - mirroringMap must define the protagonist's opposite, possible self, denied truth, temptation vector, and self-deception exposer.
+- You must output relationshipVoiceRules for key pairwise relationship distance, address rules, disclosure limits, and forbidden intimacy leaps.
 
 Output shape:
 {
@@ -37,6 +38,17 @@ Output shape:
         "voiceProfile": {},
         "relationshipVoiceShifts": {}
       }
+    ],
+    "relationshipVoiceRules": [
+      {
+        "fromCharacter": "string",
+        "toCharacter": "string",
+        "initialSocialDistance": "string",
+        "addressRules": "string",
+        "disclosureRules": "string",
+        "forbiddenIntimacy": "string",
+        "stageVoiceProgression": "string"
+      }
     ]
   }
 }
@@ -45,3 +57,5 @@ Quality gates:
 - Top-level key must be exactly characterIdentityVoiceBible.
 - Include at least protagonist, main obstacle/antagonist, and one contrast or mirror character.
 - Taste, interests, behavior, and voice must be specific rather than abstract labels.
+- relationshipVoiceRules must cover protagonist-to-primary-obstacle and protagonist-to-key-contrast/mirror relationships.
+- If characters are strangers, transactional, blackmailing, or hostile, explicitly forbid familiar address, premature confession, and unearned trust.

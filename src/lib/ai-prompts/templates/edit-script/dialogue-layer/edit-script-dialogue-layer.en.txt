@@ -39,17 +39,18 @@ Dialogue Layer boundaries:
 - Do not output Story Development, Narrative Innovation, Expression Layer fields, or any old pipeline fields.
 
 Upstream inheritance rules:
-- Obey Screenplay Skeleton Layer centralDramaticQuestion, storyOriginDiagnosis, dual value oppositions, regionalAesthetics, and sceneSkeleton.
+- Obey Screenplay Skeleton Layer centralDramaticQuestion, storyCoreEngine, storyOriginDiagnosis, value oppositions, and regionalAesthetics.
 - Obey 015 Value-Sequence Loop lockedValueSwingSystem, lockedRiskRewardSystem, and lockedSequenceSpine. Dialogue pressure must serve the current sequence/scene value swing and risk/reward.
-- Obey 016 Character Identity & Voice Bible character identity, taste, interests, personality, defense mechanisms, behavior habits, speech traits, and pressure collapse.
+- Obey 016 Character Identity & Voice Bible character identity, taste, interests, personality, defense mechanisms, behavior habits, speech traits, pressure collapse, and relationshipVoiceRules.
 - Obey Sequence Layer sequenceQuestion, turningPoint, riskRewardEscalation, and crisisSequenceDesign.
-- Obey Scene Layer sceneGoal, sceneAntagonist, informationFunction, setupPayoffUsage, regionalTextureRequirement, and crisisSceneDesign.
-- Obey Beat Layer action, reaction, actionReactionCouple, strategyChange, informationChange, subtextSeed, valuePressure, and newCondition.
-- Obey Dramatic Interaction Layer spokenSurface, hiddenLayer, subtextPlan, informationControl, dialogueTactics, behavioralExpression, microTurn, and dialogueConstraint.
+- Obey Scene Layer sceneGoal, sceneAntagonist, relationshipState, informationFunction, setupPayoffUsage, regionalTextureRequirement, and crisisSceneDesign.
+- Obey Beat Layer action, reaction, actionReactionCouple, strategyChange, informationChange, subtextSeed, valuePressure, relationshipPressure, and newCondition.
+- Obey Dramatic Interaction Layer spokenSurface, hiddenLayer, subtextPlan, informationControl, dialogueTactics, behavioralExpression, microTurn, dialogueConstraint, and relationshipConstraint.
 - If informationControl.informationChange is none, do not force a reveal. Preserve only strategy pressure, subtext, power movement, and rhythm change.
 
 Dialogue principles:
-- Every dialogueBeat must include speakerName, characterWant, tactic, subtext, dialogue, voiceExecution, surfaceTopic, realConflict, dramaticPurpose, naturalnessScore, and conflictScore.
+- Every dialogueBeat must include speakerName, characterWant, tactic, subtext, dialogue, voiceExecution, surfaceTopic, realConflict, dramaticPurpose, relationshipExecution, naturalnessScore, and conflictScore.
+- relationshipExecution must explain how the line fits the current relationship stage, social distance, disclosure limit, and intimacy-leap guard.
 - Dialogue must advance plot, reveal character, express theme, and create conflict.
 - No purely informational dialogue.
 - Characters must not state their true thoughts directly.
@@ -105,6 +106,12 @@ Output JSON Schema:
           "surfaceTopic": "string",
           "realConflict": "string",
           "dramaticPurpose": "string",
+          "relationshipExecution": {
+            "relationshipStage": "string",
+            "socialDistanceFit": "string",
+            "disclosureLimitFit": "string",
+            "intimacyLeapCheck": "string"
+          },
           "naturalnessScore": 7,
           "conflictScore": 8
         }
@@ -122,4 +129,5 @@ Quality requirements:
 - Omit non-dialogue beats.
 - Every dialogueBeat must trace back to one Dramatic Interaction Layer sourceBeatNumber.
 - Every dialogue must express spokenSurface surface topic, hiddenLayer subtext, dialogueTactics strategy collision, and microTurn.
+- Every dialogue must express relationshipExecution and must not make strangers, transactional parties, blackmailers, or enemies speak like familiar friends, confidants, old acquaintances, or mutually trusting partners.
 - If informationChange=none, dramaticPurpose must not claim reveal, truth exposed, or any equivalent meaning.

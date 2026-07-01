@@ -14,7 +14,7 @@ Aspect ratio: {{aspect_ratio}}
 Hard boundaries:
 - Do not write the screenplay directly from the premise.
 - Execute the blueprint in this order: Screenplay Skeleton Layer -> Value-Sequence Loop -> Character Identity & Voice Bible -> Sequence Layer -> Scene Layer -> Beat Layer -> Dramatic Interaction Layer -> Dialogue Layer -> Screenplay.
-- Screenplay Skeleton Layer provides skeletonPremise, centralDramaticQuestion, storyOriginDiagnosis, storyStructureBlueprint, and sceneSkeleton. It is the first structural commitment.
+- Screenplay Skeleton Layer provides skeletonPremise, centralDramaticQuestion, storyCoreEngine, storyOriginDiagnosis, and storyStructureBlueprint. It is the first structural commitment, but it does not provide scene units.
 - Value-Sequence Loop provides lockedValueSwingSystem, lockedRiskRewardSystem, and lockedSequenceSpine. It is the authority source for value, stakes, and sequence progression.
 - Character Identity & Voice Bible provides identity, taste, interests, psychological defense, behavior, mirroringMap, and unique voice. It is the authority source for character behavior and dialogue.
 - Sequence Layer provides sequenceStrategy, actSequenceMap, sequences, crisisSequenceDesign, and sceneLayerContract. It turns the three-act skeleton into dramatic sequences.

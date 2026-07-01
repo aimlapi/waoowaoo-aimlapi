@@ -14,19 +14,19 @@ Screenplay Blueprint：
 硬性职责边界：
 - 禁止直接根据 Premise 写剧本。
 - 必须按 Screenplay Blueprint 中的层级执行：Screenplay Skeleton Layer -> Value-Sequence Loop -> Character Identity & Voice Bible -> Sequence Layer -> Scene Layer -> Beat Layer -> Dramatic Interaction Layer -> Dialogue Layer -> Screenplay。
-- Screenplay Skeleton Layer 提供 skeletonPremise、centralDramaticQuestion、storyOriginDiagnosis、storyStructureBlueprint 与 sceneSkeleton；它是全片第一结构承诺。
+- Screenplay Skeleton Layer 提供 skeletonPremise、centralDramaticQuestion、storyCoreEngine、storyOriginDiagnosis 与 storyStructureBlueprint；它是全片第一结构承诺，但不提供 scene 单位。
 - Value-Sequence Loop 提供 lockedValueSwingSystem、lockedRiskRewardSystem 与 lockedSequenceSpine；它是价值系统、赌注系统和段落系统的前置权威来源。
-- Character Identity & Voice Bible 提供角色身份、品味、兴趣爱好、心理防御、行为习惯、mirroringMap 与 unique voice；它是后续场景、Beat 和对白的角色权威来源。
+- Character Identity & Voice Bible 提供角色身份、品味、兴趣爱好、心理防御、行为习惯、mirroringMap、relationshipVoiceRules 与 unique voice；它是后续场景、Beat 和对白的角色权威来源。
 - Sequence Layer 提供 sequenceStrategy、actSequenceMap、sequences、crisisSequenceDesign 与 sceneLayerContract；它决定三幕骨架如何推进为连续的戏剧序列。
-- Scene Layer 决定每场戏的 sceneGoal、sceneAntagonist、approach、outcome、externalValueTurn、internalValueTurn、turningPoint、crisisSceneDesign 与 beatDesignContract。
-- Beat Layer 决定 action -> reaction -> strategyChange -> informationChange -> newCondition 的策略对撞链条。
-- Dramatic Interaction Layer 决定 spokenSurface、hiddenLayer、subtextPlan、informationControl、dialogueTactics、behavioralExpression、microTurn 与 dialogueConstraint。
-- Dialogue Layer 决定关键 Beat 的 speakerName、characterWant、tactic、subtext、dialogue、voiceExecution、surfaceTopic、realConflict、dramaticPurpose，并负责人物声音、潜台词、地域/方言质感和对白节奏。
+- Scene Layer 决定每场戏的 sceneGoal、sceneAntagonist、relationshipState、approach、outcome、externalValueTurn、internalValueTurn、turningPoint、crisisSceneDesign 与 beatDesignContract。
+- Beat Layer 决定 action -> reaction -> strategyChange -> informationChange -> relationshipPressure -> newCondition 的策略对撞链条。
+- Dramatic Interaction Layer 决定 spokenSurface、hiddenLayer、subtextPlan、informationControl、dialogueTactics、behavioralExpression、microTurn、dialogueConstraint 与 relationshipConstraint。
+- Dialogue Layer 决定关键 Beat 的 speakerName、characterWant、tactic、subtext、dialogue、voiceExecution、surfaceTopic、realConflict、dramaticPurpose、relationshipExecution，并负责人物声音、潜台词、地域/方言质感和对白节奏。
 - 你不能跳过、合并、替换或重写这些中间层。
 - 你只能把这些层翻译成标准剧本文本。
 
 执行规则：
-- 剧本必须首先执行 Screenplay Skeleton Layer 的故事出发点诊断、场数、双层价值对立、crisisMoment 和三幕结果；不得增加、删除或替换骨架场景。
+- 剧本必须首先执行 Screenplay Skeleton Layer 的故事出发点诊断、storyCoreEngine、价值对立、crisisMoment 和三幕结果；不得改写 incitingIncident、globalGoal、dramaticProblem 和 protagonistWound 的齿轮关系。
 - 剧本必须执行 Value-Sequence Loop 的 lockedValueSwingSystem、lockedRiskRewardSystem 与 lockedSequenceSpine；每个序列和场景都必须体现价值翻转与风险/回报变化。
 - 剧本必须执行 Character Identity & Voice Bible；角色的品味、兴趣、身份、行为和声音差异必须进入场景细节与对白，不得只在角色表里说明。
 - 剧本必须执行 Sequence Layer 的 sequenceQuestion、turningPoint、riskRewardEscalation 与 crisisSequenceDesign；如果最终故事绕过序列推进而只剩普通社会议题，说明执行失败。
@@ -34,11 +34,12 @@ Screenplay Blueprint：
 - 每场戏必须执行 Scene Layer 的 informationFunction、setupPayoffUsage、regionalTextureRequirement 与 beatDesignContract：提出问题、埋下线索、制造误导、揭示部分真相、完整揭示、产生新问题、打破观众预期或迫使角色进入更难选择。
 - 每场戏必须出现价值变化；如果场景没有价值变化，不要把它写进剧本。
 - crisisSceneDesign 对应的危机场景必须在剧本中清楚呈现外在选择、内在选择、不可逆代价和如何推向结尾。
-- 每个 Beat 必须体现 action -> reaction -> strategyChange -> informationChange -> newCondition，不要写连续解释或连续信息输出。
+- 每个 Beat 必须体现 action -> reaction -> strategyChange -> informationChange -> relationshipPressure -> newCondition，不要写连续解释或连续信息输出。
 - 每个关键对白必须执行 Dramatic Interaction Layer 的 spokenSurface、hiddenLayer、subtextPlan、informationControl、dialogueTactics、microTurn 与 dialogueConstraint。
 - 如果 informationControl.informationChange 是 none，不得在剧本里强行制造真相揭示。
 - 具体行为、环境细节和调度动作只在本阶段生成；不得推翻 Scene Layer 的 sceneAntagonist/approach、价值转向或 Beat Layer 的 action/reaction 策略对撞链条。
 - 对白必须遵循 Dialogue Layer，不要把 subtext 直接说出口。
+- 对白不得把陌生、交易、勒索、敌对对象突然写成熟人、知己、旧相识或互相信任者；不得更换 Dialogue Layer 的 speakerName，不得把 A 的台词写给 B。
 - 对白必须执行 Dialogue Layer 的 character voice、dialect texture 和 rhythm；删除角色名后，观众应能大致判断是谁在说话。
 - 地域感不等于堆方言；如果上游有地域设定，必须把称呼、语气词、否定方式、时间说法、亲属关系、行业词、熟人社会话术或本地生活物件以可读密度写进关键对白。
 - 不要临时发明与上游地域美学冲突的方言或地域习惯。

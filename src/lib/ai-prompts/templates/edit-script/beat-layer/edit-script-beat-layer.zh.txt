@@ -28,7 +28,8 @@ Scene Layer：
 - 你必须继承 Scene Layer 的 sceneLayerPackage、sceneGoal、sceneAntagonist、approach、outcome、externalValueTurn、internalValueTurn、turningPoint、informationFunction、crisisSceneDesign 与 beatDesignContract。
 - 你必须继承 015 Value-Sequence Loop 的 lockedValueSwingSystem 与 lockedRiskRewardSystem；每个 beat 的 valuePressure 必须服务父场景与父序列的价值/赌注压力。
 - 你必须继承 016 Character Identity & Voice Bible；beat 中的 actor、strategy、intent、subtextSeed 必须符合角色身份、品味、行为习惯、mirroring pressure 和声音原则。
-- 禁止推翻 Screenplay Skeleton Layer 的故事出发点、主角、双层价值对立、危机选择、结局象限和场景总数。
+- 你必须继承 Scene Layer 的 relationshipState 与 016 relationshipVoiceRules；每个 beat 必须输出 relationshipPressure，禁止把陌生、交易、勒索、敌对关系跳成熟人或信任关系。
+- 禁止推翻 Screenplay Skeleton Layer 的故事出发点、主角、价值对立、危机选择和结局象限。
 - 禁止推翻 Sequence Layer 的序列顺序、序列功能、价值推进、风险回报升级和危机序列设计。
 - 禁止推翻 Scene Layer 的场景数量、场景顺序、场景目标、阻碍力量、价值转向、危机场景和 Beat 合同。
 - 禁止重新写一个故事；本层只负责把 Scene Layer 转化为 Beat Layer。
@@ -49,11 +50,12 @@ Scene Layer：
 
 机器校验合同（最高优先级）：
 - 顶层 JSON 只能是 { "beatLayerPackage": { ... } }。
-- 每个 beats[] 元素只能包含这些字段：beatNumber、sceneNumber、action、reaction、actionReactionCouple、strategyChange、informationChange、subtextSeed、valuePressure、newCondition。
+- 每个 beats[] 元素只能包含这些字段：beatNumber、sceneNumber、action、reaction、actionReactionCouple、strategyChange、informationChange、subtextSeed、valuePressure、relationshipPressure、newCondition。
 - 每个 action 只能包含 actor、strategy、intent；每个 reaction 只能包含 actor、strategy、intent。
 - action.strategy 与 reaction.strategy 必须是下方策略词库中的英文 token 原文；禁止输出中文策略词、同义词、解释短语或新枚举。
 - informationChange 必须是 setup、payoff、misdirect、partial_reveal、full_reveal、none 之一；禁止输出其他词。
 - valuePressure 必须同时包含 externalPressure 和 internalPressure。
+- relationshipPressure 必须同时包含 currentStage、pressureApplied、trustMovement、powerMovement、distanceMovement、forbiddenLeapGuard。
 - 如果需要表达 tacticalShift，只能写进 strategyChange 或 beatArc.midSceneTacticalShift；禁止在 beat 对象里新增 tacticalShift、tactic、dialogueHint、emotion、camera、shot、description、result 等字段。
 - 如果你不确定某个字段是否允许，宁可把信息压缩进已允许的 strategyChange、subtextSeed 或 newCondition，不得新增字段。
 
@@ -135,6 +137,13 @@ Scene Layer：
       - valuePressure：
           - externalPressure：本 beat 如何压迫外在价值 A1 vs B1。
           - internalPressure：本 beat 如何压迫内在价值 A2 vs B2。
+      - relationshipPressure：
+          - currentStage：继承 Scene Layer relationshipState.stage。
+          - pressureApplied：本 beat 对人物关系施加的压力。
+          - trustMovement：信任如何变化，若不变也必须说明不变。
+          - powerMovement：权力关系如何变化。
+          - distanceMovement：社交距离如何变化。
+          - forbiddenLeapGuard：本 beat 必须禁止的关系跳跃。
       - newCondition：本 beat 结束后形成的新局面，必须让下一 beat 的选择更窄、更难或更不可退。
 - crisisBeatDesign：危机场景 Beat 设计。
   - crisisSceneNumber：必须等于 sceneLayerPackage.crisisSceneDesign.crisisSceneNumber。
@@ -217,6 +226,14 @@ Scene Layer：
             "valuePressure": {
               "externalPressure": "string",
               "internalPressure": "string"
+            },
+            "relationshipPressure": {
+              "currentStage": "string",
+              "pressureApplied": "string",
+              "trustMovement": "string",
+              "powerMovement": "string",
+              "distanceMovement": "string",
+              "forbiddenLeapGuard": "string"
             },
             "newCondition": "string"
           }

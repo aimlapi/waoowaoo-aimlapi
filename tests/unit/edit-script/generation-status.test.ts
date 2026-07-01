@@ -283,31 +283,41 @@ function mockSuccessfulScreenplayDevelopmentSteps() {
   aiExecMock.executeAiTextStep
     .mockResolvedValueOnce({
       text: JSON.stringify({
-        screenplaySkeleton: {
-          skeletonPremise: 'A quiet signal wakes a station.',
-          centralDramaticQuestion: 'Can the operator answer the signal without losing herself?',
-          storyOriginDiagnosis: { primaryOrigin: 'concept' },
-          storyStructureBlueprint: { structuralBeats: {} },
-          sceneSkeleton: [
-            {
-              sceneNumber: 1,
-              sceneGoal: '确认信号来源',
-              sceneAntagonist: '失控的空间站系统',
-              sceneOutcome: '操作员被迫进入核心舱',
+          screenplaySkeleton: {
+            skeletonPremise: 'A quiet signal wakes a station.',
+            centralDramaticQuestion: 'Can the operator answer the signal without losing herself?',
+          storyCoreEngine: {
+            incitingIncident: '操作员收到一段带有生命体征编码的异常信号。',
+            globalGoal: '我要回应信号',
+            dramaticProblem: '回应信号会牺牲空间站安全，切断信号会抹掉可能幸存的人。',
+            protagonistWound: '操作员相信沉默比回应更安全。',
+            gearLock: {},
+          },
+          storyOriginDiagnosis: {
+            primaryOrigin: 'concept',
+            originDerivationChain: {
+              derivedExternalValueOpposition: {
+                valueA: '沉默',
+                valueB: '回应',
+                oppositionTest: '她不能同时沉默和回应。',
+              },
+              protagonistInference: {
+                wound: '操作员相信沉默比回应更安全。',
+              },
             },
-            {
-              sceneNumber: 2,
-              sceneGoal: '切断异常信号',
-              sceneAntagonist: '信号中的未知意识',
-              sceneOutcome: '操作员发现信号正在求救',
+          },
+          storyStructureBlueprint: {
+            structuralBeats: {},
+            coreValueAndStoryTriangle: {
+              valueSpectrumAndDualOppositions: {
+                externalValueOpposition: {
+                  valueA: '沉默',
+                  valueB: '回应',
+                  oppositionTest: '她不能同时沉默和回应。',
+                },
+              },
             },
-            {
-              sceneNumber: 3,
-              sceneGoal: '决定是否回应信号',
-              sceneAntagonist: '即将关闭的生存系统',
-              sceneOutcome: '操作员回应信号并改变空间站航向',
-            },
-          ],
+          },
         },
       }),
     })
@@ -353,6 +363,17 @@ function mockSuccessfulScreenplayDevelopmentSteps() {
               relationshipVoiceShifts: { underThreat: '更低声' },
             },
           ],
+          relationshipVoiceRules: [
+            {
+              fromCharacter: '操作员',
+              toCharacter: '空间站系统',
+              initialSocialDistance: '职业操作者与失控系统',
+              addressRules: '只用功能称呼',
+              disclosureRules: '不直接自白恐惧',
+              forbiddenIntimacy: '不得写成亲密同伴',
+              stageVoiceProgression: '从命令到质问',
+            },
+          ],
         },
       }),
     })
@@ -376,6 +397,17 @@ function mockSuccessfulScreenplayDevelopmentSteps() {
               sceneAntagonist: '失控的空间站系统',
               outcome: '操作员被迫进入核心舱',
               turningPoint: '舱门从身后锁死',
+              relationshipState: {
+                primaryPair: '操作员 / 空间站系统',
+                stage: '职业控制关系破裂',
+                socialDistance: '操作者与系统',
+                trustLevel: '低信任',
+                powerBalance: '系统暂时夺权',
+                knowledgeAsymmetry: '系统隐藏信号真实来源',
+                allowedAddressMode: '功能性称呼',
+                forbiddenRelationshipLeap: '不得突然像亲密同伴',
+                relationshipTurn: '从操作关系转为对抗关系',
+              },
             },
             {
               sceneNumber: 2,
@@ -383,6 +415,17 @@ function mockSuccessfulScreenplayDevelopmentSteps() {
               sceneAntagonist: '信号中的未知意识',
               outcome: '操作员发现信号正在求救',
               turningPoint: '屏幕显示另一端仍有人存活',
+              relationshipState: {
+                primaryPair: '操作员 / 未知信号',
+                stage: '未知接触',
+                socialDistance: '完全陌生',
+                trustLevel: '无信任',
+                powerBalance: '信息不对等',
+                knowledgeAsymmetry: '信号知道自身处境，操作员不知道',
+                allowedAddressMode: '试探性称呼',
+                forbiddenRelationshipLeap: '不得突然互相信任',
+                relationshipTurn: '从噪声对象转为可能生命',
+              },
             },
             {
               sceneNumber: 3,
@@ -390,6 +433,17 @@ function mockSuccessfulScreenplayDevelopmentSteps() {
               sceneAntagonist: '即将关闭的生存系统',
               outcome: '操作员回应信号并改变空间站航向',
               turningPoint: '她把备用电源接入发射阵列',
+              relationshipState: {
+                primaryPair: '操作员 / 未知信号',
+                stage: '有限回应',
+                socialDistance: '陌生但承认存在',
+                trustLevel: '有限信任',
+                powerBalance: '操作员掌握最后回应权',
+                knowledgeAsymmetry: '操作员仍不知道对方完整身份',
+                allowedAddressMode: '保持试探称呼',
+                forbiddenRelationshipLeap: '不得突然写成旧识',
+                relationshipTurn: '从拒绝回应转向承担回应',
+              },
             },
           ],
         },
@@ -415,6 +469,14 @@ function mockSuccessfulScreenplayDevelopmentSteps() {
                     externalPressure: '信号威胁空间站安全',
                     internalPressure: '她必须承认自己想听见回应',
                   },
+                  relationshipPressure: {
+                    currentStage: '职业控制关系破裂',
+                    pressureApplied: '系统锁门迫使操作员承认失控',
+                    trustMovement: '信任下降',
+                    powerMovement: '系统夺取主动权',
+                    distanceMovement: '从工具关系变成对抗关系',
+                    forbiddenLeapGuard: '不得写成亲密同伴',
+                  },
                   newCondition: '她无法再从外部切断信号',
                 },
               ],
@@ -433,6 +495,12 @@ function mockSuccessfulScreenplayDevelopmentSteps() {
                 beatNumber: 1,
                 speakerName: '操作员',
                 dialogue: '别再装成噪声。',
+                relationshipExecution: {
+                  relationshipStage: '职业控制关系破裂',
+                  socialDistanceFit: '仍是命令和质问，不像熟人',
+                  disclosureLimitFit: '不直接自白恐惧',
+                  intimacyLeapCheck: '没有亲密跳跃',
+                },
               },
             ],
           },

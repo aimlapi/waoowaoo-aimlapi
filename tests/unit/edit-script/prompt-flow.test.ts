@@ -53,7 +53,15 @@ describe('edit script block-first prompt flow', () => {
         user_request: '生成一条连续短片',
         screenplay_blueprint_json: JSON.stringify({
           schemaVersion: 10,
-          screenplaySkeleton: { sceneSkeleton: [] },
+          screenplaySkeleton: {
+            storyCoreEngine: {
+              incitingIncident: '收到一封具体通知。',
+              globalGoal: '我要完成目标',
+              dramaticProblem: '通知迫使主角面对无法回避的问题。',
+              protagonistWound: '主角相信自己不值得被选择。',
+              gearLock: {},
+            },
+          },
           valueSequenceLoop: {
             lockedValueSwingSystem: {},
             lockedRiskRewardSystem: {},
@@ -84,7 +92,7 @@ describe('edit script block-first prompt flow', () => {
     expect(screenplayPrompt).toContain('"schemaVersion":10')
     expect(screenplayPrompt).toContain('lockedValueSwingSystem')
     expect(screenplayPrompt).toContain('Character Identity & Voice Bible')
-    expect(screenplayPrompt).toContain('每个 Beat 必须体现 action -> reaction -> strategyChange -> informationChange -> newCondition')
+    expect(screenplayPrompt).toContain('每个 Beat 必须体现 action -> reaction -> strategyChange -> informationChange -> relationshipPressure -> newCondition')
     expect(screenplayPrompt).toContain('对白必须遵循 Dialogue Layer，不要把 subtext 直接说出口')
     expect(screenplayPrompt).toContain('角色名：2-3 个稳定视觉特征 + 关键身份/状态 + 来自 Dialogue Layer 的必要说话气质')
     expect(screenplayPrompt).toContain('场景数量以 Scene Layer 为准')
@@ -189,7 +197,7 @@ describe('edit script block-first prompt flow', () => {
       locale: 'zh',
       variables: {
         user_request: '生成一条连续短片',
-        screenplay_skeleton_json: JSON.stringify({ screenplaySkeleton: { sceneSkeleton: [] } }),
+        screenplay_skeleton_json: JSON.stringify({ screenplaySkeleton: { storyCoreEngine: {} } }),
         value_sequence_loop_json: JSON.stringify({ valueSequenceLoop: { lockedSequenceSpine: [] } }),
         character_identity_voice_bible_json: JSON.stringify({ characterIdentityVoiceBible: { characterProfiles: [] } }),
         sequence_layer_json: JSON.stringify({ sequenceLayer: { sequences: [] } }),
@@ -201,6 +209,7 @@ describe('edit script block-first prompt flow', () => {
 
     expect(beatLayerPrompt).toContain('机器校验合同（最高优先级）')
     expect(beatLayerPrompt).toContain('每个 beats[] 元素只能包含这些字段')
+    expect(beatLayerPrompt).toContain('relationshipPressure')
     expect(beatLayerPrompt).toContain('action.strategy 与 reaction.strategy 必须是下方策略词库中的英文 token 原文')
     expect(beatLayerPrompt).toContain('informationChange 必须是 setup、payoff、misdirect、partial_reveal、full_reveal、none 之一')
     expect(beatLayerPrompt).toContain('禁止在 beat 对象里新增 tacticalShift、tactic、dialogueHint、emotion、camera、shot、description、result 等字段')
@@ -412,7 +421,7 @@ describe('edit script block-first prompt flow', () => {
       locale: 'en',
       variables: {
         user_request: 'Create a continuous short film',
-        screenplay_skeleton_json: JSON.stringify({ screenplaySkeleton: { sceneSkeleton: [] } }),
+        screenplay_skeleton_json: JSON.stringify({ screenplaySkeleton: { storyCoreEngine: {} } }),
         value_sequence_loop_json: JSON.stringify({ valueSequenceLoop: { lockedSequenceSpine: [] } }),
         character_identity_voice_bible_json: JSON.stringify({ characterIdentityVoiceBible: { characterProfiles: [] } }),
         sequence_layer_json: JSON.stringify({ sequenceLayer: { sequences: [] } }),
@@ -424,6 +433,7 @@ describe('edit script block-first prompt flow', () => {
 
     expect(englishBeatLayerPrompt).toContain('Machine validation contract (highest priority)')
     expect(englishBeatLayerPrompt).toContain('Each beats[] item may contain only these fields')
+    expect(englishBeatLayerPrompt).toContain('relationshipPressure')
     expect(englishBeatLayerPrompt).toContain('must be exact English tokens from Strategy vocabulary below')
     expect(englishBeatLayerPrompt).toContain('informationChange must be exactly one of setup, payoff, misdirect, partial_reveal, full_reveal, none')
     expect(englishBeatLayerPrompt).toContain('Do not add tacticalShift, tactic, dialogueHint, emotion, camera, shot, description, result')

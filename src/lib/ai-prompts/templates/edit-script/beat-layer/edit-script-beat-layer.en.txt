@@ -28,7 +28,8 @@ Core principles:
 - You must inherit Scene Layer sceneLayerPackage, sceneGoal, sceneAntagonist, approach, outcome, externalValueTurn, internalValueTurn, turningPoint, informationFunction, crisisSceneDesign, and beatDesignContract.
 - You must inherit 015 Value-Sequence Loop lockedValueSwingSystem and lockedRiskRewardSystem. Each beat's valuePressure must serve the parent scene and parent sequence value/stakes pressure.
 - You must inherit 016 Character Identity & Voice Bible. actor, strategy, intent, and subtextSeed must fit character identity, taste, behavior, mirroring pressure, and voice principles.
-- Do not overturn Screenplay Skeleton Layer story origin, protagonist, dual value oppositions, crisis choice, ending quadrant, or total scene count.
+- You must inherit Scene Layer relationshipState and 016 relationshipVoiceRules. Every beat must output relationshipPressure and must not jump stranger, transactional, blackmailing, or hostile relationships into familiarity or trust.
+- Do not overturn Screenplay Skeleton Layer story origin, protagonist, value oppositions, crisis choice, or ending quadrant.
 - Do not overturn Sequence Layer sequence order, sequence function, value progression, risk/reward escalation, or crisis sequence design.
 - Do not overturn Scene Layer scene count, scene order, scene goals, blocking forces, value turns, crisis scene, or Beat contracts.
 - Do not rewrite the story. This layer only turns Scene Layer into Beat Layer.
@@ -49,11 +50,12 @@ Core principles:
 
 Machine validation contract (highest priority):
 - The top-level JSON must only be { "beatLayerPackage": { ... } }.
-- Each beats[] item may contain only these fields: beatNumber, sceneNumber, action, reaction, actionReactionCouple, strategyChange, informationChange, subtextSeed, valuePressure, newCondition.
+- Each beats[] item may contain only these fields: beatNumber, sceneNumber, action, reaction, actionReactionCouple, strategyChange, informationChange, subtextSeed, valuePressure, relationshipPressure, newCondition.
 - Each action may contain only actor, strategy, intent. Each reaction may contain only actor, strategy, intent.
 - action.strategy and reaction.strategy must be exact English tokens from Strategy vocabulary below. Do not output translated strategy labels, synonyms, explanatory phrases, or new enum values.
 - informationChange must be exactly one of setup, payoff, misdirect, partial_reveal, full_reveal, none. Do not output any other value.
 - valuePressure must contain both externalPressure and internalPressure.
+- relationshipPressure must contain currentStage, pressureApplied, trustMovement, powerMovement, distanceMovement, and forbiddenLeapGuard.
 - If you need to express tacticalShift, write it only inside strategyChange or beatArc.midSceneTacticalShift. Do not add tacticalShift, tactic, dialogueHint, emotion, camera, shot, description, result, or any other extra field inside a beat object.
 - If you are unsure whether a field is allowed, compress the information into an allowed field such as strategyChange, subtextSeed, or newCondition. Do not add new fields.
 
@@ -135,6 +137,13 @@ Field definitions:
       - valuePressure:
           - externalPressure: how this beat pressures External Value A1 vs B1.
           - internalPressure: how this beat pressures Internal Value A2 vs B2.
+      - relationshipPressure:
+          - currentStage: inherit Scene Layer relationshipState.stage.
+          - pressureApplied: relationship pressure applied by this beat.
+          - trustMovement: how trust moves, or why it does not move.
+          - powerMovement: how power balance moves.
+          - distanceMovement: how social distance moves.
+          - forbiddenLeapGuard: the relationship leap this beat must forbid.
       - newCondition: new condition after this beat. It must make the next choice narrower, harder, or more irreversible.
 - crisisBeatDesign:
   - crisisSceneNumber: must equal sceneLayerPackage.crisisSceneDesign.crisisSceneNumber.
@@ -217,6 +226,14 @@ Output JSON Schema:
             "valuePressure": {
               "externalPressure": "string",
               "internalPressure": "string"
+            },
+            "relationshipPressure": {
+              "currentStage": "string",
+              "pressureApplied": "string",
+              "trustMovement": "string",
+              "powerMovement": "string",
+              "distanceMovement": "string",
+              "forbiddenLeapGuard": "string"
             },
             "newCondition": "string"
           }

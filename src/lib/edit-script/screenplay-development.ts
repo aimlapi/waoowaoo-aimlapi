@@ -2,17 +2,109 @@ import { z } from 'zod'
 import { resolveEditFirstSceneCountSpec, type EditFirstDurationTier } from './duration-tier'
 
 const jsonRecordSchema = z.object({}).catchall(z.unknown())
+const forbiddenSkeletonSceneKeys = ['sceneSkeleton', 'sceneLayer', 'sceneList', 'scenes', 'sceneCount'] as const
+
+const shortValuePhraseSchema = z.string()
+  .trim()
+  .min(1)
+  .max(12)
+  .regex(/^[^\s,，。；;:：、/|]+$/, 'Value phrase must be one short value term without punctuation or spaces.')
+
+const shortGoalPhraseSchema = z.string()
+  .trim()
+  .min(1)
+  .max(16)
+  .regex(/^[^\s,，。；;:：、/|]+$/, 'Global goal must be one short concrete phrase without punctuation or spaces.')
+
+const externalValueOppositionSchema = z.object({
+  valueA: shortValuePhraseSchema,
+  valueB: shortValuePhraseSchema,
+  oppositionTest: z.string().trim().min(1),
+}).strict().superRefine((value, context) => {
+  if (value.valueA === value.valueB) {
+    context.addIssue({
+      code: z.ZodIssueCode.custom,
+      path: ['valueB'],
+      message: 'externalValueOpposition.valueA and valueB must be different.',
+    })
+  }
+})
+
+const internalValueOppositionSchema = z.object({
+  valueC: shortValuePhraseSchema,
+  valueD: shortValuePhraseSchema,
+  mutualExclusionTest: z.string().trim().min(1),
+  valuePairingRule: z.object({
+    pairAC: z.string().trim().min(1),
+    pairBD: z.string().trim().min(1),
+    acPositiveNegativeMix: z.string().trim().min(1),
+    bdPositiveNegativeMix: z.string().trim().min(1),
+    forbiddenPairing: z.string().trim().min(1),
+  }).strict(),
+}).strict().superRefine((value, context) => {
+  if (value.valueC === value.valueD) {
+    context.addIssue({
+      code: z.ZodIssueCode.custom,
+      path: ['valueD'],
+      message: 'internalValueOpposition.valueC and valueD must be different.',
+    })
+  }
+})
+
+const storyCoreEngineSchema = z.object({
+  incitingIncident: z.string().trim().min(1),
+  globalGoal: shortGoalPhraseSchema,
+  dramaticProblem: z.string().trim().min(1),
+  protagonistWound: z.string().trim().min(1),
+  gearLock: jsonRecordSchema,
+}).strict()
+
+const originDerivationChainSchema = jsonRecordSchema.extend({
+  derivedExternalValueOpposition: externalValueOppositionSchema,
+  derivedInternalValueOpposition: internalValueOppositionSchema.optional(),
+  protagonistInference: jsonRecordSchema.extend({
+    wound: z.string().trim().min(1),
+  }),
+})
+
+const valueSpectrumAndDualOppositionsSchema = jsonRecordSchema.extend({
+  externalValueOpposition: externalValueOppositionSchema,
+  internalValueOpposition: internalValueOppositionSchema.optional(),
+})
 
 export const screenplaySkeletonPackageSchema = z.object({
   screenplaySkeleton: jsonRecordSchema.extend({
-    sceneSkeleton: z.array(jsonRecordSchema.extend({
-      sceneNumber: z.number().int().min(1),
-      sceneGoal: z.string().trim().min(1).optional(),
-      sceneAntagonist: z.string().trim().min(1).optional(),
-      sceneOutcome: z.string().trim().min(1).optional(),
-    })).min(1),
+    storyCoreEngine: storyCoreEngineSchema,
+    storyOriginDiagnosis: jsonRecordSchema.extend({
+      originDerivationChain: originDerivationChainSchema,
+    }),
+    storyStructureBlueprint: jsonRecordSchema.extend({
+      coreValueAndStoryTriangle: jsonRecordSchema.extend({
+        valueSpectrumAndDualOppositions: valueSpectrumAndDualOppositionsSchema,
+      }),
+    }),
   }),
-}).strict()
+}).strict().superRefine((value, context) => {
+  for (const key of forbiddenSkeletonSceneKeys) {
+    if (key in value.screenplaySkeleton) {
+      context.addIssue({
+        code: z.ZodIssueCode.custom,
+        path: ['screenplaySkeleton', key],
+        message: `Screenplay Skeleton Layer must not contain scene-level field: ${key}`,
+      })
+    }
+  }
+
+  const wound = value.screenplaySkeleton.storyOriginDiagnosis.originDerivationChain.protagonistInference.wound
+  const protagonistWound = value.screenplaySkeleton.storyCoreEngine.protagonistWound
+  if (wound !== protagonistWound) {
+    context.addIssue({
+      code: z.ZodIssueCode.custom,
+      path: ['screenplaySkeleton', 'storyOriginDiagnosis', 'originDerivationChain', 'protagonistInference', 'wound'],
+      message: 'protagonistInference.wound must exactly match storyCoreEngine.protagonistWound',
+    })
+  }
+})
 
 export const sequenceLayerPackageSchema = z.object({
   sequenceLayer: jsonRecordSchema.extend({
@@ -54,7 +146,28 @@ export const characterIdentityVoiceBiblePackageSchema = z.object({
       voiceProfile: jsonRecordSchema,
       relationshipVoiceShifts: jsonRecordSchema,
     })).min(1),
+    relationshipVoiceRules: z.array(jsonRecordSchema.extend({
+      fromCharacter: z.string().trim().min(1),
+      toCharacter: z.string().trim().min(1),
+      initialSocialDistance: z.string().trim().min(1),
+      addressRules: z.string().trim().min(1),
+      disclosureRules: z.string().trim().min(1),
+      forbiddenIntimacy: z.string().trim().min(1),
+      stageVoiceProgression: z.string().trim().min(1),
+    })).min(1),
   }),
+}).strict()
+
+const relationshipStateSchema = z.object({
+  primaryPair: z.string().trim().min(1),
+  stage: z.string().trim().min(1),
+  socialDistance: z.string().trim().min(1),
+  trustLevel: z.string().trim().min(1),
+  powerBalance: z.string().trim().min(1),
+  knowledgeAsymmetry: z.string().trim().min(1),
+  allowedAddressMode: z.string().trim().min(1),
+  forbiddenRelationshipLeap: z.string().trim().min(1),
+  relationshipTurn: z.string().trim().min(1),
 }).strict()
 
 export const sceneLayerPackageSchema = z.object({
@@ -65,9 +178,27 @@ export const sceneLayerPackageSchema = z.object({
       sceneAntagonist: z.string().trim().min(1),
       outcome: z.string().trim().min(1),
       turningPoint: z.string().trim().min(1),
+      relationshipState: relationshipStateSchema,
     })).min(1),
   }),
-}).strict()
+}).strict().superRefine((value, context) => {
+  for (const [index, scene] of value.sceneLayerPackage.sceneLayer.entries()) {
+    if ('sourceSkeletonSceneNumber' in scene) {
+      context.addIssue({
+        code: z.ZodIssueCode.custom,
+        path: ['sceneLayerPackage', 'sceneLayer', index, 'sourceSkeletonSceneNumber'],
+        message: 'Scene Layer must not inherit sourceSkeletonSceneNumber because Skeleton no longer owns scene units.',
+      })
+    }
+    if ('inheritedSkeletonFunction' in scene) {
+      context.addIssue({
+        code: z.ZodIssueCode.custom,
+        path: ['sceneLayerPackage', 'sceneLayer', index, 'inheritedSkeletonFunction'],
+        message: 'Scene Layer must not inherit inheritedSkeletonFunction because Skeleton no longer owns scene units.',
+      })
+    }
+  }
+})
 
 export const beatStrategySchema = z.enum([
   'show',
@@ -113,6 +244,15 @@ const beatActorSchema = z.object({
   intent: z.string().trim().min(1),
 }).strict()
 
+const relationshipPressureSchema = z.object({
+  currentStage: z.string().trim().min(1),
+  pressureApplied: z.string().trim().min(1),
+  trustMovement: z.string().trim().min(1),
+  powerMovement: z.string().trim().min(1),
+  distanceMovement: z.string().trim().min(1),
+  forbiddenLeapGuard: z.string().trim().min(1),
+}).strict()
+
 const beatSchema = z.object({
   beatNumber: z.number().int().min(1),
   sceneNumber: z.number().int().min(1),
@@ -126,6 +266,7 @@ const beatSchema = z.object({
     externalPressure: z.string().trim().min(1),
     internalPressure: z.string().trim().min(1),
   }).strict(),
+  relationshipPressure: relationshipPressureSchema,
   newCondition: z.string().trim().min(1),
 }).strict()
 
@@ -152,6 +293,11 @@ const interactionSchema = z.object({
   behavioralExpression: jsonRecordSchema,
   microTurn: jsonRecordSchema,
   dialogueConstraint: jsonRecordSchema,
+  relationshipConstraint: jsonRecordSchema.extend({
+    currentStage: z.string().trim().min(1),
+    allowedMovement: z.string().trim().min(1),
+    forbiddenLeapGuard: z.string().trim().min(1),
+  }),
 }).strict()
 
 export const interactionLayerPackageSchema = z.object({
@@ -167,6 +313,12 @@ export const dialogueLayerPackageSchema = z.object({
       beatNumber: z.number().int().min(1),
       speakerName: z.string().trim().min(1),
       dialogue: z.string().trim().min(1),
+      relationshipExecution: z.object({
+        relationshipStage: z.string().trim().min(1),
+        socialDistanceFit: z.string().trim().min(1),
+        disclosureLimitFit: z.string().trim().min(1),
+        intimacyLeapCheck: z.string().trim().min(1),
+      }).strict(),
     })).optional(),
   })).min(1),
 }).strict()
@@ -216,16 +368,16 @@ export type DialogueLayer = z.infer<typeof dialogueLayerPackageSchema>['dialogue
 export type ScreenplayDevelopmentDraftPackage = z.infer<typeof screenplayDevelopmentDraftPackageSchema>
 export type ScreenplayDevelopmentPackage = z.infer<typeof screenplayDevelopmentPackageSchema>
 
-export function assertScreenplaySkeletonSceneCount(input: {
-  readonly screenplaySkeleton: ScreenplaySkeleton
+export function assertSceneLayerSceneCount(input: {
+  readonly sceneLayerPackage: SceneLayerPackage
   readonly durationTier: EditFirstDurationTier
 }): void {
   const spec = resolveEditFirstSceneCountSpec(input.durationTier)
-  const actualScenes = input.screenplaySkeleton.sceneSkeleton.length
+  const actualScenes = input.sceneLayerPackage.sceneLayer.length
   if (actualScenes >= spec.minScenes && actualScenes <= spec.maxScenes) return
 
   throw new Error([
-    'EDIT_SCREENPLAY_SKELETON_SCENE_COUNT_INVALID',
+    'EDIT_SCREENPLAY_SCENE_LAYER_SCENE_COUNT_INVALID',
     `tier=${spec.tier}`,
     `min=${String(spec.minScenes)}`,
     `max=${String(spec.maxScenes)}`,
@@ -347,6 +499,15 @@ export function buildInteractionLayerPackageFromBeatLayer(beatLayerPackage: Beat
         allowed: 'Dialogue Layer 只能围绕 spokenSurface 的表层话题生成语义草稿。',
         forbidden: '不得另起冲突，不得直接说出 hiddenLayer.subtext，不得超出 informationControl.allowedDisclosure。',
         silenceRecommended: informationChange === 'none' && beat.action.strategy === 'drop',
+      },
+      relationshipConstraint: {
+        currentStage: beat.relationshipPressure.currentStage,
+        allowedMovement: [
+          `信任变化：${beat.relationshipPressure.trustMovement}`,
+          `权力变化：${beat.relationshipPressure.powerMovement}`,
+          `距离变化：${beat.relationshipPressure.distanceMovement}`,
+        ].join('；'),
+        forbiddenLeapGuard: beat.relationshipPressure.forbiddenLeapGuard,
       },
     }
   }))

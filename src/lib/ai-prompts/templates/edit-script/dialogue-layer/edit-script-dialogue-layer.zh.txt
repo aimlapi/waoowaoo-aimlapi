@@ -39,17 +39,18 @@ Dialogue Layer 职责边界：
 - 不输出 Story Development、Narrative Innovation、Expression Layer 相关字段或旧流程字段。
 
 上游继承规则：
-- 必须服从 Screenplay Skeleton Layer 的 centralDramaticQuestion、storyOriginDiagnosis、双层价值对立、regionalAesthetics 和 sceneSkeleton。
+- 必须服从 Screenplay Skeleton Layer 的 centralDramaticQuestion、storyCoreEngine、storyOriginDiagnosis、价值对立和 regionalAesthetics。
 - 必须服从 015 Value-Sequence Loop 的 lockedValueSwingSystem、lockedRiskRewardSystem 和 lockedSequenceSpine；对白压力必须服务当前 sequence/scene 的 value swing 与 risk/reward。
-- 必须服从 016 Character Identity & Voice Bible 的角色身份、品味、兴趣、性格、防御机制、行为习惯、说话特点和压力下声音变形。
+- 必须服从 016 Character Identity & Voice Bible 的角色身份、品味、兴趣、性格、防御机制、行为习惯、说话特点、压力下声音变形和 relationshipVoiceRules。
 - 必须服从 Sequence Layer 的 sequenceQuestion、turningPoint、riskRewardEscalation 和 crisisSequenceDesign。
-- 必须服从 Scene Layer 的 sceneGoal、sceneAntagonist、informationFunction、setupPayoffUsage、regionalTextureRequirement 和 crisisSceneDesign。
-- 必须服从 Beat Layer 的 action、reaction、actionReactionCouple、strategyChange、informationChange、subtextSeed、valuePressure 和 newCondition。
-- 必须服从 Dramatic Interaction Layer 的 spokenSurface、hiddenLayer、subtextPlan、informationControl、dialogueTactics、behavioralExpression、microTurn 与 dialogueConstraint。
+- 必须服从 Scene Layer 的 sceneGoal、sceneAntagonist、relationshipState、informationFunction、setupPayoffUsage、regionalTextureRequirement 和 crisisSceneDesign。
+- 必须服从 Beat Layer 的 action、reaction、actionReactionCouple、strategyChange、informationChange、subtextSeed、valuePressure、relationshipPressure 和 newCondition。
+- 必须服从 Dramatic Interaction Layer 的 spokenSurface、hiddenLayer、subtextPlan、informationControl、dialogueTactics、behavioralExpression、microTurn、dialogueConstraint 与 relationshipConstraint。
 - 如果 informationControl.informationChange 是 none，禁止强行制造 reveal；只能维持策略压力、潜台词、权力变化和节奏变化。
 
 对白生成原则：
-- 每个 dialogueBeat 必须包含 speakerName、characterWant、tactic、subtext、dialogue、voiceExecution、surfaceTopic、realConflict、dramaticPurpose、naturalnessScore、conflictScore。
+- 每个 dialogueBeat 必须包含 speakerName、characterWant、tactic、subtext、dialogue、voiceExecution、surfaceTopic、realConflict、dramaticPurpose、relationshipExecution、naturalnessScore、conflictScore。
+- relationshipExecution 必须说明本段对白如何符合当前关系阶段、社交距离、披露限制和禁止亲密跳跃。
 - 对白必须同时推进剧情、暴露人物、体现主题、制造冲突。
 - 禁止纯信息对白。
 - 禁止角色直接说出真实想法。
@@ -105,6 +106,12 @@ Dialogue Layer 职责边界：
           "surfaceTopic": "string",
           "realConflict": "string",
           "dramaticPurpose": "string",
+          "relationshipExecution": {
+            "relationshipStage": "string",
+            "socialDistanceFit": "string",
+            "disclosureLimitFit": "string",
+            "intimacyLeapCheck": "string"
+          },
           "naturalnessScore": 7,
           "conflictScore": 8
         }
@@ -122,4 +129,5 @@ Dialogue Layer 职责边界：
 - 无对白 beat 可省略。
 - 每个 dialogueBeat 必须能追溯到一个 Dramatic Interaction Layer sourceBeatNumber。
 - 每段 dialogue 都必须体现 spokenSurface 表面话题、hiddenLayer 潜台词、dialogueTactics 策略对撞和 microTurn 微转折。
+- 每段 dialogue 都必须体现 relationshipExecution，禁止让陌生、交易、勒索、敌对对象说得像熟人、知己、旧相识或互相信任者。
 - 如果 informationChange=none，dramaticPurpose 不得写成 reveal、truth exposed、真相揭示或类似含义。

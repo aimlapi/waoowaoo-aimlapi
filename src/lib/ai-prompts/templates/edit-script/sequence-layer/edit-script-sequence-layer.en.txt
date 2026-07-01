@@ -19,7 +19,7 @@ Aspect ratio: {{aspect_ratio}}
 
 Core principles:
 - Sequence Layer is the second layer after the Screenplay Skeleton Layer.
-- You must inherit the Screenplay Skeleton Layer skeletonPremise, centralDramaticQuestion, storyOriginDiagnosis, dual value oppositions, valueQuadrant, structuralBeats, crisisMoment, causalityChain, sceneSkeleton, and ending direction.
+- You must inherit the Screenplay Skeleton Layer skeletonPremise, centralDramaticQuestion, storyCoreEngine, storyOriginDiagnosis, value oppositions, valueQuadrant, structuralBeats, crisisMoment, causalityChain, and ending direction.
 - You must inherit 015 Value-Sequence Loop lockedValueSwingSystem, lockedRiskRewardSystem, and lockedSequenceSpine. Sequence Layer is the formal expansion of lockedSequenceSpine; do not invent a new value or stakes system.
 - You must inherit 016 Character Identity & Voice Bible character functions, mirroringMap, identity, and voice principles as constraints for antagonists, contrasts, temptation, and witnesses.
 - Do not overturn the first layer's story origin, protagonist, core value conflict, inciting incident, crisis choice, or ending quadrant.
@@ -31,7 +31,7 @@ Core principles:
 - Every sequence must express the first layer's external value opposition A1 vs B1 and internal value opposition A2 vs B2.
 - Every sequence's risk and reward must escalate together and remain equivalent in magnitude.
 - Sequence Layer must give the later Scene Layer a clear basis for scene design, but it must not replace Scene Layer.
-- Sequence Layer may suggest scene allocation, but it must not change the Screenplay Skeleton Layer sceneSkeleton count. If a sequence scene-splitting suggestion conflicts with the first layer scene count, the later Scene Layer must follow the first layer sceneSkeleton.
+- Sequence Layer may suggest scene allocation, but it must not generate concrete scene units. Scene Layer is the only authority for scene count and scene breakdown.
 
 Sequence count rules:
 - Target duration <= 90 seconds: default 2 sequences.
@@ -39,7 +39,7 @@ Sequence count rules:
 - Target duration > 5 minutes and <= 20 minutes: default 4 sequences.
 - Target duration > 20 minutes and <= 60 minutes: default 6 sequences.
 - Target duration > 60 minutes: default 8 sequences.
-- You may adjust according to the first layer sceneSkeleton scale, but must explain sequenceCountReason.
+- You may adjust according to target duration, storyCoreEngine, and lockedSequenceSpine, but must explain sequenceCountReason.
 - sequence count must be at least 2 and at most 8.
 
 Field definitions:
@@ -158,7 +158,7 @@ Quality requirements:
 - sequenceCount must equal sequences.length.
 - sequenceNumber must start at 1 and increase continuously.
 - actSequenceMap.sequenceNumbers must cover every sequence exactly once.
-- Every sequence must inherit structural pressure from the first layer structuralBeats, causalityChain, or sceneSkeleton.
+- Every sequence must inherit structural pressure from the first layer storyCoreEngine, structuralBeats, or causalityChain.
 - Every sequence must have a clear sequenceGoal, sequenceAntagonist, sequenceOutcome, and irreversibleChange.
 - sequenceGoal must be a stage-specific executable objective, not an abstract wish.
 - sequenceAntagonist must be a concrete obstacle, not just "internal conflict."

@@ -20,6 +20,7 @@ Screenplay Skeleton Layer：
 - 每个关键角色必须有身份、阶层/职业、品味、兴趣爱好、私人仪式、性格、防御机制、行为习惯、说话特点。
 - mirroringMap 必须说明谁是主角反面、谁是可能自我、谁暴露主角自欺、谁诱惑主角走向错误选择。
 - 本层必须能约束后续 Scene、Beat 和 Dialogue，而不是只给最终对白做润色。
+- 必须输出 relationshipVoiceRules，用来描述关键人物之间的初始关系距离、称呼规则、信息披露边界和禁止亲密跳跃。
 
 输出 JSON Schema：
 {
@@ -93,6 +94,17 @@ Screenplay Skeleton Layer：
           "underThreat": "string"
         }
       }
+    ],
+    "relationshipVoiceRules": [
+      {
+        "fromCharacter": "string",
+        "toCharacter": "string",
+        "initialSocialDistance": "string",
+        "addressRules": "string",
+        "disclosureRules": "string",
+        "forbiddenIntimacy": "string",
+        "stageVoiceProgression": "string"
+      }
     ]
   }
 }
@@ -102,3 +114,5 @@ Screenplay Skeleton Layer：
 - 必须至少包含主角、主要阻碍者、一个对照或镜像角色。
 - 角色品味、兴趣、行为和声音必须具体，不能写成抽象标签。
 - 每个 characterProfiles.characterName 必须能在 characterRoster 中找到。
+- relationshipVoiceRules 必须覆盖主角与主要阻碍者、主角与关键对照/镜像人物之间的关系。
+- 如果人物是陌生人、交易、勒索或敌对关系，必须明确禁止熟人式称呼、过早自白和无来由信任。
