@@ -17,6 +17,8 @@ const ORIGINAL_ENV = {
   DEPLOYMENT_EDITION: process.env.DEPLOYMENT_EDITION,
   PROVIDER_CREDENTIAL_MODE: process.env.PROVIDER_CREDENTIAL_MODE,
   PLATFORM_GOOGLE_API_KEY: process.env.PLATFORM_GOOGLE_API_KEY,
+  PLATFORM_CC_API_KEY: process.env.PLATFORM_CC_API_KEY,
+  PLATFORM_CC_BASE_URL: process.env.PLATFORM_CC_BASE_URL,
   PLATFORM_OPENROUTER_API_KEY: process.env.PLATFORM_OPENROUTER_API_KEY,
   PLATFORM_OPENROUTER_BASE_URL: process.env.PLATFORM_OPENROUTER_BASE_URL,
   BILLING_MODE: process.env.BILLING_MODE,
@@ -83,6 +85,7 @@ describe('platform provider config', () => {
 
     const models = await getUserModels('user-1')
     expect(models.map((model) => model.modelKey)).toContain('openrouter::anthropic/claude-sonnet-4.6')
+    expect(models.map((model) => model.modelKey)).toContain('cc::fable5')
     expect(models.map((model) => model.modelKey)).toContain('openrouter::openai/gpt-5.5')
     expect(models.map((model) => model.modelKey)).toContain('openrouter::openai/gpt-image-2')
     expect(models.map((model) => model.modelKey)).toContain('fal::gpt-image-2')
@@ -91,6 +94,11 @@ describe('platform provider config', () => {
     await expect(resolveModelSelection('user-1', 'openrouter::anthropic/claude-sonnet-4.6', 'llm')).resolves.toMatchObject({
       provider: 'openrouter',
       modelId: 'anthropic/claude-sonnet-4.6',
+      mediaType: 'llm',
+    })
+    await expect(resolveModelSelection('user-1', 'cc::fable5', 'llm')).resolves.toMatchObject({
+      provider: 'cc',
+      modelId: 'fable5',
       mediaType: 'llm',
     })
   })

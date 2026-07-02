@@ -75,7 +75,7 @@ describe('cloud platform runtime project config', () => {
     const config = await getProjectModelConfig('project-1', 'user-1')
 
     expect(config).toEqual({
-      analysisModel: 'openrouter::anthropic/claude-sonnet-4.6',
+      analysisModel: 'cc::fable5',
       characterModel: 'openrouter::openai/gpt-image-2',
       locationModel: 'openrouter::openai/gpt-image-2',
       storyboardModel: 'openrouter::openai/gpt-image-2',

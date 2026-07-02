@@ -21,6 +21,7 @@ describe('platform model catalog', () => {
     const modelKeys = models.map((model) => model.modelKey)
 
     expect(modelKeys).toContain('google::gemini-3.5-flash')
+    expect(modelKeys).toContain('cc::fable5')
     expect(modelKeys).toContain('openrouter::google/gemini-3.5-flash')
     expect(modelKeys).toContain('fal::gpt-image-2')
     expect(modelKeys).toContain('openrouter::openai/gpt-image-2')
@@ -32,7 +33,7 @@ describe('platform model catalog', () => {
     expect(modelKeys).toContain('openrouter::bytedance/seedance-2.0-fast')
 
     expect(getPlatformDefaultModels()).toEqual({
-      analysisModel: 'openrouter::anthropic/claude-sonnet-4.6',
+      analysisModel: 'cc::fable5',
       characterModel: 'openrouter::openai/gpt-image-2',
       locationModel: 'openrouter::openai/gpt-image-2',
       storyboardModel: 'openrouter::openai/gpt-image-2',
