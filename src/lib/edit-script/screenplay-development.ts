@@ -16,9 +16,14 @@ const shortGoalPhraseSchema = z.string()
   .max(16)
   .regex(/^[^\s,，。；;:：、/|]+$/, 'Global goal must be one short concrete phrase without punctuation or spaces.')
 
+const valuePolaritySchema = z.enum(['positive', 'negative'])
+
 const externalValueOppositionSchema = z.object({
   valueA: shortValuePhraseSchema,
+  valueAPolarity: valuePolaritySchema,
   valueB: shortValuePhraseSchema,
+  valueBPolarity: valuePolaritySchema,
+  oppositionAxis: z.string().trim().min(1),
   oppositionTest: z.string().trim().min(1),
 }).strict().superRefine((value, context) => {
   if (value.valueA === value.valueB) {
@@ -28,11 +33,21 @@ const externalValueOppositionSchema = z.object({
       message: 'externalValueOpposition.valueA and valueB must be different.',
     })
   }
+  if (value.valueAPolarity === value.valueBPolarity) {
+    context.addIssue({
+      code: z.ZodIssueCode.custom,
+      path: ['valueBPolarity'],
+      message: 'externalValueOpposition.valueA and valueB must have opposite polarity.',
+    })
+  }
 })
 
 const internalValueOppositionSchema = z.object({
   valueC: shortValuePhraseSchema,
+  valueCPolarity: valuePolaritySchema,
   valueD: shortValuePhraseSchema,
+  valueDPolarity: valuePolaritySchema,
+  oppositionAxis: z.string().trim().min(1),
   mutualExclusionTest: z.string().trim().min(1),
   valuePairingRule: z.object({
     pairAC: z.string().trim().min(1),
@@ -47,6 +62,13 @@ const internalValueOppositionSchema = z.object({
       code: z.ZodIssueCode.custom,
       path: ['valueD'],
       message: 'internalValueOpposition.valueC and valueD must be different.',
+    })
+  }
+  if (value.valueCPolarity === value.valueDPolarity) {
+    context.addIssue({
+      code: z.ZodIssueCode.custom,
+      path: ['valueDPolarity'],
+      message: 'internalValueOpposition.valueC and valueD must have opposite polarity.',
     })
   }
 })
@@ -72,6 +94,21 @@ const valueSpectrumAndDualOppositionsSchema = jsonRecordSchema.extend({
   internalValueOpposition: internalValueOppositionSchema.optional(),
 })
 
+const opponentActionsSchema = z.object({
+  force: z.string().trim().min(1),
+  block: z.string().trim().min(1),
+  trap: z.string().trim().min(1),
+  forceCausalityCheck: z.object({
+    rootCauseNotImplementation: z.string().trim().min(1),
+    whyNoAlternative: z.string().trim().min(1),
+    implementationBelongsToBlockOrTrap: z.string().trim().min(1),
+  }).strict(),
+}).strict()
+
+const valueConflictSystemSchema = jsonRecordSchema.extend({
+  opponentActions: opponentActionsSchema,
+})
+
 export const screenplaySkeletonPackageSchema = z.object({
   screenplaySkeleton: jsonRecordSchema.extend({
     storyCoreEngine: storyCoreEngineSchema,
@@ -82,6 +119,7 @@ export const screenplaySkeletonPackageSchema = z.object({
       coreValueAndStoryTriangle: jsonRecordSchema.extend({
         valueSpectrumAndDualOppositions: valueSpectrumAndDualOppositionsSchema,
       }),
+      valueConflictSystem: valueConflictSystemSchema,
     }),
   }),
 }).strict().superRefine((value, context) => {
@@ -102,6 +140,43 @@ export const screenplaySkeletonPackageSchema = z.object({
       code: z.ZodIssueCode.custom,
       path: ['screenplaySkeleton', 'storyOriginDiagnosis', 'originDerivationChain', 'protagonistInference', 'wound'],
       message: 'protagonistInference.wound must exactly match storyCoreEngine.protagonistWound',
+    })
+  }
+
+  const originExternal = value.screenplaySkeleton.storyOriginDiagnosis.originDerivationChain.derivedExternalValueOpposition
+  const blueprintExternal = value.screenplaySkeleton.storyStructureBlueprint.coreValueAndStoryTriangle.valueSpectrumAndDualOppositions.externalValueOpposition
+  if (originExternal.valueA !== blueprintExternal.valueA || originExternal.valueB !== blueprintExternal.valueB) {
+    context.addIssue({
+      code: z.ZodIssueCode.custom,
+      path: ['screenplaySkeleton', 'storyStructureBlueprint', 'coreValueAndStoryTriangle', 'valueSpectrumAndDualOppositions', 'externalValueOpposition'],
+      message: 'Blueprint externalValueOpposition must match originDerivationChain derivedExternalValueOpposition.',
+    })
+  }
+
+  const originInternal = value.screenplaySkeleton.storyOriginDiagnosis.originDerivationChain.derivedInternalValueOpposition
+  const blueprintInternal = value.screenplaySkeleton.storyStructureBlueprint.coreValueAndStoryTriangle.valueSpectrumAndDualOppositions.internalValueOpposition
+  if (!originInternal || !blueprintInternal) return
+
+  if (originInternal.valueC !== blueprintInternal.valueC || originInternal.valueD !== blueprintInternal.valueD) {
+    context.addIssue({
+      code: z.ZodIssueCode.custom,
+      path: ['screenplaySkeleton', 'storyStructureBlueprint', 'coreValueAndStoryTriangle', 'valueSpectrumAndDualOppositions', 'internalValueOpposition'],
+      message: 'Blueprint internalValueOpposition must match originDerivationChain derivedInternalValueOpposition.',
+    })
+  }
+
+  if (originExternal.valueAPolarity === originInternal.valueCPolarity) {
+    context.addIssue({
+      code: z.ZodIssueCode.custom,
+      path: ['screenplaySkeleton', 'storyOriginDiagnosis', 'originDerivationChain', 'derivedInternalValueOpposition', 'valueCPolarity'],
+      message: 'A & C pairing must mix one positive and one negative value.',
+    })
+  }
+  if (originExternal.valueBPolarity === originInternal.valueDPolarity) {
+    context.addIssue({
+      code: z.ZodIssueCode.custom,
+      path: ['screenplaySkeleton', 'storyOriginDiagnosis', 'originDerivationChain', 'derivedInternalValueOpposition', 'valueDPolarity'],
+      message: 'B & D pairing must mix one positive and one negative value.',
     })
   }
 })

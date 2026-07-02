@@ -14,10 +14,14 @@
 - incitingIncident 必须是具体物理事件。
 - globalGoal 必须是一个简短、具体、可证明成败的目标短语，例如“我要拿冠军”“我要结婚”“我要复仇”；禁止写成长句、解释句或抽象愿望。
 - incitingIncident、globalGoal、dramaticProblem、protagonistWound 必须通过 gearLock 紧密咬合。
-- externalValueOpposition 必须有，且只能是 valueA vs valueB。valueA 和 valueB 必须各自是一个短价值词，不要长句，不要解释。
+- externalValueOpposition 必须有，且只能是 valueA vs valueB。valueA 和 valueB 必须各自是一个短价值词，不要长句，不要解释；二者必须在同一 oppositionAxis 上绝对对立。
+- externalValueOpposition 必须给 valueAPolarity 和 valueBPolarity，且二者必须一正一负。例：valueA=守规矩、valueAPolarity=positive；valueB=违规、valueBPolarity=negative。
 - internalValueOpposition 可选：大情节/高概念动作片可不写；小情节、反情节、文艺、意识流、人物心理向故事必须写。
-- 如果写 internalValueOpposition，只能是 valueC vs valueD。valueC 和 valueD 也必须各自是一个短价值词。
+- 如果写 internalValueOpposition，只能是 valueC vs valueD。valueC 和 valueD 也必须各自是一个短价值词，且必须在同一 oppositionAxis 上绝对对立。
+- internalValueOpposition 必须给 valueCPolarity 和 valueDPolarity，且二者必须一正一负。例：valueC=麻木、valueCPolarity=negative；valueD=不麻木、valueDPolarity=positive。
 - 如果 internalValueOpposition 存在，必须说明 A & C vs B & D 的配对：AC 一组、BD 一组，且每组必须是一正一负的混合，不允许“既富裕又自由 / 既贫穷又不自由”这种同向偷懒配对。
+- opponentActions.force 只能写逼迫主角行动的根因压力 / 世界规则 / 不可绕开的事实，不能写执行层面的制度阻碍、场景阻碍或对手操作。执行层面的阻碍应写进 block 或 trap。
+- 对“人类失去性生活能力”这类创意，force 应该是“人类失去性生活能力”，因为它才逼迫主角只能通过人工/违规手段让妻子怀上自己的孩子；“繁衍中心强制执行流程”只能是 block 或 trap。
 - protagonistInference.wound 必须与 storyCoreEngine.protagonistWound 完全一致。
 
 输出 JSON Schema：
@@ -49,12 +53,18 @@
         "primaryQuestion": "string",
         "derivedExternalValueOpposition": {
           "valueA": "短价值词",
+          "valueAPolarity": "positive|negative",
           "valueB": "短价值词",
+          "valueBPolarity": "positive|negative",
+          "oppositionAxis": "string",
           "oppositionTest": "string"
         },
         "derivedInternalValueOpposition": {
           "valueC": "短价值词",
+          "valueCPolarity": "positive|negative",
           "valueD": "短价值词",
+          "valueDPolarity": "positive|negative",
+          "oppositionAxis": "string",
           "mutualExclusionTest": "string",
           "valuePairingRule": {
             "pairAC": "string",
@@ -102,12 +112,18 @@
         "valueSpectrumAndDualOppositions": {
           "externalValueOpposition": {
             "valueA": "短价值词",
+            "valueAPolarity": "positive|negative",
             "valueB": "短价值词",
+            "valueBPolarity": "positive|negative",
+            "oppositionAxis": "string",
             "oppositionTest": "string"
           },
           "internalValueOpposition": {
             "valueC": "短价值词",
+            "valueCPolarity": "positive|negative",
             "valueD": "短价值词",
+            "valueDPolarity": "positive|negative",
+            "oppositionAxis": "string",
             "mutualExclusionTest": "string",
             "valuePairingRule": {
               "pairAC": "string",
@@ -139,7 +155,12 @@
         "opponentActions": {
           "force": "string",
           "block": "string",
-          "trap": "string"
+          "trap": "string",
+          "forceCausalityCheck": {
+            "rootCauseNotImplementation": "说明 force 为什么是根因压力，而不是执行阻碍",
+            "whyNoAlternative": "说明它为什么逼得主角没有常规选择",
+            "implementationBelongsToBlockOrTrap": "说明哪些执行层阻碍应该放进 block/trap，不准误写进 force"
+          }
         }
       },
       "storyFoundationAndEngine": {
@@ -195,5 +216,8 @@
 - screenplaySkeleton 禁止包含 sceneSkeleton、sceneLayer、sceneList、scenes、sceneCount 或任何 scene 单位。
 - externalValueOpposition 必须存在；internalValueOpposition 可选。
 - valueA、valueB、valueC、valueD 都必须是短价值词，禁止长句。
+- externalValueOpposition 和 internalValueOpposition 必须各自有 oppositionAxis，且各自两端 polarity 必须相反。
+- 如果 internalValueOpposition 存在，A&C 和 B&D 都必须是一正一负，不得同向配对。
 - globalGoal 必须是短目标短语，禁止长描述。
 - 如果存在 internalValueOpposition，必须写 valuePairingRule，说明 A&C vs B&D 且每组一正一负。
+- opponentActions.force 必须是根因压力；执行层面的机构阻碍、流程阻碍、物理阻碍只能写进 block 或 trap。

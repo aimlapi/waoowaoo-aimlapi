@@ -298,7 +298,10 @@ function mockSuccessfulScreenplayDevelopmentSteps() {
             originDerivationChain: {
               derivedExternalValueOpposition: {
                 valueA: '沉默',
+                valueAPolarity: 'negative',
                 valueB: '回应',
+                valueBPolarity: 'positive',
+                oppositionAxis: '沟通选择',
                 oppositionTest: '她不能同时沉默和回应。',
               },
               protagonistInference: {
@@ -312,8 +315,23 @@ function mockSuccessfulScreenplayDevelopmentSteps() {
               valueSpectrumAndDualOppositions: {
                 externalValueOpposition: {
                   valueA: '沉默',
+                  valueAPolarity: 'negative',
                   valueB: '回应',
+                  valueBPolarity: 'positive',
+                  oppositionAxis: '沟通选择',
                   oppositionTest: '她不能同时沉默和回应。',
+                },
+              },
+            },
+            valueConflictSystem: {
+              opponentActions: {
+                force: '异常信号包含生命体征编码',
+                block: '空间站安全协议禁止回应',
+                trap: '回应或沉默都会造成不可逆损失',
+                forceCausalityCheck: {
+                  rootCauseNotImplementation: 'force 是异常信号本身，不是安全协议。',
+                  whyNoAlternative: '生命体征编码让操作员无法把它当成普通噪音。',
+                  implementationBelongsToBlockOrTrap: '安全协议和通信禁令属于 block/trap。',
                 },
               },
             },

@@ -44,12 +44,18 @@ function buildValidSkeleton() {
         originDerivationChain: {
           derivedExternalValueOpposition: {
             valueA: '富贵',
+            valueAPolarity: 'positive',
             valueB: '贫穷',
+            valueBPolarity: 'negative',
+            oppositionAxis: '阶层资源',
             oppositionTest: '角色不能同时占有富贵生活和贫穷生活。',
           },
           derivedInternalValueOpposition: {
             valueC: '束缚',
+            valueCPolarity: 'negative',
             valueD: '自由',
+            valueDPolarity: 'positive',
+            oppositionAxis: '精神状态',
             mutualExclusionTest: '她不能同时控制孩子归属又尊重孩子自由。',
             valuePairingRule: {
               pairAC: '富贵+束缚',
@@ -69,12 +75,18 @@ function buildValidSkeleton() {
           valueSpectrumAndDualOppositions: {
             externalValueOpposition: {
               valueA: '富贵',
+              valueAPolarity: 'positive',
               valueB: '贫穷',
+              valueBPolarity: 'negative',
+              oppositionAxis: '阶层资源',
               oppositionTest: '角色不能同时占有富贵生活和贫穷生活。',
             },
             internalValueOpposition: {
               valueC: '束缚',
+              valueCPolarity: 'negative',
               valueD: '自由',
+              valueDPolarity: 'positive',
+              oppositionAxis: '精神状态',
               mutualExclusionTest: '她不能同时控制孩子归属又尊重孩子自由。',
               valuePairingRule: {
                 pairAC: '富贵+束缚',
@@ -83,6 +95,18 @@ function buildValidSkeleton() {
                 bdPositiveNegativeMix: '贫穷为负，自由为正。',
                 forbiddenPairing: '禁止写成富贵+自由与贫穷+束缚。',
               },
+            },
+          },
+        },
+        valueConflictSystem: {
+          opponentActions: {
+            force: '医院抱错孩子的血缘事实',
+            block: '两个家庭既有亲情结构阻止直接交换孩子',
+            trap: '任何选择都会伤害其中一个孩子',
+            forceCausalityCheck: {
+              rootCauseNotImplementation: 'force 是血缘错置事实，不是某个家庭的执行阻碍。',
+              whyNoAlternative: '真相一旦出现，母亲无法继续假装孩子归属没有问题。',
+              implementationBelongsToBlockOrTrap: '家庭阻挠和亲情沉没成本属于 block/trap。',
             },
           },
         },
@@ -133,6 +157,23 @@ describe('screenplay development layers', () => {
     const equalValue = buildValidSkeleton()
     equalValue.screenplaySkeleton.storyOriginDiagnosis.originDerivationChain.derivedExternalValueOpposition.valueB = '富贵'
     expect(() => screenplaySkeletonPackageSchema.parse(equalValue)).toThrow('externalValueOpposition.valueA and valueB must be different')
+  })
+
+  it('rejects value oppositions without opposite polarity and AC/BD polarity mix', () => {
+    const sameExternalPolarity = buildValidSkeleton()
+    sameExternalPolarity.screenplaySkeleton.storyOriginDiagnosis.originDerivationChain.derivedExternalValueOpposition.valueBPolarity = 'positive'
+    expect(() => screenplaySkeletonPackageSchema.parse(sameExternalPolarity)).toThrow('externalValueOpposition.valueA and valueB must have opposite polarity')
+
+    const sameInternalPolarity = buildValidSkeleton()
+    sameInternalPolarity.screenplaySkeleton.storyOriginDiagnosis.originDerivationChain.derivedInternalValueOpposition.valueCPolarity = 'positive'
+    expect(() => screenplaySkeletonPackageSchema.parse(sameInternalPolarity)).toThrow('internalValueOpposition.valueC and valueD must have opposite polarity')
+
+    const badAcPairing = buildValidSkeleton()
+    badAcPairing.screenplaySkeleton.storyOriginDiagnosis.originDerivationChain.derivedInternalValueOpposition.valueCPolarity = 'positive'
+    badAcPairing.screenplaySkeleton.storyOriginDiagnosis.originDerivationChain.derivedInternalValueOpposition.valueDPolarity = 'negative'
+    badAcPairing.screenplaySkeleton.storyStructureBlueprint.coreValueAndStoryTriangle.valueSpectrumAndDualOppositions.internalValueOpposition.valueCPolarity = 'positive'
+    badAcPairing.screenplaySkeleton.storyStructureBlueprint.coreValueAndStoryTriangle.valueSpectrumAndDualOppositions.internalValueOpposition.valueDPolarity = 'negative'
+    expect(() => screenplaySkeletonPackageSchema.parse(badAcPairing)).toThrow('A & C pairing must mix one positive and one negative value')
   })
 
   it('validates scene count on Scene Layer instead of Skeleton Layer', () => {

@@ -13,10 +13,14 @@ Hard rules:
 - You must output storyCoreEngine with incitingIncident, globalGoal, dramaticProblem, protagonistWound, and gearLock.
 - incitingIncident must be a concrete physical event.
 - globalGoal must be one short, concrete, provable goal phrase, such as "winTheTitle", "getMarried", or "takeRevenge". Do not write a long description.
-- externalValueOpposition is required and must be valueA vs valueB. valueA and valueB must each be one short value term.
+- externalValueOpposition is required and must be valueA vs valueB. valueA and valueB must each be one short value term on the same oppositionAxis.
+- externalValueOpposition must include valueAPolarity and valueBPolarity, and they must be opposite: one positive and one negative.
 - internalValueOpposition is optional. Omit it for big-plot/high-concept action stories when unnecessary; include it for miniplot, antiplot, literary, stream-of-consciousness, or psychological stories.
-- If internalValueOpposition exists, it must be valueC vs valueD. valueC and valueD must each be one short value term.
+- If internalValueOpposition exists, it must be valueC vs valueD. valueC and valueD must each be one short value term on the same oppositionAxis.
+- internalValueOpposition must include valueCPolarity and valueDPolarity, and they must be opposite: one positive and one negative.
 - If internalValueOpposition exists, explain A & C vs B & D pairing. AC and BD are the two paired value states, and each pair must mix one positive and one negative value.
+- opponentActions.force must be the root causal pressure, world rule, or unavoidable fact that forces the protagonist to act. It must not be an institutional execution step, scene obstacle, or opponent operation; those belong in block or trap.
+- For a premise where humans have lost sexual ability, force should be "humans have lost sexual ability", because that root condition forces artificial or illegal intervention. "The reproduction center enforces a sterile process" belongs in block or trap.
 - protagonistInference.wound must exactly match storyCoreEngine.protagonistWound.
 
-Output JSON Schema is the same as the Chinese template: top-level key screenplaySkeleton; use valueA/valueB for externalValueOpposition, optional valueC/valueD for internalValueOpposition, storyCoreEngine.globalGoal as a short phrase, and no scene-level fields.
+Output JSON Schema is the same as the Chinese template: top-level key screenplaySkeleton; use valueA/valueAPolarity/valueB/valueBPolarity/oppositionAxis for externalValueOpposition; optional valueC/valueCPolarity/valueD/valueDPolarity/oppositionAxis for internalValueOpposition; include forceCausalityCheck under opponentActions; storyCoreEngine.globalGoal is a short phrase; no scene-level fields.
