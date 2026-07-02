@@ -5,9 +5,22 @@ import {
   type StoryboardPanelCharacterReference,
 } from '@/lib/storyboard-character-bindings'
 import { compileStoryboardStillPromptFactsV2 } from '@/lib/storyboard-image-compiler/compiler'
+import {
+  emptyCompilerLayerPlan,
+} from '@/lib/storyboard-image-compiler/validator'
+import type {
+  CharacterGraph,
+  GlobalSceneLock,
+  LocationZone,
+  PropGraphItem,
+  SceneAssetOmission,
+  StoryboardStillPromptFacts,
+} from '@/lib/storyboard-image-compiler/types'
 import { parsePanelCharacterReferences } from './image-task-handler-shared'
 
 const STILL_TEXT_LIMIT = 420
+
+export type { StoryboardStillPromptFacts } from '@/lib/storyboard-image-compiler/types'
 
 export type StoryboardStillPromptPanel = {
   readonly id: string
@@ -22,87 +35,6 @@ export type StoryboardStillPromptPanel = {
   readonly srtSegment: string | null
   readonly photographyRules: string | null
   readonly actingNotes: string | null
-}
-
-type GlobalSceneLock = {
-  readonly source: 'location_reference.spatial_profile'
-  readonly summary: string | null
-  readonly lighting: string | null
-  readonly stable_background: readonly string[]
-}
-
-type SceneAssetOmission = {
-  readonly name: string
-  readonly kind: 'character' | 'prop'
-  readonly reason: string
-}
-
-type LocationZone = {
-  readonly source: 'panel.photography_rules.scene_zone'
-  readonly location_name: string | null
-  readonly zone_id: string | null
-  readonly zone_name: string | null
-  readonly overall_position: string | null
-  readonly must_include: readonly string[]
-  readonly subject_position: string | null
-  readonly camera_position: string | null
-  readonly screen_composition: string | null
-  readonly character_placements: readonly {
-    readonly character_name: string
-    readonly subject_position: string | null
-    readonly facing: string | null
-    readonly eyeline: string | null
-  }[]
-  readonly omitted_scene_assets: readonly SceneAssetOmission[]
-}
-
-type CharacterGraph = {
-  readonly references: readonly NumberedReferenceImage[]
-  readonly characters: readonly {
-    readonly id: string
-    readonly name: string
-    readonly appearance: string | null
-    readonly description: string | null
-    readonly referenceImage: string | null
-    readonly identity_lock: readonly string[]
-    readonly wardrobe_lock: string | null
-  }[]
-}
-
-type PropGraphItem = {
-  readonly id: string
-  readonly name: string
-  readonly visualDescription: string
-  readonly referenceImage: string | null
-  readonly source: 'panel.props'
-}
-
-type StillFrame = {
-  readonly shot_scale: string | null
-  readonly static_framing: string | null
-  readonly shot_priority: readonly string[]
-  readonly explicit_image_prompt: string | null
-  readonly visible_subjects: readonly string[]
-  readonly action: string | null
-  readonly emotion: string | null
-  readonly visible_props: readonly string[]
-  readonly crop_priority: string
-}
-
-export type StoryboardStillPromptFacts = {
-  readonly panel: {
-    readonly panel_id: string
-    readonly shot_type: string | null
-    readonly still_frame: StillFrame
-  }
-  readonly context: {
-    readonly reference_images: readonly NumberedReferenceImage[]
-    readonly LOCATION_ZONE: LocationZone | null
-    readonly GLOBAL_SCENE_LOCK: GlobalSceneLock | null
-    readonly CHARACTER_GRAPH: CharacterGraph
-    readonly PROP_GRAPH: readonly PropGraphItem[]
-    readonly NEGATIVE: readonly string[]
-  }
 }
 
 type SanitizedStillPanel = {
@@ -484,6 +416,7 @@ export function buildStoryboardStillPromptFacts(input: {
     },
     context: {
       reference_images: input.referenceImagesMap,
+      COMPILER_V2: emptyCompilerLayerPlan(),
       LOCATION_ZONE: buildLocationZone(input.panel),
       GLOBAL_SCENE_LOCK: buildGlobalSceneLock(readSpatialProfile({
         panel: input.panel,
@@ -526,6 +459,9 @@ export function buildStoryboardStillPrompt(input: {
     '',
     'SHOT_PRIORITY',
     jsonBlock(input.facts.panel.still_frame.shot_priority),
+    '',
+    'COMPILER_V2_LAYER_PLAN',
+    jsonBlock(input.facts.context.COMPILER_V2),
     '',
     'LOCATION_ZONE',
     jsonBlock(input.facts.context.LOCATION_ZONE),

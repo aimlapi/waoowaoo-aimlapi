@@ -148,6 +148,10 @@ describe('panel-still-prompt-builder', () => {
     expect(prompt).not.toContain('window on right side')
     expect(prompt).not.toContain('空间板槽位')
     expect(countOccurrences(prompt, 'Hero grips a golden eagle badge while red infrared scan lines cross his face.')).toBe(1)
+    expect(prompt).toContain('COMPILER_V2_LAYER_PLAN')
+    expect(facts.context.COMPILER_V2.version).toBe('storyboard-image-prompt-compiler-v2')
+    expect(facts.context.COMPILER_V2.adaptive_spatial_layer.active_anchors).toEqual(['stone wall', 'wet pavement'])
+    expect(facts.context.COMPILER_V2.action_performance_layer.action).toBe('STILL_FRAME.action')
   })
 
   it('sanitizes still panel facts from description and static camera fields only', () => {
@@ -217,6 +221,9 @@ describe('panel-still-prompt-builder', () => {
     expect(facts.context.GLOBAL_SCENE_LOCK?.summary).toBeNull()
     expect(facts.context.GLOBAL_SCENE_LOCK?.stable_background.length).toBeLessThanOrEqual(1)
     expect(facts.context.LOCATION_ZONE?.must_include).toEqual(['face shadow', 'collar edge'])
+    expect(facts.context.COMPILER_V2.shot_scale_class).toBe('extreme_detail')
+    expect(facts.context.COMPILER_V2.subject_prop_state_layer.visible_props).toEqual([])
+    expect(facts.context.COMPILER_V2.cinematography_framing_layer.depth_strategy).toBe('macro shallow depth of field')
     expect(prompt).toContain('Do not show prop \\"Golden eagle badge\\"')
     expect(prompt).not.toContain('small worn golden eagle badge')
     expect(prompt).not.toContain('"role": "location"')

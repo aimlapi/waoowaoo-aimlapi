@@ -151,6 +151,7 @@ function buildGridCell(input: {
     panel: facts.panel,
     reference_images: facts.context.reference_images,
     panel_context: {
+      COMPILER_V2: facts.context.COMPILER_V2,
       LOCATION_ZONE: facts.context.LOCATION_ZONE,
       GLOBAL_SCENE_LOCK: facts.context.GLOBAL_SCENE_LOCK
         ? {
