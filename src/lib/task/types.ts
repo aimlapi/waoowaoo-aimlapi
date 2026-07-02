@@ -61,6 +61,7 @@ export const TASK_TYPE = {
   ASSET_HUB_MODIFY: 'asset_hub_modify',
   EDIT_SCREENPLAY_GENERATE: 'edit_screenplay_generate',
   EDIT_SCREENPLAY_REVISE: 'edit_screenplay_revise',
+  LONG_FORM_PLAN_GENERATE: 'long_form_plan_generate',
   EDIT_SCRIPT_GENERATE: 'edit_script_generate',
   EDIT_SHOT_EXECUTION_PLAN_GENERATE: 'edit_shot_execution_plan_generate',
   AI_MODIFY_APPEARANCE: 'ai_modify_appearance',

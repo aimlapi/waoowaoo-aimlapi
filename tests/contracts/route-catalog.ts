@@ -89,6 +89,7 @@ const ROUTE_FILES = [
   'src/app/api/projects/[projectId]/generate-video/route.ts',
   'src/app/api/projects/[projectId]/location/confirm-selection/route.ts',
   'src/app/api/projects/[projectId]/location/route.ts',
+  'src/app/api/projects/[projectId]/long-form/route.ts',
   'src/app/api/projects/[projectId]/operations/[operationId]/plan/route.ts',
   'src/app/api/projects/[projectId]/panel/route.ts',
   'src/app/api/projects/[projectId]/panel/select-candidate/route.ts',
@@ -173,6 +174,7 @@ function resolveContractGroup(routeFile: string): RouteContractGroup {
     || routeFile.endsWith('/generate/plan/route.ts')
     || routeFile.endsWith('/operations/[operationId]/plan/route.ts')
     || routeFile.endsWith('/regenerate-panel-image/route.ts')
+    || routeFile.endsWith('/long-form/route.ts')
     || routeFile.includes('/edit-script/prompts/')
   ) {
     return 'direct-submit-routes'

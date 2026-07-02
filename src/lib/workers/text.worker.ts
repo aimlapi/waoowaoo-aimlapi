@@ -12,6 +12,7 @@ import {
   handleEditScreenplayGenerateTask,
   handleEditScreenplayReviseTask,
 } from './handlers/edit-screenplay-generate'
+import { handleLongFormPlanGenerateTask } from './handlers/long-form-plan-generate'
 import {
   handleEditShotExecutionPlanGenerateTask,
 } from './handlers/edit-script-structured-generate'
@@ -30,6 +31,8 @@ async function processTextTask(job: Job<TaskJobData>) {
       return await handleEditScreenplayGenerateTask(job)
     case TASK_TYPE.EDIT_SCREENPLAY_REVISE:
       return await handleEditScreenplayReviseTask(job)
+    case TASK_TYPE.LONG_FORM_PLAN_GENERATE:
+      return await handleLongFormPlanGenerateTask(job)
     case TASK_TYPE.EDIT_STYLE_PREVIEWS_GENERATE:
       return await handleEditStylePreviewsGenerateTask(job)
     case TASK_TYPE.EDIT_SCRIPT_GENERATE:

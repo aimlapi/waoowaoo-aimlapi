@@ -85,6 +85,24 @@ const generationSegmentsMock = vi.hoisted(() => ({
   updateProjectEditScriptGenerationSegmentContinuity: vi.fn(),
 }))
 
+const longFormServiceMock = vi.hoisted(() => ({
+  listProjectLongFormPlans: vi.fn(async () => []),
+  readProjectLongFormPlan: vi.fn(async () => null),
+  submitProjectLongFormPlanGenerationTask: vi.fn(async () => ({
+    success: true,
+    async: true,
+    status: 'queued',
+    taskId: 'task-long-form',
+    runId: null,
+    deduped: false,
+    projectId: 'project-1',
+    planId: 'long-form-plan-1',
+    taskType: 'long_form_plan_generate',
+    targetType: 'ProjectLongFormPlan',
+    targetId: 'long-form-plan-1',
+  })),
+}))
+
 vi.mock('@/lib/api-auth', () => authMock)
 vi.mock('@/lib/task/resolve-locale', () => ({
   resolveRequiredTaskLocale: vi.fn(() => 'zh'),
@@ -95,6 +113,7 @@ vi.mock('@/lib/operations/submit-operation-task', () => ({
 vi.mock('@/lib/edit-script/task-submission', () => taskSubmissionMock)
 vi.mock('@/lib/edit-script/service', () => editScriptServiceMock)
 vi.mock('@/lib/edit-script/generation-segments', () => generationSegmentsMock)
+vi.mock('@/lib/long-form/service', () => longFormServiceMock)
 
 type ProjectRouteContext = {
   params: Promise<{ projectId: string }>
@@ -245,5 +264,39 @@ describe('api contract - project edit script routes', () => {
 
     expect(response.status).toBe(401)
     expect(taskSubmissionMock.submitProjectEditScreenplayGenerationTask).not.toHaveBeenCalled()
+  })
+
+  it('POST /api/projects/[projectId]/long-form submits the long-form plan generation contract', async () => {
+    const mod = await import('@/app/api/projects/[projectId]/long-form/route') as ProjectPostRoute
+    const request = buildMockRequest({
+      path: '/api/projects/project-1/long-form',
+      method: 'POST',
+      body: {
+        prompt: '生成一部长篇悬疑短剧',
+        totalDurationSec: 240,
+        aspectRatio: '16:9',
+      },
+    })
+
+    const response = await mod.POST(request, { params: Promise.resolve({ projectId: 'project-1' }) })
+
+    expect(response.status).toBe(200)
+    await expect(readJson(response)).resolves.toMatchObject({
+      async: true,
+      status: 'queued',
+      taskId: 'task-long-form',
+      planId: 'long-form-plan-1',
+    })
+    expect(longFormServiceMock.submitProjectLongFormPlanGenerationTask).toHaveBeenCalledWith({
+      request: expect.any(Request),
+      projectId: 'project-1',
+      userId: 'user-1',
+      locale: 'zh',
+      prompt: '生成一部长篇悬疑短剧',
+      totalDurationSec: 240,
+      aspectRatio: '16:9',
+      source: 'project-ui',
+      confirmed: true,
+    })
   })
 })

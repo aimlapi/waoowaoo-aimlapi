@@ -134,11 +134,61 @@ model ProjectEpisode {
   editShotExecutionPlan   ProjectEditShotExecutionPlan?
   editAssetRequirements   ProjectEditAssetRequirement[]
   videoGroups             ProjectVideoGroup[]
+  sourceLongFormPlans      ProjectLongFormPlan[]       @relation("LongFormSourceEpisode")
+  longFormSegment          ProjectLongFormSegment?
 
   @@unique([projectId, episodeNumber])
   @@index([projectId])
   @@index([audioMediaId])
   @@map("project_episodes")
+}
+
+model ProjectLongFormPlan {
+  id                 String                    @id @default(uuid())
+  projectId          String
+  sourceEpisodeId    String?
+  userPrompt         String
+  totalDurationSec   Int
+  segmentDurationSec Int                       @default(120)
+  segmentCount       Int
+  status             String                    @default("generating")
+  screenplayText     String?
+  globalAssetsJson   Json?
+  styleBibleJson     Json?
+  errorMessage       String?
+  createdAt          DateTime                  @default(now())
+  updatedAt          DateTime                  @default(now()) @updatedAt
+  project            Project                   @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  sourceEpisode      ProjectEpisode?           @relation("LongFormSourceEpisode", fields: [sourceEpisodeId], references: [id], onDelete: SetNull)
+  segments           ProjectLongFormSegment[]
+
+  @@index([projectId])
+  @@index([sourceEpisodeId])
+  @@map("project_long_form_plans")
+}
+
+model ProjectLongFormSegment {
+  id                String              @id @default(uuid())
+  planId            String
+  projectId         String
+  episodeId         String              @unique
+  segmentIndex      Int
+  title             String
+  synopsis          String
+  screenplayText    String
+  targetDurationSec Int
+  status            String              @default("screenplay_ready")
+  assetRefsJson     Json?
+  createdAt         DateTime            @default(now())
+  updatedAt         DateTime            @default(now()) @updatedAt
+  plan              ProjectLongFormPlan @relation(fields: [planId], references: [id], onDelete: Cascade)
+  project           Project             @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  episode           ProjectEpisode      @relation(fields: [episodeId], references: [id], onDelete: Cascade)
+
+  @@unique([planId, segmentIndex])
+  @@index([projectId])
+  @@index([episodeId])
+  @@map("project_long_form_segments")
 }
 
 model ProjectEditScreenplay {
@@ -425,6 +475,8 @@ model Project {
   editScripts        ProjectEditScript[]
   editShotExecutionPlans ProjectEditShotExecutionPlan[]
   editAssetRequirements ProjectEditAssetRequirement[]
+  longFormPlans     ProjectLongFormPlan[]
+  longFormSegments  ProjectLongFormSegment[]
   videoGroups        ProjectVideoGroup[]
 
   @@index([userId])

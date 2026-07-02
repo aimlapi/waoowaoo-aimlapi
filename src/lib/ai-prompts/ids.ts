@@ -15,6 +15,7 @@ export const AI_PROMPT_IDS = {
   EDIT_SCRIPT_STYLE_PREVIEW_OPTIONS: 'style-preview-options',
   EDIT_SCRIPT_SCREENPLAY: 'screenplay',
   EDIT_SCRIPT_SCREENPLAY_REVISION: 'screenplay-revision',
+  EDIT_SCRIPT_LONG_FORM_PLAN: 'long-form-plan',
   EDIT_SCRIPT_STRUCTURE: 'structure',
   EDIT_SCRIPT_ASSET_EXTRACT: 'asset-extract',
   EDIT_SCRIPT_SHOT_EXECUTION_PLAN: 'shot-execution-plan',

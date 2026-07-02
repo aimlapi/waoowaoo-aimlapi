@@ -10,6 +10,7 @@ const submitOperationTaskMock = vi.hoisted(() => vi.fn(async () => ({
 })))
 
 const resolveSystemModelKeyMock = vi.hoisted(() => vi.fn(async () => 'fal::fal-ai/lyria3/pro'))
+const PLATFORM_MUSIC_MODEL = 'fal::fal-ai/lyria3/pro'
 
 vi.mock('@/lib/operations/submit-operation-task', () => ({ submitOperationTask: submitOperationTaskMock }))
 vi.mock('@/lib/model-access/system-model-resolver', () => ({
@@ -22,6 +23,8 @@ const ENV_KEYS = [
   'DEPLOYMENT_EDITION',
   'PROVIDER_CREDENTIAL_MODE',
   'BILLING_MODE',
+  'PLATFORM_DEFAULT_ANALYSIS_MODEL',
+  'PLATFORM_DEFAULT_MUSIC_MODEL',
   'PLATFORM_MUSIC_OUTPUT_FORMAT',
 ] as const
 
@@ -61,6 +64,8 @@ describe('cloud music generation runtime options', () => {
     process.env.DEPLOYMENT_EDITION = 'cloud'
     process.env.PROVIDER_CREDENTIAL_MODE = 'platform-key'
     process.env.BILLING_MODE = 'ENFORCE'
+    process.env.PLATFORM_DEFAULT_ANALYSIS_MODEL = 'openrouter::anthropic/claude-sonnet-4.6'
+    process.env.PLATFORM_DEFAULT_MUSIC_MODEL = PLATFORM_MUSIC_MODEL
     process.env.PLATFORM_MUSIC_OUTPUT_FORMAT = 'mp3'
   })
 
@@ -74,13 +79,13 @@ describe('cloud music generation runtime options', () => {
 
     expect(result).toMatchObject({
       taskId: 'task-1',
-      musicModel: 'fal::fal-ai/lyria3/pro',
+      musicModel: PLATFORM_MUSIC_MODEL,
     })
     expect(submitOperationTaskMock).toHaveBeenCalledWith(expect.objectContaining({
       payload: expect.objectContaining({
         prompt: 'quiet tension cue',
         durationSeconds: 30,
-        musicModel: 'fal::fal-ai/lyria3/pro',
+        musicModel: PLATFORM_MUSIC_MODEL,
         outputFormat: 'mp3',
       }),
     }))

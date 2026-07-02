@@ -74,6 +74,10 @@ export const AI_PROMPT_CATALOG: Record<AiPromptId, AiPromptCatalogEntry> = {
     pathStem: 'edit-script/screenplay-revision',
     variableKeys: ['original_user_request', 'current_screenplay_text', 'revision_instruction', 'duration_guidance', 'aspect_ratio'],
   },
+  [AI_PROMPT_IDS.EDIT_SCRIPT_LONG_FORM_PLAN]: {
+    pathStem: 'edit-script/long-form-plan',
+    variableKeys: ['user_request', 'total_duration_seconds', 'segment_duration_seconds', 'segment_count', 'aspect_ratio'],
+  },
   [AI_PROMPT_IDS.EDIT_SCRIPT_STRUCTURE]: {
     pathStem: 'edit-script/structure',
     variableKeys: [

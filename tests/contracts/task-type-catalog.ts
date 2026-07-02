@@ -26,6 +26,7 @@ const TASK_TYPE_OWNER_MAP = {
   [TASK_TYPE.ASSET_HUB_MODIFY]: 'tests/unit/worker/modify-image-reference-description.test.ts',
   [TASK_TYPE.EDIT_SCREENPLAY_GENERATE]: 'tests/unit/worker/edit-screenplay-generate.test.ts',
   [TASK_TYPE.EDIT_SCREENPLAY_REVISE]: 'tests/unit/worker/edit-screenplay-generate.test.ts',
+  [TASK_TYPE.LONG_FORM_PLAN_GENERATE]: 'tests/unit/worker/long-form-plan-generate.test.ts',
   [TASK_TYPE.EDIT_SCRIPT_GENERATE]: 'tests/unit/worker/edit-script-generate.test.ts',
   [TASK_TYPE.EDIT_SHOT_EXECUTION_PLAN_GENERATE]: 'tests/unit/worker/edit-script-structured-generate.test.ts',
   [TASK_TYPE.AI_MODIFY_APPEARANCE]: 'tests/unit/worker/shot-ai-prompt-appearance.test.ts',

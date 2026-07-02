@@ -18,6 +18,7 @@ const TASK_TYPE_LABELS: Record<string, string> = {
   [TASK_TYPE.ASSET_HUB_MODIFY]: 'progress.taskType.assetHubModify',
   [TASK_TYPE.EDIT_SCREENPLAY_GENERATE]: 'progress.taskType.editScreenplayGenerate',
   [TASK_TYPE.EDIT_SCREENPLAY_REVISE]: 'progress.taskType.editScreenplayRevise',
+  [TASK_TYPE.LONG_FORM_PLAN_GENERATE]: 'progress.taskType.longFormPlanGenerate',
   [TASK_TYPE.EDIT_SCRIPT_GENERATE]: 'progress.taskType.editScriptGenerate',
   [TASK_TYPE.EDIT_SHOT_EXECUTION_PLAN_GENERATE]: 'progress.taskType.editScriptGenerate',
   [TASK_TYPE.AI_MODIFY_APPEARANCE]: 'progress.taskType.aiModifyAppearance',
