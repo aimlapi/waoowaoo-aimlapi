@@ -9,13 +9,11 @@ describe('provider scope', () => {
   it('registers only the supported provider set', () => {
     expect(API_CONFIG_CATALOG_PROVIDERS.map((provider) => provider.id).sort()).toEqual([
       'ark',
-      'cc',
       'fal',
       'google',
       'openrouter',
     ])
     expect(resolveAiProviderAdapter('ark').providerKey).toBe('ark')
-    expect(resolveAiProviderAdapter('cc').providerKey).toBe('cc')
     expect(resolveAiProviderAdapter('openrouter').providerKey).toBe('openrouter')
     expect(resolveAiProviderAdapter('fal').providerKey).toBe('fal')
     expect(resolveAiProviderAdapter('google').providerKey).toBe('google')

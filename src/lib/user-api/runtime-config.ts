@@ -52,7 +52,7 @@ type PlatformProviderEnvResolution =
   | { ok: true; env: PlatformProviderEnv }
   | { ok: false; error: Error }
 
-const SUPPORTED_PROVIDER_IDS = new Set(['ark', 'cc', 'openrouter', 'fal', 'google'])
+const SUPPORTED_PROVIDER_IDS = new Set(['ark', 'openrouter', 'fal', 'google'])
 
 function isPlainObject(value: unknown): value is object {
   return !!value && typeof value === 'object' && !Array.isArray(value)
@@ -82,8 +82,6 @@ function resolvePlatformProviderEnvCandidate(providerId: string): PlatformProvid
         return 'PLATFORM_FAL'
       case 'ark':
         return 'PLATFORM_ARK'
-      case 'cc':
-        return 'PLATFORM_CC'
       case 'openrouter':
         return 'PLATFORM_OPENROUTER'
       default:
@@ -97,7 +95,7 @@ function resolvePlatformProviderEnvCandidate(providerId: string): PlatformProvid
   }
 
   const baseUrl = readEnvString(`${envPrefix}_BASE_URL`)
-  if ((providerFamily === 'cc' || providerFamily === 'openrouter') && !baseUrl) {
+  if (providerFamily === 'openrouter' && !baseUrl) {
     return { ok: false, error: new Error(`PLATFORM_PROVIDER_BASE_URL_MISSING: ${providerId}`) }
   }
   return {

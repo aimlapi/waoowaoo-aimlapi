@@ -1,6 +1,6 @@
 import { randomUUID } from 'node:crypto'
-import { CC_PLATFORM_DEFAULT_ANALYSIS_MODEL_KEY } from '@/lib/ai-providers/cc/models'
 import {
+  OPENROUTER_PLATFORM_DEFAULT_ANALYSIS_MODEL_KEY,
   OPENROUTER_PLATFORM_DEFAULT_IMAGE_MODEL_KEY,
   OPENROUTER_PLATFORM_DEFAULT_VIDEO_MODEL_KEY,
 } from '@/lib/ai-providers/openrouter/models'
@@ -26,7 +26,7 @@ export async function createFixtureProject(userId: string) {
     data: {
       userId,
       name: `project_${id}`,
-      analysisModel: CC_PLATFORM_DEFAULT_ANALYSIS_MODEL_KEY,
+      analysisModel: OPENROUTER_PLATFORM_DEFAULT_ANALYSIS_MODEL_KEY,
       characterModel: OPENROUTER_PLATFORM_DEFAULT_IMAGE_MODEL_KEY,
       locationModel: OPENROUTER_PLATFORM_DEFAULT_IMAGE_MODEL_KEY,
       storyboardModel: OPENROUTER_PLATFORM_DEFAULT_IMAGE_MODEL_KEY,
@@ -42,7 +42,7 @@ export async function createFixtureNovelProject(projectId: string) {
   return await prisma.project.update({
     where: { id: projectId },
     data: {
-      analysisModel: CC_PLATFORM_DEFAULT_ANALYSIS_MODEL_KEY,
+      analysisModel: OPENROUTER_PLATFORM_DEFAULT_ANALYSIS_MODEL_KEY,
       characterModel: OPENROUTER_PLATFORM_DEFAULT_IMAGE_MODEL_KEY,
       locationModel: OPENROUTER_PLATFORM_DEFAULT_IMAGE_MODEL_KEY,
       storyboardModel: OPENROUTER_PLATFORM_DEFAULT_IMAGE_MODEL_KEY,
