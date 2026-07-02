@@ -32,6 +32,7 @@ export type StoryboardGridPromptCell = {
   readonly cell_position: typeof GRID_CELL_POSITIONS[number]
   readonly panel_id: string
   readonly panel: StoryboardStillPromptFacts['panel']
+  readonly reference_images: StoryboardStillPromptFacts['context']['reference_images']
   readonly panel_context: StoryboardGridPromptCellContext
 }
 
@@ -148,6 +149,7 @@ function buildGridCell(input: {
     cell_position: GRID_CELL_POSITIONS[input.index] || 'bottom_right',
     panel_id: input.panel.id,
     panel: facts.panel,
+    reference_images: facts.context.reference_images,
     panel_context: {
       LOCATION_ZONE: facts.context.LOCATION_ZONE,
       GLOBAL_SCENE_LOCK: facts.context.GLOBAL_SCENE_LOCK
@@ -164,6 +166,19 @@ function buildGridCell(input: {
   }
 }
 
+function uniqueReferenceImages(cells: readonly StoryboardGridPromptCell[]): readonly NumberedReferenceImage[] {
+  const seen = new Set<string>()
+  const output: NumberedReferenceImage[] = []
+  for (const cell of cells) {
+    for (const reference of cell.reference_images) {
+      if (seen.has(reference.image_no)) continue
+      seen.add(reference.image_no)
+      output.push(reference)
+    }
+  }
+  return output
+}
+
 export function buildStoryboardGridPromptFacts(input: {
   readonly panels: readonly StoryboardGridPromptPanel[]
   readonly projectData: NovelProjectData
@@ -171,20 +186,21 @@ export function buildStoryboardGridPromptFacts(input: {
   readonly sourceVideoBlockId: string
   readonly styleBible: EditScriptStyleBible | null
 }): StoryboardGridPromptFacts {
+  const cells = input.panels.map((panel, index) => buildGridCell({
+    panel,
+    index,
+    projectData: input.projectData,
+    referenceImagesMap: input.referenceImagesMap,
+  }))
   return {
     grid: {
       mode: '2x2',
       source_video_block_id: input.sourceVideoBlockId,
       safe_crop_rules: buildGridSafeCropRules(),
-      cells: input.panels.map((panel, index) => buildGridCell({
-        panel,
-        index,
-        projectData: input.projectData,
-        referenceImagesMap: input.referenceImagesMap,
-      })),
+      cells,
     },
     context: {
-      reference_images: input.referenceImagesMap,
+      reference_images: uniqueReferenceImages(cells),
       STYLE: buildCompactStyleBlock(input.styleBible),
       NEGATIVE: buildNegativeBlock(input.styleBible),
     },

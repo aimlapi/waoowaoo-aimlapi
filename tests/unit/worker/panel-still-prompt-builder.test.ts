@@ -66,6 +66,7 @@ const projectData: NovelProjectData = {
 const referenceImages: readonly NumberedReferenceImage[] = [
   { image_no: '图 1', role: 'character', name: 'Hero', appearance: 'primary' },
   { image_no: '图 2', role: 'location', name: 'Old Town' },
+  { image_no: '图 3', role: 'prop', name: 'Golden eagle badge' },
 ]
 
 const panel: StoryboardStillPromptPanel = {
@@ -162,5 +163,63 @@ describe('panel-still-prompt-builder', () => {
       expect.stringContaining('Visible props must be present and readable: Golden eagle badge.'),
       expect.stringContaining('Freeze any action wording'),
     ]))
+  })
+
+  it('filters omitted props and distant references for extreme detail shots', () => {
+    const facts = buildStoryboardStillPromptFacts({
+      panel: {
+        ...panel,
+        shotType: 'extreme close-up',
+        description: 'Hero clenches his jaw; the golden eagle badge is cropped outside the frame.',
+        imagePrompt: 'Extreme close-up on Hero face only.',
+        props: JSON.stringify(['Golden eagle badge']),
+        photographyRules: JSON.stringify({
+          sceneZone: {
+            sceneZoneId: 'zone-face',
+            name: 'Hero face detail',
+            overallPosition: 'only the face plane, no street reconstruction',
+            fixedAnchors: ['face shadow', 'collar edge', 'background storefront'],
+          },
+          omittedSceneAssets: [{
+            name: 'Golden eagle badge',
+            kind: 'prop',
+            reason: 'the frame crops below the collar and the badge is not visible',
+          }],
+          shotBlocking: {
+            subjectPosition: 'Hero face fills the frame',
+            cameraPosition: 'tight frontal detail',
+            screenComposition: 'face and collar edge only',
+            characterPlacements: [{
+              characterName: 'Hero',
+              subjectPosition: 'fills frame',
+              facing: 'front',
+              eyeline: 'toward unseen threat',
+            }],
+          },
+          cameraPlan: {
+            shotScale: 'extreme close-up',
+            composition: 'Hero face fills the frame',
+            cameraPosition: 'tight frontal detail',
+          },
+        }),
+      },
+      projectData,
+      referenceImagesMap: referenceImages,
+    })
+    const prompt = buildStoryboardStillPrompt({
+      aspectRatio: '16:9',
+      facts,
+    })
+
+    expect(facts.context.PROP_GRAPH).toEqual([])
+    expect(facts.panel.still_frame.visible_props).toEqual([])
+    expect(facts.context.reference_images.map((item) => item.image_no)).toEqual(['图 1'])
+    expect(facts.context.GLOBAL_SCENE_LOCK?.summary).toBeNull()
+    expect(facts.context.GLOBAL_SCENE_LOCK?.stable_background.length).toBeLessThanOrEqual(1)
+    expect(facts.context.LOCATION_ZONE?.must_include).toEqual(['face shadow', 'collar edge'])
+    expect(prompt).toContain('Do not show prop \\"Golden eagle badge\\"')
+    expect(prompt).not.toContain('small worn golden eagle badge')
+    expect(prompt).not.toContain('"role": "location"')
+    expect(prompt).not.toContain('"role": "prop"')
   })
 })

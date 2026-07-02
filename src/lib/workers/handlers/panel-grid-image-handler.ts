@@ -34,6 +34,7 @@ import {
   buildStoryboardGridPrompt,
   buildStoryboardGridPromptFacts,
 } from './panel-grid-prompt-builder'
+import { filterReferenceImageUrlsByPromptMap } from '@/lib/storyboard-image-compiler/compiler'
 
 const GRID_CELL_COUNT = 4
 
@@ -307,7 +308,13 @@ export async function handlePanelGridImageTask(
   })
 
   await reportTaskProgress(job, 18, { stage: 'generate_panel_grid' })
-  const effectiveReferenceImages = promptFieldOmissions.includes('context.reference_images') ? [] : referenceImages
+  const effectiveReferenceImages = promptFieldOmissions.includes('context.reference_images')
+    ? []
+    : filterReferenceImageUrlsByPromptMap({
+      urls: referenceImages,
+      originalMap: referenceImagesMap,
+      filteredMap: selectedPromptContext.context.reference_images,
+    })
   const source = await resolveImageSourceFromGeneration(job, {
     userId: job.data.userId,
     modelId: modelKey,

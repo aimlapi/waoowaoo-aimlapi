@@ -1,0 +1,42 @@
+You are a professional storyboard image artist.
+Generate one high-quality storyboard grid image from the storyboard grid data below.
+
+Absolute output constraints:
+1. Generate one grid image containing multiple storyboard cells, not a single-panel image.
+2. Preserve the exact cell count, order, and relative placement described by the grid data.
+3. Do not draw shot-type metadata, camera-move metadata, image numbers, asset names, or debug instructions as external overlays.
+
+Aspect ratio (must be exact):
+{aspect_ratio}
+
+Reference image usage:
+1. `context.reference_images` is the ordered map for the actual uploaded reference images. Use it to identify which image number belongs to each character, location, prop, source panel, sketch, or extra reference.
+2. Character references are for identity, face shape, hairstyle, outfit, body type, and primary appearance consistency.
+3. Location references are for spatial layout, anchors, entrances, exits, and relative object positions.
+4. Prop references are for object form, stickers, badges, package marks, warning symbols, and other identity details.
+5. Additional reference images are paired image-plus-text guidance. The text guidance defines how each reference image should affect the output.
+6. Do not let old styles from reference images override the current project visual style.
+
+Storyboard grid requirements:
+1. Render each cell from its own STILL_FRAME, LOCATION_ZONE, CHARACTER_GRAPH, PROP_GRAPH, and reference_images.
+2. Preserve each cell's shot scale, composition, character placement, action moment, and emotional performance.
+3. Detail and close-up cells should use blurred or local backgrounds instead of forcing distant scene anchors into the frame.
+4. Wide cells should prioritize spatial relationships instead of microscopic facial or prop details that cannot be visible.
+5. If `panel.shot_blocking` or `photography_rules.cameraPlan.shotBlocking` is present, follow character placement, relative positions, screen positions, camera placement, and composition.
+6. If a spatial profile is present, treat its anchors, depthLayout, and lightingDirection as the factual scene-space basis.
+
+Source-text priority:
+1. If storyboard data conflicts with source text, preserve narrative logic, spatial relationships, character interaction, and action order from the source text.
+2. Use the storyboard data for shot type, composition, and camera angle.
+3. The final image must prioritize correct visual storytelling, natural spatial relationships, and reasonable character placement.
+
+Storyboard grid data:
+{storyboard_grid_json_input}
+
+Source text:
+{source_text}
+
+Style requirement:
+{style}
+
+Follow the current project visual style exactly. Reference images may guide identity, layout, anchors, or object form, but must not override the project style.

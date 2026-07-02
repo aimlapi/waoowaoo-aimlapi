@@ -34,6 +34,7 @@ import {
   applyPanelPromptFieldOmissions,
   parseStoryboardPromptFieldOmissions,
 } from '@/lib/storyboard/prompt-field-selection'
+import { filterReferenceImageUrlsByPromptMap } from '@/lib/storyboard-image-compiler/compiler'
 
 const EMPTY_PANEL_REFERENCE_COLLECTION = {
   items: [],
@@ -198,7 +199,13 @@ export async function handlePanelImageTask(job: Job<TaskJobData>) {
   })
 
   const candidates: string[] = []
-  const effectiveReferenceImages = promptFieldOmissions.includes('context.reference_images') ? [] : referenceImages
+  const effectiveReferenceImages = promptFieldOmissions.includes('context.reference_images')
+    ? []
+    : filterReferenceImageUrlsByPromptMap({
+      urls: referenceImages,
+      originalMap: referenceImagesMap,
+      filteredMap: selectedPromptContext.context.reference_images,
+    })
 
   for (let i = 0; i < candidateCount; i++) {
     await reportTaskProgress(job, 18 + Math.floor((i / Math.max(candidateCount, 1)) * 58), {

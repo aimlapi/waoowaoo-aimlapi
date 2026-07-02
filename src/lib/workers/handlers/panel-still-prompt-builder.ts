@@ -4,6 +4,7 @@ import {
   findCharacterForStoryboardReference,
   type StoryboardPanelCharacterReference,
 } from '@/lib/storyboard-character-bindings'
+import { compileStoryboardStillPromptFactsV2 } from '@/lib/storyboard-image-compiler/compiler'
 import { parsePanelCharacterReferences } from './image-task-handler-shared'
 
 const STILL_TEXT_LIMIT = 420
@@ -465,7 +466,7 @@ export function buildStoryboardStillPromptFacts(input: {
 }): StoryboardStillPromptFacts {
   const sanitized = sanitizePanelForStillImagePrompt(input.panel)
   const propGraph = buildPropGraph(input)
-  return {
+  const rawFacts: StoryboardStillPromptFacts = {
     panel: {
       panel_id: sanitized.panelId,
       shot_type: sanitized.shotScale,
@@ -501,6 +502,7 @@ export function buildStoryboardStillPromptFacts(input: {
       ],
     },
   }
+  return compileStoryboardStillPromptFactsV2(rawFacts).facts
 }
 
 function jsonBlock(value: unknown): string {
