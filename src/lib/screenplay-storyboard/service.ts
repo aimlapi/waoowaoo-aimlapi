@@ -18,16 +18,30 @@ import {
   type SceneZone,
 } from './scene-continuity'
 import {
+  formatProductionLocationsForStorage,
+  panelContinuityStateSchema,
+  productionLocationGroupSchema,
+  productionSegmentSchema,
+  sceneContinuityLoopSchema,
+  segmentContinuityBibleSchema,
+  validateProductionLocationGroups,
+  validateProductionSegments,
+  validateSceneContinuityLoops,
+  validateSegmentContinuityBibles,
+  type PanelContinuityState,
+  type ProductionLocationGroup,
+  type ProductionSegment,
+  type SceneContinuityLoop,
+  type SegmentContinuityBible,
+} from './production-continuity'
+import {
   storyboardPanelGroupSchema,
   validateStoryboardPanelGroups,
   type ValidatedStoryboardPanelGroup,
 } from './panel-groups'
 import {
-  sceneAssetSegmentSchema,
   omittedSceneAssetSchema,
-  validateSceneAssetSegments,
   type OmittedSceneAsset,
-  type SceneAssetSegment,
 } from './scene-assets'
 
 export interface GenerateScreenplayStoryboardInput {
@@ -79,7 +93,10 @@ interface PropAsset {
 interface PanelDraft {
   readonly panelIndex: number
   readonly panelNumber: number
-  readonly sceneSegmentId: string
+  readonly productionSegmentId: string
+  readonly originalOrderKey: string
+  readonly screenplaySceneNumber: number
+  readonly productionLocationId: string
   readonly description: string
   readonly location: string
   readonly locationId: string
@@ -98,11 +115,12 @@ interface PanelDraft {
   readonly photographyRules: string
   readonly actingNotes: string | null
   readonly shotBlocking: DirectShotBlocking
+  readonly panelContinuity: PanelContinuityState
 }
 
 const directPanelSchema = z.object({
   panelNumber: z.number().int().positive(),
-  sceneSegmentId: z.string().trim().min(1),
+  productionSegmentId: z.string().trim().min(1),
   sourceText: z.string().trim().min(1),
   description: z.string().trim().min(8),
   locationId: z.string().trim().min(1),
@@ -116,14 +134,18 @@ const directPanelSchema = z.object({
   imagePrompt: z.string().trim().min(20),
   videoPrompt: z.string().trim().min(20),
   shotBlocking: directShotBlockingSchema,
+  panelContinuity: panelContinuityStateSchema,
   actingNotes: z.string().trim().min(1).nullable().optional(),
 }).strict()
 
 const directStoryboardOutputSchema = z.object({
-  sceneSegments: z.array(sceneAssetSegmentSchema).min(1).max(80),
+  productionLocations: z.array(productionLocationGroupSchema).min(1).max(80),
+  productionSegments: z.array(productionSegmentSchema).min(1).max(80),
+  segmentContinuityBibles: z.array(segmentContinuityBibleSchema).min(1).max(80),
   sceneZones: z.array(sceneZoneSchema).min(1).max(80),
   panels: z.array(directPanelSchema).min(1).max(120),
   panelGroups: z.array(storyboardPanelGroupSchema).min(1).max(120),
+  sceneContinuityLoops: z.array(sceneContinuityLoopSchema).min(1).max(80),
 }).strict()
 
 function normalizePanelLimit(value: number | undefined): number {
@@ -352,25 +374,30 @@ function buildPrompt(input: {
     '输出严格 JSON，不要 Markdown。',
     '',
     'JSON 格式：',
-    '{"sceneSegments":[{"sceneSegmentId":"","order":1,"locationId":"","environment":"","characterNames":[""],"propNames":[""]}],"sceneZones":[{"sceneZoneId":"","locationId":"","name":"","overallPosition":"","fixedAnchors":[""]}],"panels":[{"panelNumber":1,"sceneSegmentId":"","sourceText":"","description":"","locationId":"","sceneZoneId":"","characters":[""],"props":[""],"omittedSceneAssets":[{"name":"","kind":"character","reason":""}],"shotType":"","cameraMove":"","duration":4,"imagePrompt":"","videoPrompt":"","shotBlocking":{"sceneZoneId":"","subjectPosition":"","cameraPosition":"","screenComposition":"","characterPlacements":[{"characterName":"","subjectPosition":"","facing":"","eyeline":""}]},"actingNotes":""}],"panelGroups":[{"groupNumber":1,"panelNumbers":[1,2],"sceneZoneIds":[""],"continuityRule":""}]}',
+    '{"productionLocations":[{"productionLocationId":"","locationId":"","stableSpatialFacts":[""],"reusableAnchors":[""],"stableSetDressing":[""],"nonPersistentStateBans":[""]}],"productionSegments":[{"productionSegmentId":"","order":1,"originalOrderKey":"001.001","screenplaySceneNumber":1,"productionLocationId":"","locationId":"","environment":"","sourceText":"","characterNames":[""],"propNames":[""]}],"segmentContinuityBibles":[{"productionSegmentId":"","originalOrderKey":"001.001","screenplaySceneNumber":1,"dramaticContext":"","temporalState":"","atmosphereState":"","crowdState":"","spatialContinuity":[""],"persistentSetState":[{"name":"","kind":"set_dressing","continuityRule":""}],"characterContinuity":[{"characterName":"","initialPosition":"","blockingArc":"","eyelineRules":[""]}],"screenDirectionRules":[""],"forbiddenChanges":[""]}],"sceneZones":[{"sceneZoneId":"","locationId":"","name":"","overallPosition":"","fixedAnchors":[""]}],"panels":[{"panelNumber":1,"productionSegmentId":"","sourceText":"","description":"","locationId":"","sceneZoneId":"","characters":[""],"props":[""],"omittedSceneAssets":[{"name":"","kind":"character","reason":""}],"shotType":"","cameraMove":"","duration":4,"imagePrompt":"","videoPrompt":"","shotBlocking":{"sceneZoneId":"","subjectPosition":"","cameraPosition":"","screenComposition":"","characterPlacements":[{"characterName":"","subjectPosition":"","facing":"","eyeline":""}]},"panelContinuity":{"inheritedContinuity":[""],"changedContinuity":[""],"visibleContinuityElements":[""],"forbiddenDiscontinuity":[""]},"actingNotes":""}],"panelGroups":[{"groupNumber":1,"panelNumbers":[1,2],"sceneZoneIds":[""],"continuityRule":""}],"sceneContinuityLoops":[{"productionSegmentId":"","auditRound":1,"checkedPanelNumbers":[1,2],"checkedContinuityAxes":["space","character_blocking","eyeline"],"detectedIssues":[""],"repairActions":[""],"locked":true}]}',
     '',
     '字段要求：',
     '- panelNumber 从 1 连续递增。',
-    '- sceneSegments 必须只按剧本时间顺序中的当下发生场景切分：同一连续环境、同一现实空间、同一段正在发生的剧情为一个 sceneSegment。',
-    '- 禁止因为人物/道具出入画、人物/道具增减、剧情强弱转折、电话威胁升级、反应变化，把同一当下发生场景拆成多个 sceneSegment。',
-    '- sceneSegments.characterNames / propNames 是该当下发生场景内出现过的人物和道具汇总结果；场景边界只能由剧情正在发生的连续环境和现实空间决定。',
-    '- panel.sceneSegmentId 必须引用 sceneSegments 中的 sceneSegmentId。',
-    '- sceneSegment 的 characterNames / propNames 默认每张 panel 都应入画。',
+    '- 剧作 Scene 保持剧本原有结构；productionSegments 必须在每个剧作 Scene 内按制片物理场景拆分，不得把剧作 Scene 当作制片场景。',
+    '- productionSegments 必须只按剧本时间顺序中的当下发生场景切分：同一连续环境、同一现实空间、同一段正在发生的剧情为一个 productionSegment。',
+    '- 禁止因为人物/道具出入画、人物/道具增减、剧情强弱转折、电话威胁升级、反应变化，把同一当下发生场景拆成多个 productionSegment。',
+    '- originalOrderKey 格式必须是 001.001：前三位是剧作 Scene 编号，后三位是该剧作 Scene 内的制片物理场景片段序号。',
+    '- screenplaySceneNumber 必须是该片段所属的剧作 Scene 编号。',
+    '- productionLocationId 必须引用 productionLocations.productionLocationId；locationId 必须复制对应项目场景资产的 locationId。',
+    '- 同一 productionLocation 只共享长期空间资产和稳定布景，不共享剧情状态、时间状态、桌面状态、群众状态或人物关系状态。',
+    '- productionSegments.characterNames / propNames 是该当下发生场景内出现过的人物和道具汇总结果；场景边界只能由剧情正在发生的连续环境和现实空间决定。',
+    '- panel.productionSegmentId 必须引用 productionSegments 中的 productionSegmentId。',
+    '- productionSegment 的 characterNames / propNames 默认每张 panel 都应入画。',
     '- 禁止用空镜、纯环境镜头、纯道具插入镜头替代剧情 panel；每个 panel 必须承载人物处境、动作或反应。',
-    '- 远景、全景、中景、近景都必须让所属 sceneSegment 的全部 characterNames / propNames 入画；可以放在前景、背景、焦外或阴影里，但不能画外。',
-    '- 只有极近景、很小景别特写、插入细节镜头，才允许因为构图裁切省略部分 sceneSegment 资产。',
-    '- 即使是极近景/插入细节镜头，也必须至少包含一个所属 sceneSegment 的人物或道具资产；禁止 characters=[] 且 props=[] 的空资产 panel。',
+    '- 远景、全景、中景、近景都必须让所属 productionSegment 的全部 characterNames / propNames 入画；可以放在前景、背景、焦外或阴影里，但不能画外。',
+    '- 只有极近景、很小景别特写、插入细节镜头，才允许因为构图裁切省略部分 productionSegment 资产。',
+    '- 即使是极近景/插入细节镜头，也必须至少包含一个所属 productionSegment 的人物或道具资产；禁止 characters=[] 且 props=[] 的空资产 panel。',
     '- 电话通话、威胁、反应、对白场面优先拍人物关系；不要只拍手机屏幕、桌面、灯、门、积水等环境物件。',
-    '- 每个 panel 的 characters / props 是该镜头实际入画的资产，必须来自所属 sceneSegment 的 characterNames / propNames，不得跨场景段借人或借物。',
-    '- 如果某个 sceneSegment 资产因景别、遮挡、画外声、构图裁切等原因没有出现在当前 panel，必须逐项写入 omittedSceneAssets，并给出具体 reason。',
-    '- omittedSceneAssets 只能包含所属 sceneSegment 的资产；已经写入 characters / props 的资产不能再写入 omittedSceneAssets。',
-    '- characters / props 与 omittedSceneAssets 合并后，必须完整覆盖所属 sceneSegment 的 characterNames / propNames；没有显式 omission 就视为漏资产。',
-    '- 若做电话两端、异地反应，必须拆成不同 sceneSegment，不得在同一个 sceneSegment 中用 omission 混过。',
+    '- 每个 panel 的 characters / props 是该镜头实际入画的资产，必须来自所属 productionSegment 的 characterNames / propNames，不得跨场景段借人或借物。',
+    '- 如果某个 productionSegment 资产因景别、遮挡、画外声、构图裁切等原因没有出现在当前 panel，必须逐项写入 omittedSceneAssets，并给出具体 reason。',
+    '- omittedSceneAssets 只能包含所属 productionSegment 的资产；已经写入 characters / props 的资产不能再写入 omittedSceneAssets。',
+    '- characters / props 与 omittedSceneAssets 合并后，必须完整覆盖所属 productionSegment 的 characterNames / propNames；没有显式 omission 就视为漏资产。',
+    '- 若做电话两端、异地反应，必须拆成不同 productionSegment，不得在同一个 productionSegment 中用 omission 混过。',
     '- sourceText 必须来自剧本开头对应段落，可压缩但不能改写剧情事实。',
     '- description 写画面里实际可见的动作、人物位置、情绪和空间关系。',
     '- characters 只能使用项目角色资产中的 name；没有出现角色就空数组。',
@@ -380,21 +407,50 @@ function buildPrompt(input: {
     '- videoPrompt 可以在 imagePrompt 基础上加入运动和声音，但不要新增剧情。',
     '- actingNotes 只写表演状态、身体动作、眼神/停顿。',
     '',
+    'Production Location Grouping 要求：',
+    '- productionLocations 只记录同一制片物理场景的长期稳定事实：空间结构、稳定锚点、长期布景、不能跨场景段继承的状态禁令。',
+    '- stableSpatialFacts / reusableAnchors 只能来自项目场景资产、空间事实或剧本明确描述；不得把气氛、海报、红光、赛事氛围升级成路牌、招牌、霓虹灯等新硬锚点。',
+    '- nonPersistentStateBans 必须说明哪些内容不能因为同一地点而跨剧情段继承，例如夜晚人群、桌上菜、当前现金、某次比赛状态。',
+    '',
+    'Segment Continuity Bible 要求：',
+    '- 每个 productionSegment 必须有且只有一个 segmentContinuityBible；这是当前这幕戏的短期连续性状态表。',
+    '- dramaticContext 写这段戏的戏剧压力；temporalState 写日夜/时间阶段；atmosphereState 写当前气氛；crowdState 写群众密度与变化。',
+    '- spatialContinuity 锁定该段内入口、桌子、幕布、出口、出餐档口等相对关系。',
+    '- persistentSetState 必须列出这段戏内需要跨 panel 持续的桌面物、菜、酒、手机、行李箱、工具包、现金、笔记本、瓶盖、人群等元素。',
+    '- characterContinuity 必须说明人物初始站位、坐站关系、位置弧线、视线规则；不要让人物在无剧情原因时换边、换朝向或丢失视线对象。',
+    '- screenDirectionRules 必须锁住镜头轴线、出口方向、幕布方向、人物左右关系或前后景关系。',
+    '- forbiddenChanges 必须列出本段内严禁发生的断裂，例如人群突然消失、桌面物突然重置、同一张桌变成另一张桌、布景锚点被发明。',
+    '',
     'Scene Zone 要求：',
     '- sceneZones 是实际分镜会使用的拍摄空间子区域，不是泛泛世界观地点。',
     '- 每个 sceneZone 只保留一个 overallPosition：一句话说明该区域在整个场景里的整体位置。',
-    '- fixedAnchors 最多 5 个，只写稳定锚点名称或短语。',
+    '- fixedAnchors 最多 5 个，只写本镜头区域内必须出现的硬空间锚点；软布景、气氛、桌面状态、人群状态必须放入 Segment Continuity Bible 或 panelContinuity。',
     '- 禁止在 sceneZone 里重复描述同一空间关系；不要写长篇空间说明。',
+    '- 禁止把“世界杯海报/直播氛围/红光”改写成剧本没有明确写出的路牌、霓虹招牌或文字标识。',
     '',
     'shotBlocking 要求：',
     '- 每个 panel 只写主体整体位置、镜头整体位置、画面构图关系和角色视线。',
     '- 有角色的 panel，characterPlacements 必须覆盖每个 characters 里的角色名。',
     '- 无角色空镜必须使用 characterPlacements: []。',
     '- eyeline 必须写角色看向的场内对象或方向；不要写看向观众、看向镜头、面对观众。',
+    '- 人物关系镜头里，人物站坐高低、左右关系、视线对象优先级高于桌面道具；除非 sourceText 明确要求插入镜头，不要让桌面/手机压过人物关系。',
+    '',
+    'Panel Continuity State 要求：',
+    '- 每个 panel 必须写 panelContinuity。',
+    '- inheritedContinuity 写从同一 productionSegment 前文继承的空间、人物、道具、群众状态。',
+    '- changedContinuity 只写本 panel 相对上一 panel 的真实变化；没有变化可以空数组。',
+    '- visibleContinuityElements 写本画面中能看见或明确读出的持续元素。',
+    '- forbiddenDiscontinuity 写本 panel 绝对不能发生的断裂。',
     '',
     'Panel Group 要求：',
     '- panelGroups 是后续分镜图连续性单位，必须按顺序连续覆盖所有 panel，不得跳选、乱序、重复或遗漏。',
     '- continuityRule 只用一句话说明该组必须保持不变的空间/角色连续性。',
+    '',
+    'Scene Continuity Loop 要求：',
+    '- sceneContinuityLoops 必须在 panels 规划完成后，对每个 productionSegment 分别自检一次。',
+    '- checkedPanelNumbers 必须连续覆盖该 productionSegment 下的所有 panel。',
+    '- checkedContinuityAxes 至少包含 space、character_blocking、eyeline、persistent_props、crowd_state 中的三项。',
+    '- 若发现断裂，必须在 repairActions 写明已如何修正 panel 的 sceneZone、shotBlocking、panelContinuity 或 imagePrompt；最终 locked 必须为 true。',
     '',
     `画幅：${input.videoRatio}`,
     '',
@@ -475,17 +531,29 @@ function buildPanelDrafts(input: {
   readonly panels: readonly z.infer<typeof directPanelSchema>[]
   readonly characters: readonly CharacterAsset[]
   readonly locations: readonly LocationAsset[]
+  readonly productionSegments: readonly ProductionSegment[]
+  readonly segmentContinuityBibles: readonly SegmentContinuityBible[]
   readonly sceneZones: readonly SceneZone[]
   readonly panelGroups: readonly ValidatedStoryboardPanelGroup[]
   readonly screenplayId: string
 }): PanelDraft[] {
   let cursor = 0
   const locationById = new Map(input.locations.map((location) => [location.locationId, location]))
+  const productionSegmentById = new Map(input.productionSegments.map((segment) => [segment.productionSegmentId, segment]))
+  const segmentContinuityById = new Map(input.segmentContinuityBibles.map((bible) => [bible.productionSegmentId, bible]))
   const sceneZoneById = new Map(input.sceneZones.map((zone) => [zone.sceneZoneId, zone]))
   return input.panels.map((panel, index) => {
     const location = locationById.get(panel.locationId)
     if (!location) {
       throw new Error(`SCREENPLAY_STORYBOARD_PANEL_LOCATION_NOT_FOUND:panel_${panel.panelNumber}:${panel.locationId}`)
+    }
+    const productionSegment = productionSegmentById.get(panel.productionSegmentId)
+    if (!productionSegment) {
+      throw new Error(`SCREENPLAY_STORYBOARD_PANEL_PRODUCTION_SEGMENT_NOT_FOUND:panel_${panel.panelNumber}:${panel.productionSegmentId}`)
+    }
+    const segmentContinuityBible = segmentContinuityById.get(panel.productionSegmentId)
+    if (!segmentContinuityBible) {
+      throw new Error(`SCREENPLAY_STORYBOARD_PANEL_SEGMENT_CONTINUITY_MISSING:panel_${panel.panelNumber}:${panel.productionSegmentId}`)
     }
     const sceneZone = sceneZoneById.get(panel.sceneZoneId)
     if (!sceneZone) {
@@ -502,7 +570,10 @@ function buildPanelDrafts(input: {
       sourceType: 'directScreenplayStoryboardPanel',
       screenplayId: input.screenplayId,
       panelNumber: panel.panelNumber,
-      sceneSegmentId: panel.sceneSegmentId,
+      productionSegmentId: panel.productionSegmentId,
+      originalOrderKey: productionSegment.originalOrderKey,
+      screenplaySceneNumber: productionSegment.screenplaySceneNumber,
+      productionLocationId: productionSegment.productionLocationId,
       sourceVideoBlockKind: group.panelNumbers.length > 1 ? 'group' : 'single',
       sourceVideoBlockId,
       locationId: panel.locationId,
@@ -516,12 +587,17 @@ function buildPanelDrafts(input: {
       },
       omittedSceneAssets: panel.omittedSceneAssets,
       shotBlocking: panel.shotBlocking,
+      segmentContinuityBible,
+      panelContinuity: panel.panelContinuity,
       continuityRule: group.continuityRule,
     }
     return {
       panelIndex: index,
       panelNumber: index + 1,
-      sceneSegmentId: panel.sceneSegmentId,
+      productionSegmentId: panel.productionSegmentId,
+      originalOrderKey: productionSegment.originalOrderKey,
+      screenplaySceneNumber: productionSegment.screenplaySceneNumber,
+      productionLocationId: productionSegment.productionLocationId,
       description: panel.description,
       location: location.name,
       locationId: panel.locationId,
@@ -544,6 +620,7 @@ function buildPanelDrafts(input: {
       photographyRules: JSON.stringify(source),
       actingNotes: panel.actingNotes ?? null,
       shotBlocking: panel.shotBlocking,
+      panelContinuity: panel.panelContinuity,
     }
   })
 }
@@ -563,9 +640,12 @@ async function upsertDirectStoryboard(input: {
   readonly title: string
   readonly userPrompt: string
   readonly panelDrafts: readonly PanelDraft[]
-  readonly sceneSegments: readonly SceneAssetSegment[]
+  readonly productionLocations: readonly ProductionLocationGroup[]
+  readonly productionSegments: readonly ProductionSegment[]
+  readonly segmentContinuityBibles: readonly SegmentContinuityBible[]
   readonly sceneZones: readonly SceneZone[]
   readonly panelGroups: readonly ValidatedStoryboardPanelGroup[]
+  readonly sceneContinuityLoops: readonly SceneContinuityLoop[]
 }): Promise<{ readonly storyboardId: string; readonly panelIds: readonly string[] }> {
   const marker = buildStoryboardMarker(input.screenplayId)
   const markerNeedle = `"screenplayId":"${input.screenplayId}"`
@@ -601,11 +681,16 @@ async function upsertDirectStoryboard(input: {
     sourceType: 'directScreenplayStoryboard',
     screenplayId: input.screenplayId,
     title: input.title,
-    sceneSegments: input.sceneSegments,
+    productionLocations: formatProductionLocationsForStorage(input.productionLocations),
+    productionSegments: input.productionSegments,
+    segmentContinuityBibles: input.segmentContinuityBibles,
     sceneZones: formatSceneZonesForStorage(input.sceneZones),
     panels: input.panelDrafts.map((panel) => ({
       panelNumber: panel.panelNumber,
-      sceneSegmentId: panel.sceneSegmentId,
+      productionSegmentId: panel.productionSegmentId,
+      originalOrderKey: panel.originalOrderKey,
+      screenplaySceneNumber: panel.screenplaySceneNumber,
+      productionLocationId: panel.productionLocationId,
       description: panel.description,
       location: panel.location,
       locationId: panel.locationId,
@@ -616,18 +701,23 @@ async function upsertDirectStoryboard(input: {
       sourceText: panel.srtSegment,
       duration: panel.duration,
       shotBlocking: panel.shotBlocking,
+      panelContinuity: panel.panelContinuity,
     })),
     panelGroups: input.panelGroups,
+    sceneContinuityLoops: input.sceneContinuityLoops,
   })
   const photographyPlan = JSON.stringify({
     source: 'edit_screenplay',
     sourceType: 'directScreenplayStoryboard',
-    consistencyMode: 'direct_screenplay_storyboard',
+    consistencyMode: 'production_segment_continuity_storyboard',
     currentStage: 'panel_prompts_ready',
     screenplayId: input.screenplayId,
-    sceneSegments: input.sceneSegments,
+    productionLocations: formatProductionLocationsForStorage(input.productionLocations),
+    productionSegments: input.productionSegments,
+    segmentContinuityBibles: input.segmentContinuityBibles,
     sceneZones: formatSceneZonesForStorage(input.sceneZones),
     panelGroups: input.panelGroups,
+    sceneContinuityLoops: input.sceneContinuityLoops,
   })
 
   const storyboard = existing
@@ -810,20 +900,30 @@ export async function generateScreenplayStoryboardPanels(input: GenerateScreenpl
     groups: parsed.panelGroups,
     panelNumbers: parsed.panels.map((panel) => panel.panelNumber),
   })
-  const sceneSegments = validateSceneAssetSegments({
-    segments: parsed.sceneSegments,
+  const productionLocations = validateProductionLocationGroups({
+    productionLocations: parsed.productionLocations,
+    locations,
+  })
+  const productionSegments = validateProductionSegments({
+    productionSegments: parsed.productionSegments,
+    productionLocations,
     characters,
     props,
     locations,
     panels: parsed.panels.map((panel) => ({
       panelNumber: panel.panelNumber,
-      sceneSegmentId: panel.sceneSegmentId,
+      productionSegmentId: panel.productionSegmentId,
       locationId: panel.locationId,
       shotType: panel.shotType,
       characterNames: panel.characters,
       propNames: panel.props,
       omittedSceneAssets: panel.omittedSceneAssets,
+      panelContinuity: panel.panelContinuity,
     })),
+  })
+  const segmentContinuityBibles = validateSegmentContinuityBibles({
+    productionSegments,
+    segmentContinuityBibles: parsed.segmentContinuityBibles,
   })
   validateSceneContinuity({
     sceneZones: parsed.sceneZones,
@@ -840,11 +940,24 @@ export async function generateScreenplayStoryboardPanels(input: GenerateScreenpl
     panelGroups,
     panels: parsed.panels,
   })
+  const panelNumbersBySegment = new Map<string, number[]>()
+  for (const panel of parsed.panels) {
+    const existing = panelNumbersBySegment.get(panel.productionSegmentId) ?? []
+    existing.push(panel.panelNumber)
+    panelNumbersBySegment.set(panel.productionSegmentId, existing)
+  }
+  const sceneContinuityLoops = validateSceneContinuityLoops({
+    productionSegments,
+    loops: parsed.sceneContinuityLoops,
+    panelNumbersBySegment,
+  })
   const title = screenplay.screenplayText.match(/《([^》]+)》/)?.[1] ?? '剧本分镜'
   const panelDrafts = buildPanelDrafts({
     panels: parsed.panels,
     characters,
     locations,
+    productionSegments,
+    segmentContinuityBibles,
     sceneZones: parsed.sceneZones,
     panelGroups,
     screenplayId: screenplay.id,
@@ -856,9 +969,12 @@ export async function generateScreenplayStoryboardPanels(input: GenerateScreenpl
     title,
     userPrompt: screenplay.userPrompt,
     panelDrafts,
-    sceneSegments,
+    productionLocations,
+    productionSegments,
+    segmentContinuityBibles,
     sceneZones: parsed.sceneZones,
     panelGroups,
+    sceneContinuityLoops,
   })
   return {
     storyboardId: storyboard.storyboardId,

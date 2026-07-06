@@ -14,6 +14,7 @@ import type {
   LocationZone,
   PropGraphItem,
   SceneAssetOmission,
+  SegmentContinuityLock,
   StoryboardStillPromptFacts,
 } from '@/lib/storyboard-image-compiler/types'
 import { parsePanelCharacterReferences } from './image-task-handler-shared'
@@ -149,6 +150,10 @@ function readStringArray(value: unknown): readonly string[] {
   return text ? [text] : []
 }
 
+function readNumber(value: unknown): number | null {
+  return typeof value === 'number' && Number.isFinite(value) ? value : null
+}
+
 function buildGlobalSceneLock(spatialProfile: unknown): GlobalSceneLock | null {
   const profile = toRecord(spatialProfile)
   if (!profile) return null
@@ -163,6 +168,50 @@ function buildGlobalSceneLock(spatialProfile: unknown): GlobalSceneLock | null {
     summary: compactText(profile.sceneSummary, 220),
     lighting: compactText(profile.lightingDirection, 160),
     stable_background: stableBackground,
+  }
+}
+
+function buildSegmentContinuityLock(panel: StoryboardStillPromptPanel): SegmentContinuityLock | null {
+  const rules = readPhotographyRules(panel)
+  const bible = toRecord(rules.segmentContinuityBible)
+  const panelContinuity = toRecord(rules.panelContinuity)
+  if (!bible && !panelContinuity) return null
+
+  const persistentSetStateRaw = Array.isArray(bible?.persistentSetState) ? bible.persistentSetState : []
+  const persistentSetState = persistentSetStateRaw.map((item) => {
+    const record = toRecord(item) || {}
+    const name = normalizeString(record.name)
+    const rule = normalizeString(record.continuityRule)
+    return name && rule ? `${name}: ${rule}` : name || rule
+  }).filter(Boolean)
+
+  const characterContinuityRaw = Array.isArray(bible?.characterContinuity) ? bible.characterContinuity : []
+  const characterContinuity = characterContinuityRaw.map((item) => {
+    const record = toRecord(item) || {}
+    const characterName = normalizeString(record.characterName)
+    const initialPosition = normalizeString(record.initialPosition)
+    const blockingArc = normalizeString(record.blockingArc)
+    const eyelineRules = readStringArray(record.eyelineRules).join('；')
+    return [characterName, initialPosition, blockingArc, eyelineRules].filter(Boolean).join(' / ')
+  }).filter(Boolean)
+
+  return {
+    source: 'panel.photography_rules.segment_continuity',
+    production_segment_id: compactText(rules.productionSegmentId, 120),
+    original_order_key: compactText(rules.originalOrderKey, 40),
+    screenplay_scene_number: readNumber(rules.screenplaySceneNumber),
+    dramatic_context: compactText(bible?.dramaticContext, 180),
+    temporal_state: compactText(bible?.temporalState, 120),
+    atmosphere_state: compactText(bible?.atmosphereState, 180),
+    crowd_state: compactText(bible?.crowdState, 160),
+    spatial_continuity: readStringArray(bible?.spatialContinuity).map((item) => compactText(item, 180)).filter((item): item is string => item !== null),
+    persistent_set_state: persistentSetState.map((item) => compactText(item, 180)).filter((item): item is string => item !== null),
+    character_continuity: characterContinuity.map((item) => compactText(item, 220)).filter((item): item is string => item !== null),
+    screen_direction_rules: readStringArray(bible?.screenDirectionRules).map((item) => compactText(item, 180)).filter((item): item is string => item !== null),
+    inherited_continuity: readStringArray(panelContinuity?.inheritedContinuity).map((item) => compactText(item, 180)).filter((item): item is string => item !== null),
+    changed_continuity: readStringArray(panelContinuity?.changedContinuity).map((item) => compactText(item, 180)).filter((item): item is string => item !== null),
+    visible_continuity_elements: readStringArray(panelContinuity?.visibleContinuityElements).map((item) => compactText(item, 120)).filter((item): item is string => item !== null),
+    forbidden_discontinuity: readStringArray(panelContinuity?.forbiddenDiscontinuity).map((item) => compactText(item, 180)).filter((item): item is string => item !== null),
   }
 }
 
@@ -338,11 +387,24 @@ function buildShotPriority(input: {
   readonly visibleSubjects: readonly string[]
   readonly visibleProps: readonly string[]
   readonly omittedSceneAssets: readonly SceneAssetOmission[]
+  readonly segmentContinuity: SegmentContinuityLock | null
 }): readonly string[] {
   const imagePrompt = sanitizeStillAction(input.panel.imagePrompt, 360)
   const formatOmissionReason = (reason: string) => /[。.!?！？]$/u.test(reason) ? reason : `${reason}.`
   const priorities = [
     imagePrompt ? `Primary image intent: ${imagePrompt}` : null,
+    input.segmentContinuity
+      ? `Whole-scene continuity lock: keep ${[
+        ...input.segmentContinuity.visible_continuity_elements,
+        ...input.segmentContinuity.inherited_continuity,
+      ].slice(0, 8).join('; ')}.`
+      : null,
+    input.segmentContinuity && input.segmentContinuity.crowd_state
+      ? `Crowd/background continuity: ${input.segmentContinuity.crowd_state}.`
+      : null,
+    input.segmentContinuity && input.segmentContinuity.forbidden_discontinuity.length > 0
+      ? `Do not break scene continuity: ${input.segmentContinuity.forbidden_discontinuity.slice(0, 6).join('; ')}.`
+      : null,
     input.visibleSubjects.length > 0
       ? `Visible characters must read clearly: ${input.visibleSubjects.join(', ')}.`
       : null,
@@ -359,6 +421,7 @@ function buildShotPriority(input: {
 export function sanitizePanelForStillImagePrompt(panel: StoryboardStillPromptPanel): SanitizedStillPanel {
   const cameraPlan = readCameraPlan(panel)
   const locationZone = buildLocationZone(panel)
+  const segmentContinuity = buildSegmentContinuityLock(panel)
   const characters = parsePanelCharacterReferences(panel.characters)
   const propNames = parsePanelPropNames(panel.props)
   const staticFraming = sanitizeStaticFraming([
@@ -387,6 +450,7 @@ export function sanitizePanelForStillImagePrompt(panel: StoryboardStillPromptPan
       visibleSubjects: characters.map((character) => character.name),
       visibleProps: propNames,
       omittedSceneAssets: locationZone?.omitted_scene_assets || [],
+      segmentContinuity,
     }),
   }
 }
@@ -418,6 +482,7 @@ export function buildStoryboardStillPromptFacts(input: {
       reference_images: input.referenceImagesMap,
       COMPILER_V2: emptyCompilerLayerPlan(),
       LOCATION_ZONE: buildLocationZone(input.panel),
+      SEGMENT_CONTINUITY: buildSegmentContinuityLock(input.panel),
       GLOBAL_SCENE_LOCK: buildGlobalSceneLock(readSpatialProfile({
         panel: input.panel,
         projectData: input.projectData,
@@ -452,8 +517,9 @@ export function buildStoryboardStillPrompt(input: {
     `Aspect ratio: ${input.aspectRatio}`,
     '',
     'BOUNDARY RULES',
-    'Use only single-frame visual facts. Do not include camera movement, duration, fps, subtitles, SRT timing, video-generation text, continuity text, or motion-path language.',
+    'Use only single-frame visual facts. Do not include camera movement, duration, fps, subtitles, SRT timing, video-generation text, transitions, or motion-path language.',
     'SHOT_PRIORITY is the highest authority for this panel. Style and scene context must support it, never replace it.',
+    'SEGMENT_CONTINUITY is a whole-scene lock for spatial layout, persistent props, crowd state, character blocking, and eyelines. Apply it to this still frame without turning it into transition text.',
     'Freeze action language into the visible result state of one frame. Do not create motion blur, repeated limbs, speed trails, or animation smear.',
     'The local scene area has exactly one source of truth: LOCATION_ZONE. GLOBAL_SCENE_LOCK is only a light continuity reference.',
     '',
@@ -465,6 +531,9 @@ export function buildStoryboardStillPrompt(input: {
     '',
     'LOCATION_ZONE',
     jsonBlock(input.facts.context.LOCATION_ZONE),
+    '',
+    'SEGMENT_CONTINUITY',
+    jsonBlock(input.facts.context.SEGMENT_CONTINUITY),
     '',
     'GLOBAL_SCENE_LOCK',
     jsonBlock(input.facts.context.GLOBAL_SCENE_LOCK),

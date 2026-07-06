@@ -48,6 +48,25 @@ export type GlobalSceneLock = {
   readonly stable_background: readonly string[]
 }
 
+export type SegmentContinuityLock = {
+  readonly source: 'panel.photography_rules.segment_continuity'
+  readonly production_segment_id: string | null
+  readonly original_order_key: string | null
+  readonly screenplay_scene_number: number | null
+  readonly dramatic_context: string | null
+  readonly temporal_state: string | null
+  readonly atmosphere_state: string | null
+  readonly crowd_state: string | null
+  readonly spatial_continuity: readonly string[]
+  readonly persistent_set_state: readonly string[]
+  readonly character_continuity: readonly string[]
+  readonly screen_direction_rules: readonly string[]
+  readonly inherited_continuity: readonly string[]
+  readonly changed_continuity: readonly string[]
+  readonly visible_continuity_elements: readonly string[]
+  readonly forbidden_discontinuity: readonly string[]
+}
+
 export type CharacterGraph = {
   readonly references: readonly NumberedReferenceImage[]
   readonly characters: readonly {
@@ -125,6 +144,7 @@ export type StoryboardStillPromptFacts = {
     readonly reference_images: readonly NumberedReferenceImage[]
     readonly COMPILER_V2: StoryboardImageCompilerLayerPlan
     readonly LOCATION_ZONE: LocationZone | null
+    readonly SEGMENT_CONTINUITY: SegmentContinuityLock | null
     readonly GLOBAL_SCENE_LOCK: GlobalSceneLock | null
     readonly CHARACTER_GRAPH: CharacterGraph
     readonly PROP_GRAPH: readonly PropGraphItem[]

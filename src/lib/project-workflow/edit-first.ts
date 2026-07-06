@@ -438,7 +438,7 @@ export async function resolveEditFirstWorkflowState(params: {
   const storyboardImageReadiness = resolveStoryboardImageReadiness(panels)
   const directStoryboards = storyboards.filter((storyboard) => {
     const plan = parseJsonRecord(storyboard.photographyPlan)
-    return readString(plan.consistencyMode) === 'direct_screenplay_storyboard'
+    return readString(plan.consistencyMode) === 'production_segment_continuity_storyboard'
   })
   const storyboardPanelPromptFailed = directStoryboards.some((storyboard) => {
     const plan = parseJsonRecord(storyboard.photographyPlan)
