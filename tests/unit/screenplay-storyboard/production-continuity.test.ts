@@ -10,6 +10,12 @@ import {
   type SceneContinuityLoop,
   type SegmentContinuityBible,
 } from '@/lib/screenplay-storyboard/production-continuity'
+import {
+  panelContinuityStateSchema,
+  productionSegmentSchema,
+  segmentContinuityBibleSchema,
+  sceneContinuityLoopSchema,
+} from '@/lib/screenplay-storyboard/production-continuity-schema'
 
 const locations = [{ locationId: 'food-stall' }, { locationId: 'rental-room' }]
 const characters = [{ name: '陈志国' }, { name: '老葛' }]
@@ -200,5 +206,112 @@ describe('production continuity storyboard contract', () => {
 
     expect(loops.map((item) => item.productionSegmentId)).toEqual(['segment-001-001', 'segment-002-001'])
   })
-})
 
+  it('rejects adjacent production segment splits inside the same screenplay scene and location', () => {
+    const productionLocations = validateProductionLocationGroups({
+      productionLocations: [productionLocation()],
+      locations,
+    })
+
+    expect(() => validateProductionSegments({
+      productionSegments: [
+        segment(),
+        segment({
+          productionSegmentId: 'segment-001-002',
+          order: 2,
+          originalOrderKey: '001.002',
+          screenplaySceneNumber: 1,
+          environment: '同一大排档下注段',
+          sourceText: '老葛把志国按到同一张圆桌旁下注。',
+        }),
+      ],
+      productionLocations,
+      locations,
+      characters,
+      props,
+      panels: [
+        {
+          panelNumber: 1,
+          productionSegmentId: 'segment-001-001',
+          locationId: 'food-stall',
+          shotType: '中景',
+          characterNames: ['陈志国', '老葛'],
+          propNames: ['手机', '啤酒'],
+          omittedSceneAssets: [],
+          panelContinuity: panelContinuity(),
+        },
+        {
+          panelNumber: 2,
+          productionSegmentId: 'segment-001-002',
+          locationId: 'food-stall',
+          shotType: '中景',
+          characterNames: ['陈志国', '老葛'],
+          propNames: ['手机', '啤酒'],
+          omittedSceneAssets: [],
+          panelContinuity: panelContinuity(),
+        },
+      ],
+    })).toThrow('SCREENPLAY_STORYBOARD_PRODUCTION_SEGMENT_SPLIT_SAME_SCENE_LOCATION:segment-001-002:food-stall')
+  })
+
+  it('allows non-detail panels to omit segment roster assets when the omission is explicitly accounted for', () => {
+    const productionLocations = validateProductionLocationGroups({
+      productionLocations: [productionLocation()],
+      locations,
+    })
+
+    const productionSegments = validateProductionSegments({
+      productionSegments: [segment()],
+      productionLocations,
+      locations,
+      characters,
+      props,
+      panels: [
+        {
+          panelNumber: 1,
+          productionSegmentId: 'segment-001-001',
+          locationId: 'food-stall',
+          shotType: '全景',
+          characterNames: ['陈志国'],
+          propNames: ['手机'],
+          omittedSceneAssets: [
+            { name: '老葛', kind: 'character', reason: '老葛尚未从中心桌起身，处于画外空间。' },
+            { name: '啤酒', kind: 'prop', reason: '啤酒尚未被端到当前桌面。' },
+          ],
+          panelContinuity: panelContinuity(),
+        },
+      ],
+    })
+
+    expect(productionSegments).toHaveLength(1)
+  })
+
+  it('accepts meaningful short Chinese continuity states while rejecting placeholder values', () => {
+    expect(productionSegmentSchema.parse(segment({
+      environment: '夜晚',
+    })).environment).toBe('夜晚')
+
+    expect(segmentContinuityBibleSchema.parse(bible({
+      temporalState: '傍晚',
+      atmosphereState: '压抑',
+      crowdState: '无人',
+    })).atmosphereState).toBe('压抑')
+
+    expect(() => segmentContinuityBibleSchema.parse(bible({
+      crowdState: '无',
+    }))).toThrow()
+
+    expect(() => sceneContinuityLoopSchema.parse(loop({
+      repairActions: ['无'],
+    }))).toThrow()
+
+    expect(panelContinuityStateSchema.parse(panelContinuity({
+      inheritedContinuity: ['啤酒杯'],
+      changedContinuity: [],
+    })).inheritedContinuity).toEqual(['啤酒杯'])
+
+    expect(() => panelContinuityStateSchema.parse(panelContinuity({
+      changedContinuity: ['无'],
+    }))).toThrow()
+  })
+})

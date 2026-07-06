@@ -2,13 +2,15 @@ import { Prisma } from '@prisma/client'
 import { z } from 'zod'
 import type { Locale } from '@/i18n/routing'
 import { ApiError } from '@/lib/api-errors'
-import { executeAiTextStep } from '@/lib/ai-exec/engine'
+import { chatCompletionStream } from '@/lib/ai-exec/engine'
+import { getCompletionParts } from '@/lib/ai-exec/llm-helpers'
 import { getProjectModelConfig } from '@/lib/config-service'
 import { decodeImageUrlsFromDb } from '@/lib/contracts/image-urls-contract'
 import { prisma } from '@/lib/prisma'
 import { submitTask } from '@/lib/task/submitter'
 import { TASK_TYPE } from '@/lib/task/types'
 import { parseNullableEditScriptStyleBible } from '@/lib/edit-script/style-bible-prompt'
+import type { ChatMessageContent, TextContentPart } from '@/lib/ai-registry/message-content'
 import {
   directShotBlockingSchema,
   formatSceneZonesForStorage,
@@ -131,8 +133,8 @@ const directPanelSchema = z.object({
   shotType: z.string().trim().min(1),
   cameraMove: z.string().trim().min(1),
   duration: z.number().positive().max(12),
-  imagePrompt: z.string().trim().min(20),
-  videoPrompt: z.string().trim().min(20),
+  imagePrompt: z.string().trim().min(8).nullable().optional(),
+  videoPrompt: z.string().trim().min(8).nullable().optional(),
   shotBlocking: directShotBlockingSchema,
   panelContinuity: panelContinuityStateSchema,
   actingNotes: z.string().trim().min(1).nullable().optional(),
@@ -159,8 +161,40 @@ interface ValidatedDirectStoryboardOutput {
   readonly sceneContinuityLoops: readonly SceneContinuityLoop[]
 }
 
-const DIRECT_STORYBOARD_MAX_ATTEMPTS = 3
-const DIRECT_STORYBOARD_MAX_TOKENS = 24000
+const DIRECT_STORYBOARD_MAX_ATTEMPTS = 4
+const DIRECT_STORYBOARD_MAX_TOKENS = 16000
+const PANELS_PER_OPENING_SCENE_ESTIMATE = 6
+const MIN_OPENING_SCREENPLAY_SCENES = 2
+const MAX_OPENING_SCREENPLAY_SCENES = 12
+
+async function executeDirectStoryboardTextStep(input: {
+  readonly userId: string
+  readonly projectId: string
+  readonly model: string
+  readonly prompt: ChatMessageContent
+  readonly attempt: number
+}): Promise<{ readonly text: string }> {
+  const completion = await chatCompletionStream(
+    input.userId,
+    input.model,
+    [{ role: 'user', content: input.prompt }],
+    {
+      temperature: 0.35,
+      reasoning: false,
+      maxTokens: DIRECT_STORYBOARD_MAX_TOKENS,
+      projectId: input.projectId,
+      action: 'screenplay-storyboard-panels',
+      streamStepId: 'screenplay-storyboard-panels',
+      streamStepTitle: input.attempt === 1
+        ? 'Generate screenplay storyboard panels'
+        : 'Repair screenplay storyboard panels',
+      streamStepIndex: input.attempt,
+      streamStepTotal: DIRECT_STORYBOARD_MAX_ATTEMPTS,
+    },
+  )
+  const parts = getCompletionParts(completion)
+  return { text: parts.text }
+}
 
 function normalizePanelLimit(value: number | undefined): number {
   if (typeof value !== 'number' || !Number.isFinite(value)) return 12
@@ -169,6 +203,38 @@ function normalizePanelLimit(value: number | undefined): number {
 
 function stringifyForPrompt(value: unknown): string {
   return JSON.stringify(value, null, 2)
+}
+
+function cacheablePromptPart(text: string): TextContentPart {
+  return {
+    type: 'text',
+    text,
+    cacheControl: { type: 'ephemeral', ttl: '1h' },
+  }
+}
+
+function dynamicPromptPart(text: string): TextContentPart {
+  return {
+    type: 'text',
+    text,
+  }
+}
+
+export function selectOpeningScreenplayTextForStoryboard(input: {
+  readonly screenplayText: string
+  readonly panelLimit: number
+}): string {
+  const normalized = input.screenplayText.trim()
+  const sceneWindow = Math.max(
+    MIN_OPENING_SCREENPLAY_SCENES,
+    Math.min(MAX_OPENING_SCREENPLAY_SCENES, Math.ceil(input.panelLimit / PANELS_PER_OPENING_SCENE_ESTIMATE)),
+  )
+  const headingPattern = /^##\s*场景\s*\d+[^\n]*$/gmu
+  const headings = Array.from(normalized.matchAll(headingPattern))
+  if (headings.length <= sceneWindow) return normalized
+  const cutoff = headings[sceneWindow].index
+  if (typeof cutoff !== 'number' || cutoff <= 0) return normalized
+  return normalized.slice(0, cutoff).trim()
 }
 
 function parseJsonObjectResponse(responseText: string): Record<string, unknown> {
@@ -187,14 +253,16 @@ function parseJsonObjectResponse(responseText: string): Record<string, unknown> 
 }
 
 function formatDirectStoryboardGenerationError(error: unknown): string {
+  const sanitizeForRepair = (message: string): string =>
+    message.replace(/变形\s+of\s+啤酒瓶盖/gu, '包含英文连接词的啤酒瓶盖错误资产名')
   if (error instanceof z.ZodError) {
-    return error.issues.map((issue) => {
+    return sanitizeForRepair(error.issues.map((issue) => {
       const path = issue.path.length > 0 ? issue.path.join('.') : '<root>'
       return `${path}: ${issue.message}`
-    }).join('\n')
+    }).join('\n'))
   }
-  if (error instanceof Error) return error.message
-  return String(error)
+  if (error instanceof Error) return sanitizeForRepair(error.message)
+  return sanitizeForRepair(String(error))
 }
 
 function resolveCharacterImageUrl(input: {
@@ -381,7 +449,17 @@ function visualStylePromptBlock(styleBibleJson: unknown): Record<string, unknown
   }
 }
 
-function buildPrompt(input: {
+export function compactStoryDevelopmentForStoryboard(storyDevelopmentJson: Prisma.JsonValue | null): Record<string, string> {
+  return storyDevelopmentJson
+    ? {
+      sourcePolicy: '分镜阶段为节省 token，不读取完整剧作开发 JSON；剧本文本、视觉风格、角色资产和场景空间事实是当前分镜的权威输入。',
+    }
+    : {
+      sourcePolicy: '当前项目没有可用剧作开发 JSON；剧本文本、视觉风格、角色资产和场景空间事实是当前分镜的权威输入。',
+    }
+}
+
+function buildPromptContent(input: {
   readonly screenplayText: string
   readonly storyDevelopmentJson: Prisma.JsonValue | null
   readonly visualStyle: Record<string, unknown>
@@ -390,21 +468,25 @@ function buildPrompt(input: {
   readonly characters: readonly CharacterAsset[]
   readonly locations: readonly LocationAsset[]
   readonly props: readonly PropAsset[]
-}) {
-  return [
+}): ChatMessageContent {
+  const instructions = [
     '你是直接分镜 Panel Agent。禁止生成或依赖导演拆镜、剪辑表、edit table、shotsJson、videoBlocksJson 或独立摄影指导方案。',
-    '你只能从剧本正文、剧作开发 JSON、纯视觉风格、项目角色资产、项目场景资产和轻量空间事实生成 storyboard panels。',
+    '你只能从剧本正文、剧作开发摘要、纯视觉风格、项目角色资产、项目场景资产和轻量空间事实生成 storyboard panels。',
     `请从剧本开头按叙事顺序生成前 ${input.panelLimit} 个 storyboard panel，不得跳选，不得重排，不得提前抽后文高潮。`,
     '每个 panel 必须是一张可直接生成分镜图的画面，不是剪辑表镜头。',
     '输出严格 JSON，不要 Markdown。',
     '',
     'JSON 格式：',
-    '{"productionLocations":[{"productionLocationId":"","locationId":"","stableSpatialFacts":[""],"reusableAnchors":[""],"stableSetDressing":[""],"nonPersistentStateBans":[""]}],"productionSegments":[{"productionSegmentId":"","order":1,"originalOrderKey":"001.001","screenplaySceneNumber":1,"productionLocationId":"","locationId":"","environment":"","sourceText":"","characterNames":[""],"propNames":[""]}],"segmentContinuityBibles":[{"productionSegmentId":"","originalOrderKey":"001.001","screenplaySceneNumber":1,"dramaticContext":"","temporalState":"","atmosphereState":"","crowdState":"","spatialContinuity":[""],"persistentSetState":[{"name":"","kind":"set_dressing","continuityRule":""}],"characterContinuity":[{"characterName":"","initialPosition":"","blockingArc":"","eyelineRules":[""]}],"screenDirectionRules":[""],"forbiddenChanges":[""]}],"sceneZones":[{"sceneZoneId":"","locationId":"","name":"","overallPosition":"","fixedAnchors":[""]}],"panels":[{"panelNumber":1,"productionSegmentId":"","sourceText":"","description":"","locationId":"","sceneZoneId":"","characters":[""],"props":[""],"omittedSceneAssets":[{"name":"","kind":"character","reason":""}],"shotType":"","cameraMove":"","duration":4,"imagePrompt":"","videoPrompt":"","shotBlocking":{"sceneZoneId":"","subjectPosition":"","cameraPosition":"","screenComposition":"","characterPlacements":[{"characterName":"","subjectPosition":"","facing":"","eyeline":""}]},"panelContinuity":{"inheritedContinuity":[""],"changedContinuity":[""],"visibleContinuityElements":[""],"forbiddenDiscontinuity":[""]},"actingNotes":""}],"panelGroups":[{"groupNumber":1,"panelNumbers":[1,2],"sceneZoneIds":[""],"continuityRule":""}],"sceneContinuityLoops":[{"productionSegmentId":"","auditRound":1,"checkedPanelNumbers":[1,2],"checkedContinuityAxes":["space","character_blocking","eyeline"],"detectedIssues":[""],"repairActions":[""],"locked":true}]}',
+    '{"productionLocations":[{"productionLocationId":"","locationId":"","stableSpatialFacts":[""],"reusableAnchors":[""],"stableSetDressing":[""],"nonPersistentStateBans":[""]}],"productionSegments":[{"productionSegmentId":"","order":1,"originalOrderKey":"001.001","screenplaySceneNumber":1,"productionLocationId":"","locationId":"","environment":"","sourceText":"","characterNames":[""],"propNames":[""]}],"segmentContinuityBibles":[{"productionSegmentId":"","originalOrderKey":"001.001","screenplaySceneNumber":1,"dramaticContext":"","temporalState":"","atmosphereState":"","crowdState":"","spatialContinuity":[""],"persistentSetState":[{"name":"","kind":"set_dressing","continuityRule":""}],"characterContinuity":[{"characterName":"","initialPosition":"","blockingArc":"","eyelineRules":[""]}],"screenDirectionRules":[""],"forbiddenChanges":[""]}],"sceneZones":[{"sceneZoneId":"","locationId":"","name":"","overallPosition":"","fixedAnchors":[""]}],"panels":[{"panelNumber":1,"productionSegmentId":"","sourceText":"","description":"","locationId":"","sceneZoneId":"","characters":[""],"props":[""],"omittedSceneAssets":[{"name":"","kind":"character","reason":""}],"shotType":"","cameraMove":"","duration":4,"shotBlocking":{"sceneZoneId":"","subjectPosition":"","cameraPosition":"","screenComposition":"","characterPlacements":[{"characterName":"","subjectPosition":"","facing":"","eyeline":""}]},"panelContinuity":{"inheritedContinuity":[""],"changedContinuity":[],"visibleContinuityElements":[""],"forbiddenDiscontinuity":[""]}}],"panelGroups":[{"groupNumber":1,"panelNumbers":[1,2],"sceneZoneIds":[""],"continuityRule":""}],"sceneContinuityLoops":[{"productionSegmentId":"","auditRound":1,"checkedPanelNumbers":[1,2],"checkedContinuityAxes":["space","character_blocking","eyeline"],"detectedIssues":[],"repairActions":[],"locked":true}]}',
     '',
     '字段要求：',
     '- panelNumber 从 1 连续递增。',
+    '- 所有文本字段必须是有意义中文内容；禁止写空字符串、空格、无、暂无、N/A、none、null 或单字占位。',
+    '- 输出要精炼：每个中文说明字段优先写 1 句短句，不要长篇解释。',
+    '- panels 不需要输出 imagePrompt、videoPrompt、actingNotes；后续图像编译器会从已校验的 panel 事实编译最终提示词。',
     '- 剧作 Scene 保持剧本原有结构；productionSegments 必须在每个剧作 Scene 内按制片物理场景拆分，不得把剧作 Scene 当作制片场景。',
     '- productionSegments 必须只按剧本时间顺序中的当下发生场景切分：同一连续环境、同一现实空间、同一段正在发生的剧情为一个 productionSegment。',
+    '- 同一个剧作 Scene 内，相邻片段如果 locationId 相同，必须合并为同一个 productionSegment；不得按人物入场、下注、赢钱、对话转折、看手机或反应拆段。',
     '- 禁止因为人物/道具出入画、人物/道具增减、剧情强弱转折、电话威胁升级、反应变化，把同一当下发生场景拆成多个 productionSegment。',
     '- originalOrderKey 格式必须是 001.001：前三位是剧作 Scene 编号，后三位是该剧作 Scene 内的制片物理场景片段序号。',
     '- screenplaySceneNumber 必须是该片段所属的剧作 Scene 编号。',
@@ -412,10 +494,10 @@ function buildPrompt(input: {
     '- 同一 productionLocation 只共享长期空间资产和稳定布景，不共享剧情状态、时间状态、桌面状态、群众状态或人物关系状态。',
     '- productionSegments.characterNames / propNames 是该当下发生场景内出现过的人物和道具汇总结果；场景边界只能由剧情正在发生的连续环境和现实空间决定。',
     '- panel.productionSegmentId 必须引用 productionSegments 中的 productionSegmentId。',
-    '- productionSegment 的 characterNames / propNames 默认每张 panel 都应入画。',
+    '- productionSegment 的 characterNames / propNames 是整段 roster，不等于每张 panel 都已经入画；每张 panel 必须通过 characters / props 与 omittedSceneAssets 显式说明可见或未入画状态。',
     '- 禁止用空镜、纯环境镜头、纯道具插入镜头替代剧情 panel；每个 panel 必须承载人物处境、动作或反应。',
-    '- 远景、全景、中景、近景都必须让所属 productionSegment 的全部 characterNames / propNames 入画；可以放在前景、背景、焦外或阴影里，但不能画外。',
-    '- 只有极近景、很小景别特写、插入细节镜头，才允许因为构图裁切省略部分 productionSegment 资产。',
+    '- 远景、全景、中景、近景必须优先保持当前 beat 已经建立的人物、道具、群众和桌面状态；尚未登场、已经离场、合理处于画外空间的资产必须写入 omittedSceneAssets 说明具体原因。',
+    '- 极近景、很小景别特写、插入细节镜头允许因为构图裁切省略部分 productionSegment 资产。',
     '- 即使是极近景/插入细节镜头，也必须至少包含一个所属 productionSegment 的人物或道具资产；禁止 characters=[] 且 props=[] 的空资产 panel。',
     '- 电话通话、威胁、反应、对白场面优先拍人物关系；不要只拍手机屏幕、桌面、灯、门、积水等环境物件。',
     '- 每个 panel 的 characters / props 是该镜头实际入画的资产，必须来自所属 productionSegment 的 characterNames / propNames，不得跨场景段借人或借物。',
@@ -426,11 +508,9 @@ function buildPrompt(input: {
     '- sourceText 必须来自剧本开头对应段落，可压缩但不能改写剧情事实。',
     '- description 写画面里实际可见的动作、人物位置、情绪和空间关系。',
     '- characters 只能使用项目角色资产中的 name；没有出现角色就空数组。',
+    '- characters / props / omittedSceneAssets.name 必须逐字复制项目资产 name，禁止翻译、改写、加英文、删字或中英混写。',
     '- locationId 必须复制对应项目场景资产的 locationId。',
     '- sceneZoneId 必须引用 sceneZones 中的 sceneZoneId。',
-    '- imagePrompt 必须包含画幅、角色、场景、动作、景别、光线、地域/生活纹理，不要字幕、水印、Logo。',
-    '- videoPrompt 可以在 imagePrompt 基础上加入运动和声音，但不要新增剧情。',
-    '- actingNotes 只写表演状态、身体动作、眼神/停顿。',
     '',
     'Production Location Grouping 要求：',
     '- productionLocations 只记录同一制片物理场景的长期稳定事实：空间结构、稳定锚点、长期布景、不能跨场景段继承的状态禁令。',
@@ -439,7 +519,7 @@ function buildPrompt(input: {
     '',
     'Segment Continuity Bible 要求：',
     '- 每个 productionSegment 必须有且只有一个 segmentContinuityBible；这是当前这幕戏的短期连续性状态表。',
-    '- dramaticContext 写这段戏的戏剧压力；temporalState 写日夜/时间阶段；atmosphereState 写当前气氛；crowdState 写群众密度与变化。',
+    '- dramaticContext 写这段戏的戏剧压力；temporalState 写日夜/时间阶段，允许夜晚、白天、傍晚、深夜这类明确短状态；atmosphereState 写当前气氛；crowdState 写群众密度与变化，允许无人、零散人群、满场人群这类明确状态。',
     '- spatialContinuity 锁定该段内入口、桌子、幕布、出口、出餐档口等相对关系。',
     '- persistentSetState 必须列出这段戏内需要跨 panel 持续的桌面物、菜、酒、手机、行李箱、工具包、现金、笔记本、瓶盖、人群等元素。',
     '- characterContinuity 必须说明人物初始站位、坐站关系、位置弧线、视线规则；不要让人物在无剧情原因时换边、换朝向或丢失视线对象。',
@@ -464,6 +544,7 @@ function buildPrompt(input: {
     '- 每个 panel 必须写 panelContinuity。',
     '- inheritedContinuity 写从同一 productionSegment 前文继承的空间、人物、道具、群众状态。',
     '- changedContinuity 只写本 panel 相对上一 panel 的真实变化；没有变化可以空数组。',
+    '- changedContinuity 没有变化必须写 []，绝对不要写 ["无"]、["暂无"] 或任何占位词。',
     '- visibleContinuityElements 写本画面中能看见或明确读出的持续元素。',
     '- forbiddenDiscontinuity 写本 panel 绝对不能发生的断裂。',
     '',
@@ -475,53 +556,69 @@ function buildPrompt(input: {
     '- sceneContinuityLoops 必须在 panels 规划完成后，对每个 productionSegment 分别自检一次。',
     '- checkedPanelNumbers 必须连续覆盖该 productionSegment 下的所有 panel。',
     '- checkedContinuityAxes 至少包含 space、character_blocking、eyeline、persistent_props、crowd_state 中的三项。',
-    '- 若发现断裂，必须在 repairActions 写明已如何修正 panel 的 sceneZone、shotBlocking、panelContinuity 或 imagePrompt；最终 locked 必须为 true。',
+    '- 若发现断裂，必须在 repairActions 写明已如何修正 panel 的 sceneZone、shotBlocking 或 panelContinuity；最终 locked 必须为 true。',
     '',
     `画幅：${input.videoRatio}`,
-    '',
-    '纯视觉风格（只管画面风格，不是导演意图）：',
-    stringifyForPrompt(input.visualStyle),
-    '',
-    '项目角色资产：',
-    stringifyForPrompt(characterPromptAssets(input.characters)),
-    '',
-    '项目道具资产：',
-    stringifyForPrompt(propPromptAssets(input.props)),
-    '',
-    '项目场景资产与轻量空间事实：',
-    stringifyForPrompt(locationPromptAssets(input.locations)),
-    '',
-    '剧作开发 JSON：',
-    stringifyForPrompt(input.storyDevelopmentJson),
-    '',
-    '剧本正文：',
-    input.screenplayText,
   ].join('\n')
+
+  return [
+    cacheablePromptPart(`${instructions}\n\n`),
+    cacheablePromptPart([
+      '纯视觉风格（只管画面风格，不是导演意图）：',
+      stringifyForPrompt(input.visualStyle),
+      '',
+      '项目角色资产：',
+      stringifyForPrompt(characterPromptAssets(input.characters)),
+      '',
+      '项目道具资产：',
+      stringifyForPrompt(propPromptAssets(input.props)),
+      '',
+      '项目场景资产与轻量空间事实：',
+      stringifyForPrompt(locationPromptAssets(input.locations)),
+      '',
+      '剧作开发 JSON 摘要：',
+      stringifyForPrompt(compactStoryDevelopmentForStoryboard(input.storyDevelopmentJson)),
+      '',
+    ].join('\n')),
+    cacheablePromptPart([
+      '剧本正文：',
+      input.screenplayText,
+    ].join('\n')),
+  ]
 }
 
-function buildRepairPrompt(input: {
-  readonly basePrompt: string
+function buildRepairPromptContent(input: {
+  readonly basePrompt: ChatMessageContent
   readonly attempt: number
   readonly validationError: string
-}): string {
+}): ChatMessageContent {
+  const baseParts = typeof input.basePrompt === 'string'
+    ? [cacheablePromptPart(input.basePrompt)]
+    : input.basePrompt
   return [
-    input.basePrompt,
-    '',
-    `这是第 ${input.attempt} 次修复重试。上一版输出没有通过系统校验，禁止解释，必须重新输出完整 JSON。`,
-    '修复目标：保持同一剧本顺序、同一项目资产、同一 panelLimit，只修正 schema、资产覆盖、制片场景连续性与 scene continuity loop 的错误。',
-    '严禁放宽规则、严禁减少 panel 数、严禁把错误字段继续放进 panels。',
-    '所有 string().min(N) 的字段必须写成有意义中文短句，不能写空字符串、空格、无、暂无、N/A、none、null 或单字占位。',
-    '所有 min(1) 的数组必须至少写一个有意义条目，不能用空数组规避连续性约束。',
-    'segmentContinuityBibles.temporalState / crowdState 必须明确写当前时间阶段与群众状态；persistentSetState 必须列出本段跨 panel 持续的布景、道具、群众或空间锚点。',
-    'sceneZones.overallPosition 必须用一句完整中文说明该拍摄区域在整体场景里的相对位置。',
-    'panels.panelContinuity.inheritedContinuity 必须至少写一条继承状态；每条不少于四个中文字符，必须来自同一 productionSegment 的前文空间、人物、道具或群众状态。',
-    '如果某个 productionSegment 的角色或道具属于当前段汇总资产，但当前 panel 不是极近景/插入细节镜头，就必须让该资产在画面中可见，可在前景、背景、焦外或阴影中；不能写入 omittedSceneAssets。',
-    '如果角色或道具剧情上尚未出现，但你又把它放进 productionSegment.characterNames / propNames，则必须重新规划 panel，让非特写镜头仍能合理看见它，或把当前 panel 改成允许裁切的细节镜头。',
-    'panels 里的字段只能使用 JSON 格式中声明过的字段；不要把 order、originalOrderKey、screenplaySceneNumber、productionLocationId 写入 panel 对象。',
-    '',
-    '上一版校验错误：',
-    input.validationError,
-  ].join('\n')
+    ...baseParts,
+    dynamicPromptPart([
+      '',
+      `这是第 ${input.attempt} 次修复重试。上一版输出没有通过系统校验，禁止解释，必须重新输出完整 JSON。`,
+      '修复目标：保持同一剧本顺序、同一项目资产、同一 panelLimit，只修正 schema、资产覆盖、制片场景连续性与 scene continuity loop 的错误。',
+      '严禁放宽规则、严禁减少 panel 数、严禁把错误字段继续放进 panels。',
+      '所有文本字段必须写成有意义中文内容，不能写空字符串、空格、无、暂无、N/A、none、null 或单字占位。',
+      '所有 min(1) 的数组必须至少写一个有意义条目，不能用空数组规避连续性约束。',
+      'changedContinuity / detectedIssues / repairActions 如果没有真实内容必须写 []，绝对不要写 ["无"]、["暂无"] 或任何占位词。',
+      'segmentContinuityBibles.temporalState / crowdState 必须明确写当前时间阶段与群众状态；夜晚、白天、傍晚、深夜、无人、零散人群是有效短状态；persistentSetState 必须列出本段跨 panel 持续的布景、道具、群众或空间锚点。',
+      'sceneZones.overallPosition 必须用一句完整中文说明该拍摄区域在整体场景里的相对位置。',
+      'panels.panelContinuity.inheritedContinuity 必须至少写一条继承状态；每条不少于四个中文字符，必须来自同一 productionSegment 的前文空间、人物、道具或群众状态。',
+      '如果某个 productionSegment 的角色或道具属于当前段汇总资产，但当前 panel 中尚未登场、已经离场、处于合理画外空间或因景别裁切不可见，必须写入 omittedSceneAssets 并给出具体物理原因。',
+      '所有角色名、道具名必须逐字复制项目资产 name；禁止在资产名中夹英文连接词、翻译、改写、加字或删字。',
+      '啤酒瓶盖道具的唯一合法资产名是“变形的啤酒瓶盖”。',
+      '如果角色或道具剧情上尚未出现，但你又把它放进 productionSegment.characterNames / propNames，则必须重新规划 panel，让非特写镜头仍能合理看见它，或把当前 panel 改成允许裁切的细节镜头。',
+      '同一个剧作 Scene 内，相邻片段如果 locationId 相同，必须合并为同一个 productionSegment；不得按人物入场、下注、赢钱、对话转折、看手机或反应拆段。',
+      'panels 里的字段只能使用 JSON 格式中声明过的字段；不要把 order、originalOrderKey、screenplaySceneNumber、productionLocationId、imagePrompt、videoPrompt、actingNotes 写入 panel 对象。',
+      '',
+      '上一版校验错误：',
+      input.validationError,
+    ].join('\n')),
+  ]
 }
 
 function bindCharacters(input: {
@@ -575,6 +672,43 @@ function groupForPanel(panelNumber: number, groups: readonly ValidatedStoryboard
   const group = groups.find((item) => item.panelNumbers.includes(panelNumber))
   if (!group) throw new Error(`SCREENPLAY_STORYBOARD_PANEL_GROUP_MISSING:${panelNumber}`)
   return group
+}
+
+function optionalTrimmedText(value: string | null | undefined): string | null {
+  const trimmed = typeof value === 'string' ? value.trim() : ''
+  return trimmed.length > 0 ? trimmed : null
+}
+
+function compilePanelImageIntent(input: {
+  readonly panel: z.infer<typeof directPanelSchema>
+  readonly location: LocationAsset
+  readonly sceneZone: SceneZone
+  readonly segmentContinuityBible: SegmentContinuityBible
+}): string {
+  const visibleCharacters = input.panel.characters.length > 0
+    ? `可见角色：${input.panel.characters.join('、')}`
+    : '无可见角色'
+  const visibleProps = input.panel.props.length > 0
+    ? `可见道具：${input.panel.props.join('、')}`
+    : '无可见道具'
+  const continuityElements = input.panel.panelContinuity.visibleContinuityElements.slice(0, 4).join('、')
+  return [
+    `${input.panel.shotType}，${input.location.name}，${input.sceneZone.name}。`,
+    input.panel.description,
+    visibleCharacters,
+    visibleProps,
+    `连续性：${continuityElements || input.segmentContinuityBible.atmosphereState}。`,
+  ].join(' ')
+}
+
+function compilePanelVideoIntent(input: {
+  readonly panel: z.infer<typeof directPanelSchema>
+  readonly segmentContinuityBible: SegmentContinuityBible
+}): string {
+  return [
+    `${input.panel.cameraMove}镜头，保持${input.segmentContinuityBible.temporalState}与${input.segmentContinuityBible.crowdState}连续性。`,
+    input.panel.description,
+  ].join(' ')
 }
 
 function buildPanelDrafts(input: {
@@ -665,8 +799,16 @@ function buildPanelDrafts(input: {
       duration,
       shotType: panel.shotType,
       cameraMove: panel.cameraMove,
-      imagePrompt: panel.imagePrompt,
-      videoPrompt: panel.videoPrompt,
+      imagePrompt: optionalTrimmedText(panel.imagePrompt) ?? compilePanelImageIntent({
+        panel,
+        location,
+        sceneZone,
+        segmentContinuityBible,
+      }),
+      videoPrompt: optionalTrimmedText(panel.videoPrompt) ?? compilePanelVideoIntent({
+        panel,
+        segmentContinuityBible,
+      }),
       photographyRules: JSON.stringify(source),
       actingNotes: panel.actingNotes ?? null,
       shotBlocking: panel.shotBlocking,
@@ -995,8 +1137,11 @@ export async function generateScreenplayStoryboardPanels(input: GenerateScreenpl
     })
   }
 
-  const prompt = buildPrompt({
-    screenplayText: screenplay.screenplayText,
+  const prompt = buildPromptContent({
+    screenplayText: selectOpeningScreenplayTextForStoryboard({
+      screenplayText: screenplay.screenplayText,
+      panelLimit,
+    }),
     storyDevelopmentJson: screenplay.storyDevelopmentJson,
     visualStyle: visualStylePromptBlock(screenplay.styleBibleJson),
     videoRatio: project.videoRatio,
@@ -1009,22 +1154,12 @@ export async function generateScreenplayStoryboardPanels(input: GenerateScreenpl
   let validated: ValidatedDirectStoryboardOutput | null = null
   let lastValidationError = ''
   for (let attempt = 1; attempt <= DIRECT_STORYBOARD_MAX_ATTEMPTS; attempt += 1) {
-    const completion = await executeAiTextStep({
+    const completion = await executeDirectStoryboardTextStep({
       userId: input.userId,
       projectId: input.projectId,
       model: config.analysisModel,
-      messages: [{ role: 'user', content: promptForAttempt }],
-      temperature: 0.35,
-      maxTokens: DIRECT_STORYBOARD_MAX_TOKENS,
-      action: 'screenplay-storyboard-panels',
-      meta: {
-        stepId: 'screenplay-storyboard-panels',
-        stepTitle: attempt === 1
-          ? 'Generate screenplay storyboard panels'
-          : 'Repair screenplay storyboard panels',
-        stepIndex: attempt,
-        stepTotal: DIRECT_STORYBOARD_MAX_ATTEMPTS,
-      },
+      prompt: promptForAttempt,
+      attempt,
     })
     try {
       validated = parseAndValidateDirectStoryboardOutput({
@@ -1040,7 +1175,7 @@ export async function generateScreenplayStoryboardPanels(input: GenerateScreenpl
       if (attempt === DIRECT_STORYBOARD_MAX_ATTEMPTS) {
         throw new Error(`SCREENPLAY_STORYBOARD_VALIDATION_FAILED_AFTER_REPAIR:${lastValidationError}`)
       }
-      promptForAttempt = buildRepairPrompt({
+      promptForAttempt = buildRepairPromptContent({
         basePrompt: prompt,
         attempt: attempt + 1,
         validationError: lastValidationError,

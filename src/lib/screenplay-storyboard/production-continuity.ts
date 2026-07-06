@@ -139,6 +139,13 @@ export function validateProductionSegments(input: {
     if (
       previousSegment
       && previousSegment.locationId === segment.locationId
+      && previousSegment.screenplaySceneNumber === segment.screenplaySceneNumber
+    ) {
+      throw new Error(`SCREENPLAY_STORYBOARD_PRODUCTION_SEGMENT_SPLIT_SAME_SCENE_LOCATION:${segment.productionSegmentId}:${segment.locationId}`)
+    }
+    if (
+      previousSegment
+      && previousSegment.locationId === segment.locationId
       && normalizeEnvironment(previousSegment.environment) === normalizeEnvironment(segment.environment)
     ) {
       throw new Error(`SCREENPLAY_STORYBOARD_PRODUCTION_SEGMENT_DUPLICATE_CONTINUOUS_SCENE:${segment.productionSegmentId}:${segment.locationId}`)
@@ -189,10 +196,6 @@ export function validateProductionSegments(input: {
       context: `panel_${panel.panelNumber}`,
     })
     const isTightDetail = isTightDetailShot(panel.shotType)
-    const omittedNames = [...omittedCharacters, ...omittedProps]
-    if (!isTightDetail && omittedNames.length > 0) {
-      throw new Error(`SCREENPLAY_STORYBOARD_PANEL_NON_DETAIL_OMITS_PRODUCTION_SEGMENT_ASSET:panel_${panel.panelNumber}:${omittedNames[0]}`)
-    }
     if (isTightDetail && segment.characterNames.length + segment.propNames.length > 0) {
       const visibleSceneAssetCount = panel.characterNames.length + panel.propNames.length
       if (visibleSceneAssetCount === 0) {
