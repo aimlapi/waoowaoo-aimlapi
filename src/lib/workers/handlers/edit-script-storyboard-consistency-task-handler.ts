@@ -52,6 +52,13 @@ function isDirectScreenplayStoryboardPayload(value: unknown): boolean {
     && (value as Record<string, unknown>).mode === 'direct_screenplay_storyboard'
 }
 
+function readDirectScreenplayStoryboardGenerationMode(value: unknown): 'replace' | 'append' {
+  const payload = readRecord(value)
+  if (payload.generationMode === 'append') return 'append'
+  if (payload.generationMode === undefined || payload.generationMode === 'replace') return 'replace'
+  throw new Error(`SCREENPLAY_STORYBOARD_GENERATION_MODE_INVALID:${String(payload.generationMode)}`)
+}
+
 function parsePayload(job: Job<TaskJobData>): ParsedPayload {
   const payload = readRecord(job.data.payload)
   const editScriptId = readString(payload.editScriptId) || job.data.targetId
@@ -287,6 +294,7 @@ export async function handleEditScriptStoryboardCameraPlanTask(job: Job<TaskJobD
       episodeId: job.data.episodeId,
       locale: job.data.locale,
       requestId: job.data.trace?.requestId || null,
+      generationMode: readDirectScreenplayStoryboardGenerationMode(job.data.payload),
     })
     return {
       storyboardId: result.storyboardId,

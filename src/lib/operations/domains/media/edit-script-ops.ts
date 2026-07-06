@@ -87,6 +87,7 @@ const reviseEditScriptAssetsInputSchema = z.object({
 
 const generateEditScriptStoryboardInputSchema = z.object({
   ...confirmedInputFields,
+  generationMode: z.enum(['replace', 'append']).optional(),
 }).strict()
 
 type GenerateEditScreenplayInput = z.infer<typeof generateEditScreenplayInputSchema>
@@ -596,6 +597,7 @@ export function createEditScriptOperations(): ProjectAgentOperationRegistryDraft
           episodeId,
           locale: resolveLocale(ctx.context.locale),
           requestId: ctx.request.headers.get('x-request-id'),
+          generationMode: input.generationMode,
         })
 
         writeOperationDataPart<TaskSubmittedPartData>(ctx.writer, 'data-task-submitted', {

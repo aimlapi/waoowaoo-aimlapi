@@ -7,6 +7,7 @@ import { submitScreenplayStoryboardTask } from '@/lib/screenplay-storyboard/serv
 
 const submitScreenplayStoryboardRequestSchema = z.object({
   episodeId: z.string().trim().min(1),
+  generationMode: z.enum(['replace', 'append']).optional(),
 }).strict()
 
 export const POST = apiHandler(async (
@@ -29,6 +30,7 @@ export const POST = apiHandler(async (
     userId: authResult.session.user.id,
     locale: resolveRequiredTaskLocale(request, body),
     requestId: request.headers.get('x-request-id'),
+    generationMode: parsed.data.generationMode,
   })
 
   return NextResponse.json(result)
