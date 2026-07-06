@@ -89,6 +89,9 @@ const panel: StoryboardStillPromptPanel = {
       spatialHardLocks: {
         anchorLayout: ['stone wall remains on screen left across this zone'],
         screenDirectionLocks: ['Hero eyeline remains toward screen right'],
+        depthLayoutLocks: ['stone wall remains in the midground and wet pavement remains in the foreground'],
+        cameraSideLocks: ['camera stays on the wet pavement side of the wall'],
+        subjectPlacementLocks: ['Hero remains between the foreground pavement and the midground wall'],
         forbiddenSpatialChanges: ['do not mirror the stone wall and wet pavement relationship'],
       },
     },
@@ -146,6 +149,7 @@ describe('panel-still-prompt-builder', () => {
     expect(prompt).toContain('small worn golden eagle badge')
     expect(prompt).toContain('Do not show character \\"Villain\\"')
     expect(prompt).toContain('stone wall remains on screen left across this zone')
+    expect(prompt).toContain('camera stays on the wet pavement side of the wall')
     expect(prompt).toContain('Spatial hard locks are mandatory')
     expect(prompt).not.toContain('video_prompt')
     expect(prompt).not.toContain('横向轨道')
@@ -194,6 +198,9 @@ describe('panel-still-prompt-builder', () => {
             spatialHardLocks: {
               anchorLayout: ['face shadow remains above the collar edge'],
               screenDirectionLocks: ['Hero eyeline remains toward the same unseen threat'],
+              depthLayoutLocks: ['face plane remains foreground and collar edge remains lower foreground'],
+              cameraSideLocks: ['camera remains frontal to the same face plane'],
+              subjectPlacementLocks: ['Hero face remains locked above the same collar edge'],
               forbiddenSpatialChanges: ['do not mirror the face-shadow and collar-edge relationship'],
             },
           },

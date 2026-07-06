@@ -33,6 +33,9 @@ function sceneZone(input: Partial<SceneZone> = {}): SceneZone {
     spatialHardLocks: input.spatialHardLocks ?? {
       anchorLayout: ['左侧红光窗户固定在画面左侧', '右侧木床头固定在画面右侧'],
       screenDirectionLocks: ['窗外红光始终从画面左侧投向床头右侧'],
+      depthLayoutLocks: ['床尾固定在画面左下前景，床头固定在画面右侧中后景'],
+      cameraSideLocks: ['镜头始终位于靠镜头床沿这一侧，不得切到靠窗床边'],
+      subjectPlacementLocks: ['陈志国坐下和躺下都必须落在同一张单人木床的同一床轴上'],
       forbiddenSpatialChanges: ['不得镜像翻转窗户和床头的左右关系'],
     },
   }
@@ -66,6 +69,9 @@ describe('scene continuity spatial hard locks', () => {
     expect(formatSceneZonesForStorage(zones)[0]?.spatialHardLocks).toEqual({
       anchorLayout: ['左侧红光窗户固定在画面左侧', '右侧木床头固定在画面右侧'],
       screenDirectionLocks: ['窗外红光始终从画面左侧投向床头右侧'],
+      depthLayoutLocks: ['床尾固定在画面左下前景，床头固定在画面右侧中后景'],
+      cameraSideLocks: ['镜头始终位于靠镜头床沿这一侧，不得切到靠窗床边'],
+      subjectPlacementLocks: ['陈志国坐下和躺下都必须落在同一张单人木床的同一床轴上'],
       forbiddenSpatialChanges: ['不得镜像翻转窗户和床头的左右关系'],
     })
   })

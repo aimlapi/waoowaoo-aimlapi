@@ -238,15 +238,34 @@ function readSpatialHardLocks(value: unknown): SpatialHardLocks | null {
   const screenDirectionLocks = readStringArray(record.screenDirectionLocks)
     .map((item) => compactText(item, 180))
     .filter((item): item is string => item !== null)
+  const depthLayoutLocks = readStringArray(record.depthLayoutLocks)
+    .map((item) => compactText(item, 180))
+    .filter((item): item is string => item !== null)
+  const cameraSideLocks = readStringArray(record.cameraSideLocks)
+    .map((item) => compactText(item, 180))
+    .filter((item): item is string => item !== null)
+  const subjectPlacementLocks = readStringArray(record.subjectPlacementLocks)
+    .map((item) => compactText(item, 180))
+    .filter((item): item is string => item !== null)
   const forbiddenSpatialChanges = readStringArray(record.forbiddenSpatialChanges)
     .map((item) => compactText(item, 180))
     .filter((item): item is string => item !== null)
-  if (anchorLayout.length === 0 || screenDirectionLocks.length === 0 || forbiddenSpatialChanges.length === 0) {
+  if (
+    anchorLayout.length === 0
+    || screenDirectionLocks.length === 0
+    || depthLayoutLocks.length === 0
+    || cameraSideLocks.length === 0
+    || subjectPlacementLocks.length === 0
+    || forbiddenSpatialChanges.length === 0
+  ) {
     return null
   }
   return {
     anchor_layout: anchorLayout,
     screen_direction_locks: screenDirectionLocks,
+    depth_layout_locks: depthLayoutLocks,
+    camera_side_locks: cameraSideLocks,
+    subject_placement_locks: subjectPlacementLocks,
     forbidden_spatial_changes: forbiddenSpatialChanges,
   }
 }
@@ -434,6 +453,9 @@ function buildShotPriority(input: {
       ? `Spatial hard locks are mandatory: ${[
         ...input.locationZone.spatial_hard_locks.anchor_layout,
         ...input.locationZone.spatial_hard_locks.screen_direction_locks,
+        ...input.locationZone.spatial_hard_locks.depth_layout_locks,
+        ...input.locationZone.spatial_hard_locks.camera_side_locks,
+        ...input.locationZone.spatial_hard_locks.subject_placement_locks,
         ...input.locationZone.spatial_hard_locks.forbidden_spatial_changes,
       ].slice(0, 8).join('; ')}.`
       : null,

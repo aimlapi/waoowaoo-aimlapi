@@ -3,6 +3,9 @@ import { z } from 'zod'
 export const spatialHardLocksSchema = z.object({
   anchorLayout: z.array(z.string().trim().min(4)).min(1).max(8),
   screenDirectionLocks: z.array(z.string().trim().min(4)).min(1).max(8),
+  depthLayoutLocks: z.array(z.string().trim().min(4)).min(1).max(8),
+  cameraSideLocks: z.array(z.string().trim().min(4)).min(1).max(8),
+  subjectPlacementLocks: z.array(z.string().trim().min(4)).min(1).max(8),
   forbiddenSpatialChanges: z.array(z.string().trim().min(4)).min(1).max(8),
 }).strict()
 
@@ -69,7 +72,15 @@ export function validateSceneContinuity(input: {
     if (!locationIds.has(zone.locationId)) {
       throw new Error(`SCREENPLAY_STORYBOARD_SCENE_ZONE_LOCATION_NOT_FOUND:${zone.sceneZoneId}:${zone.locationId}`)
     }
-    if ((panelCountByZoneId.get(zone.sceneZoneId) ?? 0) > 1 && zone.spatialHardLocks.forbiddenSpatialChanges.length === 0) {
+    if (
+      (panelCountByZoneId.get(zone.sceneZoneId) ?? 0) > 1
+      && (
+        zone.spatialHardLocks.depthLayoutLocks.length === 0
+        || zone.spatialHardLocks.cameraSideLocks.length === 0
+        || zone.spatialHardLocks.subjectPlacementLocks.length === 0
+        || zone.spatialHardLocks.forbiddenSpatialChanges.length === 0
+      )
+    ) {
       throw new Error(`SCREENPLAY_STORYBOARD_SCENE_ZONE_SPATIAL_HARD_LOCK_MISSING:${zone.sceneZoneId}`)
     }
     zoneById.set(zone.sceneZoneId, zone)
@@ -117,6 +128,9 @@ export function formatSceneZonesForStorage(sceneZones: readonly SceneZone[]) {
     spatialHardLocks: {
       anchorLayout: [...zone.spatialHardLocks.anchorLayout],
       screenDirectionLocks: [...zone.spatialHardLocks.screenDirectionLocks],
+      depthLayoutLocks: [...zone.spatialHardLocks.depthLayoutLocks],
+      cameraSideLocks: [...zone.spatialHardLocks.cameraSideLocks],
+      subjectPlacementLocks: [...zone.spatialHardLocks.subjectPlacementLocks],
       forbiddenSpatialChanges: [...zone.spatialHardLocks.forbiddenSpatialChanges],
     },
   }))

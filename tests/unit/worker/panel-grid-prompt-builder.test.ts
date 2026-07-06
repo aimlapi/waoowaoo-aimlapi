@@ -123,6 +123,9 @@ const panels: readonly StoryboardGridPromptPanel[] = [
         spatialHardLocks: {
           anchorLayout: ['黑金桌面左前边缘始终位于画面下方'],
           screenDirectionLocks: ['杯脚阴影始终落在杯子右后侧'],
+          depthLayoutLocks: ['桌面左前角始终处在画面下方前景'],
+          cameraSideLocks: ['镜头始终贴近桌面左前角一侧'],
+          subjectPlacementLocks: ['粉红药液高脚杯始终位于同一桌面左前局部'],
           forbiddenSpatialChanges: ['不得把桌面左前角镜像成右前角'],
         },
       },
@@ -159,6 +162,9 @@ const panels: readonly StoryboardGridPromptPanel[] = [
         spatialHardLocks: {
           anchorLayout: ['黑金餐桌边缘始终横贯画面下方', '右后方霓虹卡座始终在画面右后景'],
           screenDirectionLocks: ['顾严保持在画面左侧，施雨保持在画面右侧'],
+          depthLayoutLocks: ['黑金餐桌边缘固定在前景，右后方霓虹卡座固定在后景'],
+          cameraSideLocks: ['镜头始终位于餐桌前缘同一侧，不得越过桌轴'],
+          subjectPlacementLocks: ['顾严和施雨始终隔着同一张餐桌对峙'],
           forbiddenSpatialChanges: ['不得镜像翻转顾严和施雨的左右关系', '不得把右后方霓虹卡座移到左后景'],
         },
       },
@@ -200,6 +206,9 @@ const panels: readonly StoryboardGridPromptPanel[] = [
         spatialHardLocks: {
           anchorLayout: ['灰色衣领始终包围颈部下缘'],
           screenDirectionLocks: ['红色倒计时光始终贴近颈部正前方'],
+          depthLayoutLocks: ['颈部皮肤在前景，灰色衣领在下方近前景'],
+          cameraSideLocks: ['镜头始终正对顾严颈部前侧'],
+          subjectPlacementLocks: ['心动检测脖环始终套在顾严颈部同一位置'],
           forbiddenSpatialChanges: ['不得把颈环改成背景灯或衣服装饰'],
         },
       },
@@ -236,6 +245,9 @@ const panels: readonly StoryboardGridPromptPanel[] = [
         spatialHardLocks: {
           anchorLayout: ['黑金餐桌边缘始终横贯画面下方', '右后方霓虹卡座始终在画面右后景'],
           screenDirectionLocks: ['顾严保持在画面左侧，施雨保持在画面右侧'],
+          depthLayoutLocks: ['黑金餐桌边缘固定在前景，右后方霓虹卡座固定在后景'],
+          cameraSideLocks: ['镜头始终位于餐桌前缘同一侧，不得越过桌轴'],
+          subjectPlacementLocks: ['顾严和施雨始终隔着同一张餐桌对峙'],
           forbiddenSpatialChanges: ['不得镜像翻转顾严和施雨的左右关系', '不得把右后方霓虹卡座移到左后景'],
         },
       },
@@ -271,6 +283,7 @@ describe('panel-grid-prompt-builder', () => {
     expect(countSection(prompt, 'STILL_FRAME')).toBe(4)
     expect(prompt).toContain('GRID_CONTINUITY_LOCKS')
     expect(prompt).toContain('顾严保持在画面左侧，施雨保持在画面右侧')
+    expect(prompt).toContain('镜头始终位于餐桌前缘同一侧，不得越过桌轴')
     expect(prompt).toContain('不得镜像翻转顾严和施雨的左右关系')
     expect(prompt).not.toContain('SCENE_GRAPH')
     expect(prompt).not.toContain('BLOCKING_STATE')

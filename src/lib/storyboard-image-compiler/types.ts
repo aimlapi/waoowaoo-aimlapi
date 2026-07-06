@@ -25,6 +25,9 @@ export type SceneAssetOmission = {
 export type SpatialHardLocks = {
   readonly anchor_layout: readonly string[]
   readonly screen_direction_locks: readonly string[]
+  readonly depth_layout_locks: readonly string[]
+  readonly camera_side_locks: readonly string[]
+  readonly subject_placement_locks: readonly string[]
   readonly forbidden_spatial_changes: readonly string[]
 }
 
