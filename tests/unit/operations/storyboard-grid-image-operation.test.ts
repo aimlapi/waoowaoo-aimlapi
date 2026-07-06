@@ -231,46 +231,37 @@ describe('generate_edit_script_storyboard_images operation', () => {
     ])
   })
 
-  it('submits individual panel image tasks when generation mode is single', async () => {
+  it('submits 2x2 grid image tasks by default', async () => {
     const operation = createStoryboardPanelImageOperations().generate_edit_script_storyboard_images
     const result = await operation.execute(buildContext(), {
       episodeId: 'episode-1',
-      generationMode: 'single',
     })
 
     expect(result).toMatchObject({
-      total: 2,
+      total: 1,
+      taskTotal: 1,
+      targetTotal: 2,
       episodeId: 'episode-1',
       panelIds: ['panel-1', 'panel-2'],
-      generationMode: 'single',
+      generationMode: 'grid',
     })
-    expect(submitOperationTaskMock).toHaveBeenCalledTimes(2)
+    expect(submitOperationTaskMock).toHaveBeenCalledTimes(1)
     expect(submitOperationTaskMock.mock.calls[0]?.[0]).toEqual(expect.objectContaining({
       type: TASK_TYPE.IMAGE_PANEL,
       targetType: 'ProjectPanel',
       targetId: 'panel-1',
       operationId: 'generate_edit_script_storyboard_images',
-      dedupeKey: `edit_first_panel_image:panel-1:style-signature-1:${PANEL_IMAGE_PROMPT_CONTRACT_SIGNATURE}`,
+      dedupeKey: expect.stringContaining('edit_first_panel_grid_image:'),
       payload: expect.objectContaining({
         panelId: 'panel-1',
         referenceMode: 'asset',
         imageModel: 'storyboard-model-1',
+        storyboardGrid: {
+          mode: '2x2',
+          sourceVideoBlockId: 'edit-script-1:video-block:1',
+          panelIds: ['panel-1', 'panel-2'],
+        },
       }),
-    }))
-    expect(submitOperationTaskMock.mock.calls[1]?.[0]).toEqual(expect.objectContaining({
-      targetId: 'panel-2',
-      dedupeKey: `edit_first_panel_image:panel-2:style-signature-1:${PANEL_IMAGE_PROMPT_CONTRACT_SIGNATURE}`,
-      payload: expect.objectContaining({
-        panelId: 'panel-2',
-        referenceMode: 'asset',
-        imageModel: 'storyboard-model-1',
-      }),
-    }))
-    expect(submitOperationTaskMock.mock.calls[0]?.[0]?.payload).toEqual(expect.not.objectContaining({
-      storyboardGrid: expect.anything(),
-    }))
-    expect(submitOperationTaskMock.mock.calls[1]?.[0]?.payload).toEqual(expect.not.objectContaining({
-      storyboardGrid: expect.anything(),
     }))
   })
 

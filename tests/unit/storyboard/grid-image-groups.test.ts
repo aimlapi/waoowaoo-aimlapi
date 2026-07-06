@@ -15,20 +15,20 @@ function panel(id: string, panelIndex: number, sourceVideoBlockKind: 'single' | 
 }
 
 describe('storyboard grid image group planner', () => {
-  it('keeps every panel as an individual task when generation mode is single', () => {
+  it('plans 2x2 grid tasks by default', () => {
     const groups = planStoryboardPanelImageSubmissionGroups([
       panel('panel-2', 1, 'group', 'edit-1:videoBlock:1'),
       panel('panel-1', 0, 'group', 'edit-1:videoBlock:1'),
-    ], 'single')
+    ])
 
     expect(groups).toEqual([
       {
-        kind: 'single',
-        panels: [expect.objectContaining({ id: 'panel-1' })],
-      },
-      {
-        kind: 'single',
-        panels: [expect.objectContaining({ id: 'panel-2' })],
+        kind: 'grid2x2',
+        sourceVideoBlockId: 'edit-1:videoBlock:1',
+        panels: [
+          expect.objectContaining({ id: 'panel-1' }),
+          expect.objectContaining({ id: 'panel-2' }),
+        ],
       },
     ])
   })
@@ -37,7 +37,8 @@ describe('storyboard grid image group planner', () => {
     const groups = planStoryboardPanelImageSubmissionGroups([
       panel('panel-1', 0, 'group', 'edit-1:videoBlock:1'),
       panel('panel-2', 1, 'group', 'edit-1:videoBlock:1'),
-      panel('panel-3', 2, 'single', 'edit-1:videoBlock:2'),
+      panel('panel-3', 2, 'group', 'edit-1:videoBlock:2'),
+      panel('panel-4', 3, 'group', 'edit-1:videoBlock:2'),
     ])
 
     expect(groups).toEqual([
@@ -50,13 +51,17 @@ describe('storyboard grid image group planner', () => {
         ],
       },
       {
-        kind: 'single',
-        panels: [expect.objectContaining({ id: 'panel-3' })],
+        kind: 'grid2x2',
+        sourceVideoBlockId: 'edit-1:videoBlock:2',
+        panels: [
+          expect.objectContaining({ id: 'panel-3' }),
+          expect.objectContaining({ id: 'panel-4' }),
+        ],
       },
     ])
   })
 
-  it('splits large grouped blocks into fixed four-cell grid tasks and keeps remainders single', () => {
+  it('splits large grouped blocks into grid tasks without single-panel remainder tasks', () => {
     const groups = planStoryboardPanelImageSubmissionGroups([
       panel('panel-1', 0, 'group', 'edit-1:videoBlock:1'),
       panel('panel-2', 1, 'group', 'edit-1:videoBlock:1'),
@@ -73,12 +78,22 @@ describe('storyboard grid image group planner', () => {
         expect.objectContaining({ id: 'panel-1' }),
         expect.objectContaining({ id: 'panel-2' }),
         expect.objectContaining({ id: 'panel-3' }),
-        expect.objectContaining({ id: 'panel-4' }),
       ],
     })
     expect(groups[1]).toEqual({
-      kind: 'single',
-      panels: [expect.objectContaining({ id: 'panel-5' })],
+      kind: 'grid2x2',
+      sourceVideoBlockId: 'edit-1:videoBlock:1',
+      panels: [
+        expect.objectContaining({ id: 'panel-4' }),
+        expect.objectContaining({ id: 'panel-5' }),
+      ],
     })
+  })
+
+  it('fails explicitly when a panel cannot be assigned to a grid source block', () => {
+    expect(() => planStoryboardPanelImageSubmissionGroups([
+      panel('panel-1', 0, 'single', 'edit-1:videoBlock:1'),
+      panel('panel-2', 1, 'group', 'edit-1:videoBlock:1'),
+    ])).toThrow('STORYBOARD_PANEL_GRID_SOURCE_VIDEO_BLOCK_MISSING:panel-1')
   })
 })

@@ -192,7 +192,7 @@ export function createStoryboardPanelImageOperations(): ProjectAgentOperationReg
       episodeId: z.string().min(1),
       storyboardIds: z.array(z.string().min(1)),
       panelIds: z.array(z.string().min(1)),
-      generationMode: z.enum(['single', 'grid']),
+      generationMode: z.literal('grid'),
     }).passthrough(),
   )
 
@@ -218,7 +218,7 @@ export function createStoryboardPanelImageOperations(): ProjectAgentOperationReg
         confirmed: z.boolean().optional(),
         episodeId: z.string().trim().min(1).optional(),
         storyboardId: z.string().trim().min(1).optional(),
-        generationMode: z.enum(['single', 'grid']).optional(),
+        generationMode: z.literal('grid').optional(),
       }).passthrough(),
       outputSchema: storyboardImageBatchOutputSchema,
       execute: async (ctx, input) => {
@@ -301,15 +301,11 @@ export function createStoryboardPanelImageOperations(): ProjectAgentOperationReg
             candidateCount: 1,
             count: 1,
             referenceMode: 'asset',
-            ...(group.kind === 'grid2x2'
-              ? {
-                storyboardGrid: {
-                  mode: '2x2',
-                  sourceVideoBlockId: group.sourceVideoBlockId,
-                  panelIds: group.panels.map((panel) => panel.id),
-                },
-              }
-              : {}),
+            storyboardGrid: {
+              mode: '2x2',
+              sourceVideoBlockId: group.sourceVideoBlockId,
+              panelIds: group.panels.map((panel) => panel.id),
+            },
             meta: {
               locale,
             },
@@ -337,14 +333,12 @@ export function createStoryboardPanelImageOperations(): ProjectAgentOperationReg
               intent: 'generate',
               hasOutputAtStart: false,
             }),
-            dedupeKey: group.kind === 'grid2x2'
-              ? createTaskDedupeKey('edit_first_panel_grid_image', {
-                sourceVideoBlockId: group.sourceVideoBlockId,
-                panelIds: group.panels.map((panel) => panel.id),
-                styleBibleSignature,
-                panelImagePromptContractSignature: PANEL_IMAGE_PROMPT_CONTRACT_SIGNATURE,
-              })
-              : `edit_first_panel_image:${primaryPanel.id}:${styleBibleSignature}:${PANEL_IMAGE_PROMPT_CONTRACT_SIGNATURE}`,
+            dedupeKey: createTaskDedupeKey('edit_first_panel_grid_image', {
+              sourceVideoBlockId: group.sourceVideoBlockId,
+              panelIds: group.panels.map((panel) => panel.id),
+              styleBibleSignature,
+              panelImagePromptContractSignature: PANEL_IMAGE_PROMPT_CONTRACT_SIGNATURE,
+            }),
             billingInfo: buildDefaultTaskBillingInfo(TASK_TYPE.IMAGE_PANEL, billingPayload),
             decoratePayload: false,
           })

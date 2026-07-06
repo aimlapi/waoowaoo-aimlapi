@@ -3,7 +3,10 @@
 import { useCallback } from 'react'
 import { useGenerateStoryboardGridImages, useRegenerateProjectPanelImage } from '@/lib/query/hooks'
 import { useSelectProjectPanelCandidate } from '@/lib/query/mutations/storyboard-prompt-mutations'
-import type { StoryboardPanelImageGenerationMode } from '@/lib/storyboard/grid-image-groups'
+import {
+  splitGridChunkSizes,
+  type StoryboardPanelImageGenerationMode,
+} from '@/lib/storyboard/grid-image-groups'
 
 interface UseWorkspaceImageActionsParams {
   projectId: string
@@ -28,21 +31,11 @@ export function useWorkspaceImageActions({
     panelIds: readonly string[]
     generationMode?: StoryboardPanelImageGenerationMode
   }) => {
-    const generationMode = payload.generationMode ?? 'grid'
-    if (generationMode === 'single') {
-      for (const panelId of payload.panelIds) {
-        await regeneratePanelImageMutation.mutateAsync({ panelId, count: 1 })
-      }
-      return
-    }
-    for (let index = 0; index < payload.panelIds.length; index += 4) {
-      const panelIds = payload.panelIds.slice(index, index + 4)
-      const panelId = panelIds[0]
-      if (!panelId) continue
-      if (panelIds.length === 1) {
-        await regeneratePanelImageMutation.mutateAsync({ panelId, count: 1 })
-        continue
-      }
+    void payload.generationMode
+    let cursor = 0
+    for (const size of splitGridChunkSizes(payload.panelIds.length)) {
+      const panelIds = payload.panelIds.slice(cursor, cursor + size)
+      cursor += size
       await generateStoryboardGridImagesMutation.mutateAsync({
         episodeId: payload.episodeId,
         editScriptId: payload.editScriptId,
@@ -50,7 +43,7 @@ export function useWorkspaceImageActions({
         panelIds,
       })
     }
-  }, [generateStoryboardGridImagesMutation, regeneratePanelImageMutation])
+  }, [generateStoryboardGridImagesMutation])
   const handleSelectPanelCandidate = useCallback(async (panelId: string, imageUrl: string) => {
     await selectPanelCandidateMutation.mutateAsync({
       panelId,

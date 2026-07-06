@@ -438,12 +438,10 @@ function ResultColumn({ title, run, snapshots, panels, copy }: {
       return taskResultImages(snapshot?.result).map((url, index) => ({
         key: `${task.taskId}:${index}`,
         url,
-        label: task.panelIds.length === 1
-          ? `#${panels.findIndex((panel) => panel.id === task.panelIds[0]) + 1}`
-          : `#${index + 1}`,
+        label: `#${index + 1}`,
       }))
     })
-  }, [panels, run, snapshots])
+  }, [run, snapshots])
   const fullGridImage = run?.mode === 'grid_2x2' ? gridImageUrl(snapshots.get(run.tasks[0]?.taskId || '')?.result) : null
 
   return (

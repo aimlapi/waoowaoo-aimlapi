@@ -2103,21 +2103,11 @@ export function buildWorkspaceNodeCanvasProjection({
             generationMode: 'grid',
           }
         : undefined
-      const storyboardSingleImageAction: WorkspaceCanvasNodeAction | undefined = !isRunning && blockPanelIds.length > 0
-        ? {
-            type: 'generate_storyboard_grid_images',
-            episodeId,
-            editScriptId: editScript.id,
-            sourceVideoBlockId: `${editScript.id}:video-block:${index + 1}`,
-            panelIds: blockPanelIds,
-            generationMode: 'single',
-          }
-        : undefined
-      const primaryAction = action ?? (!blockHasPanelImages ? storyboardSingleImageAction : undefined)
+      const primaryAction = action ?? (!blockHasPanelImages ? storyboardGridImageAction : undefined)
       const primaryActionLabel = action
         ? translate('actions.generateVideo')
-        : !blockHasPanelImages && storyboardSingleImageAction
-          ? translate('actions.generateStoryboardSingleImages')
+        : !blockHasPanelImages && storyboardGridImageAction
+          ? translate('actions.generateStoryboardGridImages')
           : undefined
       const modeLabel = block.kind === 'group' ? translate('nodeFields.videoPlanGroup') : translate('nodeFields.videoPlanSingle')
       const nodeId = workspaceNodeId.videoPlan(editScript.id, index + 1)

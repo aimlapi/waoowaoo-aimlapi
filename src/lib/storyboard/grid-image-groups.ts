@@ -1,6 +1,6 @@
 const GRID_CELL_COUNT = 4
 
-export type StoryboardPanelImageGenerationMode = 'single' | 'grid'
+export type StoryboardPanelImageGenerationMode = 'grid'
 
 export type StoryboardGridGroupingPanel = {
   readonly id: string
@@ -10,18 +10,15 @@ export type StoryboardGridGroupingPanel = {
 }
 
 export type StoryboardPanelImageSubmissionGroup =
-  | {
-    readonly kind: 'single'
-    readonly panels: readonly [StoryboardGridGroupingPanel]
-  }
-  | {
+  {
     readonly kind: 'grid2x2'
     readonly sourceVideoBlockId: string
     readonly panels: readonly StoryboardGridGroupingPanel[]
   }
 
 export function normalizeStoryboardPanelImageGenerationMode(value: unknown): StoryboardPanelImageGenerationMode {
-  return value === 'single' ? 'single' : 'grid'
+  void value
+  return 'grid'
 }
 
 function isRecord(value: unknown): value is Record<string, unknown> {
@@ -43,8 +40,27 @@ function readPanelSourceVideoBlockId(panel: StoryboardGridGroupingPanel): string
   if (!isRecord(parsed)) return ''
   const sourceVideoBlockKind = normalizeString(parsed.sourceVideoBlockKind)
   const sourceVideoBlockId = normalizeString(parsed.sourceVideoBlockId)
-  if (sourceVideoBlockKind !== 'group' || !sourceVideoBlockId) return ''
+  if (!sourceVideoBlockId) return ''
+  if (sourceVideoBlockKind && sourceVideoBlockKind !== 'group') return ''
   return sourceVideoBlockId
+}
+
+export function splitGridChunkSizes(panelCount: number): number[] {
+  if (panelCount < 2) {
+    throw new Error(`STORYBOARD_PANEL_GRID_REQUIRES_AT_LEAST_TWO_PANELS:${panelCount}`)
+  }
+  const sizes: number[] = []
+  let remaining = panelCount
+  while (remaining > 0) {
+    if (remaining <= GRID_CELL_COUNT) {
+      sizes.push(remaining)
+      break
+    }
+    const nextSize = remaining % GRID_CELL_COUNT === 1 ? 3 : GRID_CELL_COUNT
+    sizes.push(nextSize)
+    remaining -= nextSize
+  }
+  return sizes
 }
 
 function pushChunkedGridGroups(
@@ -52,12 +68,10 @@ function pushChunkedGridGroups(
   sourceVideoBlockId: string,
   panels: readonly StoryboardGridGroupingPanel[],
 ) {
-  for (let index = 0; index < panels.length; index += GRID_CELL_COUNT) {
-    const chunk = panels.slice(index, index + GRID_CELL_COUNT)
-    if (chunk.length === 1) {
-      output.push({ kind: 'single', panels: [chunk[0]] })
-      continue
-    }
+  let cursor = 0
+  for (const size of splitGridChunkSizes(panels.length)) {
+    const chunk = panels.slice(cursor, cursor + size)
+    cursor += size
     output.push({
       kind: 'grid2x2',
       sourceVideoBlockId,
@@ -74,9 +88,7 @@ export function planStoryboardPanelImageSubmissionGroups(
     if (left.storyboardId !== right.storyboardId) return left.storyboardId.localeCompare(right.storyboardId)
     return left.panelIndex - right.panelIndex
   })
-  if (generationMode === 'single') {
-    return sortedPanels.map((panel) => ({ kind: 'single', panels: [panel] }))
-  }
+  void generationMode
   const groupedPanels = new Map<string, {
     readonly sourceVideoBlockId: string
     readonly panels: StoryboardGridGroupingPanel[]
@@ -86,8 +98,7 @@ export function planStoryboardPanelImageSubmissionGroups(
   for (const panel of sortedPanels) {
     const sourceVideoBlockId = readPanelSourceVideoBlockId(panel)
     if (!sourceVideoBlockId) {
-      output.push({ kind: 'single', panels: [panel] })
-      continue
+      throw new Error(`STORYBOARD_PANEL_GRID_SOURCE_VIDEO_BLOCK_MISSING:${panel.id}`)
     }
     const key = `${panel.storyboardId}:${sourceVideoBlockId}`
     const existing = groupedPanels.get(key)

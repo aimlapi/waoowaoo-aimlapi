@@ -574,7 +574,7 @@ function buildPanelDrafts(input: {
       originalOrderKey: productionSegment.originalOrderKey,
       screenplaySceneNumber: productionSegment.screenplaySceneNumber,
       productionLocationId: productionSegment.productionLocationId,
-      sourceVideoBlockKind: group.panelNumbers.length > 1 ? 'group' : 'single',
+      sourceVideoBlockKind: 'group',
       sourceVideoBlockId,
       locationId: panel.locationId,
       sceneZoneId: panel.sceneZoneId,
