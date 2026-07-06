@@ -148,6 +148,20 @@ const directStoryboardOutputSchema = z.object({
   sceneContinuityLoops: z.array(sceneContinuityLoopSchema).min(1).max(80),
 }).strict()
 
+type DirectStoryboardOutput = z.infer<typeof directStoryboardOutputSchema>
+
+interface ValidatedDirectStoryboardOutput {
+  readonly parsed: DirectStoryboardOutput
+  readonly panelGroups: readonly ValidatedStoryboardPanelGroup[]
+  readonly productionLocations: readonly ProductionLocationGroup[]
+  readonly productionSegments: readonly ProductionSegment[]
+  readonly segmentContinuityBibles: readonly SegmentContinuityBible[]
+  readonly sceneContinuityLoops: readonly SceneContinuityLoop[]
+}
+
+const DIRECT_STORYBOARD_MAX_ATTEMPTS = 3
+const DIRECT_STORYBOARD_MAX_TOKENS = 24000
+
 function normalizePanelLimit(value: number | undefined): number {
   if (typeof value !== 'number' || !Number.isFinite(value)) return 12
   return Math.max(1, Math.min(120, Math.floor(value)))
@@ -170,6 +184,17 @@ function parseJsonObjectResponse(responseText: string): Record<string, unknown> 
     throw new Error('SCREENPLAY_STORYBOARD_JSON_OBJECT_REQUIRED')
   }
   return parsed as Record<string, unknown>
+}
+
+function formatDirectStoryboardGenerationError(error: unknown): string {
+  if (error instanceof z.ZodError) {
+    return error.issues.map((issue) => {
+      const path = issue.path.length > 0 ? issue.path.join('.') : '<root>'
+      return `${path}: ${issue.message}`
+    }).join('\n')
+  }
+  if (error instanceof Error) return error.message
+  return String(error)
 }
 
 function resolveCharacterImageUrl(input: {
@@ -474,6 +499,31 @@ function buildPrompt(input: {
   ].join('\n')
 }
 
+function buildRepairPrompt(input: {
+  readonly basePrompt: string
+  readonly attempt: number
+  readonly validationError: string
+}): string {
+  return [
+    input.basePrompt,
+    '',
+    `这是第 ${input.attempt} 次修复重试。上一版输出没有通过系统校验，禁止解释，必须重新输出完整 JSON。`,
+    '修复目标：保持同一剧本顺序、同一项目资产、同一 panelLimit，只修正 schema、资产覆盖、制片场景连续性与 scene continuity loop 的错误。',
+    '严禁放宽规则、严禁减少 panel 数、严禁把错误字段继续放进 panels。',
+    '所有 string().min(N) 的字段必须写成有意义中文短句，不能写空字符串、空格、无、暂无、N/A、none、null 或单字占位。',
+    '所有 min(1) 的数组必须至少写一个有意义条目，不能用空数组规避连续性约束。',
+    'segmentContinuityBibles.temporalState / crowdState 必须明确写当前时间阶段与群众状态；persistentSetState 必须列出本段跨 panel 持续的布景、道具、群众或空间锚点。',
+    'sceneZones.overallPosition 必须用一句完整中文说明该拍摄区域在整体场景里的相对位置。',
+    'panels.panelContinuity.inheritedContinuity 必须至少写一条继承状态；每条不少于四个中文字符，必须来自同一 productionSegment 的前文空间、人物、道具或群众状态。',
+    '如果某个 productionSegment 的角色或道具属于当前段汇总资产，但当前 panel 不是极近景/插入细节镜头，就必须让该资产在画面中可见，可在前景、背景、焦外或阴影中；不能写入 omittedSceneAssets。',
+    '如果角色或道具剧情上尚未出现，但你又把它放进 productionSegment.characterNames / propNames，则必须重新规划 panel，让非特写镜头仍能合理看见它，或把当前 panel 改成允许裁切的细节镜头。',
+    'panels 里的字段只能使用 JSON 格式中声明过的字段；不要把 order、originalOrderKey、screenplaySceneNumber、productionLocationId 写入 panel 对象。',
+    '',
+    '上一版校验错误：',
+    input.validationError,
+  ].join('\n')
+}
+
 function bindCharacters(input: {
   readonly names: readonly string[]
   readonly characters: readonly CharacterAsset[]
@@ -631,6 +681,84 @@ function buildStoryboardMarker(screenplayId: string): string {
     sourceType: 'directScreenplayStoryboard',
     screenplayId,
   })
+}
+
+function parseAndValidateDirectStoryboardOutput(input: {
+  readonly completionText: string
+  readonly panelLimit: number
+  readonly characters: readonly CharacterAsset[]
+  readonly locations: readonly LocationAsset[]
+  readonly props: readonly PropAsset[]
+}): ValidatedDirectStoryboardOutput {
+  if (!input.completionText.trim()) throw new Error('SCREENPLAY_STORYBOARD_LLM_EMPTY')
+  const parsed = directStoryboardOutputSchema.parse(parseJsonObjectResponse(input.completionText))
+  if (parsed.panels.length !== input.panelLimit) {
+    throw new Error(`SCREENPLAY_STORYBOARD_PANEL_COUNT_MISMATCH: expected ${input.panelLimit}, got ${parsed.panels.length}`)
+  }
+  const panelGroups = validateStoryboardPanelGroups({
+    groups: parsed.panelGroups,
+    panelNumbers: parsed.panels.map((panel) => panel.panelNumber),
+  })
+  const productionLocations = validateProductionLocationGroups({
+    productionLocations: parsed.productionLocations,
+    locations: input.locations,
+  })
+  const productionSegments = validateProductionSegments({
+    productionSegments: parsed.productionSegments,
+    productionLocations,
+    characters: input.characters,
+    props: input.props,
+    locations: input.locations,
+    panels: parsed.panels.map((panel) => ({
+      panelNumber: panel.panelNumber,
+      productionSegmentId: panel.productionSegmentId,
+      locationId: panel.locationId,
+      shotType: panel.shotType,
+      characterNames: panel.characters,
+      propNames: panel.props,
+      omittedSceneAssets: panel.omittedSceneAssets,
+      panelContinuity: panel.panelContinuity,
+    })),
+  })
+  const segmentContinuityBibles = validateSegmentContinuityBibles({
+    productionSegments,
+    segmentContinuityBibles: parsed.segmentContinuityBibles,
+  })
+  validateSceneContinuity({
+    sceneZones: parsed.sceneZones,
+    locations: input.locations,
+    panels: parsed.panels.map((panel) => ({
+      panelNumber: panel.panelNumber,
+      characterNames: panel.characters,
+      locationId: panel.locationId,
+      sceneZoneId: panel.sceneZoneId,
+      shotBlocking: panel.shotBlocking,
+    })),
+  })
+  validatePanelGroupSceneZones({
+    panelGroups,
+    panels: parsed.panels,
+  })
+  const panelNumbersBySegment = new Map<string, number[]>()
+  for (const panel of parsed.panels) {
+    const existing = panelNumbersBySegment.get(panel.productionSegmentId) ?? []
+    existing.push(panel.panelNumber)
+    panelNumbersBySegment.set(panel.productionSegmentId, existing)
+  }
+  const sceneContinuityLoops = validateSceneContinuityLoops({
+    productionSegments,
+    panelNumbersBySegment,
+    loops: parsed.sceneContinuityLoops,
+  })
+
+  return {
+    parsed,
+    panelGroups,
+    productionLocations,
+    productionSegments,
+    segmentContinuityBibles,
+    sceneContinuityLoops,
+  }
 }
 
 async function upsertDirectStoryboard(input: {
@@ -877,80 +1005,59 @@ export async function generateScreenplayStoryboardPanels(input: GenerateScreenpl
     locations,
     props,
   })
-  const completion = await executeAiTextStep({
-    userId: input.userId,
-    projectId: input.projectId,
-    model: config.analysisModel,
-    messages: [{ role: 'user', content: prompt }],
-    temperature: 0.35,
-    action: 'screenplay-storyboard-panels',
-    meta: {
-      stepId: 'screenplay-storyboard-panels',
-      stepTitle: 'Generate screenplay storyboard panels',
-      stepIndex: 1,
-      stepTotal: 1,
-    },
-  })
-  if (!completion.text.trim()) throw new Error('SCREENPLAY_STORYBOARD_LLM_EMPTY')
-  const parsed = directStoryboardOutputSchema.parse(parseJsonObjectResponse(completion.text))
-  if (parsed.panels.length !== panelLimit) {
-    throw new Error(`SCREENPLAY_STORYBOARD_PANEL_COUNT_MISMATCH: expected ${panelLimit}, got ${parsed.panels.length}`)
+  let promptForAttempt = prompt
+  let validated: ValidatedDirectStoryboardOutput | null = null
+  let lastValidationError = ''
+  for (let attempt = 1; attempt <= DIRECT_STORYBOARD_MAX_ATTEMPTS; attempt += 1) {
+    const completion = await executeAiTextStep({
+      userId: input.userId,
+      projectId: input.projectId,
+      model: config.analysisModel,
+      messages: [{ role: 'user', content: promptForAttempt }],
+      temperature: 0.35,
+      maxTokens: DIRECT_STORYBOARD_MAX_TOKENS,
+      action: 'screenplay-storyboard-panels',
+      meta: {
+        stepId: 'screenplay-storyboard-panels',
+        stepTitle: attempt === 1
+          ? 'Generate screenplay storyboard panels'
+          : 'Repair screenplay storyboard panels',
+        stepIndex: attempt,
+        stepTotal: DIRECT_STORYBOARD_MAX_ATTEMPTS,
+      },
+    })
+    try {
+      validated = parseAndValidateDirectStoryboardOutput({
+        completionText: completion.text,
+        panelLimit,
+        characters,
+        locations,
+        props,
+      })
+      break
+    } catch (error: unknown) {
+      lastValidationError = formatDirectStoryboardGenerationError(error)
+      if (attempt === DIRECT_STORYBOARD_MAX_ATTEMPTS) {
+        throw new Error(`SCREENPLAY_STORYBOARD_VALIDATION_FAILED_AFTER_REPAIR:${lastValidationError}`)
+      }
+      promptForAttempt = buildRepairPrompt({
+        basePrompt: prompt,
+        attempt: attempt + 1,
+        validationError: lastValidationError,
+      })
+    }
   }
-  const panelGroups = validateStoryboardPanelGroups({
-    groups: parsed.panelGroups,
-    panelNumbers: parsed.panels.map((panel) => panel.panelNumber),
-  })
-  const productionLocations = validateProductionLocationGroups({
-    productionLocations: parsed.productionLocations,
-    locations,
-  })
-  const productionSegments = validateProductionSegments({
-    productionSegments: parsed.productionSegments,
-    productionLocations,
-    characters,
-    props,
-    locations,
-    panels: parsed.panels.map((panel) => ({
-      panelNumber: panel.panelNumber,
-      productionSegmentId: panel.productionSegmentId,
-      locationId: panel.locationId,
-      shotType: panel.shotType,
-      characterNames: panel.characters,
-      propNames: panel.props,
-      omittedSceneAssets: panel.omittedSceneAssets,
-      panelContinuity: panel.panelContinuity,
-    })),
-  })
-  const segmentContinuityBibles = validateSegmentContinuityBibles({
-    productionSegments,
-    segmentContinuityBibles: parsed.segmentContinuityBibles,
-  })
-  validateSceneContinuity({
-    sceneZones: parsed.sceneZones,
-    locations,
-    panels: parsed.panels.map((panel) => ({
-      panelNumber: panel.panelNumber,
-      characterNames: panel.characters,
-      locationId: panel.locationId,
-      sceneZoneId: panel.sceneZoneId,
-      shotBlocking: panel.shotBlocking,
-    })),
-  })
-  validatePanelGroupSceneZones({
+  if (!validated) {
+    throw new Error(`SCREENPLAY_STORYBOARD_VALIDATION_FAILED_AFTER_REPAIR:${lastValidationError || 'unknown'}`)
+  }
+  const {
+    parsed,
     panelGroups,
-    panels: parsed.panels,
-  })
-  const panelNumbersBySegment = new Map<string, number[]>()
-  for (const panel of parsed.panels) {
-    const existing = panelNumbersBySegment.get(panel.productionSegmentId) ?? []
-    existing.push(panel.panelNumber)
-    panelNumbersBySegment.set(panel.productionSegmentId, existing)
-  }
-  const sceneContinuityLoops = validateSceneContinuityLoops({
+    productionLocations,
     productionSegments,
-    loops: parsed.sceneContinuityLoops,
-    panelNumbersBySegment,
-  })
+    segmentContinuityBibles,
+    sceneContinuityLoops,
+  } = validated
   const title = screenplay.screenplayText.match(/《([^》]+)》/)?.[1] ?? '剧本分镜'
   const panelDrafts = buildPanelDrafts({
     panels: parsed.panels,
