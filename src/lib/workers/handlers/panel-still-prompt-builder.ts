@@ -15,6 +15,7 @@ import type {
   PropGraphItem,
   SceneAssetOmission,
   SegmentContinuityLock,
+  SpatialHardLocks,
   StoryboardStillPromptFacts,
 } from '@/lib/storyboard-image-compiler/types'
 import { parsePanelCharacterReferences } from './image-task-handler-shared'
@@ -228,6 +229,28 @@ function readSceneAssetOmissions(value: unknown): readonly SceneAssetOmission[] 
   }).filter((item): item is SceneAssetOmission => item !== null)
 }
 
+function readSpatialHardLocks(value: unknown): SpatialHardLocks | null {
+  const record = toRecord(value)
+  if (!record) return null
+  const anchorLayout = readStringArray(record.anchorLayout)
+    .map((item) => compactText(item, 180))
+    .filter((item): item is string => item !== null)
+  const screenDirectionLocks = readStringArray(record.screenDirectionLocks)
+    .map((item) => compactText(item, 180))
+    .filter((item): item is string => item !== null)
+  const forbiddenSpatialChanges = readStringArray(record.forbiddenSpatialChanges)
+    .map((item) => compactText(item, 180))
+    .filter((item): item is string => item !== null)
+  if (anchorLayout.length === 0 || screenDirectionLocks.length === 0 || forbiddenSpatialChanges.length === 0) {
+    return null
+  }
+  return {
+    anchor_layout: anchorLayout,
+    screen_direction_locks: screenDirectionLocks,
+    forbidden_spatial_changes: forbiddenSpatialChanges,
+  }
+}
+
 function buildLocationZone(panel: StoryboardStillPromptPanel): LocationZone | null {
   const rules = readPhotographyRules(panel)
   const sceneZone = toRecord(rules.sceneZone)
@@ -255,6 +278,7 @@ function buildLocationZone(panel: StoryboardStillPromptPanel): LocationZone | nu
     zone_name: compactText(sceneZone?.name, 120),
     overall_position: compactText(sceneZone?.overallPosition, 220),
     must_include: readStringArray(sceneZone?.fixedAnchors).slice(0, 6),
+    spatial_hard_locks: readSpatialHardLocks(sceneZone?.spatialHardLocks),
     subject_position: compactText(shotBlocking?.subjectPosition, 180),
     camera_position: compactText(shotBlocking?.cameraPosition, 160),
     screen_composition: sanitizeStaticFraming(shotBlocking?.screenComposition, 220),
@@ -388,6 +412,7 @@ function buildShotPriority(input: {
   readonly visibleProps: readonly string[]
   readonly omittedSceneAssets: readonly SceneAssetOmission[]
   readonly segmentContinuity: SegmentContinuityLock | null
+  readonly locationZone: LocationZone | null
 }): readonly string[] {
   const imagePrompt = sanitizeStillAction(input.panel.imagePrompt, 360)
   const formatOmissionReason = (reason: string) => /[。.!?！？]$/u.test(reason) ? reason : `${reason}.`
@@ -404,6 +429,13 @@ function buildShotPriority(input: {
       : null,
     input.segmentContinuity && input.segmentContinuity.forbidden_discontinuity.length > 0
       ? `Do not break scene continuity: ${input.segmentContinuity.forbidden_discontinuity.slice(0, 6).join('; ')}.`
+      : null,
+    input.locationZone?.spatial_hard_locks
+      ? `Spatial hard locks are mandatory: ${[
+        ...input.locationZone.spatial_hard_locks.anchor_layout,
+        ...input.locationZone.spatial_hard_locks.screen_direction_locks,
+        ...input.locationZone.spatial_hard_locks.forbidden_spatial_changes,
+      ].slice(0, 8).join('; ')}.`
       : null,
     input.visibleSubjects.length > 0
       ? `Visible characters must read clearly: ${input.visibleSubjects.join(', ')}.`
@@ -451,6 +483,7 @@ export function sanitizePanelForStillImagePrompt(panel: StoryboardStillPromptPan
       visibleProps: propNames,
       omittedSceneAssets: locationZone?.omitted_scene_assets || [],
       segmentContinuity,
+      locationZone,
     }),
   }
 }
@@ -522,6 +555,7 @@ export function buildStoryboardStillPrompt(input: {
     'SEGMENT_CONTINUITY is a whole-scene lock for spatial layout, persistent props, crowd state, character blocking, and eyelines. Apply it to this still frame without turning it into transition text.',
     'Freeze action language into the visible result state of one frame. Do not create motion blur, repeated limbs, speed trails, or animation smear.',
     'The local scene area has exactly one source of truth: LOCATION_ZONE. GLOBAL_SCENE_LOCK is only a light continuity reference.',
+    'SPATIAL_HARD_LOCKS are non-negotiable. Do not mirror, flip, swap, or rebuild fixed anchor positions between panels sharing the same zone.',
     '',
     'SHOT_PRIORITY',
     jsonBlock(input.facts.panel.still_frame.shot_priority),
@@ -531,6 +565,9 @@ export function buildStoryboardStillPrompt(input: {
     '',
     'LOCATION_ZONE',
     jsonBlock(input.facts.context.LOCATION_ZONE),
+    '',
+    'SPATIAL_HARD_LOCKS',
+    jsonBlock(input.facts.context.LOCATION_ZONE?.spatial_hard_locks ?? null),
     '',
     'SEGMENT_CONTINUITY',
     jsonBlock(input.facts.context.SEGMENT_CONTINUITY),

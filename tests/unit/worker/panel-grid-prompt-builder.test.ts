@@ -120,6 +120,11 @@ const panels: readonly StoryboardGridPromptPanel[] = [
         name: '黑金餐桌左前局部',
         overallPosition: '只拍桌面左前角，不重建整间餐厅。',
         fixedAnchors: ['黑金桌面左前边缘', '杯脚阴影'],
+        spatialHardLocks: {
+          anchorLayout: ['黑金桌面左前边缘始终位于画面下方'],
+          screenDirectionLocks: ['杯脚阴影始终落在杯子右后侧'],
+          forbiddenSpatialChanges: ['不得把桌面左前角镜像成右前角'],
+        },
       },
       shotBlocking: {
         subjectPosition: '粉红药液高脚杯位于画面中央偏左。',
@@ -151,6 +156,11 @@ const panels: readonly StoryboardGridPromptPanel[] = [
         name: '餐桌对峙局部',
         overallPosition: '只拍同一张餐桌两侧人物关系。',
         fixedAnchors: ['黑金餐桌边缘', '右后方霓虹卡座'],
+        spatialHardLocks: {
+          anchorLayout: ['黑金餐桌边缘始终横贯画面下方', '右后方霓虹卡座始终在画面右后景'],
+          screenDirectionLocks: ['顾严保持在画面左侧，施雨保持在画面右侧'],
+          forbiddenSpatialChanges: ['不得镜像翻转顾严和施雨的左右关系', '不得把右后方霓虹卡座移到左后景'],
+        },
       },
       cameraPlan: {
         shotScale: 'medium shot',
@@ -187,6 +197,11 @@ const panels: readonly StoryboardGridPromptPanel[] = [
         name: '顾严颈部特写区',
         overallPosition: '只拍顾严颈部与衣领局部。',
         fixedAnchors: ['灰色衣领', '红色倒计时光'],
+        spatialHardLocks: {
+          anchorLayout: ['灰色衣领始终包围颈部下缘'],
+          screenDirectionLocks: ['红色倒计时光始终贴近颈部正前方'],
+          forbiddenSpatialChanges: ['不得把颈环改成背景灯或衣服装饰'],
+        },
       },
       omittedSceneAssets: [{
         name: '施雨',
@@ -218,6 +233,11 @@ const panels: readonly StoryboardGridPromptPanel[] = [
         name: '餐桌对峙局部',
         overallPosition: '只拍同一张餐桌两侧人物关系。',
         fixedAnchors: ['黑金餐桌边缘', '右后方霓虹卡座'],
+        spatialHardLocks: {
+          anchorLayout: ['黑金餐桌边缘始终横贯画面下方', '右后方霓虹卡座始终在画面右后景'],
+          screenDirectionLocks: ['顾严保持在画面左侧，施雨保持在画面右侧'],
+          forbiddenSpatialChanges: ['不得镜像翻转顾严和施雨的左右关系', '不得把右后方霓虹卡座移到左后景'],
+        },
       },
     }),
     actingNotes: null,
@@ -247,7 +267,11 @@ describe('panel-grid-prompt-builder', () => {
     expect(countSection(prompt, 'CHARACTER_GRAPH')).toBe(4)
     expect(countSection(prompt, 'PROP_GRAPH')).toBe(4)
     expect(countSection(prompt, 'LOCATION_ZONE')).toBe(4)
+    expect(countSection(prompt, 'SPATIAL_HARD_LOCKS')).toBe(4)
     expect(countSection(prompt, 'STILL_FRAME')).toBe(4)
+    expect(prompt).toContain('GRID_CONTINUITY_LOCKS')
+    expect(prompt).toContain('顾严保持在画面左侧，施雨保持在画面右侧')
+    expect(prompt).toContain('不得镜像翻转顾严和施雨的左右关系')
     expect(prompt).not.toContain('SCENE_GRAPH')
     expect(prompt).not.toContain('BLOCKING_STATE')
     expect(prompt).not.toContain('shot_delta')

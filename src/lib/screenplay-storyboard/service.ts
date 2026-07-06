@@ -477,7 +477,7 @@ function buildPromptContent(input: {
     '输出严格 JSON，不要 Markdown。',
     '',
     'JSON 格式：',
-    '{"productionLocations":[{"productionLocationId":"","locationId":"","stableSpatialFacts":[""],"reusableAnchors":[""],"stableSetDressing":[""],"nonPersistentStateBans":[""]}],"productionSegments":[{"productionSegmentId":"","order":1,"originalOrderKey":"001.001","screenplaySceneNumber":1,"productionLocationId":"","locationId":"","environment":"","sourceText":"","characterNames":[""],"propNames":[""]}],"segmentContinuityBibles":[{"productionSegmentId":"","originalOrderKey":"001.001","screenplaySceneNumber":1,"dramaticContext":"","temporalState":"","atmosphereState":"","crowdState":"","spatialContinuity":[""],"persistentSetState":[{"name":"","kind":"set_dressing","continuityRule":""}],"characterContinuity":[{"characterName":"","initialPosition":"","blockingArc":"","eyelineRules":[""]}],"screenDirectionRules":[""],"forbiddenChanges":[""]}],"sceneZones":[{"sceneZoneId":"","locationId":"","name":"","overallPosition":"","fixedAnchors":[""]}],"panels":[{"panelNumber":1,"productionSegmentId":"","sourceText":"","description":"","locationId":"","sceneZoneId":"","characters":[""],"props":[""],"omittedSceneAssets":[{"name":"","kind":"character","reason":""}],"shotType":"","cameraMove":"","duration":4,"shotBlocking":{"sceneZoneId":"","subjectPosition":"","cameraPosition":"","screenComposition":"","characterPlacements":[{"characterName":"","subjectPosition":"","facing":"","eyeline":""}]},"panelContinuity":{"inheritedContinuity":[""],"changedContinuity":[],"visibleContinuityElements":[""],"forbiddenDiscontinuity":[""]}}],"panelGroups":[{"groupNumber":1,"panelNumbers":[1,2],"sceneZoneIds":[""],"continuityRule":""}],"sceneContinuityLoops":[{"productionSegmentId":"","auditRound":1,"checkedPanelNumbers":[1,2],"checkedContinuityAxes":["space","character_blocking","eyeline"],"detectedIssues":[],"repairActions":[],"locked":true}]}',
+    '{"productionLocations":[{"productionLocationId":"","locationId":"","stableSpatialFacts":[""],"reusableAnchors":[""],"stableSetDressing":[""],"nonPersistentStateBans":[""]}],"productionSegments":[{"productionSegmentId":"","order":1,"originalOrderKey":"001.001","screenplaySceneNumber":1,"productionLocationId":"","locationId":"","environment":"","sourceText":"","characterNames":[""],"propNames":[""]}],"segmentContinuityBibles":[{"productionSegmentId":"","originalOrderKey":"001.001","screenplaySceneNumber":1,"dramaticContext":"","temporalState":"","atmosphereState":"","crowdState":"","spatialContinuity":[""],"persistentSetState":[{"name":"","kind":"set_dressing","continuityRule":""}],"characterContinuity":[{"characterName":"","initialPosition":"","blockingArc":"","eyelineRules":[""]}],"screenDirectionRules":[""],"forbiddenChanges":[""]}],"sceneZones":[{"sceneZoneId":"","locationId":"","name":"","overallPosition":"","fixedAnchors":[""],"spatialHardLocks":{"anchorLayout":[""],"screenDirectionLocks":[""],"forbiddenSpatialChanges":[""]}}],"panels":[{"panelNumber":1,"productionSegmentId":"","sourceText":"","description":"","locationId":"","sceneZoneId":"","characters":[""],"props":[""],"omittedSceneAssets":[{"name":"","kind":"character","reason":""}],"shotType":"","cameraMove":"","duration":4,"shotBlocking":{"sceneZoneId":"","subjectPosition":"","cameraPosition":"","screenComposition":"","characterPlacements":[{"characterName":"","subjectPosition":"","facing":"","eyeline":""}]},"panelContinuity":{"inheritedContinuity":[""],"changedContinuity":[],"visibleContinuityElements":[""],"forbiddenDiscontinuity":[""]}}],"panelGroups":[{"groupNumber":1,"panelNumbers":[1,2],"sceneZoneIds":[""],"continuityRule":""}],"sceneContinuityLoops":[{"productionSegmentId":"","auditRound":1,"checkedPanelNumbers":[1,2],"checkedContinuityAxes":["space","character_blocking","eyeline"],"detectedIssues":[],"repairActions":[],"locked":true}]}',
     '',
     '字段要求：',
     '- panelNumber 从 1 连续递增。',
@@ -530,6 +530,10 @@ function buildPromptContent(input: {
     '- sceneZones 是实际分镜会使用的拍摄空间子区域，不是泛泛世界观地点。',
     '- 每个 sceneZone 只保留一个 overallPosition：一句话说明该区域在整个场景里的整体位置。',
     '- fixedAnchors 最多 5 个，只写本镜头区域内必须出现的硬空间锚点；软布景、气氛、桌面状态、人群状态必须放入 Segment Continuity Bible 或 panelContinuity。',
+    '- spatialHardLocks 是该 sceneZone 的不可违反空间锁，必须输出 anchorLayout、screenDirectionLocks、forbiddenSpatialChanges 三组数组。',
+    '- anchorLayout 必须写清固定锚点之间的绝对关系，例如窗户在画面左侧、床头在画面右侧、桌面前缘在下方、入口在后景。',
+    '- screenDirectionLocks 必须写清同一 sceneZone 内镜头不可反转的银幕方向、人物左右关系、视线方向或前后景关系。',
+    '- forbiddenSpatialChanges 必须写清禁止发生的空间错误，例如不得镜像翻转床头窗户关系、不得把同一张桌改到另一侧、不得让背景锚点互换位置。',
     '- 禁止在 sceneZone 里重复描述同一空间关系；不要写长篇空间说明。',
     '- 禁止把“世界杯海报/直播氛围/红光”改写成剧本没有明确写出的路牌、霓虹招牌或文字标识。',
     '',
@@ -607,6 +611,7 @@ function buildRepairPromptContent(input: {
       'changedContinuity / detectedIssues / repairActions 如果没有真实内容必须写 []，绝对不要写 ["无"]、["暂无"] 或任何占位词。',
       'segmentContinuityBibles.temporalState / crowdState 必须明确写当前时间阶段与群众状态；夜晚、白天、傍晚、深夜、无人、零散人群是有效短状态；persistentSetState 必须列出本段跨 panel 持续的布景、道具、群众或空间锚点。',
       'sceneZones.overallPosition 必须用一句完整中文说明该拍摄区域在整体场景里的相对位置。',
+      'sceneZones.spatialHardLocks 必须写满 anchorLayout、screenDirectionLocks、forbiddenSpatialChanges；同一 sceneZone 被多个 panel 复用时，必须明确禁止床头/窗户/桌面/入口/人物左右关系发生镜像翻转。',
       'panels.panelContinuity.inheritedContinuity 必须至少写一条继承状态；每条不少于四个中文字符，必须来自同一 productionSegment 的前文空间、人物、道具或群众状态。',
       '如果某个 productionSegment 的角色或道具属于当前段汇总资产，但当前 panel 中尚未登场、已经离场、处于合理画外空间或因景别裁切不可见，必须写入 omittedSceneAssets 并给出具体物理原因。',
       '所有角色名、道具名必须逐字复制项目资产 name；禁止在资产名中夹英文连接词、翻译、改写、加字或删字。',
@@ -692,9 +697,15 @@ function compilePanelImageIntent(input: {
     ? `可见道具：${input.panel.props.join('、')}`
     : '无可见道具'
   const continuityElements = input.panel.panelContinuity.visibleContinuityElements.slice(0, 4).join('、')
+  const spatialHardLocks = [
+    ...input.sceneZone.spatialHardLocks.anchorLayout,
+    ...input.sceneZone.spatialHardLocks.screenDirectionLocks,
+    ...input.sceneZone.spatialHardLocks.forbiddenSpatialChanges,
+  ].slice(0, 6).join('；')
   return [
     `${input.panel.shotType}，${input.location.name}，${input.sceneZone.name}。`,
     input.panel.description,
+    `空间硬锁：${spatialHardLocks}。`,
     visibleCharacters,
     visibleProps,
     `连续性：${continuityElements || input.segmentContinuityBible.atmosphereState}。`,
@@ -768,6 +779,7 @@ function buildPanelDrafts(input: {
         name: sceneZone.name,
         overallPosition: sceneZone.overallPosition,
         fixedAnchors: sceneZone.fixedAnchors,
+        spatialHardLocks: sceneZone.spatialHardLocks,
       },
       omittedSceneAssets: panel.omittedSceneAssets,
       shotBlocking: panel.shotBlocking,

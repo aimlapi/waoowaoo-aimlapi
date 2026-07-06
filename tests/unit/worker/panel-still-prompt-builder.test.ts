@@ -86,6 +86,11 @@ const panel: StoryboardStillPromptPanel = {
       name: 'stone wall corner',
       overallPosition: 'right back corner beside the stone wall',
       fixedAnchors: ['stone wall', 'wet pavement'],
+      spatialHardLocks: {
+        anchorLayout: ['stone wall remains on screen left across this zone'],
+        screenDirectionLocks: ['Hero eyeline remains toward screen right'],
+        forbiddenSpatialChanges: ['do not mirror the stone wall and wet pavement relationship'],
+      },
     },
     omittedSceneAssets: [{
       name: 'Villain',
@@ -132,6 +137,7 @@ describe('panel-still-prompt-builder', () => {
     expect(prompt).toContain('Generate one still storyboard frame')
     expect(prompt).toContain('SHOT_PRIORITY')
     expect(prompt).toContain('LOCATION_ZONE')
+    expect(prompt).toContain('SPATIAL_HARD_LOCKS')
     expect(prompt).toContain('GLOBAL_SCENE_LOCK')
     expect(prompt).toContain('STILL_FRAME')
     expect(prompt).toContain('medium shot')
@@ -139,6 +145,8 @@ describe('panel-still-prompt-builder', () => {
     expect(prompt).toContain('Golden eagle badge')
     expect(prompt).toContain('small worn golden eagle badge')
     expect(prompt).toContain('Do not show character \\"Villain\\"')
+    expect(prompt).toContain('stone wall remains on screen left across this zone')
+    expect(prompt).toContain('Spatial hard locks are mandatory')
     expect(prompt).not.toContain('video_prompt')
     expect(prompt).not.toContain('横向轨道')
     expect(prompt).not.toContain('camera pushes forward')
@@ -183,6 +191,11 @@ describe('panel-still-prompt-builder', () => {
             name: 'Hero face detail',
             overallPosition: 'only the face plane, no street reconstruction',
             fixedAnchors: ['face shadow', 'collar edge', 'background storefront'],
+            spatialHardLocks: {
+              anchorLayout: ['face shadow remains above the collar edge'],
+              screenDirectionLocks: ['Hero eyeline remains toward the same unseen threat'],
+              forbiddenSpatialChanges: ['do not mirror the face-shadow and collar-edge relationship'],
+            },
           },
           omittedSceneAssets: [{
             name: 'Golden eagle badge',

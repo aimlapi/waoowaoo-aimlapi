@@ -22,6 +22,12 @@ export type SceneAssetOmission = {
   readonly reason: string
 }
 
+export type SpatialHardLocks = {
+  readonly anchor_layout: readonly string[]
+  readonly screen_direction_locks: readonly string[]
+  readonly forbidden_spatial_changes: readonly string[]
+}
+
 export type LocationZone = {
   readonly source: 'panel.photography_rules.scene_zone'
   readonly location_name: string | null
@@ -29,6 +35,7 @@ export type LocationZone = {
   readonly zone_name: string | null
   readonly overall_position: string | null
   readonly must_include: readonly string[]
+  readonly spatial_hard_locks: SpatialHardLocks | null
   readonly subject_position: string | null
   readonly camera_position: string | null
   readonly screen_composition: string | null

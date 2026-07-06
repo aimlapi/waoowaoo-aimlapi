@@ -4,6 +4,7 @@ import {
   buildStoryboardStillPromptFacts,
   type StoryboardStillPromptFacts,
 } from './panel-still-prompt-builder'
+import type { SpatialHardLocks } from '@/lib/storyboard-image-compiler/types'
 
 const GRID_CELL_POSITIONS = ['top_left', 'top_right', 'bottom_left', 'bottom_right'] as const
 
@@ -41,6 +42,7 @@ export type StoryboardGridPromptFacts = {
     readonly mode: '2x2'
     readonly source_video_block_id: string
     readonly safe_crop_rules: readonly string[]
+    readonly spatial_hard_locks_by_zone: readonly StoryboardGridZoneSpatialLock[]
     readonly cells: readonly StoryboardGridPromptCell[]
   }
   readonly context: {
@@ -48,6 +50,13 @@ export type StoryboardGridPromptFacts = {
     readonly STYLE: readonly string[]
     readonly NEGATIVE: readonly string[]
   }
+}
+
+type StoryboardGridZoneSpatialLock = {
+  readonly zone_id: string
+  readonly zone_name: string | null
+  readonly cell_positions: readonly StoryboardGridPromptCell['cell_position'][]
+  readonly spatial_hard_locks: SpatialHardLocks
 }
 
 function normalizeString(value: unknown): string {
@@ -181,6 +190,37 @@ function uniqueReferenceImages(cells: readonly StoryboardGridPromptCell[]): read
   return output
 }
 
+function buildGridSpatialHardLocks(cells: readonly StoryboardGridPromptCell[]): readonly StoryboardGridZoneSpatialLock[] {
+  const cellCountByZoneId = new Map<string, number>()
+  for (const cell of cells) {
+    const zoneId = cell.panel_context.LOCATION_ZONE?.zone_id
+    if (!zoneId) continue
+    cellCountByZoneId.set(zoneId, (cellCountByZoneId.get(zoneId) ?? 0) + 1)
+  }
+  const locksByZoneId = new Map<string, StoryboardGridZoneSpatialLock>()
+  for (const cell of cells) {
+    const locationZone = cell.panel_context.LOCATION_ZONE
+    if (!locationZone?.zone_id) continue
+    if (!locationZone.spatial_hard_locks) {
+      if ((cellCountByZoneId.get(locationZone.zone_id) ?? 0) > 1) {
+        throw new Error(`STORYBOARD_GRID_SPATIAL_HARD_LOCK_MISSING:${locationZone.zone_id}`)
+      }
+      continue
+    }
+    const existing = locksByZoneId.get(locationZone.zone_id)
+    if (existing && JSON.stringify(existing.spatial_hard_locks) !== JSON.stringify(locationZone.spatial_hard_locks)) {
+      throw new Error(`STORYBOARD_GRID_SPATIAL_HARD_LOCK_CONFLICT:${locationZone.zone_id}`)
+    }
+    locksByZoneId.set(locationZone.zone_id, {
+      zone_id: locationZone.zone_id,
+      zone_name: locationZone.zone_name,
+      cell_positions: existing ? [...existing.cell_positions, cell.cell_position] : [cell.cell_position],
+      spatial_hard_locks: locationZone.spatial_hard_locks,
+    })
+  }
+  return Array.from(locksByZoneId.values())
+}
+
 export function buildStoryboardGridPromptFacts(input: {
   readonly panels: readonly StoryboardGridPromptPanel[]
   readonly projectData: NovelProjectData
@@ -199,6 +239,7 @@ export function buildStoryboardGridPromptFacts(input: {
       mode: '2x2',
       source_video_block_id: input.sourceVideoBlockId,
       safe_crop_rules: buildGridSafeCropRules(),
+      spatial_hard_locks_by_zone: buildGridSpatialHardLocks(cells),
       cells,
     },
     context: {
@@ -231,6 +272,8 @@ function stringifyCell(cell: StoryboardGridPromptCell | undefined, label: string
     jsonBlock(cell.panel.still_frame.shot_priority),
     'LOCATION_ZONE',
     jsonBlock(cell.panel_context.LOCATION_ZONE),
+    'SPATIAL_HARD_LOCKS',
+    jsonBlock(cell.panel_context.LOCATION_ZONE?.spatial_hard_locks ?? null),
     'GLOBAL_SCENE_LOCK',
     jsonBlock(cell.panel_context.GLOBAL_SCENE_LOCK),
     'CHARACTER_GRAPH',
@@ -255,6 +298,7 @@ export function buildStoryboardGridPrompt(input: {
     'Each cell is a single still frame, not a video clip.',
     'Use each cell SHOT_PRIORITY as the highest authority for that panel.',
     'Each cell LOCATION_ZONE is the only local scene-area source for that panel; GLOBAL_SCENE_LOCK is only a light continuity reference.',
+    'SPATIAL_HARD_LOCKS and GRID_CONTINUITY_LOCKS are hard constraints. Never mirror, flip, swap, or rebuild anchor positions inside cells that share the same zone.',
     'For each cell, default to showing all assets listed in visible_subjects and visible_props. Omit an asset only when it is listed in omitted_scene_assets or the shot is a tight detail that truly crops it out.',
     'Do not invent characters, props, room areas, readable labels, subtitles, numbers, or motion-path language.',
     '',
@@ -270,6 +314,9 @@ export function buildStoryboardGridPrompt(input: {
     '',
     'STYLE',
     stringifyList(facts.context.STYLE),
+    '',
+    'GRID_CONTINUITY_LOCKS',
+    jsonBlock(facts.grid.spatial_hard_locks_by_zone),
     '',
     stringifyCell(facts.grid.cells[0], 'TOP_LEFT', 0),
     '',
