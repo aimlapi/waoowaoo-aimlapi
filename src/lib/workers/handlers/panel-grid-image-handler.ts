@@ -116,6 +116,19 @@ function readPreviousGridImageUrl(payload: AnyObj): string | null {
     : null
 }
 
+function readSameProductionLocationVisualMemory(payload: AnyObj): {
+  readonly referencePanelIds: readonly string[]
+  readonly instructions: readonly string[]
+} | null {
+  const raw = payload.sameProductionLocationVisualMemory
+  if (!raw || typeof raw !== 'object' || Array.isArray(raw)) return null
+  const record = raw as Record<string, unknown>
+  return {
+    referencePanelIds: normalizeStringArray(record.referencePanelIds),
+    instructions: normalizeStringArray(record.instructions),
+  }
+}
+
 async function collectGridReferenceImages(input: {
   readonly projectData: Awaited<ReturnType<typeof resolveNovelData>>
   readonly panels: readonly GridPanel[]
@@ -162,6 +175,20 @@ async function collectPreviousGridReferenceImage(input: {
   if (normalizationIssues.length > 0) {
     throw new Error(`PANEL_GRID_PREVIOUS_REFERENCE_NORMALIZE_FAILED:${normalizationIssues.map((issue) => `${issue.index}:${issue.code}`).join(';')}`)
   }
+  const sameLocationMemory = readSameProductionLocationVisualMemory(input.payload)
+  const memoryName = sameLocationMemory
+    ? [
+        input.job.data.locale === 'en'
+          ? 'same production location visual memory'
+          : '同一制片场景视觉记忆',
+        sameLocationMemory.referencePanelIds.length > 0
+          ? `reference panels: ${sameLocationMemory.referencePanelIds.join(', ')}`
+          : '',
+        ...sameLocationMemory.instructions,
+      ].filter(Boolean).join('; ')
+    : input.job.data.locale === 'en'
+      ? 'previous complete storyboard grid'
+      : '上一张完整分镜套图'
   return {
     referenceImages,
     referenceImagesMap: referenceImages.map((_, index) => ({
@@ -169,9 +196,7 @@ async function collectPreviousGridReferenceImage(input: {
         ? `Image ${input.nextImageNumber + index + 1}`
         : `图 ${input.nextImageNumber + index + 1}`,
       role: 'extra',
-      name: input.job.data.locale === 'en'
-        ? 'previous complete storyboard grid'
-        : '上一张完整分镜套图',
+      name: memoryName,
     })),
   }
 }

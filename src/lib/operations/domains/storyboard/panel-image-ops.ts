@@ -32,6 +32,10 @@ import {
   type StoryboardPanelImageSubmissionGroup,
 } from '@/lib/storyboard/grid-image-groups'
 import { PANEL_IMAGE_PROMPT_CONTRACT_SIGNATURE } from '@/lib/storyboard/panel-image-dedupe'
+import {
+  resolveSameProductionLocationVisualMemory,
+  type SameProductionLocationVisualMemory,
+} from '@/lib/storyboard/same-production-location-visual-memory'
 
 function normalizeString(value: unknown): string {
   return typeof value === 'string' ? value.trim() : ''
@@ -61,6 +65,21 @@ type ReferenceImageNoteInput = {
   instruction: string
   url?: string
   referencePanelId?: string
+}
+
+function buildSameProductionLocationVisualMemoryPayload(memory: SameProductionLocationVisualMemory | null) {
+  if (!memory) return {}
+  return {
+    previousGridImageUrl: memory.previousGridImageUrl,
+    sameProductionLocationVisualMemory: {
+      productionLocationId: memory.productionLocationId,
+      locationId: memory.locationId,
+      referencePanelIds: [...memory.referencePanelIds],
+      referencePanelIndexes: [...memory.referencePanelIndexes],
+      signature: memory.signature,
+      instructions: [...memory.instructions],
+    },
+  }
 }
 
 function normalizeReferenceImageNotes(input: unknown): ReferenceImageNoteInput[] {
@@ -296,11 +315,16 @@ export function createStoryboardPanelImageOperations(): ProjectAgentOperationReg
           const primaryPanel = group.panels[0]
           if (!primaryPanel) throw new Error('STORYBOARD_IMAGE_SUBMISSION_GROUP_EMPTY')
           const styleBibleSignature = await readStyleBibleSignature(primaryPanel.storyboardId)
+          const sameLocationMemory = await resolveSameProductionLocationVisualMemory({
+            currentPanels: group.panels,
+            allPanels: panels,
+          })
           const body = {
             panelId: primaryPanel.id,
             candidateCount: 1,
             count: 1,
             referenceMode: 'asset',
+            ...buildSameProductionLocationVisualMemoryPayload(sameLocationMemory),
             storyboardGrid: {
               mode: '2x2',
               sourceVideoBlockId: group.sourceVideoBlockId,
@@ -336,6 +360,7 @@ export function createStoryboardPanelImageOperations(): ProjectAgentOperationReg
             dedupeKey: createTaskDedupeKey('edit_first_panel_grid_image', {
               sourceVideoBlockId: group.sourceVideoBlockId,
               panelIds: group.panels.map((panel) => panel.id),
+              sameProductionLocationVisualMemorySignature: sameLocationMemory?.signature ?? null,
               styleBibleSignature,
               panelImagePromptContractSignature: PANEL_IMAGE_PROMPT_CONTRACT_SIGNATURE,
             }),
@@ -459,6 +484,7 @@ export function createStoryboardPanelImageOperations(): ProjectAgentOperationReg
             panelIndex: true,
             imageUrl: true,
             imageMediaId: true,
+            photographyRules: true,
           },
         })
         const panelById = new Map(rawPanels.map((panel) => [panel.id, panel]))
@@ -472,6 +498,20 @@ export function createStoryboardPanelImageOperations(): ProjectAgentOperationReg
         if (storyboardIds.size !== 1) {
           throw new Error('STORYBOARD_GRID_PANEL_STORYBOARD_MISMATCH')
         }
+        const storyboardIdForGrid = orderedPanels[0]?.storyboardId
+        if (!storyboardIdForGrid) throw new Error('STORYBOARD_GRID_STORYBOARD_ID_MISSING')
+        const allStoryboardPanels = await prisma.projectPanel.findMany({
+          where: { storyboardId: storyboardIdForGrid },
+          orderBy: { panelIndex: 'asc' },
+          select: {
+            id: true,
+            storyboardId: true,
+            panelIndex: true,
+            imageUrl: true,
+            imageMediaId: true,
+            photographyRules: true,
+          },
+        })
 
         const projectModelConfig = await getProjectModelConfig(ctx.projectId, ctx.userId)
         if (!projectModelConfig.storyboardModel) {
@@ -479,11 +519,16 @@ export function createStoryboardPanelImageOperations(): ProjectAgentOperationReg
         }
         await resolveModelSelection(ctx.userId, projectModelConfig.storyboardModel, 'image')
         const locale = resolveLocaleFromContext(ctx.context.locale)
+        const sameLocationMemory = await resolveSameProductionLocationVisualMemory({
+          currentPanels: orderedPanels,
+          allPanels: allStoryboardPanels,
+        })
         const body = {
           panelId: orderedPanels[0]?.id,
           candidateCount: 1,
           count: 1,
           referenceMode: 'asset',
+          ...buildSameProductionLocationVisualMemoryPayload(sameLocationMemory),
           storyboardGrid: {
             mode: '2x2',
             sourceVideoBlockId,
@@ -527,6 +572,7 @@ export function createStoryboardPanelImageOperations(): ProjectAgentOperationReg
           dedupeKey: createTaskDedupeKey('storyboard_grid_image', {
             sourceVideoBlockId,
             panelIds,
+            sameProductionLocationVisualMemorySignature: sameLocationMemory?.signature ?? null,
             styleBibleSignature,
             panelImagePromptContractSignature: PANEL_IMAGE_PROMPT_CONTRACT_SIGNATURE,
           }),

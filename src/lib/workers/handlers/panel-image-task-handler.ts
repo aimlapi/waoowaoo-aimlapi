@@ -73,14 +73,21 @@ export async function handlePanelImageTask(job: Job<TaskJobData>) {
     ? EMPTY_PANEL_REFERENCE_COLLECTION
     : await collectPanelReferenceImageItemsWithDiagnostics(projectData, panel, { strict: true })
   const referenceImageItems: ReferenceImageItem[] = [...refCollection.items]
+  const referenceImageNotes = Array.isArray(payload.referenceImageNotes)
+    ? payload.referenceImageNotes
+      .map((item) => (typeof item === 'string' ? item.trim() : ''))
+      .filter(Boolean)
+      .slice(0, 16)
+    : []
   if (Array.isArray(payload.referencePanelImageUrls)) {
     for (const [index, url] of payload.referencePanelImageUrls.entries()) {
       const signed = toSignedUrlIfCos(typeof url === 'string' ? url : null, 3600)
       if (signed) {
+        const note = referenceImageNotes[index]
         referenceImageItems.push({
           url: signed,
           role: 'source_panel',
-          name: `previous storyboard panel ${index + 1}`,
+          name: note ? `previous storyboard panel ${index + 1}; ${note}` : `previous storyboard panel ${index + 1}`,
         })
       }
     }
@@ -96,12 +103,6 @@ export async function handlePanelImageTask(job: Job<TaskJobData>) {
       }
     }
   }
-  const referenceImageNotes = Array.isArray(payload.referenceImageNotes)
-    ? payload.referenceImageNotes
-      .map((item) => (typeof item === 'string' ? item.trim() : ''))
-      .filter(Boolean)
-      .slice(0, 16)
-    : []
   const normalizationIssues: OutboundImageNormalizationIssue[] = []
   const { referenceImages, referenceImagesMap } = await normalizeReferenceImageItemsForGeneration(referenceImageItems, {
     locale: job.data.locale,

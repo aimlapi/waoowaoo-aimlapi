@@ -6,6 +6,8 @@ export type StoryboardGridGroupingPanel = {
   readonly id: string
   readonly storyboardId: string
   readonly panelIndex: number
+  readonly imageUrl?: string | null
+  readonly imageMediaId?: string | null
   readonly photographyRules: string | null
 }
 

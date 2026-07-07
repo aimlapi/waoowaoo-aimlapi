@@ -35,9 +35,16 @@ const createMutationBatchMock = vi.hoisted(() => vi.fn(async () => ({
   id: 'mutation-batch-grid-1',
 })))
 
+const sameProductionLocationVisualMemoryMock = vi.hoisted(() => ({
+  resolveSameProductionLocationVisualMemory: vi.fn(),
+}))
+
 vi.mock('@/lib/prisma', () => ({ prisma: prismaMock }))
 vi.mock('@/lib/operations/submit-operation-task', () => ({ submitOperationTask: submitOperationTaskMock }))
 vi.mock('@/lib/mutation-batch/service', () => ({ createMutationBatch: createMutationBatchMock }))
+vi.mock('@/lib/storyboard/same-production-location-visual-memory', () => ({
+  resolveSameProductionLocationVisualMemory: sameProductionLocationVisualMemoryMock.resolveSameProductionLocationVisualMemory,
+}))
 vi.mock('@/lib/config-service', () => ({
   getProjectModelConfig: vi.fn(async () => ({ storyboardModel: 'storyboard-model-1', videoRatio: '16:9' })),
   resolveProjectModelCapabilityGenerationOptions: vi.fn(async () => ({ quality: 'high' })),
@@ -96,6 +103,7 @@ describe('generate_storyboard_grid_images operation', () => {
         panelIndex: 0,
         imageUrl: 'images/panel-1-old.jpg',
         imageMediaId: null,
+        photographyRules: JSON.stringify({ productionLocationId: 'pl-room', locationId: 'loc-room' }),
       },
       {
         id: 'panel-2',
@@ -103,11 +111,21 @@ describe('generate_storyboard_grid_images operation', () => {
         panelIndex: 1,
         imageUrl: null,
         imageMediaId: null,
+        photographyRules: JSON.stringify({ productionLocationId: 'pl-room', locationId: 'loc-room' }),
       },
     ])
     prismaMock.projectPanel.findUnique.mockResolvedValue({
       imageUrl: 'images/panel-old.jpg',
       imageMediaId: null,
+    })
+    sameProductionLocationVisualMemoryMock.resolveSameProductionLocationVisualMemory.mockResolvedValue({
+      previousGridImageUrl: 'images/storyboard-reference/same-location.jpg',
+      productionLocationId: 'pl-room',
+      locationId: 'loc-room',
+      referencePanelIds: ['panel-old-1'],
+      referencePanelIndexes: [0],
+      signature: 'same-location-signature',
+      instructions: ['only inherit fixed spatial footprint'],
     })
   })
 
@@ -135,6 +153,15 @@ describe('generate_storyboard_grid_images operation', () => {
       payload: expect.objectContaining({
         panelId: 'panel-1',
         referenceMode: 'asset',
+        previousGridImageUrl: 'images/storyboard-reference/same-location.jpg',
+        sameProductionLocationVisualMemory: {
+          productionLocationId: 'pl-room',
+          locationId: 'loc-room',
+          referencePanelIds: ['panel-old-1'],
+          referencePanelIndexes: [0],
+          signature: 'same-location-signature',
+          instructions: ['only inherit fixed spatial footprint'],
+        },
         storyboardGrid: {
           mode: '2x2',
           sourceVideoBlockId: 'edit-script-1:video-block:1',

@@ -608,6 +608,10 @@ function buildPromptContent(input: {
     '- cameraSideLocks 必须写清镜头固定站在哪一侧拍摄，例如始终在靠门侧、靠床前沿侧或桌子同一侧，禁止切到相反侧。',
     '- subjectPlacementLocks 必须写清人物动作状态和固定空间实体的关系，例如坐在同一条前景床沿、头靠同一侧床头、身体沿同一床轴延伸。',
     '- forbiddenSpatialChanges 必须写清禁止发生的空间错误，例如不得镜像翻转床头窗户关系、不得把同一张桌改到另一侧、不得让背景锚点互换位置。',
+    '- 固定陈设必须写 footprint 关系：不只写“床/桌/窗在哪里”，还要写谁贴哪面墙、谁不贴哪面墙、谁和谁之间隔着床沿/过道/桌边/门洞/前景距离。',
+    '- depthLayoutLocks 必须包含 separation/intervening-object 规则：如果两个锚点之间隔着床、桌、通道、门、柜台、墙角或前景距离，必须写清“中间隔着什么”，防止近景把空间压扁。',
+    '- forbiddenSpatialChanges 必须包含 forbidden adjacency：明确禁止不该相邻的固定物贴在一起，例如桌子不得贴到窗墙下、床长边不得贴到后墙、柜台不得漂到入口边。',
+    '- 如果同一 productionLocation 曾经出现过鱼缸、货架、海报、餐具、群众、手机界面等临时或污染性元素，只有当前剧本片段明确需要时才可出现；否则必须写入 forbiddenSpatialChanges 或 panelContinuity.forbiddenDiscontinuity。',
     '- 禁止在 sceneZone 里重复描述同一空间关系；不要写长篇空间说明。',
     '- 禁止把“世界杯海报/直播氛围/红光”改写成剧本没有明确写出的路牌、霓虹招牌或文字标识。',
     '',
@@ -636,8 +640,15 @@ function buildPromptContent(input: {
     '- checkedContinuityAxes 至少包含 space、character_blocking、eyeline、persistent_props、crowd_state 中的三项；即使该 productionSegment 只有 1 个 panel，也必须写满至少 3 项。',
     '- 若发现断裂，必须在 repairActions 写明已如何修正 panel 的 sceneZone、shotBlocking 或 panelContinuity；最终 locked 必须为 true。',
     '',
-    `画幅：${input.videoRatio}`,
-  ].join('\n')
+      `画幅：${input.videoRatio}`,
+      '',
+      'Same Production Location Visual Memory 要求：',
+      '- 后续生图会自动从同一 productionLocationId/locationId 的已生成分镜中选择视觉参考；你必须让 productionLocationId/locationId 规范、稳定、可复用。',
+      '- 同制片场景视觉参考只用于继承固定空间脚印：床、桌、窗、门、墙、柜、柜台、通道等固定锚点的位置、相邻关系、间隔关系和镜头轴线。',
+      '- 不得把同制片场景的剧情状态当成长期空间资产：人物姿态、临时道具、桌面内容、手机界面、时间状态、群众状态、灯光强弱、污染性大件物只能由当前 productionSegment 决定。',
+      '- 近景、极近景、插入镜头也必须保留空间纵深语义；如果画面裁掉中间物，也必须在 spatialHardLocks / shotBlocking 中说明它仍然隔在两个锚点之间。',
+      '- 场景一致性优先级：当前 panel 事实 > 当前 Segment Continuity Bible > 同一 productionLocation 固定空间脚印 > 参考图外观。参考图不能覆盖当前剧情事实。',
+    ].join('\n')
 
   return [
     cacheablePromptPart(`${instructions}\n\n`),
@@ -802,13 +813,13 @@ function compilePanelImageIntent(input: {
     : '无可见道具'
   const continuityElements = input.panel.panelContinuity.visibleContinuityElements.slice(0, 4).join('、')
   const spatialHardLocks = [
-    ...input.sceneZone.spatialHardLocks.anchorLayout,
-    ...input.sceneZone.spatialHardLocks.screenDirectionLocks,
-    ...input.sceneZone.spatialHardLocks.depthLayoutLocks,
-    ...input.sceneZone.spatialHardLocks.cameraSideLocks,
-    ...input.sceneZone.spatialHardLocks.subjectPlacementLocks,
-    ...input.sceneZone.spatialHardLocks.forbiddenSpatialChanges,
-  ].slice(0, 6).join('；')
+    ...input.sceneZone.spatialHardLocks.anchorLayout.slice(0, 4),
+    ...input.sceneZone.spatialHardLocks.screenDirectionLocks.slice(0, 2),
+    ...input.sceneZone.spatialHardLocks.depthLayoutLocks.slice(0, 4),
+    ...input.sceneZone.spatialHardLocks.cameraSideLocks.slice(0, 2),
+    ...input.sceneZone.spatialHardLocks.subjectPlacementLocks.slice(0, 3),
+    ...input.sceneZone.spatialHardLocks.forbiddenSpatialChanges.slice(0, 4),
+  ].slice(0, 14).join('；')
   return [
     `${input.panel.shotType}，${input.location.name}，${input.sceneZone.name}。`,
     input.panel.description,
