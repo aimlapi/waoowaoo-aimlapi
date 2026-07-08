@@ -23,7 +23,7 @@ import {
 import { getCompletionContent, getCompletionParts } from '@/lib/ai-exec/llm-helpers'
 import { toAiRuntimeError } from '@/lib/ai-exec/governance'
 
-export type AiMediaExecutionModality = Extract<AiModality, 'image' | 'video' | 'music'>
+export type AiMediaExecutionModality = Extract<AiModality, 'image' | 'video' | 'music' | 'audio'>
 
 export type AiImageExecutionOptions = {
   referenceImages?: string[]
@@ -58,6 +58,19 @@ export type AiMusicExecutionOptions = {
   mood?: string
   bpm?: number
   outputFormat?: 'mp3' | 'wav'
+}
+
+export type AiAudioExecutionOptions = {
+  generationKind?: string
+  voice?: string
+  language?: string
+  outputFormat?: 'mp3' | 'wav'
+  audioUrls?: string[]
+  imageUrl?: string
+  sampleRate?: number
+  speed?: number
+  volume?: number
+  pitch?: number
 }
 
 export type AiLlmExecutionInput = {
@@ -106,7 +119,14 @@ export type AiMediaExecutionInput =
     modelKey: string
     prompt: string
     options?: AiMusicExecutionOptions
-}
+  }
+  | {
+    modality: 'audio'
+    userId: string
+    modelKey: string
+    prompt: string
+    options?: AiAudioExecutionOptions
+  }
 
 export async function executeMediaGeneration(input: AiMediaExecutionInput): Promise<GenerateResult> {
   const selection = await resolveModelSelection(input.userId, input.modelKey, input.modality)
@@ -150,6 +170,24 @@ export async function executeMediaGeneration(input: AiMediaExecutionInput): Prom
       })
     }
     case 'music': {
+      const modalityAdapter = adapter[input.modality]
+      if (!modalityAdapter) {
+        throw new Error(`AI_PROVIDER_MODALITY_UNSUPPORTED:${selection.provider}:${input.modality}`)
+      }
+      const descriptor = modalityAdapter.describe(selection)
+      validateAiOptions({
+        schema: descriptor.optionSchema,
+        options: input.options,
+        context: `${input.modality}:${selection.modelKey}`,
+      })
+      return await modalityAdapter.execute({
+        userId: input.userId,
+        selection,
+        prompt: input.prompt,
+        options: input.options,
+      })
+    }
+    case 'audio': {
       const modalityAdapter = adapter[input.modality]
       if (!modalityAdapter) {
         throw new Error(`AI_PROVIDER_MODALITY_UNSUPPORTED:${selection.provider}:${input.modality}`)

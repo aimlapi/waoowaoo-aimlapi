@@ -135,14 +135,39 @@ export type AiProviderMusicExecutionContext = {
   }
 }
 
-export type AiProviderMediaModalityAdapter<M extends 'image' | 'video' | 'music'> = {
+export type AiProviderAudioExecutionContext = {
+  userId: string
+  selection: AiResolvedSelection & {
+    provider: string
+    modelId: string
+    modelKey: string
+  }
+  prompt: string
+  options?: {
+    generationKind?: string
+    voice?: string
+    language?: string
+    outputFormat?: 'mp3' | 'wav'
+    audioUrls?: string[]
+    imageUrl?: string
+    sampleRate?: number
+    speed?: number
+    volume?: number
+    pitch?: number
+    [key: string]: unknown
+  }
+}
+
+export type AiProviderMediaModalityAdapter<M extends 'image' | 'video' | 'music' | 'audio'> = {
   describe: (selection: AiResolvedSelection) => AiVariantDescriptor
   execute: (
     input: M extends 'image'
       ? AiProviderImageExecutionContext
       : M extends 'video'
         ? AiProviderVideoExecutionContext
-        : AiProviderMusicExecutionContext,
+        : M extends 'music'
+          ? AiProviderMusicExecutionContext
+          : AiProviderAudioExecutionContext,
   ) => Promise<GenerateResult>
 }
 
@@ -155,6 +180,7 @@ export interface AiProviderAdapter {
   image?: AiProviderMediaModalityAdapter<'image'>
   video?: AiProviderMediaModalityAdapter<'video'>
   music?: AiProviderMediaModalityAdapter<'music'>
+  audio?: AiProviderMediaModalityAdapter<'audio'>
   languageModel?: AiProviderLanguageModelAdapter
   completeLlm?: (input: AiLlmExecutionInput) => Promise<AiProviderLlmResult>
   streamLlm?: (input: AiProviderLlmStreamContext) => Promise<AiProviderLlmResult>

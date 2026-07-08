@@ -3,7 +3,7 @@ import type { InternalLLMStreamStepMeta } from '@/lib/llm-observe/internal-strea
 import type { LLMStreamKind } from '@/lib/llm-observe/types'
 import type { ChatMessageContent } from '@/lib/ai-registry/message-content'
 
-export type AiModality = 'llm' | 'vision' | 'image' | 'video' | 'music'
+export type AiModality = 'llm' | 'vision' | 'image' | 'video' | 'music' | 'audio'
 export type AiExecutionMode = 'sync' | 'async' | 'stream' | 'batch'
 export type AiVariantSubKind = 'official' | 'user-template'
 
@@ -223,7 +223,7 @@ export type AiLlmExecutionResult = {
   successDetails?: AiUnknownObject
 }
 
-export type UnifiedModelType = 'llm' | 'image' | 'video' | 'music'
+export type UnifiedModelType = 'llm' | 'image' | 'video' | 'music' | 'audio'
 export type CapabilityValue = string | number | boolean
 export type CapabilityOptionValue = CapabilityValue
 export type CapabilitySelections = Record<string, Record<string, CapabilityValue>>
@@ -279,11 +279,19 @@ export interface MusicCapabilities {
   fieldI18n?: CapabilityFieldI18nMap
 }
 
+export interface AudioCapabilities {
+  generationKindOptions?: string[]
+  outputFormatOptions?: string[]
+  sampleRateOptions?: number[]
+  fieldI18n?: CapabilityFieldI18nMap
+}
+
 export interface ModelCapabilities {
   llm?: LLMCapabilities
   image?: ImageCapabilities
   video?: VideoCapabilities
   music?: MusicCapabilities
+  audio?: AudioCapabilities
 }
 
 const CAPABILITY_NAMESPACES = new Set<keyof ModelCapabilities>([
@@ -291,6 +299,7 @@ const CAPABILITY_NAMESPACES = new Set<keyof ModelCapabilities>([
   'image',
   'video',
   'music',
+  'audio',
 ])
 
 const LLM_ALLOWED_FIELDS = new Set<keyof LLMCapabilities>([
@@ -320,6 +329,13 @@ const MUSIC_ALLOWED_FIELDS = new Set<keyof MusicCapabilities>([
   'vocalModeOptions',
   'outputFormatOptions',
   'bpmOptions',
+  'fieldI18n',
+])
+
+const AUDIO_ALLOWED_FIELDS = new Set<keyof AudioCapabilities>([
+  'generationKindOptions',
+  'outputFormatOptions',
+  'sampleRateOptions',
   'fieldI18n',
 ])
 
@@ -636,6 +652,43 @@ function validateMusicCapabilities(issues: CapabilityValidationIssue[], raw: unk
   })
 }
 
+function validateAudioCapabilities(issues: CapabilityValidationIssue[], raw: unknown) {
+  if (!isRecord(raw)) return
+
+  const generationKindOptions = raw.generationKindOptions
+  if (generationKindOptions !== undefined && !isStringArray(generationKindOptions)) {
+    issues.push({
+      code: 'CAPABILITY_FIELD_INVALID',
+      field: 'capabilities.audio.generationKindOptions',
+      message: 'generationKindOptions must be a non-empty string array',
+    })
+  }
+
+  const outputFormatOptions = raw.outputFormatOptions
+  if (outputFormatOptions !== undefined && !isStringArray(outputFormatOptions)) {
+    issues.push({
+      code: 'CAPABILITY_FIELD_INVALID',
+      field: 'capabilities.audio.outputFormatOptions',
+      message: 'outputFormatOptions must be a non-empty string array',
+    })
+  }
+
+  const sampleRateOptions = raw.sampleRateOptions
+  if (sampleRateOptions !== undefined && !isNumberArray(sampleRateOptions)) {
+    issues.push({
+      code: 'CAPABILITY_FIELD_INVALID',
+      field: 'capabilities.audio.sampleRateOptions',
+      message: 'sampleRateOptions must be a finite number array',
+    })
+  }
+
+  validateFieldI18nMap(issues, 'audio', raw.fieldI18n, {
+    generationKind: isStringArray(generationKindOptions) ? generationKindOptions : undefined,
+    outputFormat: isStringArray(outputFormatOptions) ? outputFormatOptions : undefined,
+    sampleRate: isNumberArray(sampleRateOptions) ? sampleRateOptions : undefined,
+  })
+}
+
 function validateOptionFieldValue(
   fieldPath: string,
   value: unknown,
@@ -697,16 +750,19 @@ export function validateModelCapabilities(
   validateNamespaceShape(issues, 'image', (capabilities as ModelCapabilities).image)
   validateNamespaceShape(issues, 'video', (capabilities as ModelCapabilities).video)
   validateNamespaceShape(issues, 'music', (capabilities as ModelCapabilities).music)
+  validateNamespaceShape(issues, 'audio', (capabilities as ModelCapabilities).audio)
 
   validateNamespaceAllowedFields(issues, 'llm', (capabilities as ModelCapabilities).llm, LLM_ALLOWED_FIELDS)
   validateNamespaceAllowedFields(issues, 'image', (capabilities as ModelCapabilities).image, IMAGE_ALLOWED_FIELDS)
   validateNamespaceAllowedFields(issues, 'video', (capabilities as ModelCapabilities).video, VIDEO_ALLOWED_FIELDS)
   validateNamespaceAllowedFields(issues, 'music', (capabilities as ModelCapabilities).music, MUSIC_ALLOWED_FIELDS)
+  validateNamespaceAllowedFields(issues, 'audio', (capabilities as ModelCapabilities).audio, AUDIO_ALLOWED_FIELDS)
 
   validateLLMCapabilities(issues, (capabilities as ModelCapabilities).llm)
   validateImageCapabilities(issues, (capabilities as ModelCapabilities).image)
   validateVideoCapabilities(issues, (capabilities as ModelCapabilities).video)
   validateMusicCapabilities(issues, (capabilities as ModelCapabilities).music)
+  validateAudioCapabilities(issues, (capabilities as ModelCapabilities).audio)
 
   return issues
 }

@@ -5,7 +5,7 @@ import type {
   AiOptionValidator,
 } from '@/lib/ai-registry/types'
 
-export type MediaModality = 'image' | 'video' | 'music'
+export type MediaModality = 'image' | 'video' | 'music' | 'audio'
 
 export function enumValidator(values: readonly string[]): AiOptionValidator {
   const allowedValues = new Set(values)
@@ -22,6 +22,16 @@ export function integerRangeValidator(input: { min?: number; max?: number }): Ai
   return (value) => {
     if (value === undefined) return { ok: true }
     if (typeof value !== 'number' || !Number.isInteger(value)) return { ok: false, reason: 'expected_integer' }
+    if (input.min !== undefined && value < input.min) return { ok: false, reason: `min=${input.min}` }
+    if (input.max !== undefined && value > input.max) return { ok: false, reason: `max=${input.max}` }
+    return { ok: true }
+  }
+}
+
+export function numberRangeValidator(input: { min?: number; max?: number }): AiOptionValidator {
+  return (value) => {
+    if (value === undefined) return { ok: true }
+    if (typeof value !== 'number' || !Number.isFinite(value)) return { ok: false, reason: 'expected_number' }
     if (input.min !== undefined && value < input.min) return { ok: false, reason: `min=${input.min}` }
     if (input.max !== undefined && value > input.max) return { ok: false, reason: `max=${input.max}` }
     return { ok: true }
@@ -116,6 +126,23 @@ function buildAllowedKeys(modality: MediaModality): ReadonlySet<string> {
       'seed',
       'cameraFixed',
       'watermark',
+    ])
+  }
+  if (modality === 'audio') {
+    return new Set([
+      'provider',
+      'modelId',
+      'modelKey',
+      'generationKind',
+      'voice',
+      'language',
+      'outputFormat',
+      'audioUrls',
+      'imageUrl',
+      'sampleRate',
+      'speed',
+      'volume',
+      'pitch',
     ])
   }
   return new Set([

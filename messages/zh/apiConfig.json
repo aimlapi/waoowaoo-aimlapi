@@ -102,6 +102,7 @@
   "typeImage": "图像",
   "typeVideo": "视频",
   "typeMusic": "音乐/配乐",
+  "typeAudio": "声音/音效",
   "audioSubMusic": "音乐",
   "apiKeyLabel": "API Key",
   "apiType": "API 类型",

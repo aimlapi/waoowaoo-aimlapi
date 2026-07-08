@@ -56,6 +56,7 @@ export interface WorkflowConcurrencyPayload {
   analysis?: number
   image?: number
   video?: number
+  audio?: number
 }
 
 export interface ApiConfigPutBody {
@@ -80,4 +81,5 @@ export const CAPABILITY_MODEL_TYPES: readonly UnifiedModelType[] = [
   'video',
   'llm',
   'music',
+  'audio',
 ]

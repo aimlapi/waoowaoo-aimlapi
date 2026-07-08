@@ -35,7 +35,7 @@ export interface ModelFormState {
   modelId: string
 }
 
-export type ProviderCardModelType = 'llm' | 'image' | 'video' | 'music'
+export type ProviderCardModelType = 'llm' | 'image' | 'video' | 'music' | 'audio'
 
 export type ProviderCardGroupedModels = Partial<Record<ProviderCardModelType, CustomModel[]>>
 

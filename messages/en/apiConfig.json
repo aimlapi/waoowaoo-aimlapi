@@ -102,6 +102,7 @@
   "typeImage": "Image",
   "typeVideo": "Video",
   "typeMusic": "Music / Score",
+  "typeAudio": "Audio / Sound",
   "audioSubMusic": "Music",
   "apiKeyLabel": "API Key",
   "apiType": "API Type",

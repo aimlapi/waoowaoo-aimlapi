@@ -6,6 +6,7 @@ import {
   createFalVideoObjectValidator,
   enumValidator,
   integerRangeValidator,
+  numberRangeValidator,
   nonEmptyStringValidator,
   type MediaModality,
 } from '@/lib/ai-providers/shared/option-schema'
@@ -35,6 +36,8 @@ export const FAL_PLATFORM_MODEL_PRESETS = [
   { provider: 'fal', modelId: 'banana-2', name: 'Banana 2', type: 'image' },
   { provider: 'fal', modelId: FAL_GPT_IMAGE_2_MODEL_ID, name: 'GPT Image 2', type: 'image' },
   { provider: 'fal', modelId: FAL_LYRIA_3_PRO_MODEL_ID, name: 'Lyria 3 Pro', type: 'music' },
+  { provider: 'fal', modelId: FAL_XAI_TTS_MODEL_ID, name: 'xAI TTS', type: 'audio' },
+  { provider: 'fal', modelId: FAL_SEED_AUDIO_MODEL_ID, name: 'Seed Audio 1.0', type: 'audio' },
 ] as const satisfies ReadonlyArray<PlatformModelPreset>
 
 export const FAL_VIDEO_MODEL_IDS = new Set([
@@ -72,6 +75,28 @@ export const FAL_BUILTIN_CAPABILITY_CATALOG_ENTRIES = [
         durationSecondsOptions: [30, 60, 90, 120, 180],
         vocalModeOptions: ['instrumental', 'vocal'],
         outputFormatOptions: ['mp3'],
+      },
+    },
+  },
+  {
+    modelType: 'audio',
+    provider: 'fal',
+    modelId: FAL_XAI_TTS_MODEL_ID,
+    capabilities: {
+      audio: {
+        generationKindOptions: ['dialogue_tts'],
+        outputFormatOptions: ['mp3', 'wav'],
+      },
+    },
+  },
+  {
+    modelType: 'audio',
+    provider: 'fal',
+    modelId: FAL_SEED_AUDIO_MODEL_ID,
+    capabilities: {
+      audio: {
+        generationKindOptions: ['foley', 'spot_sfx', 'ambience'],
+        outputFormatOptions: ['mp3', 'wav'],
       },
     },
   },
@@ -186,6 +211,8 @@ export const FAL_API_CONFIG_CATALOG_MODELS = [
   { modelId: 'banana-2', name: 'Banana 2', type: 'image', provider: 'fal' },
   { modelId: FAL_GPT_IMAGE_2_MODEL_ID, name: 'GPT Image 2', type: 'image', provider: 'fal' },
   { modelId: FAL_LYRIA_3_PRO_MODEL_ID, name: 'Lyria 3 Pro', type: 'music', provider: 'fal' },
+  { modelId: FAL_XAI_TTS_MODEL_ID, name: 'xAI TTS', type: 'audio', provider: 'fal' },
+  { modelId: FAL_SEED_AUDIO_MODEL_ID, name: 'Seed Audio 1.0', type: 'audio', provider: 'fal' },
   { modelId: 'fal-wan25', name: 'Wan 2.6', type: 'video', provider: 'fal' },
   { modelId: 'fal-veo31', name: 'Veo 3.1', type: 'video', provider: 'fal' },
   { modelId: 'fal-sora2', name: 'Sora 2', type: 'video', provider: 'fal' },
@@ -372,6 +399,33 @@ export function resolveFalOptionSchema(modality: MediaModality, modelId: string)
       })
     }
     return buildMediaOptionSchema('music')
+  }
+  if (modality === 'audio') {
+    if (modelId === FAL_XAI_TTS_MODEL_ID) {
+      return buildMediaOptionSchema('audio', {
+        required: ['voice'],
+        validators: {
+          generationKind: enumValidator(['dialogue_tts']),
+          voice: nonEmptyStringValidator(),
+          language: nonEmptyStringValidator(),
+          outputFormat: enumValidator(['mp3', 'wav']),
+        },
+      })
+    }
+    if (modelId === FAL_SEED_AUDIO_MODEL_ID) {
+      return buildMediaOptionSchema('audio', {
+        validators: {
+          generationKind: enumValidator(['foley', 'spot_sfx', 'ambience']),
+          outputFormat: enumValidator(['mp3', 'wav']),
+          imageUrl: nonEmptyStringValidator(),
+          sampleRate: integerRangeValidator({ min: 8_000, max: 192_000 }),
+          speed: numberRangeValidator({ min: 0.1, max: 4 }),
+          volume: numberRangeValidator({ min: 0, max: 4 }),
+          pitch: numberRangeValidator({ min: -24, max: 24 }),
+        },
+      })
+    }
+    return buildMediaOptionSchema('audio')
   }
   if (modality === 'video') {
     if (modelId === FAL_HAPPY_HORSE_IMAGE_TO_VIDEO_MODEL_ID) {

@@ -26,6 +26,8 @@ describe('platform model catalog', () => {
     expect(modelKeys).toContain('fal::gpt-image-2')
     expect(modelKeys).toContain('openrouter::openai/gpt-image-2')
     expect(modelKeys).toContain('fal::fal-ai/lyria3/pro')
+    expect(modelKeys).toContain('fal::xai/tts/v1')
+    expect(modelKeys).toContain('fal::bytedance/seed-audio-1.0')
     expect(modelKeys).toContain('ark::doubao-seedance-2-0-260128')
     expect(modelKeys).toContain('openrouter::anthropic/claude-sonnet-4.6')
     expect(modelKeys).toContain('openrouter::openai/gpt-5.5')

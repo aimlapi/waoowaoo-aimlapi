@@ -1,12 +1,13 @@
 import type { AiProviderAdapter } from '@/lib/ai-providers/runtime-types'
 import { describeMediaVariantBase } from '@/lib/ai-providers/shared/media-adapter'
+import { executeFalAudioGeneration } from './audio'
 import { executeFalImageGeneration } from './image'
 import { executeFalMusicGeneration } from './music'
 import { resolveFalOptionSchema } from './models'
 import { executeFalVideoGeneration } from './video'
 
 function describeFalMediaVariant(
-  modality: 'image' | 'video' | 'music',
+  modality: 'image' | 'video' | 'music' | 'audio',
   selection: Parameters<NonNullable<AiProviderAdapter['image']>['describe']>[0],
 ) {
   return describeMediaVariantBase({
@@ -30,5 +31,9 @@ export const falAdapter: AiProviderAdapter = {
   music: {
     describe: (selection) => describeFalMediaVariant('music', selection),
     execute: executeFalMusicGeneration,
+  },
+  audio: {
+    describe: (selection) => describeFalMediaVariant('audio', selection),
+    execute: executeFalAudioGeneration,
   },
 }

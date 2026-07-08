@@ -57,17 +57,19 @@ const typeLabel = (type: ProviderCardModelType, t: ProviderCardTranslator) => {
       return t('typeVideo')
     case 'music':
       return t('typeMusic')
+    case 'audio':
+      return t('typeAudio')
   }
 }
 
 type ProviderCardVisibleType = ProviderCardModelType
 
-const MODEL_TYPES: readonly ProviderCardVisibleType[] = ['llm', 'image', 'video', 'music']
+const MODEL_TYPES: readonly ProviderCardVisibleType[] = ['llm', 'image', 'video', 'music', 'audio']
 
 export function getAddableModelTypesForProvider(providerId: string): ProviderCardModelType[] {
   const providerKey = getProviderKey(providerId)
   if (providerKey === 'openrouter') return ['llm', 'video']
-  if (providerKey === 'fal') return ['image', 'video']
+  if (providerKey === 'fal') return ['image', 'video', 'audio', 'music']
   if (providerKey === 'google') return ['llm', 'image', 'video', 'music']
   if (providerKey === 'ark') return ['llm', 'image', 'video']
   return []
