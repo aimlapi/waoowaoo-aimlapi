@@ -6,7 +6,11 @@ import path from 'node:path'
 import { promisify } from 'node:util'
 import type { Job } from 'bullmq'
 import { prisma } from '@/lib/prisma'
-import { parseEditorProjectData, readCompletedBgmScoreMix } from '@/lib/bgm-score/project-data'
+import {
+  parseEditorProjectData,
+  readCompletedBgmScoreMix,
+  readCompletedBgmScoreTimelineAudio,
+} from '@/lib/bgm-score/project-data'
 import { parseNullableEditScriptStyleBible } from '@/lib/edit-script/style-bible-prompt'
 import { ensureMediaObjectFromStorageKey, resolveStorageKeyFromMediaValue } from '@/lib/media/service'
 import { generateUniqueKey, getObjectBuffer, toFetchableUrl, uploadObject } from '@/lib/storage'
@@ -277,6 +281,7 @@ export async function handleFinalVideoRenderTask(job: Job<TaskJobData>) {
     if (!episode) throw new Error('FINAL_VIDEO_RENDER_EPISODE_NOT_FOUND')
     const bgmMix = readCompletedBgmScoreMix(editorProject?.projectData ?? null)
     if (!bgmMix) throw new Error('FINAL_VIDEO_RENDER_BGM_REQUIRED')
+    const timelineAudio = readCompletedBgmScoreTimelineAudio(editorProject?.projectData ?? null)
     const existingProjectData = parseEditorProjectData(editorProject?.projectData ?? null)
 
     const clips = buildFinalRenderClips({ panels, videoGroups, editScript })
@@ -342,6 +347,7 @@ export async function handleFinalVideoRenderTask(job: Job<TaskJobData>) {
       outputPath: finalPath,
       durationSeconds: stitchedDurationSeconds,
       volume: readBgmVolume(payload.bgmVolume),
+      duckingProfile: timelineAudio?.duckingProfile,
     })
     const outputBuffer = await readFile(finalPath)
 
@@ -367,8 +373,10 @@ export async function handleFinalVideoRenderTask(job: Job<TaskJobData>) {
       dimensions,
       durationSeconds: stitchedDurationSeconds,
       bgmScore: existingProjectData.bgmScore ?? null,
+      timelineAudio: timelineAudio ?? null,
       audioMix: {
         hasSourceAudio: audioMix.hasSourceAudio,
+        duckingSegmentCount: timelineAudio?.duckingProfile.length ?? 0,
         targets: {
           mainIntegratedLufs: MAIN_AUDIO_TARGET.integratedLufs,
           bgmIntegratedLufs: BGM_AUDIO_TARGET.integratedLufs,

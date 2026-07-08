@@ -361,4 +361,104 @@ describe('final video render worker', () => {
       },
     })
   })
+
+  it('applies locked audio timeline ducking when completed BGM carries timeline audio design', async () => {
+    prismaMock.projectPanel.findMany.mockResolvedValue([
+      {
+        id: 'panel-1',
+        panelIndex: 0,
+        panelNumber: 1,
+        duration: 3,
+        description: 'panel 1',
+        videoUrl: null,
+        videoMedia: {
+          storageKey: 'video/source.mp4',
+          url: '/m/source-video',
+        },
+        photographyRules: JSON.stringify({ source: 'edit_script', editScriptId: 'edit-script-1' }),
+        storyboard: {
+          id: 'storyboard-1',
+          createdAt: new Date('2026-01-01T00:00:00.000Z'),
+          storyboardTextJson: JSON.stringify({ editScriptId: 'edit-script-1' }),
+          clip: { createdAt: new Date('2026-01-01T00:00:00.000Z') },
+        },
+      },
+    ])
+    prismaMock.videoEditorProject.findUnique.mockResolvedValue({
+      projectData: JSON.stringify({
+        schemaVersion: 1,
+        bgmScore: {
+          schemaVersion: 2,
+          status: 'completed',
+          taskId: 'task-bgm',
+          editScriptId: 'edit-script-1',
+          timelineSignature: 'timeline-signature',
+          durationSeconds: 3,
+          musicModel: 'google::lyria-3-pro-preview',
+          timelineAudio: {
+            schemaVersion: 1,
+            timelineSignature: 'timeline-signature',
+            durationSeconds: 3,
+            clips: [{
+              order: 1,
+              sourceKind: 'panel',
+              panelId: 'panel-1',
+              groupId: null,
+              shotNumber: 1,
+              shotNumbers: [1],
+              startSec: 0,
+              endSec: 3,
+              soundDirection: 'whispered dialogue under room tone',
+            }],
+            stemPlan: [{
+              role: 'dialogue',
+              status: 'planned',
+              description: 'Authoritative dialogue stem.',
+            }],
+            dialogueCues: [],
+            spotSfxPlan: [],
+            ambiencePlan: [],
+            duckingProfile: [{
+              startSec: 0.5,
+              endSec: 1.5,
+              bgmVolume: 0.22,
+              reason: 'dialogue',
+              sourceId: 'dialogue-1',
+            }],
+          },
+          mix: {
+            mediaId: 'media-bgm',
+            url: '/m/bgm',
+            storageKey: 'music/bgm-score.m4a',
+            mimeType: 'audio/mp4',
+            durationMs: 3000,
+          },
+        },
+      }),
+    })
+    const { handleFinalVideoRenderTask } = await import('@/lib/workers/final-video-render')
+
+    await handleFinalVideoRenderTask(buildJob({
+      episodeId: 'episode-1',
+      bgmVolume: 0.8,
+    }))
+
+    const ffmpegCalls = execFileMock.mock.calls
+      .filter((call) => call[0] === 'ffmpeg')
+      .map((call) => (call[1] as readonly string[]).join(' '))
+    expect(ffmpegCalls.some((args) =>
+      args.includes("volume='if(between(t\\,0.500\\,1.500)\\,0.176\\,0.800)':eval=frame"))).toBe(true)
+
+    const completedProjectDataCall = prismaMock.videoEditorProject.upsert.mock.calls.find((call) => {
+      const arg = call[0] as { update?: { renderStatus?: string } }
+      return arg.update?.renderStatus === 'completed'
+    })
+    const completedProjectDataArg = completedProjectDataCall?.[0] as { update?: { projectData?: string } }
+    const projectData = JSON.parse(completedProjectDataArg.update?.projectData ?? '{}') as {
+      audioMix?: { duckingSegmentCount?: number }
+      timelineAudio?: { duckingProfile?: readonly unknown[] } | null
+    }
+    expect(projectData.audioMix?.duckingSegmentCount).toBe(1)
+    expect(projectData.timelineAudio?.duckingProfile).toHaveLength(1)
+  })
 })

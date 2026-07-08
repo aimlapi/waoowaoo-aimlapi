@@ -1,3 +1,5 @@
+import type { DuckingSegment } from '@/lib/audio-design/types'
+
 export type FinalRenderAudioCommandResult = {
   readonly stdout: string
   readonly stderr: string
@@ -101,6 +103,52 @@ function parseLoudnormMeasurement(stderr: string): AudioLoudnessMeasurement {
 function formatFilterNumber(value: number): string {
   if (!Number.isFinite(value)) throw new Error('FINAL_VIDEO_RENDER_AUDIO_FILTER_NUMBER_INVALID')
   return value.toFixed(3)
+}
+
+function escapeFfmpegExpressionComma(value: string): string {
+  return value.replace(/,/g, '\\,')
+}
+
+function assertValidDuckingSegment(segment: DuckingSegment, durationSeconds: number): void {
+  if (
+    !Number.isFinite(segment.startSec)
+    || !Number.isFinite(segment.endSec)
+    || !Number.isFinite(segment.bgmVolume)
+    || segment.startSec < 0
+    || segment.endSec <= segment.startSec
+    || segment.endSec > durationSeconds + 0.001
+    || segment.bgmVolume < 0
+    || segment.bgmVolume > 1
+  ) {
+    throw new Error('FINAL_VIDEO_RENDER_DUCKING_SEGMENT_INVALID')
+  }
+}
+
+export function buildBgmVolumeFilter(input: {
+  readonly baseVolume: number
+  readonly durationSeconds: number
+  readonly duckingProfile?: readonly DuckingSegment[]
+}): string {
+  if (!Number.isFinite(input.baseVolume) || input.baseVolume < 0 || input.baseVolume > 1) {
+    throw new Error('FINAL_VIDEO_RENDER_BGM_VOLUME_INVALID')
+  }
+  const segments = [...(input.duckingProfile ?? [])]
+    .filter((segment) => segment.endSec > 0 && segment.startSec < input.durationSeconds)
+    .sort((left, right) => {
+      if (left.startSec !== right.startSec) return left.startSec - right.startSec
+      return left.bgmVolume - right.bgmVolume
+    })
+  if (segments.length === 0) return `volume=${formatFilterNumber(input.baseVolume)}`
+
+  let expression = formatFilterNumber(input.baseVolume)
+  for (const segment of [...segments].reverse()) {
+    assertValidDuckingSegment(segment, input.durationSeconds)
+    const startSec = formatFilterNumber(segment.startSec)
+    const endSec = formatFilterNumber(Math.min(segment.endSec, input.durationSeconds))
+    const segmentVolume = formatFilterNumber(input.baseVolume * segment.bgmVolume)
+    expression = `if(between(t,${startSec},${endSec}),${segmentVolume},${expression})`
+  }
+  return `volume='${escapeFfmpegExpressionComma(expression)}':eval=frame`
 }
 
 function loudnormAnalyzeFilter(target: AudioLoudnessTarget): string {
@@ -225,10 +273,16 @@ export async function muxFinalRenderAudio(input: {
   readonly outputPath: string
   readonly durationSeconds: number
   readonly volume: number
+  readonly duckingProfile?: readonly DuckingSegment[]
 }): Promise<FinalRenderAudioMixResult> {
   const fadeDuration = Math.min(2, Math.max(0.4, input.durationSeconds / 8))
   const fadeOutStart = Math.max(0, input.durationSeconds - fadeDuration)
   const bgmMeasurement = await analyzeAudioLoudness(input.runCommand, input.musicPath, BGM_AUDIO_TARGET)
+  const bgmVolumeFilter = buildBgmVolumeFilter({
+    baseVolume: input.volume,
+    durationSeconds: input.durationSeconds,
+    duckingProfile: input.duckingProfile,
+  })
 
   if (!input.hasSourceAudio) {
     await input.runCommand('ffmpeg', [
@@ -240,7 +294,7 @@ export async function muxFinalRenderAudio(input: {
       '-i',
       input.musicPath,
       '-filter_complex',
-      `[1:a]atrim=0:${input.durationSeconds.toFixed(3)},asetpts=PTS-STARTPTS,afade=t=in:st=0:d=${fadeDuration.toFixed(3)},afade=t=out:st=${fadeOutStart.toFixed(3)}:d=${fadeDuration.toFixed(3)},loudnorm=${loudnormApplyFilter(BGM_AUDIO_TARGET, bgmMeasurement)},volume=${input.volume.toFixed(3)},alimiter=limit=0.95[aout]`,
+      `[1:a]atrim=0:${input.durationSeconds.toFixed(3)},asetpts=PTS-STARTPTS,afade=t=in:st=0:d=${fadeDuration.toFixed(3)},afade=t=out:st=${fadeOutStart.toFixed(3)}:d=${fadeDuration.toFixed(3)},loudnorm=${loudnormApplyFilter(BGM_AUDIO_TARGET, bgmMeasurement)},${bgmVolumeFilter},alimiter=limit=0.95[aout]`,
       '-map',
       '0:v:0',
       '-map',
@@ -276,7 +330,7 @@ export async function muxFinalRenderAudio(input: {
     '-filter_complex',
     [
       `[1:a]loudnorm=${loudnormApplyFilter(MAIN_AUDIO_TARGET, mainMeasurement)}[main_norm]`,
-      `[2:a]atrim=0:${input.durationSeconds.toFixed(3)},asetpts=PTS-STARTPTS,afade=t=in:st=0:d=${fadeDuration.toFixed(3)},afade=t=out:st=${fadeOutStart.toFixed(3)}:d=${fadeDuration.toFixed(3)},loudnorm=${loudnormApplyFilter(BGM_AUDIO_TARGET, bgmMeasurement)},volume=${input.volume.toFixed(3)}[bgm_norm]`,
+      `[2:a]atrim=0:${input.durationSeconds.toFixed(3)},asetpts=PTS-STARTPTS,afade=t=in:st=0:d=${fadeDuration.toFixed(3)},afade=t=out:st=${fadeOutStart.toFixed(3)}:d=${fadeDuration.toFixed(3)},loudnorm=${loudnormApplyFilter(BGM_AUDIO_TARGET, bgmMeasurement)},${bgmVolumeFilter}[bgm_norm]`,
       '[main_norm]asplit=2[main_mix][main_sidechain]',
       `[bgm_norm][main_sidechain]sidechaincompress=threshold=${BGM_DUCKING_THRESHOLD}:ratio=${BGM_DUCKING_RATIO}:attack=${BGM_DUCKING_ATTACK_MS}:release=${BGM_DUCKING_RELEASE_MS}[ducked_bgm]`,
       '[main_mix][ducked_bgm]amix=inputs=2:duration=first:dropout_transition=0,alimiter=limit=0.95[aout]',

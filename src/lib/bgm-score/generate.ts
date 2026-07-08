@@ -1,6 +1,7 @@
-import { createHash } from 'node:crypto'
 import type { Job } from 'bullmq'
 import { executeAiTextStep, generateMusic } from '@/lib/ai-exec/engine'
+import { buildTimelineAudioDesign, createTimelineSignature } from '@/lib/audio-design/timeline'
+import type { TimelineAudioDesign } from '@/lib/audio-design/types'
 import { prisma } from '@/lib/prisma'
 import { safeParseJsonObject } from '@/lib/json-repair'
 import { parseNullableEditScriptStyleBible } from '@/lib/edit-script/style-bible-prompt'
@@ -91,18 +92,6 @@ async function loadAudioBuffer(input: {
     buffer: Buffer.from(await response.arrayBuffer()),
     mimeType: response.headers.get('content-type') || explicitMimeType,
   }
-}
-
-function timelineSignature(clips: readonly FinalRenderClipPlan[]): string {
-  const payload = clips.map((clip) => ({
-    order: clip.order,
-    sourceKind: clip.sourceKind,
-    panelId: clip.panelId,
-    groupId: clip.groupId ?? null,
-    shotNumbers: clip.shotNumbers,
-    durationSeconds: clip.durationSeconds,
-  }))
-  return createHash('sha256').update(JSON.stringify(payload)).digest('hex').slice(0, 24)
 }
 
 async function buildEditScript(episodeId: string): Promise<FinalRenderEditScriptInput | null> {
@@ -227,6 +216,7 @@ export async function handleBgmScoreGenerateTask(job: Job<TaskJobData>) {
   let editScriptId = ''
   let signature = ''
   let durationSeconds = 0
+  let timelineAudio: TimelineAudioDesign | undefined
 
   try {
     await reportTaskProgress(job, 8, { stage: 'bgm_score_prepare' })
@@ -272,7 +262,12 @@ export async function handleBgmScoreGenerateTask(job: Job<TaskJobData>) {
     ensureSchedulableTimeline(clips)
     editScriptId = editScript.id
     durationSeconds = clips.reduce((total, clip) => total + clip.durationSeconds, 0)
-    signature = timelineSignature(clips)
+    signature = createTimelineSignature(clips)
+    timelineAudio = buildTimelineAudioDesign({
+      clips,
+      timelineSignature: signature,
+      durationSeconds,
+    })
 
     await writeBgmScoreProjectData({
       episodeId,
@@ -284,6 +279,7 @@ export async function handleBgmScoreGenerateTask(job: Job<TaskJobData>) {
         timelineSignature: signature,
         durationSeconds,
         musicModel,
+        timelineAudio,
       },
     })
 
@@ -357,6 +353,7 @@ export async function handleBgmScoreGenerateTask(job: Job<TaskJobData>) {
       timelineSignature: signature,
       durationSeconds,
       musicModel,
+      timelineAudio,
       plan,
       mix,
     }
@@ -386,6 +383,7 @@ export async function handleBgmScoreGenerateTask(job: Job<TaskJobData>) {
           timelineSignature: signature,
           durationSeconds,
           musicModel,
+          ...(timelineAudio ? { timelineAudio } : {}),
           errorMessage: message,
         },
       })

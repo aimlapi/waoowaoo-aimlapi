@@ -320,12 +320,21 @@ describe('bgm score worker', () => {
         bgmScore?: {
           status?: string
           schemaVersion?: number
+          timelineAudio?: {
+            durationSeconds?: number
+            duckingProfile?: readonly { reason?: string; bgmVolume?: number }[]
+            stemPlan?: readonly { role?: string }[]
+          }
           plan?: { virtualLayers?: readonly unknown[]; promptSections?: readonly unknown[] }
           mix?: { url?: string }
         }
       }
       return projectData.bgmScore?.status === 'completed'
         && projectData.bgmScore.schemaVersion === 2
+        && projectData.bgmScore.timelineAudio?.durationSeconds === 3
+        && projectData.bgmScore.timelineAudio.duckingProfile?.some((segment) =>
+          segment.reason === 'native_video_sound' && segment.bgmVolume === 0.82) === true
+        && projectData.bgmScore.timelineAudio.stemPlan?.some((stem) => stem.role === 'dialogue') === true
         && projectData.bgmScore.mix?.url === '/m/bgm-mix'
         && projectData.bgmScore.plan?.virtualLayers?.length === 2
         && projectData.bgmScore.plan?.promptSections?.length === 1

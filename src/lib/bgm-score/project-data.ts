@@ -1,4 +1,10 @@
-import { BGM_SCORE_STATUS, type BgmScoreMix, type BgmScoreProjectData } from './types'
+import type { TimelineAudioDesign } from '@/lib/audio-design/types'
+import {
+  BGM_SCORE_STATUS,
+  bgmScoreProjectDataSchema,
+  type BgmScoreMix,
+  type BgmScoreProjectData,
+} from './types'
 
 export type EditorProjectDataRecord = Record<string, unknown>
 
@@ -52,4 +58,16 @@ export function readCompletedBgmScoreMix(projectDataJson: string | null | undefi
     mimeType,
     durationMs,
   }
+}
+
+export function readCompletedBgmScoreProjectData(projectDataJson: string | null | undefined): BgmScoreProjectData | null {
+  const data = parseEditorProjectData(projectDataJson)
+  const bgmScore = data.bgmScore
+  if (!isRecord(bgmScore) || bgmScore.status !== BGM_SCORE_STATUS.COMPLETED) return null
+  const parsed = bgmScoreProjectDataSchema.safeParse(bgmScore)
+  return parsed.success ? parsed.data : null
+}
+
+export function readCompletedBgmScoreTimelineAudio(projectDataJson: string | null | undefined): TimelineAudioDesign | null {
+  return readCompletedBgmScoreProjectData(projectDataJson)?.timelineAudio ?? null
 }

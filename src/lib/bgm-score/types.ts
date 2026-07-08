@@ -1,4 +1,5 @@
 import { z } from 'zod'
+import { timelineAudioDesignSchema, type TimelineAudioDesign } from '@/lib/audio-design/types'
 
 export const BGM_SCORE_STATUS = {
   PENDING: 'pending',
@@ -115,7 +116,33 @@ export interface BgmScoreProjectData {
   readonly timelineSignature: string
   readonly durationSeconds: number
   readonly musicModel: string
+  readonly timelineAudio?: TimelineAudioDesign
   readonly plan?: BgmScorePlan
   readonly mix?: BgmScoreMix
   readonly errorMessage?: string | null
 }
+
+export const bgmScoreProjectDataSchema = z.object({
+  schemaVersion: z.literal(2),
+  status: z.enum([
+    BGM_SCORE_STATUS.PENDING,
+    BGM_SCORE_STATUS.GENERATING,
+    BGM_SCORE_STATUS.COMPLETED,
+    BGM_SCORE_STATUS.FAILED,
+  ]),
+  taskId: z.string().trim().min(1),
+  editScriptId: z.string().trim().min(1),
+  timelineSignature: z.string().trim().min(1),
+  durationSeconds: z.number().positive(),
+  musicModel: z.string().trim().min(1),
+  timelineAudio: timelineAudioDesignSchema.optional(),
+  plan: bgmScorePlanSchema.optional(),
+  mix: z.object({
+    mediaId: z.string().trim().min(1),
+    url: z.string().trim().min(1),
+    storageKey: z.string().trim().min(1),
+    mimeType: z.string().trim().min(1),
+    durationMs: z.number().positive(),
+  }).optional(),
+  errorMessage: z.string().optional().nullable(),
+})
