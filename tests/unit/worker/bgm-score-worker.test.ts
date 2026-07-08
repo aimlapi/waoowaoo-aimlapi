@@ -323,7 +323,7 @@ describe('bgm score worker', () => {
           timelineAudio?: {
             durationSeconds?: number
             duckingProfile?: readonly { reason?: string; bgmVolume?: number }[]
-            stemPlan?: readonly { role?: string }[]
+            stemPlan?: readonly { role?: string; modelKey?: string | null }[]
           }
           plan?: { virtualLayers?: readonly unknown[]; promptSections?: readonly unknown[] }
           mix?: { url?: string }
@@ -334,7 +334,8 @@ describe('bgm score worker', () => {
         && projectData.bgmScore.timelineAudio?.durationSeconds === 3
         && projectData.bgmScore.timelineAudio.duckingProfile?.some((segment) =>
           segment.reason === 'native_video_sound' && segment.bgmVolume === 0.82) === true
-        && projectData.bgmScore.timelineAudio.stemPlan?.some((stem) => stem.role === 'dialogue') === true
+        && projectData.bgmScore.timelineAudio.stemPlan?.some((stem) =>
+          stem.role === 'dialogue' && stem.modelKey === 'fal::xai/tts/v1') === true
         && projectData.bgmScore.mix?.url === '/m/bgm-mix'
         && projectData.bgmScore.plan?.virtualLayers?.length === 2
         && projectData.bgmScore.plan?.promptSections?.length === 1

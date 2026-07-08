@@ -21,6 +21,15 @@ export const audioProductionStatusSchema = z.enum([
   'mixed',
 ])
 
+export const audioStemGenerationKindSchema = z.enum([
+  'native_reference',
+  'dialogue_tts',
+  'foley',
+  'spot_sfx',
+  'ambience',
+  'music',
+])
+
 export const dialogueCueSchema = z.object({
   cueId: z.string().trim().min(1),
   shotNumber: z.number().int().positive(),
@@ -85,6 +94,10 @@ export const duckingSegmentSchema = z.object({
 export const audioStemPlanSchema = z.object({
   role: audioStemRoleSchema,
   status: audioProductionStatusSchema,
+  provider: z.literal('fal').nullable(),
+  modelId: z.string().trim().min(1).nullable(),
+  modelKey: z.string().trim().min(1).nullable(),
+  generationKind: audioStemGenerationKindSchema,
   description: z.string().trim().min(1),
 })
 
@@ -149,6 +162,7 @@ export const audioDesignStateSchema = z.object({
 export type AudioStemRole = z.infer<typeof audioStemRoleSchema>
 export type AudioDuckingReason = z.infer<typeof audioDuckingReasonSchema>
 export type AudioProductionStatus = z.infer<typeof audioProductionStatusSchema>
+export type AudioStemGenerationKind = z.infer<typeof audioStemGenerationKindSchema>
 export type DialogueCue = z.infer<typeof dialogueCueSchema>
 export type SpotSfxCue = z.infer<typeof spotSfxCueSchema>
 export type AmbienceCue = z.infer<typeof ambienceCueSchema>

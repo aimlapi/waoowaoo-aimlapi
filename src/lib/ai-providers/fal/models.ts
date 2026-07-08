@@ -17,6 +17,8 @@ import { usdToCredits } from '@/lib/ai-registry/pricing-currency'
 
 export const FAL_GPT_IMAGE_2_MODEL_ID = 'gpt-image-2'
 export const FAL_LYRIA_3_PRO_MODEL_ID = 'fal-ai/lyria3/pro'
+export const FAL_XAI_TTS_MODEL_ID = 'xai/tts/v1'
+export const FAL_SEED_AUDIO_MODEL_ID = 'bytedance/seed-audio-1.0'
 export const FAL_PLATFORM_DEFAULT_IMAGE_MODEL_KEY = `fal::${FAL_GPT_IMAGE_2_MODEL_ID}`
 export const FAL_PLATFORM_DEFAULT_MUSIC_MODEL_KEY = `fal::${FAL_LYRIA_3_PRO_MODEL_ID}`
 export const FAL_HAPPY_HORSE_IMAGE_TO_VIDEO_MODEL_ID = 'alibaba/happy-horse/image-to-video'

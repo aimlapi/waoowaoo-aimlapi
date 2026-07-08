@@ -413,6 +413,10 @@ describe('final video render worker', () => {
             stemPlan: [{
               role: 'dialogue',
               status: 'planned',
+              provider: 'fal',
+              modelId: 'xai/tts/v1',
+              modelKey: 'fal::xai/tts/v1',
+              generationKind: 'dialogue_tts',
               description: 'Authoritative dialogue stem.',
             }],
             dialogueCues: [],

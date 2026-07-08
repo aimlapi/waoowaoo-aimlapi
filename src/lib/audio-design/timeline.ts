@@ -1,8 +1,10 @@
 import { createHash } from 'node:crypto'
 import type { FinalRenderClipPlan } from '@/lib/video-compose/final-render-plan'
+import { resolveDefaultAudioStemModelConfig } from './stem-model-config'
 import {
   timelineAudioDesignSchema,
   type AmbienceCue,
+  type AudioStemPlan,
   type DialogueCue,
   type DuckingSegment,
   type SpotSfxCue,
@@ -155,6 +157,26 @@ function buildAmbiencePlan(clips: readonly TimelineClipAudio[]): readonly Ambien
     }))
 }
 
+function createGeneratedStemPlan(input: {
+  readonly role: Exclude<AudioStemPlan['role'], 'native_video'>
+  readonly status: AudioStemPlan['status']
+  readonly description: string
+}): AudioStemPlan {
+  const modelConfig = resolveDefaultAudioStemModelConfig(input.role)
+  if (!modelConfig) {
+    throw new Error(`AUDIO_DESIGN_STEM_MODEL_NOT_CONFIGURED:${input.role}`)
+  }
+  return {
+    role: input.role,
+    status: input.status,
+    provider: modelConfig.provider,
+    modelId: modelConfig.modelId,
+    modelKey: modelConfig.modelKey,
+    generationKind: modelConfig.generationKind,
+    description: input.description,
+  }
+}
+
 export function createTimelineSignature(clips: readonly FinalRenderClipPlan[]): string {
   const payload = clips.map((clip) => ({
     order: clip.order,
@@ -201,35 +223,39 @@ export function buildTimelineAudioDesign(input: {
       {
         role: 'native_video',
         status: 'generated',
+        provider: null,
+        modelId: null,
+        modelKey: null,
+        generationKind: 'native_reference',
         description: hasNativeSoundDirection
           ? 'Use generated video audio as native scene reference and ambience bed.'
           : 'Use generated video audio only when present as native scene reference.',
       },
-      {
+      createGeneratedStemPlan({
         role: 'dialogue',
         status: dialogueCues.length > 0 ? 'planned' : 'planned',
         description: 'Authoritative dialogue and narration stem generated from the script dialogue layer.',
-      },
-      {
+      }),
+      createGeneratedStemPlan({
         role: 'foley',
         status: 'planned',
         description: 'Action-synchronized foley stem for footsteps, cloth, handling, and contact sounds.',
-      },
-      {
+      }),
+      createGeneratedStemPlan({
         role: 'spot_sfx',
         status: spotSfx.length > 0 ? 'planned' : 'planned',
         description: 'Critical spot sound effects that must remain controllable at final mix time.',
-      },
-      {
+      }),
+      createGeneratedStemPlan({
         role: 'ambience',
         status: 'planned',
         description: 'Continuous scene ambience beds derived from shot-level sound direction.',
-      },
-      {
+      }),
+      createGeneratedStemPlan({
         role: 'bgm',
         status: 'planned',
         description: 'Continuous instrumental score generated after the final timeline is locked.',
-      },
+      }),
     ],
     dialogueCues,
     spotSfxPlan: spotSfx,

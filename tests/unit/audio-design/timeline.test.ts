@@ -81,6 +81,14 @@ describe('audio design timeline', () => {
       'ambience',
       'bgm',
     ])
+    expect(timelineAudio.stemPlan.map((stem) => [stem.role, stem.modelKey, stem.generationKind])).toEqual([
+      ['native_video', null, 'native_reference'],
+      ['dialogue', 'fal::xai/tts/v1', 'dialogue_tts'],
+      ['foley', 'fal::bytedance/seed-audio-1.0', 'foley'],
+      ['spot_sfx', 'fal::bytedance/seed-audio-1.0', 'spot_sfx'],
+      ['ambience', 'fal::bytedance/seed-audio-1.0', 'ambience'],
+      ['bgm', 'fal::fal-ai/lyria3/pro', 'music'],
+    ])
     expect(timelineAudio.duckingProfile).toEqual([
       expect.objectContaining({
         startSec: 0,
