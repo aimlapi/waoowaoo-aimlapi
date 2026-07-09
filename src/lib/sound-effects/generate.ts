@@ -1,8 +1,8 @@
 import type { Job } from 'bullmq'
 import { Prisma } from '@prisma/client'
 import { z } from 'zod'
+import { executeSoundEffectGeneration } from '@/lib/ai-exec/engine'
 import { executeAiStructuredTextStep } from '@/lib/ai-exec/structured-step'
-import { generateElevenLabsSoundEffect } from '@/lib/ai-providers/elevenlabs/sound-effects'
 import { getProjectModelConfig } from '@/lib/config-service'
 import { withInternalLLMStreamCallbacks } from '@/lib/llm-observe/internal-stream-context'
 import { ensureMediaObjectFromStorageKey } from '@/lib/media/service'
@@ -107,7 +107,7 @@ async function writeSoundEffectScoreProjectData(input: {
 }
 
 async function renderCue(userId: string, cue: SoundEffectCuePlan): Promise<SoundEffectCueRender> {
-  const generated = await generateElevenLabsSoundEffect({
+  const generated = await executeSoundEffectGeneration({
     userId,
     text: cue.prompt,
     durationSeconds: cue.durationSeconds,

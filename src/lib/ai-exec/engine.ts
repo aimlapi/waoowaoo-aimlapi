@@ -14,6 +14,7 @@ import type {
 import { resolveModelSelection } from '@/lib/user-api/runtime-config'
 import { validateAiOptions } from '@/lib/ai-exec/normalize'
 import { resolveAiProviderAdapter } from '@/lib/ai-providers'
+import { generateElevenLabsSoundEffect } from '@/lib/ai-providers/elevenlabs/sound-effects'
 import { runChatCompletion } from '@/lib/ai-exec/llm/completion-runner'
 import { chatCompletionStream as runChatCompletionStream } from '@/lib/ai-exec/llm/completion-runner'
 import {
@@ -58,6 +59,12 @@ export type AiMusicExecutionOptions = {
   mood?: string
   bpm?: number
   outputFormat?: 'mp3' | 'wav'
+}
+
+export type AiSoundEffectGenerationResult = {
+  readonly buffer: Buffer
+  readonly mimeType: string
+  readonly modelId: string
 }
 
 export type AiLlmExecutionInput = {
@@ -168,6 +175,14 @@ export async function executeMediaGeneration(input: AiMediaExecutionInput): Prom
       })
     }
   }
+}
+
+export async function executeSoundEffectGeneration(input: {
+  readonly userId: string
+  readonly text: string
+  readonly durationSeconds: number
+}): Promise<AiSoundEffectGenerationResult> {
+  return await generateElevenLabsSoundEffect(input)
 }
 
 export async function executeLlmCompletion(input: AiLlmExecutionInput): Promise<OpenAI.Chat.Completions.ChatCompletion> {

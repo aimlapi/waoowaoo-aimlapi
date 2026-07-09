@@ -73,6 +73,7 @@ describe('OpenRouter vision adapter', () => {
     expect(openAiConstructorMock).toHaveBeenCalledWith({
       baseURL: 'https://openrouter.example/v1',
       apiKey: 'sk-openrouter',
+      fetch: expect.any(Function),
     })
     expect(completionCreateMock).toHaveBeenCalledWith(
       {
