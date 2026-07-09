@@ -13,7 +13,7 @@ import { isCloudDeployment, isPlatformProviderCredentialMode } from '@/lib/deplo
 import { getProjectModelConfig } from '@/lib/config-service'
 import { resolveSystemModelKey } from '@/lib/model-access/system-model-resolver'
 import { getPlatformRuntimePlan } from '@/lib/platform-runtime/presets'
-import { resolveRequiredTaskLocale } from '@/lib/task/resolve-locale'
+import { resolveRequiredOperationTaskLocale } from '@/lib/operations/task-locale'
 import {
   assertOperationPlanConfirmedCost,
   createPlannedTask,
@@ -198,7 +198,7 @@ async function planGenerateProjectMusicOperation(
         targetType: 'Project',
         targetId: ctx.projectId,
         payload,
-        locale: resolveRequiredTaskLocale(ctx.request, payload),
+        locale: resolveRequiredOperationTaskLocale(ctx, payload),
         episodeId,
         dedupeKey: `music_generate:${ctx.projectId}:${hashPayload(payload)}`,
         billingInfo: requirePlannedTaskBillingInfo({
@@ -289,7 +289,7 @@ async function planGenerateEpisodeBgmScoreOperation(
         targetType: 'ProjectEpisode',
         targetId: episodeId,
         payload,
-        locale: resolveRequiredTaskLocale(ctx.request, payload),
+        locale: resolveRequiredOperationTaskLocale(ctx, payload),
         episodeId,
         dedupeKey: `music_score_plan:${ctx.projectId}:${episodeId}:${hashPayload(payload)}`,
         billingInfo: requirePlannedTaskBillingInfo({
@@ -334,7 +334,7 @@ async function planGenerateEpisodeSoundEffectScoreOperation(
         targetType: 'ProjectEpisode',
         targetId: episodeId,
         payload,
-        locale: resolveRequiredTaskLocale(ctx.request, payload),
+        locale: resolveRequiredOperationTaskLocale(ctx, payload),
         episodeId,
         dedupeKey: `sound_effect_score_plan:${ctx.projectId}:${episodeId}:${hashPayload(payload)}`,
         billingInfo: { billable: false },

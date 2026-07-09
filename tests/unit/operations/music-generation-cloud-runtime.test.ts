@@ -83,6 +83,7 @@ describe('cloud music generation runtime options', () => {
       musicModel: 'fal::fal-ai/lyria3/pro',
     })
     expect(submitOperationTaskMock).toHaveBeenCalledWith(expect.objectContaining({
+      locale: 'zh',
       payload: expect.objectContaining({
         prompt: 'quiet tension cue',
         durationSeconds: 30,

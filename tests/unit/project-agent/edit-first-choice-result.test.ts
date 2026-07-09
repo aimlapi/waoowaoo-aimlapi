@@ -12,11 +12,15 @@ import {
   applyEditFirstChoiceResultSideEffects,
   buildEditFirstChoiceResult,
 } from '@/lib/project-agent/edit-first-choice-result'
-import { approveProjectEpisodeEditScriptAssets } from '@/lib/edit-script/service'
+import { approveProjectEpisodeEditScriptAssets, confirmProjectEditStylePreview } from '@/lib/edit-script/service'
 import { approveEpisodePromptGeneratedScript, confirmEpisodeEditBible } from '@/lib/edit-bible'
 
 vi.mock('@/lib/edit-script/service', () => ({
   approveProjectEpisodeEditScriptAssets: vi.fn(async () => undefined),
+  confirmProjectEditStylePreview: vi.fn(async () => ({
+    id: 'style-1',
+    status: 'confirmed',
+  })),
 }))
 
 vi.mock('@/lib/edit-bible', () => ({
@@ -25,6 +29,7 @@ vi.mock('@/lib/edit-bible', () => ({
 }))
 
 const approveProjectEpisodeEditScriptAssetsMock = vi.mocked(approveProjectEpisodeEditScriptAssets)
+const confirmProjectEditStylePreviewMock = vi.mocked(confirmProjectEditStylePreview)
 const approveEpisodePromptGeneratedScriptMock = vi.mocked(approveEpisodePromptGeneratedScript)
 const confirmEpisodeEditBibleMock = vi.mocked(confirmEpisodeEditBible)
 
@@ -50,6 +55,7 @@ function readSyntheticToolResult(choiceResult: ReturnType<typeof buildEditFirstC
 describe('buildEditFirstChoiceResult', () => {
   beforeEach(() => {
     approveProjectEpisodeEditScriptAssetsMock.mockClear()
+    confirmProjectEditStylePreviewMock.mockClear()
     approveEpisodePromptGeneratedScriptMock.mockClear()
     confirmEpisodeEditBibleMock.mockClear()
     prismaMock.project.updateMany.mockClear()
@@ -276,6 +282,59 @@ describe('buildEditFirstChoiceResult', () => {
       userId: 'user-1',
       episodeId: 'episode-1',
     })
+  })
+
+  it('persists selected style preview as the explicit style confirmation edge', async () => {
+    await applyEditFirstChoiceResultSideEffects({
+      choiceType: 'style',
+      output: {
+        ok: true,
+        stylePreviewId: 'style-1',
+        aspectRatio: '16:9',
+      },
+      projectId: 'project-1',
+      userId: 'user-1',
+      episodeId: 'episode-1',
+    })
+
+    expect(confirmProjectEditStylePreviewMock).toHaveBeenCalledWith({
+      projectId: 'project-1',
+      userId: 'user-1',
+      episodeId: 'episode-1',
+      stylePreviewId: 'style-1',
+      aspectRatio: '16:9',
+    })
+  })
+
+  it('does not confirm style preview from a failed choice result', async () => {
+    await applyEditFirstChoiceResultSideEffects({
+      choiceType: 'style',
+      output: {
+        ok: false,
+        stylePreviewId: 'style-1',
+        aspectRatio: '16:9',
+      },
+      projectId: 'project-1',
+      userId: 'user-1',
+      episodeId: 'episode-1',
+    })
+
+    expect(confirmProjectEditStylePreviewMock).not.toHaveBeenCalled()
+  })
+
+  it('rejects style preview confirmation without a selected preview id', async () => {
+    await expect(applyEditFirstChoiceResultSideEffects({
+      choiceType: 'style',
+      output: {
+        ok: true,
+        aspectRatio: '16:9',
+      },
+      projectId: 'project-1',
+      userId: 'user-1',
+      episodeId: 'episode-1',
+    })).rejects.toThrow('PROJECT_AGENT_STYLE_REVIEW_STYLE_PREVIEW_ID_REQUIRED')
+
+    expect(confirmProjectEditStylePreviewMock).not.toHaveBeenCalled()
   })
 
   it('does not approve script review when the user requests revision', async () => {

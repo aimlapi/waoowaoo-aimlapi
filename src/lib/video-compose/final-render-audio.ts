@@ -51,6 +51,7 @@ const BGM_DUCKING_THRESHOLD = 0.08
 const BGM_DUCKING_RATIO = 3
 const BGM_DUCKING_ATTACK_MS = 80
 const BGM_DUCKING_RELEASE_MS = 450
+const LOUDNESS_UNMEASURABLE_ERROR = 'FINAL_VIDEO_RENDER_LOUDNESS_UNMEASURABLE'
 
 async function hasAudioStream(runCommand: FinalRenderAudioCommandRunner, filePath: string): Promise<boolean> {
   const result = await runCommand('ffprobe', [
@@ -82,6 +83,9 @@ function parseLoudnormMeasurement(stderr: string): AudioLoudnessMeasurement {
     throw new Error('FINAL_VIDEO_RENDER_LOUDNESS_ANALYSIS_FAILED')
   }
   const record = parsed as Record<string, unknown>
+  if (record.input_i === '-inf' || record.input_tp === '-inf' || record.target_offset === 'inf') {
+    throw new Error(LOUDNESS_UNMEASURABLE_ERROR)
+  }
   const inputIntegrated = parseLoudnormNumber(record.input_i)
   const inputTruePeak = parseLoudnormNumber(record.input_tp)
   const inputLra = parseLoudnormNumber(record.input_lra)
@@ -155,6 +159,10 @@ async function analyzeAudioLoudness(
     '-',
   ])
   return parseLoudnormMeasurement(result.stderr)
+}
+
+function isUnmeasurableLoudnessError(error: unknown): boolean {
+  return error instanceof Error && error.message === LOUDNESS_UNMEASURABLE_ERROR
 }
 
 export async function renderFinalRenderClipAudio(input: {
@@ -291,7 +299,51 @@ export async function muxFinalRenderAudio(input: {
     }
   }
 
-  const mainMeasurement = await analyzeAudioLoudness(input.runCommand, input.mainAudioPath, MAIN_AUDIO_TARGET)
+  let mainMeasurement: AudioLoudnessMeasurement | null = null
+  try {
+    mainMeasurement = await analyzeAudioLoudness(input.runCommand, input.mainAudioPath, MAIN_AUDIO_TARGET)
+  } catch (error) {
+    if (!isUnmeasurableLoudnessError(error)) throw error
+  }
+  if (!mainMeasurement) {
+    const filters = [
+      `[2:a]atrim=0:${input.durationSeconds.toFixed(3)},asetpts=PTS-STARTPTS,afade=t=in:st=0:d=${fadeDuration.toFixed(3)},afade=t=out:st=${fadeOutStart.toFixed(3)}:d=${fadeDuration.toFixed(3)},loudnorm=${loudnormApplyFilter(BGM_AUDIO_TARGET, bgmMeasurement)},volume=${input.volume.toFixed(3)}[bgm_norm]`,
+      ...soundEffectFilters,
+      soundEffects.length > 0
+        ? `[bgm_norm]${soundEffectLabels}amix=inputs=${soundEffects.length + 1}:duration=first:dropout_transition=0,alimiter=limit=0.95[aout]`
+        : '[bgm_norm]alimiter=limit=0.95[aout]',
+    ]
+    await input.runCommand('ffmpeg', [
+      '-y',
+      '-i',
+      input.stitchedPath,
+      '-i',
+      input.mainAudioPath,
+      '-i',
+      input.musicPath,
+      ...soundEffectInputs,
+      '-filter_complex',
+      filters.join(';'),
+      '-map',
+      '0:v:0',
+      '-map',
+      '[aout]',
+      '-c:v',
+      'copy',
+      '-c:a',
+      'aac',
+      '-b:a',
+      '192k',
+      '-movflags',
+      '+faststart',
+      '-shortest',
+      input.outputPath,
+    ])
+    return {
+      hasSourceAudio: false,
+      bgm: bgmMeasurement,
+    }
+  }
   await input.runCommand('ffmpeg', [
       '-y',
       '-i',

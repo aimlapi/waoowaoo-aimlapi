@@ -62,7 +62,18 @@ export function findE2eTerminalFailure(input: {
       message: input.diagnostics.workflow.blocking.reason ?? 'workflow entered failed stage',
     }
   }
-  const failedTasks = input.diagnostics.tasks.filter((task) => task.status === 'failed')
+  const completedTasks = input.diagnostics.tasks.filter((task) => task.status === 'completed')
+  const failedTasks = input.diagnostics.tasks.filter((task) => {
+    if (task.status !== 'failed') return false
+    const taskUpdatedAt = Date.parse(task.updatedAt)
+    const coveredByLaterSuccess = completedTasks.some((completedTask) =>
+      completedTask.type === task.type
+      && completedTask.targetType === task.targetType
+      && completedTask.targetId === task.targetId
+      && Date.parse(completedTask.updatedAt) > taskUpdatedAt
+    )
+    return !coveredByLaterSuccess
+  })
   if (failedTasks.length === 0) return null
   const providerFailures = failedTasks.filter((task) => classifyTaskFailure(task) === 'provider')
   if (providerFailures.length === failedTasks.length) {

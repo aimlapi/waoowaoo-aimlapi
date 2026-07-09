@@ -1,7 +1,7 @@
 import { setTimeout as sleep } from 'node:timers/promises'
 import { prisma } from '@/lib/prisma'
 import { E2eApiClient } from './api-client'
-import { readFollowUpAction, readNextActionFromSessionState } from './actions'
+import { buildWorkflowNextActionUserMessage, readFollowUpAction, readNextActionFromSessionState } from './actions'
 import { readE2eDiagnostics } from './diagnostics'
 import type { E2eDiagnostics } from './diagnostics-types'
 import { authenticateE2eClient, E2eHttpClient } from './http-client'
@@ -83,6 +83,7 @@ async function readAndApplyNextAction(input: {
   readonly config: E2eRunnerConfig
   readonly api: E2eApiClient
   readonly scope: E2eProjectScope
+  readonly diagnostics: E2eDiagnostics
 }): Promise<boolean> {
   const sessionState = await input.api.getSessionState({
     projectId: input.scope.projectId,
@@ -117,7 +118,22 @@ async function readAndApplyNextAction(input: {
     episodeId: input.scope.episodeId,
   })
   const followUp = readFollowUpAction(claimed)
-  if (!followUp) return false
+  if (!followUp) {
+    const workflowNextAction = input.diagnostics.workflow.nextAction
+    if (!workflowNextAction) return false
+    if (hasActiveTasks(input.diagnostics) || hasActiveRun(input.diagnostics)) return false
+    await input.api.sendUserMessage({
+      projectId: input.scope.projectId,
+      episodeId: input.scope.episodeId,
+      text: buildWorkflowNextActionUserMessage({
+        locale: input.config.locale,
+        nextAction: workflowNextAction,
+      }),
+      locale: input.config.locale,
+      assistantPermissionMode: input.config.assistantPermissionMode,
+    })
+    return true
+  }
   await input.api.submitTaskFollowUp({
     projectId: input.scope.projectId,
     episodeId: input.scope.episodeId,
@@ -218,7 +234,7 @@ export async function runLongFormE2e(config: E2eRunnerConfig): Promise<E2eRunRes
         })
       }
 
-      const actionApplied = await readAndApplyNextAction({ config, api, scope })
+      const actionApplied = await readAndApplyNextAction({ config, api, scope, diagnostics })
       if (!actionApplied && !hasActiveTasks(diagnostics) && !hasActiveRun(diagnostics)) {
         watchdog = {
           ...watchdog,

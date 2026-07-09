@@ -69,4 +69,43 @@ describe('long-form E2E watchdog', () => {
       now: 1,
     })?.status).toBe('PROVIDER_FAIL')
   })
+
+  it('ignores a failed task when a later task for the same target completed', () => {
+    expect(findE2eTerminalFailure({
+      diagnostics: diagnostics({
+        tasks: [
+          {
+            id: 'task-success',
+            type: 'edit_bible_generate',
+            targetType: 'ProjectEditBible',
+            targetId: 'bible-1',
+            status: 'completed',
+            progress: 100,
+            operationId: 'generate_edit_bible',
+            batchKey: null,
+            errorCode: null,
+            errorMessage: null,
+            updatedAt: '2026-07-08T00:05:00.000Z',
+          },
+          {
+            id: 'task-failed',
+            type: 'edit_bible_generate',
+            targetType: 'ProjectEditBible',
+            targetId: 'bible-1',
+            status: 'failed',
+            progress: 90,
+            operationId: 'generate_edit_bible',
+            batchKey: null,
+            errorCode: 'INTERNAL_ERROR',
+            errorMessage: 'EDIT_BIBLE_EXTRACTION_FAILED',
+            updatedAt: '2026-07-08T00:00:00.000Z',
+          },
+        ],
+      }),
+      stageTimeoutMs: 1000,
+      overallTimeoutMs: 2000,
+      state: createE2eWatchdogState(0),
+      now: 1,
+    })).toBeNull()
+  })
 })

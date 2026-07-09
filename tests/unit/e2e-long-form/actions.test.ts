@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { readFollowUpAction, readNextActionFromSessionState } from '../../../scripts/e2e-long-form/actions'
+import { buildWorkflowNextActionUserMessage, readFollowUpAction, readNextActionFromSessionState } from '../../../scripts/e2e-long-form/actions'
 import type { E2eRunnerConfig } from '../../../scripts/e2e-long-form/types'
 
 const baseConfig: E2eRunnerConfig = {
@@ -25,6 +25,87 @@ const baseConfig: E2eRunnerConfig = {
 }
 
 describe('long-form E2E action reader', () => {
+  it('selects the first script intake option in every group', () => {
+    const action = readNextActionFromSessionState(baseConfig, {
+      sessionState: {
+        pendingInteraction: {
+          kind: 'choice',
+          runId: 'run-script-intake',
+          interruptionId: 'interrupt-script-intake',
+          choiceType: 'script_intake',
+          toolCallId: 'tool-script-intake',
+          choiceCard: {
+            groups: [
+              {
+                key: 'tone',
+                options: [
+                  { value: 'cinematic', label: '电影感' },
+                  { value: 'documentary', label: '纪实' },
+                ],
+              },
+              {
+                key: 'pace',
+                options: [
+                  { value: 'fast', label: '快节奏' },
+                ],
+              },
+            ],
+          },
+        },
+      },
+    })
+
+    expect(action).toEqual({
+      kind: 'choice',
+      action: {
+        runId: 'run-script-intake',
+        interruptionId: 'interrupt-script-intake',
+        choiceType: 'script_intake',
+        toolCallId: 'tool-script-intake',
+        output: {
+          ok: true,
+          selections: {
+            tone: 'cinematic',
+            pace: 'fast',
+          },
+          labels: {
+            toneLabel: '电影感',
+            paceLabel: '快节奏',
+          },
+        },
+      },
+    })
+  })
+
+  it('approves script review choices', () => {
+    const action = readNextActionFromSessionState(baseConfig, {
+      sessionState: {
+        pendingInteraction: {
+          kind: 'choice',
+          runId: 'run-script-review',
+          interruptionId: 'interrupt-script-review',
+          choiceType: 'script_review',
+          toolCallId: null,
+          choiceCard: { groups: [] },
+        },
+      },
+    })
+
+    expect(action).toEqual({
+      kind: 'choice',
+      action: {
+        runId: 'run-script-review',
+        interruptionId: 'interrupt-script-review',
+        choiceType: 'script_review',
+        toolCallId: null,
+        output: {
+          ok: true,
+          decision: 'approve',
+        },
+      },
+    })
+  })
+
   it('submits bible review with the configured aspect ratio', () => {
     const action = readNextActionFromSessionState(baseConfig, {
       sessionState: {
@@ -102,5 +183,27 @@ describe('long-form E2E action reader', () => {
       waitId: 'wait-1',
       claimId: 'claim-1',
     })
+  })
+
+  it('builds workflow next action messages with the operation id', () => {
+    expect(buildWorkflowNextActionUserMessage({
+      locale: 'zh',
+      nextAction: {
+        id: 'plan_chapters',
+        operationId: 'plan_chapters',
+        title: 'Plan chapters',
+        requiresUserConfirmation: false,
+      },
+    })).toContain('operationId=plan_chapters')
+
+    expect(buildWorkflowNextActionUserMessage({
+      locale: 'en',
+      nextAction: {
+        id: 'generate_edit_script_assets',
+        operationId: 'generate_edit_script_assets',
+        title: 'Generate required assets',
+        requiresUserConfirmation: false,
+      },
+    })).toContain('operationId=generate_edit_script_assets')
   })
 })

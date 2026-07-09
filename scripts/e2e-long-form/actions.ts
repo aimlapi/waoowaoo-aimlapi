@@ -1,4 +1,5 @@
 import type { FollowUpResponse } from './api-client'
+import type { EditFirstWorkflowState } from '@/lib/project-workflow/edit-first'
 import type { E2eChoiceAction, E2eNextAction, E2eRunnerConfig, E2eTaskFollowUpAction } from './types'
 
 type UnknownRecord = Record<string, unknown>
@@ -55,7 +56,9 @@ function readStyleAspectRatio(choiceCard: UnknownRecord, config: E2eRunnerConfig
 function buildChoiceAction(config: E2eRunnerConfig, interaction: UnknownRecord): E2eChoiceAction {
   const choiceType = readString(interaction.choiceType, 'pendingInteraction.choiceType')
   if (
-    choiceType !== 'bible_review'
+    choiceType !== 'script_intake'
+    && choiceType !== 'script_review'
+    && choiceType !== 'bible_review'
     && choiceType !== 'style'
     && choiceType !== 'asset_review'
     && choiceType !== 'budget_confirmation'
@@ -70,6 +73,37 @@ function buildChoiceAction(config: E2eRunnerConfig, interaction: UnknownRecord):
     toolCallId: readOptionalString(interaction.toolCallId),
   } as const
 
+  if (choiceType === 'script_intake') {
+    const groups = readArray(choiceCard.groups, 'choiceCard.groups')
+    const selections: Record<string, string> = {}
+    const labels: Record<string, string> = {}
+    for (const item of groups) {
+      const group = readRecord(item, 'choiceCard.groups.item')
+      const key = readString(group.key, 'choiceCard.groups.item.key')
+      selections[key] = readChoiceOptionValue(choiceCard, key)
+      const options = readArray(group.options, `choiceCard.groups.${key}.options`)
+      const first = readRecord(options[0], `choiceCard.groups.${key}.options.0`)
+      const label = readOptionalString(first.label)
+      if (label) labels[`${key}Label`] = label
+    }
+    return {
+      ...base,
+      output: {
+        ok: true,
+        selections,
+        labels,
+      },
+    }
+  }
+  if (choiceType === 'script_review') {
+    return {
+      ...base,
+      output: {
+        ok: true,
+        decision: 'approve',
+      },
+    }
+  }
   if (choiceType === 'bible_review') {
     return {
       ...base,
@@ -146,4 +180,14 @@ export function readFollowUpAction(response: FollowUpResponse): E2eTaskFollowUpA
     throw new Error('E2E_FOLLOW_UP_INVALID')
   }
   return { runId, waitId, claimId }
+}
+
+export function buildWorkflowNextActionUserMessage(input: {
+  readonly locale: E2eRunnerConfig['locale']
+  readonly nextAction: NonNullable<EditFirstWorkflowState['nextAction']>
+}): string {
+  if (input.locale === 'en') {
+    return `Continue the current persisted workflow and execute nextAction operationId=${input.nextAction.operationId}.`
+  }
+  return `继续当前已持久化的工作流，执行 nextAction operationId=${input.nextAction.operationId}。`
 }

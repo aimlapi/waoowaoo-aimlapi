@@ -68,7 +68,7 @@ export interface E2eProjectScope {
 export interface E2eChoiceAction {
   readonly runId: string
   readonly interruptionId: string | null
-  readonly choiceType: 'bible_review' | 'style' | 'asset_review' | 'budget_confirmation'
+  readonly choiceType: 'script_intake' | 'script_review' | 'bible_review' | 'style' | 'asset_review' | 'budget_confirmation'
   readonly toolCallId: string | null
   readonly output: Record<string, unknown>
 }

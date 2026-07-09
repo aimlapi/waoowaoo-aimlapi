@@ -4,6 +4,9 @@ import type { E2eTargetStageDefinition, E2eTargetStageId } from './types'
 export const EDIT_FIRST_WORKFLOW_STAGE_ORDER: readonly EditFirstWorkflowStage[] = [
   'not_started',
   'ready_to_ingest_script',
+  'script_generating',
+  'script_ready_for_review',
+  'ready_to_generate_bible',
   'bible_generating',
   'bible_ready_for_review',
   'style_preview_generating',

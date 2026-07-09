@@ -58,6 +58,7 @@ export const POST = apiHandler(async (
   if (typeof body.storyboardId === 'string') input.storyboardId = body.storyboardId
   if (typeof body.panelIndex === 'number') input.panelIndex = body.panelIndex
   if (typeof body.limit === 'number') input.limit = body.limit
+  if (body.confirmed === true) input.confirmed = true
   if (typeof body.confirmedMaxCost === 'number') input.confirmedMaxCost = body.confirmedMaxCost
   if (isRecord(body.generationOptions)) input.generationOptions = body.generationOptions
 

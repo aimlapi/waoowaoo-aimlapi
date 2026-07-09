@@ -13,6 +13,18 @@ function loudnormJson() {
   ].join('\n')
 }
 
+function silentLoudnormJson() {
+  return [
+    '{',
+    '  "input_i": "-inf",',
+    '  "input_tp": "-inf",',
+    '  "input_lra": "0.00",',
+    '  "input_thresh": "-70.00",',
+    '  "target_offset": "inf"',
+    '}',
+  ].join('\n')
+}
+
 describe('final render audio mix', () => {
   it('splits the main audio before sidechain ducking so the mix graph does not reuse one label twice', async () => {
     const runCommandMock = vi.fn<FinalRenderAudioCommandRunner>(async (command) => {
@@ -46,5 +58,51 @@ describe('final render audio mix', () => {
     expect(filterGraph).toContain('[main_mix][ducked_bgm]amix=inputs=2')
     expect(filterGraph).not.toContain('[bgm][main]sidechaincompress')
     expect(filterGraph).not.toContain('[main][ducked_bgm]amix')
+  })
+
+  it('treats unmeasurable silent source audio as absent and still mixes BGM with sound effects', async () => {
+    let loudnormCallCount = 0
+    const runCommandMock = vi.fn<FinalRenderAudioCommandRunner>(async (command, args) => {
+      if (command === 'ffmpeg' && args.some((arg) => arg.includes('print_format=json'))) {
+        loudnormCallCount += 1
+        return {
+          stdout: '',
+          stderr: loudnormCallCount === 1 ? loudnormJson() : silentLoudnormJson(),
+        }
+      }
+      return { stdout: '', stderr: '' }
+    })
+
+    const result = await muxFinalRenderAudio({
+      runCommand: runCommandMock,
+      stitchedPath: '/tmp/stitched.mp4',
+      mainAudioPath: '/tmp/main-audio.m4a',
+      hasSourceAudio: true,
+      musicPath: '/tmp/bgm.mp3',
+      soundEffects: [
+        {
+          path: '/tmp/sfx-1.mp3',
+          startSeconds: 1.2,
+          durationSeconds: 0.8,
+        },
+      ],
+      outputPath: '/tmp/final.mp4',
+      durationSeconds: 57,
+      volume: 0.42,
+    })
+
+    expect(result.hasSourceAudio).toBe(false)
+    const finalFfmpegCall = runCommandMock.mock.calls.find((call) => {
+      const args = call[1]
+      return call[0] === 'ffmpeg' && args.includes('-filter_complex') && args.includes('/tmp/final.mp4')
+    })
+    expect(finalFfmpegCall).toBeTruthy()
+    const args = finalFfmpegCall?.[1] ?? []
+    const filterComplexIndex = args.indexOf('-filter_complex')
+    expect(filterComplexIndex).toBeGreaterThanOrEqual(0)
+    const filterGraph = args[filterComplexIndex + 1]
+    expect(filterGraph).toContain('[bgm_norm][sfx0]amix=inputs=2')
+    expect(filterGraph).not.toContain('[main_norm]')
+    expect(filterGraph).not.toContain('sidechaincompress=')
   })
 })

@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { requireProjectAuthLight, isErrorResponse } from '@/lib/api-auth'
 import { apiHandler, ApiError } from '@/lib/api-errors'
 import { executeProjectAgentOperationFromApi } from '@/lib/adapters/api/execute-project-agent-operation'
+import { resolveRequiredTaskLocale } from '@/lib/task/resolve-locale'
 
 function isRecord(value: unknown): value is Record<string, unknown> {
   return !!value && typeof value === 'object' && !Array.isArray(value)
@@ -23,8 +24,10 @@ export const POST = apiHandler(async (
     })
   }
 
+  const locale = resolveRequiredTaskLocale(request, body)
   const input: Record<string, unknown> = {
     confirmed: body.confirmed === true,
+    meta: { locale },
   }
   if (typeof body.episodeId === 'string') input.episodeId = body.episodeId
   if (typeof body.bgmVolume === 'number') input.bgmVolume = body.bgmVolume
@@ -35,6 +38,7 @@ export const POST = apiHandler(async (
     projectId,
     userId: authResult.session.user.id,
     context: {
+      locale,
       episodeId: typeof body.episodeId === 'string' ? body.episodeId : null,
     },
     input,

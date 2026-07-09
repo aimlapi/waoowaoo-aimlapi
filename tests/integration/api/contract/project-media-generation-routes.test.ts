@@ -42,6 +42,8 @@ vi.mock('@/lib/adapters/api/execute-project-agent-operation', () => apiAdapterMo
 vi.mock('@/lib/operations/planning', () => planningMock)
 
 import { POST as generateVideoPost } from '@/app/api/projects/[projectId]/generate-video/route'
+import { POST as generateBgmPost } from '@/app/api/projects/[projectId]/generate-bgm/route'
+import { POST as generateSfxPost } from '@/app/api/projects/[projectId]/generate-sfx/route'
 import { POST as finalVideoRenderPost } from '@/app/api/projects/[projectId]/final-video-render/route'
 import { POST as regeneratePanelImagePost } from '@/app/api/projects/[projectId]/regenerate-panel-image/route'
 import { POST as operationPlanPost } from '@/app/api/projects/[projectId]/operations/[operationId]/plan/route'
@@ -202,7 +204,7 @@ describe('api contract - project media generation routes (operation adapter)', (
       buildMockRequest({
         path: '/api/projects/project-1/generate-video',
         method: 'POST',
-        body: { episodeId: 'episode-1', all: true },
+        body: { episodeId: 'episode-1', all: true, confirmed: true },
       }),
       { params: Promise.resolve({ projectId: 'project-1' }) },
     )
@@ -288,6 +290,9 @@ describe('api contract - project media generation routes (operation adapter)', (
     }))
     expect(apiAdapterMock.executeProjectAgentOperationFromApi).toHaveBeenNthCalledWith(2, expect.objectContaining({
       operationId: 'generate_episode_videos',
+      input: expect.objectContaining({
+        confirmed: true,
+      }),
     }))
     expect(apiAdapterMock.executeProjectAgentOperationFromApi).toHaveBeenNthCalledWith(3, expect.objectContaining({
       operationId: 'generate_video_group',
@@ -374,14 +379,69 @@ describe('api contract - project media generation routes (operation adapter)', (
     expect(apiAdapterMock.executeProjectAgentOperationFromApi).not.toHaveBeenCalled()
   })
 
-  it('POST /api/projects/[projectId]/final-video-render -> routes to final render operation with confirmation', async () => {
+  it('POST /api/projects/[projectId]/generate-bgm -> forwards confirmed maximum cost and locale metadata', async () => {
+    apiAdapterMock.executeProjectAgentOperationFromApi.mockResolvedValueOnce({ success: true })
+
+    const res = await generateBgmPost(
+      buildMockRequest({
+        path: '/api/projects/project-1/generate-bgm',
+        method: 'POST',
+        body: { episodeId: 'episode-1', confirmed: true, confirmedMaxCost: 12.5, locale: 'zh' },
+      }),
+      { params: Promise.resolve({ projectId: 'project-1' }) },
+    )
+
+    expect(res.status).toBe(200)
+    expect(apiAdapterMock.executeProjectAgentOperationFromApi).toHaveBeenCalledWith(expect.objectContaining({
+      operationId: 'generate_episode_bgm_score',
+      context: {
+        locale: 'zh',
+        episodeId: 'episode-1',
+      },
+      input: {
+        confirmed: true,
+        meta: { locale: 'zh' },
+        episodeId: 'episode-1',
+        confirmedMaxCost: 12.5,
+      },
+    }))
+  })
+
+  it('POST /api/projects/[projectId]/generate-sfx -> forwards locale metadata', async () => {
+    apiAdapterMock.executeProjectAgentOperationFromApi.mockResolvedValueOnce({ success: true })
+
+    const res = await generateSfxPost(
+      buildMockRequest({
+        path: '/api/projects/project-1/generate-sfx',
+        method: 'POST',
+        body: { episodeId: 'episode-1', confirmed: true, meta: { locale: 'zh' } },
+      }),
+      { params: Promise.resolve({ projectId: 'project-1' }) },
+    )
+
+    expect(res.status).toBe(200)
+    expect(apiAdapterMock.executeProjectAgentOperationFromApi).toHaveBeenCalledWith(expect.objectContaining({
+      operationId: 'generate_episode_sound_effect_score',
+      context: {
+        locale: 'zh',
+        episodeId: 'episode-1',
+      },
+      input: {
+        confirmed: true,
+        meta: { locale: 'zh' },
+        episodeId: 'episode-1',
+      },
+    }))
+  })
+
+  it('POST /api/projects/[projectId]/final-video-render -> routes to final render operation with confirmation and locale metadata', async () => {
     apiAdapterMock.executeProjectAgentOperationFromApi.mockResolvedValueOnce({ success: true })
 
     const res = await finalVideoRenderPost(
       buildMockRequest({
         path: '/api/projects/project-1/final-video-render',
         method: 'POST',
-        body: { episodeId: 'episode-1', confirmed: true, bgmVolume: 0.35 },
+        body: { episodeId: 'episode-1', confirmed: true, bgmVolume: 0.35, locale: 'zh' },
       }),
       { params: Promise.resolve({ projectId: 'project-1' }) },
     )
@@ -391,9 +451,13 @@ describe('api contract - project media generation routes (operation adapter)', (
       operationId: 'render_final_video',
       projectId: 'project-1',
       userId: 'user-1',
-      context: { episodeId: 'episode-1' },
+      context: {
+        locale: 'zh',
+        episodeId: 'episode-1',
+      },
       input: {
         confirmed: true,
+        meta: { locale: 'zh' },
         episodeId: 'episode-1',
         bgmVolume: 0.35,
       },

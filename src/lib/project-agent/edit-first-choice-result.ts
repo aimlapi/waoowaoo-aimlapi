@@ -3,7 +3,7 @@ import type { AgentInputItem } from '@openai/agents'
 import type { EditScriptVideoRatio } from '@/lib/edit-script/types'
 import { prisma } from '@/lib/prisma'
 import { EDIT_FIRST_CHOICE_TOOL_IDS, type EditFirstChoiceType } from './edit-first-choice-tools'
-import { approveProjectEpisodeEditScriptAssets } from '@/lib/edit-script/service'
+import { approveProjectEpisodeEditScriptAssets, confirmProjectEditStylePreview } from '@/lib/edit-script/service'
 import { approveEpisodePromptGeneratedScript, confirmEpisodeEditBible } from '@/lib/edit-bible'
 import { normalizeScriptIntakeChoiceBrief } from './script-intake'
 
@@ -242,6 +242,27 @@ export async function applyEditFirstChoiceResultSideEffects(params: {
       projectId: params.projectId,
       userId: params.userId,
       episodeId: params.episodeId,
+    })
+    return
+  }
+  if (params.choiceType === 'style') {
+    const stylePreviewId = readString(params.output.stylePreviewId)
+    const aspectRatio = readAspectRatio(params.output.aspectRatio)
+    if (!stylePreviewId) {
+      throw new Error('PROJECT_AGENT_STYLE_REVIEW_STYLE_PREVIEW_ID_REQUIRED')
+    }
+    if (!aspectRatio) {
+      throw new Error('PROJECT_AGENT_STYLE_REVIEW_ASPECT_RATIO_REQUIRED')
+    }
+    if (!params.episodeId) {
+      throw new Error('PROJECT_AGENT_STYLE_REVIEW_EPISODE_ID_REQUIRED')
+    }
+    await confirmProjectEditStylePreview({
+      projectId: params.projectId,
+      userId: params.userId,
+      episodeId: params.episodeId,
+      stylePreviewId,
+      aspectRatio,
     })
     return
   }

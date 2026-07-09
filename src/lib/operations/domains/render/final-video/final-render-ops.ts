@@ -8,6 +8,7 @@ import { defineOperation } from '@/lib/operations/define-operation'
 import { EDIT_FIRST_EMPTY_TOOL_INPUT_SCHEMA } from '@/lib/project-workflow/edit-first-tool-input-schema'
 import { EDIT_FIRST_CHAPTER_SCOPE_TOOL_INPUT_SCHEMA } from '@/lib/project-workflow/edit-first-tool-input-schema'
 import { submitOperationTask } from '@/lib/operations/submit-operation-task'
+import { resolveRequiredOperationTaskLocale } from '@/lib/operations/task-locale'
 import {
   refineTaskSubmitOperationOutputSchema,
   taskSubmitOperationOutputSchemaBase,
@@ -219,6 +220,7 @@ export function createFinalRenderOperations(): ProjectAgentOperationRegistryDraf
           source: ctx.source,
           confirmed: input.confirmed === true,
           payload,
+          locale: resolveRequiredOperationTaskLocale(ctx, payload),
           dedupeKey: `final_video_render:${episodeId}`,
           billingInfo: null,
         })
