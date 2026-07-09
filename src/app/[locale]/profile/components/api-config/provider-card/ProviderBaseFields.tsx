@@ -3,6 +3,7 @@
 import type { ProviderCardProps, ProviderCardTranslator } from './types'
 import type { UseProviderCardStateResult } from './hooks/useProviderCardState'
 import { AppIcon } from '@/components/ui/icons'
+import { isFixedModelOnlyProvider } from './fixed-provider-models'
 
 interface ProviderBaseFieldsProps {
   provider: ProviderCardProps['provider']
@@ -12,6 +13,7 @@ interface ProviderBaseFieldsProps {
 
 export function ProviderBaseFields({ provider, t, state }: ProviderBaseFieldsProps) {
   const baseUrlPlaceholder = provider.baseUrl || 'https://api.example.com'
+  const showBaseUrlField = state.showBaseUrlEdit && !isFixedModelOnlyProvider(provider.id)
 
   return (
     <>
@@ -209,7 +211,7 @@ export function ProviderBaseFields({ provider, t, state }: ProviderBaseFieldsPro
         </div>
       )}
 
-      {state.showBaseUrlEdit && (
+      {showBaseUrlField && (
         <div className="px-3.5 pb-2.5 pt-2">
           <div className="glass-surface-soft flex items-center gap-2.5 rounded-xl px-3 py-2">
             <span className="w-[64px] shrink-0 whitespace-nowrap text-[12px] font-semibold text-[var(--glass-text-tertiary)]">

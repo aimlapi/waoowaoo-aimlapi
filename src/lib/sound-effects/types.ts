@@ -1,4 +1,7 @@
 import { z } from 'zod'
+import { ELEVENLABS_SOUND_EFFECT_MODEL } from './model'
+
+export { ELEVENLABS_SOUND_EFFECT_MODEL }
 
 export const SOUND_EFFECT_SCORE_STATUS = {
   PENDING: 'pending',
@@ -8,8 +11,6 @@ export const SOUND_EFFECT_SCORE_STATUS = {
 } as const
 
 export type SoundEffectScoreStatus = (typeof SOUND_EFFECT_SCORE_STATUS)[keyof typeof SOUND_EFFECT_SCORE_STATUS]
-
-export const ELEVENLABS_SOUND_EFFECT_MODEL = 'eleven_text_to_sound_v2'
 
 export const soundEffectCuePlanSchema = z.object({
   cueId: z.string().trim().min(1),

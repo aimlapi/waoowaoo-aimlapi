@@ -3,6 +3,11 @@ import {
   getAddableModelTypesForProvider,
   getVisibleModelTypesForProvider,
 } from '@/app/[locale]/profile/components/api-config/provider-card/ProviderAdvancedFields'
+import {
+  isFixedModelOnlyProvider,
+  resolveFixedProviderModel,
+} from '@/app/[locale]/profile/components/api-config/provider-card/fixed-provider-models'
+import { filterModelProviders } from '@/app/[locale]/profile/components/api-config-tab/hooks/useApiConfigFilters'
 import { getDefaultModelEmptyStateText } from '@/app/[locale]/profile/components/api-config-tab/default-model-empty-state'
 import type { CustomModel } from '@/app/[locale]/profile/components/api-config/types'
 
@@ -35,6 +40,27 @@ describe('api config provider scope', () => {
       video: [model('video')],
       music: [model('music')],
     })).toEqual(['llm', 'image', 'video', 'music'])
+  })
+
+  it('keeps ElevenLabs visible even though it has no configurable models', () => {
+    const providers = filterModelProviders({
+      providers: [
+        { id: 'google', name: 'Google' },
+        { id: 'elevenlabs', name: 'ElevenLabs' },
+      ],
+      modelProviderKeys: new Set(['google']),
+    })
+
+    expect(providers.map((provider) => provider.id)).toEqual(['google', 'elevenlabs'])
+  })
+
+  it('shows ElevenLabs as a fixed sound-effect model provider', () => {
+    expect(isFixedModelOnlyProvider('elevenlabs')).toBe(true)
+    expect(resolveFixedProviderModel('elevenlabs')).toMatchObject({
+      modelId: 'eleven_text_to_sound_v2',
+      titleKey: 'fixedSoundEffectModel',
+    })
+    expect(resolveFixedProviderModel('google')).toBeNull()
   })
 
   it('has empty-state copy for the supported default model types', () => {

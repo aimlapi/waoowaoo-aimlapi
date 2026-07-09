@@ -31,6 +31,8 @@
   "modelDisplayName": "外显名称（你自己看的）",
   "modelActualId": "实际调用 ID（模型参数）",
   "noModelsForProvider": "该厂商暂无配置模型",
+  "fixedSoundEffectModel": "音效生成模型",
+  "fixedSoundEffectModelDescription": "视频音效生成会固定调用此模型。这里只需要配置 ElevenLabs API Key。",
   "defaultModels": "默认模型配置",
   "textDefault": "文本模型",
   "characterDefault": "角色模型",

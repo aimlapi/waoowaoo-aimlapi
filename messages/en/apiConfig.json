@@ -31,6 +31,8 @@
   "modelDisplayName": "Display Name (for your reference)",
   "modelActualId": "Actual Model ID (API parameter)",
   "noModelsForProvider": "No models configured for this provider",
+  "fixedSoundEffectModel": "Sound Effect Model",
+  "fixedSoundEffectModelDescription": "Video sound effects always use this model. Configure only the ElevenLabs API key here.",
   "defaultModels": "Default Model Configuration",
   "textDefault": "Text Model",
   "characterDefault": "Character Model",

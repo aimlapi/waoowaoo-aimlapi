@@ -10,6 +10,7 @@ import type {
   ProviderCardProps,
   ProviderCardTranslator,
 } from './types'
+import { resolveFixedProviderModel } from './fixed-provider-models'
 
 interface ProviderAdvancedFieldsProps {
   provider: ProviderCardProps['provider']
@@ -122,6 +123,7 @@ export function ProviderAdvancedFields({
   state,
 }: ProviderAdvancedFieldsProps) {
   const providerKey = getProviderKey(provider.id)
+  const fixedProviderModel = resolveFixedProviderModel(provider.id)
   const addableModelTypes = new Set<ProviderCardModelType>(getAddableModelTypesForProvider(provider.id))
   const visibleTypes = useMemo(
     () => getVisibleModelTypesForProvider(provider.id, state.groupedModels),
@@ -160,6 +162,25 @@ export function ProviderAdvancedFields({
       })),
     [t, visibleTypes],
   )
+
+  if (fixedProviderModel) {
+    return (
+      <div className="p-3">
+        <div className="glass-surface-soft rounded-xl p-3">
+          <div className="flex items-center gap-2 text-[12px] font-semibold text-[var(--glass-text-primary)]">
+            <AppIcon name="audioWave" className="h-3.5 w-3.5" />
+            <span>{t(fixedProviderModel.titleKey)}</span>
+          </div>
+          <div className="mt-2 rounded-lg bg-[var(--glass-bg-surface)] px-3 py-2 font-mono text-[12px] text-[var(--glass-text-primary)]">
+            {fixedProviderModel.modelId}
+          </div>
+          <p className="mt-2 text-[11px] leading-relaxed text-[var(--glass-text-tertiary)]">
+            {t(fixedProviderModel.descriptionKey)}
+          </p>
+        </div>
+      </div>
+    )
+  }
 
   return useTabbedLayout ? (
     <div className="space-y-2.5 p-3">

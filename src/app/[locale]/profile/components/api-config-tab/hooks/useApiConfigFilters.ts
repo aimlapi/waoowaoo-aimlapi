@@ -13,8 +13,8 @@ interface EnabledModelOption extends CustomModel {
   providerName: string
 }
 
-const ALWAYS_SHOW_PROVIDERS: string[] = []
-const ALLOWED_PROVIDER_KEYS = new Set(['ark', 'openrouter', 'fal', 'google'])
+const ALWAYS_SHOW_PROVIDERS: string[] = ['elevenlabs']
+const ALLOWED_PROVIDER_KEYS = new Set(['ark', 'openrouter', 'fal', 'google', 'elevenlabs'])
 const PROVIDER_MODEL_TYPES: Array<'llm' | 'image' | 'video' | 'music'> = ['llm', 'image', 'video', 'music']
 const MODEL_PROVIDER_KEYS = [
   'ark',
@@ -43,6 +43,27 @@ function shouldExposeModelForProvider(provider: Provider | undefined, model: Cus
   return ALLOWED_PROVIDER_KEYS.has(getProviderKey(provider.id)) && isProviderModelType(model.type)
 }
 
+function isPresetProvider(providerId: string) {
+  return !providerId.includes(':')
+}
+
+export function filterModelProviders(input: {
+  providers: Provider[]
+  modelProviderKeys: ReadonlySet<string>
+}): Provider[] {
+  return input.providers.filter((provider) => {
+    const providerKey = getProviderKey(provider.id)
+    if (!ALLOWED_PROVIDER_KEYS.has(providerKey)) return false
+    const isCustomProvider = !isPresetProvider(provider.id)
+
+    return (
+      (isCustomProvider && input.modelProviderKeys.has(providerKey)) ||
+      input.modelProviderKeys.has(providerKey) ||
+      ALWAYS_SHOW_PROVIDERS.includes(providerKey)
+    )
+  })
+}
+
 export function useApiConfigFilters({
   providers,
   models,
@@ -56,23 +77,8 @@ export function useApiConfigFilters({
     return keys
   }, [models])
 
-  const isPresetProvider = (providerId: string) => {
-    // Built-in catalog providers use plain ids without ':'.
-    return !providerId.includes(':')
-  }
-
   const modelProviders = useMemo(() => {
-    return providers.filter((provider) => {
-      const providerKey = getProviderKey(provider.id)
-      if (!ALLOWED_PROVIDER_KEYS.has(providerKey)) return false
-      const isCustomProvider = !isPresetProvider(provider.id)
-
-      return (
-        (isCustomProvider && modelProviderKeys.has(providerKey)) ||
-        modelProviderKeys.has(providerKey) ||
-        ALWAYS_SHOW_PROVIDERS.includes(providerKey)
-      )
-    })
+    return filterModelProviders({ providers, modelProviderKeys })
   }, [modelProviderKeys, providers])
 
   const enabledModelsByType = useMemo(() => {
