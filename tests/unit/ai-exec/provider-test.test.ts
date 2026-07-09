@@ -27,4 +27,51 @@ describe('provider connection diagnostics', () => {
 
     fetchSpy.mockRestore()
   })
+
+  it('tests ElevenLabs keys through the no-spend user endpoint', async () => {
+    const fetchSpy = vi.spyOn(globalThis, 'fetch').mockResolvedValue(new Response('{}', { status: 200 }))
+
+    const result = await testProviderConnection({
+      apiType: 'elevenlabs',
+      apiKey: 'elevenlabs-local-key',
+    })
+
+    expect(result.success).toBe(true)
+    expect(result.steps).toEqual([
+      {
+        name: 'credits',
+        status: 'pass',
+        message: 'ElevenLabs user endpoint ok',
+      },
+    ])
+    expect(fetchSpy).toHaveBeenCalledWith('https://api.elevenlabs.io/v1/user', {
+      method: 'GET',
+      headers: {
+        'xi-api-key': 'elevenlabs-local-key',
+      },
+    })
+
+    fetchSpy.mockRestore()
+  })
+
+  it('reports ElevenLabs authentication failures without falling back to another provider', async () => {
+    const fetchSpy = vi.spyOn(globalThis, 'fetch').mockResolvedValue(new Response('forbidden', { status: 403 }))
+
+    const result = await testProviderConnection({
+      apiType: 'elevenlabs',
+      apiKey: 'wrong-key',
+    })
+
+    expect(result.success).toBe(false)
+    expect(result.steps).toEqual([
+      {
+        name: 'credits',
+        status: 'fail',
+        message: 'Authentication failed (403)',
+      },
+    ])
+    expect(fetchSpy).toHaveBeenCalledTimes(1)
+
+    fetchSpy.mockRestore()
+  })
 })

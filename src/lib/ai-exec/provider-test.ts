@@ -17,7 +17,7 @@ export interface TestProviderResult {
   steps: TestStep[]
 }
 
-type PresetProviderType = 'ark' | 'google' | 'openrouter' | 'fal'
+type PresetProviderType = 'ark' | 'google' | 'openrouter' | 'fal' | 'elevenlabs'
 
 type TestProviderPayload = {
   apiType: PresetProviderType
@@ -133,6 +133,41 @@ async function testFalProvider(apiKey: string): Promise<TestProviderResult> {
   }
 }
 
+async function testElevenLabsProvider(input: { apiKey: string; baseUrl?: string }): Promise<TestProviderResult> {
+  const normalizedKey = input.apiKey.trim()
+  if (!normalizedKey) {
+    return {
+      success: false,
+      steps: [{ name: 'credits', status: 'fail', message: 'Missing apiKey' }],
+    }
+  }
+
+  const baseUrl = (input.baseUrl?.trim() || 'https://api.elevenlabs.io').replace(/\/+$/, '')
+  try {
+    const response = await fetch(`${baseUrl}/v1/user`, {
+      method: 'GET',
+      headers: {
+        'xi-api-key': normalizedKey,
+      },
+    })
+    if (!response.ok) {
+      return {
+        success: false,
+        steps: [{ name: 'credits', status: 'fail', message: classifyFetchFailure(response.status) }],
+      }
+    }
+    return {
+      success: true,
+      steps: [{ name: 'credits', status: 'pass', message: 'ElevenLabs user endpoint ok' }],
+    }
+  } catch (error) {
+    return {
+      success: false,
+      steps: [{ name: 'credits', status: 'fail', message: toErrorMessage(error) }],
+    }
+  }
+}
+
 export async function testProviderConnection(payload: TestProviderPayload): Promise<TestProviderResult> {
   const apiKey = payload.apiKey.trim()
   if (!apiKey) {
@@ -161,6 +196,11 @@ export async function testProviderConnection(payload: TestProviderPayload): Prom
       return await testGoogleProvider(apiKey)
     case 'fal':
       return await testFalProvider(apiKey)
+    case 'elevenlabs':
+      return await testElevenLabsProvider({
+        apiKey,
+        baseUrl: payload.baseUrl,
+      })
     default:
       return {
         success: false,
