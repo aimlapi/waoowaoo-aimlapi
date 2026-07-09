@@ -27,6 +27,10 @@ const editScriptServiceMock = vi.hoisted(() => ({
     approvedCount: 3,
     scripts: [],
   })),
+  confirmProjectEditStylePreview: vi.fn(async (): Promise<unknown> => ({
+    id: 'style-preview-1',
+    status: 'selected',
+  })),
 }))
 
 const editBibleMock = vi.hoisted(() => ({
