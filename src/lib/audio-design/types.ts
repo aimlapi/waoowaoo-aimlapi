@@ -59,6 +59,15 @@ export const spotSfxCueSchema = z.object({
   durationSec: z.number().positive().optional().nullable(),
 })
 
+export const foleyCueSchema = z.object({
+  cueId: z.string().trim().min(1),
+  beatNumber: z.number().int().positive(),
+  label: z.string().trim().min(1),
+  description: z.string().trim().min(1),
+  startSec: z.number().min(0).optional().nullable(),
+  durationSec: z.number().positive().optional().nullable(),
+})
+
 export const ambienceCueSchema = z.object({
   cueId: z.string().trim().min(1),
   shotNumbers: z.array(z.number().int().positive()).min(1),
@@ -152,9 +161,76 @@ export const scriptAudioDesignSchema = z.object({
   dialogueLayer: z.array(dialogueCueSchema),
 })
 
+export const scriptSoundBgmSectionSchema = z.object({
+  sectionId: z.string().trim().min(1),
+  startSec: z.number().min(0),
+  endSec: z.number().positive(),
+  intensity: z.number().int().min(1).max(5),
+  description: z.string().trim().min(1),
+}).superRefine((section, ctx) => {
+  if (section.endSec <= section.startSec) {
+    ctx.addIssue({
+      code: z.ZodIssueCode.custom,
+      path: ['endSec'],
+      message: 'SCRIPT_SOUND_BGM_SECTION_TIME_RANGE_INVALID',
+    })
+  }
+})
+
+export const scriptSoundAnalysisSchema = z.object({
+  schemaVersion: z.literal(1),
+  sourceKind: z.enum(['script', 'sound_description']),
+  targetDurationSeconds: z.number().positive().max(600),
+  summary: z.string().trim().min(1),
+  emotionalArc: z.string().trim().min(1),
+  voiceBible: scriptAudioDesignSchema.shape.voiceBible,
+  dialogueLayer: z.array(dialogueCueSchema),
+  foleyPlan: z.array(foleyCueSchema),
+  spotSfxPlan: z.array(spotSfxCueSchema),
+  ambiencePlan: z.array(ambienceCueSchema),
+  bgmPlan: z.object({
+    overallDirection: z.string().trim().min(1),
+    sections: z.array(scriptSoundBgmSectionSchema).min(1),
+  }),
+  stemPromptSeeds: z.object({
+    dialogue: z.string().trim().min(1),
+    foley: z.string().trim().min(1),
+    spotSfx: z.string().trim().min(1),
+    ambience: z.string().trim().min(1),
+    bgm: z.string().trim().min(1),
+  }),
+}).superRefine((analysis, ctx) => {
+  const checkEnd = (path: Array<string | number>, endSec: number) => {
+    if (endSec > analysis.targetDurationSeconds + 0.001) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        path,
+        message: 'SCRIPT_SOUND_ANALYSIS_TIMING_OUT_OF_RANGE',
+      })
+    }
+  }
+
+  analysis.dialogueLayer.forEach((cue, index) => {
+    if (typeof cue.endSec === 'number') checkEnd(['dialogueLayer', index, 'endSec'], cue.endSec)
+  })
+  analysis.spotSfxPlan.forEach((cue, index) => {
+    if (typeof cue.startSec === 'number' && typeof cue.durationSec === 'number') {
+      checkEnd(['spotSfxPlan', index, 'durationSec'], cue.startSec + cue.durationSec)
+    }
+  })
+  analysis.foleyPlan.forEach((cue, index) => {
+    if (typeof cue.startSec === 'number' && typeof cue.durationSec === 'number') {
+      checkEnd(['foleyPlan', index, 'durationSec'], cue.startSec + cue.durationSec)
+    }
+  })
+  analysis.ambiencePlan.forEach((cue, index) => checkEnd(['ambiencePlan', index, 'endSec'], cue.endSec))
+  analysis.bgmPlan.sections.forEach((section, index) => checkEnd(['bgmPlan', 'sections', index, 'endSec'], section.endSec))
+})
+
 export const audioDesignStateSchema = z.object({
   schemaVersion: z.literal(1),
   scriptAudio: scriptAudioDesignSchema.optional(),
+  scriptSoundAnalysis: scriptSoundAnalysisSchema.optional(),
   shotAudioPlans: z.array(shotAudioPlanSchema),
   timelineAudio: timelineAudioDesignSchema.optional(),
 })
@@ -165,6 +241,7 @@ export type AudioProductionStatus = z.infer<typeof audioProductionStatusSchema>
 export type AudioStemGenerationKind = z.infer<typeof audioStemGenerationKindSchema>
 export type DialogueCue = z.infer<typeof dialogueCueSchema>
 export type SpotSfxCue = z.infer<typeof spotSfxCueSchema>
+export type FoleyCue = z.infer<typeof foleyCueSchema>
 export type AmbienceCue = z.infer<typeof ambienceCueSchema>
 export type DuckingSegment = z.infer<typeof duckingSegmentSchema>
 export type AudioStemPlan = z.infer<typeof audioStemPlanSchema>
@@ -172,4 +249,5 @@ export type TimelineClipAudio = z.infer<typeof timelineClipAudioSchema>
 export type TimelineAudioDesign = z.infer<typeof timelineAudioDesignSchema>
 export type ShotAudioPlan = z.infer<typeof shotAudioPlanSchema>
 export type ScriptAudioDesign = z.infer<typeof scriptAudioDesignSchema>
+export type ScriptSoundAnalysis = z.infer<typeof scriptSoundAnalysisSchema>
 export type AudioDesignState = z.infer<typeof audioDesignStateSchema>
