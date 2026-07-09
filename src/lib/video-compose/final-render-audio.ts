@@ -28,6 +28,13 @@ export type FinalRenderAudioMixResult = {
   readonly bgm: AudioLoudnessMeasurement
 }
 
+export type FinalRenderSoundEffectInput = {
+  readonly path: string
+  readonly startSeconds: number
+  readonly durationSeconds: number
+  readonly volume?: number
+}
+
 export const MAIN_AUDIO_TARGET: AudioLoudnessTarget = {
   integratedLufs: -16,
   truePeakDb: -1.5,
@@ -222,6 +229,7 @@ export async function muxFinalRenderAudio(input: {
   readonly mainAudioPath: string
   readonly hasSourceAudio: boolean
   readonly musicPath: string
+  readonly soundEffects?: readonly FinalRenderSoundEffectInput[]
   readonly outputPath: string
   readonly durationSeconds: number
   readonly volume: number
@@ -229,16 +237,39 @@ export async function muxFinalRenderAudio(input: {
   const fadeDuration = Math.min(2, Math.max(0.4, input.durationSeconds / 8))
   const fadeOutStart = Math.max(0, input.durationSeconds - fadeDuration)
   const bgmMeasurement = await analyzeAudioLoudness(input.runCommand, input.musicPath, BGM_AUDIO_TARGET)
+  const soundEffects = (input.soundEffects ?? []).filter((effect) => (
+    Number.isFinite(effect.startSeconds) &&
+    effect.startSeconds >= 0 &&
+    Number.isFinite(effect.durationSeconds) &&
+    effect.durationSeconds > 0
+  ))
+  const soundEffectInputs = soundEffects.flatMap((effect) => ['-i', effect.path])
+  const soundEffectOffset = input.hasSourceAudio ? 3 : 2
+  const soundEffectFilters = soundEffects.map((effect, index) => {
+    const inputIndex = soundEffectOffset + index
+    const delayMs = Math.round(effect.startSeconds * 1000)
+    const volume = typeof effect.volume === 'number' && Number.isFinite(effect.volume) ? effect.volume : 1
+    return `[${inputIndex}:a]atrim=0:${effect.durationSeconds.toFixed(3)},asetpts=PTS-STARTPTS,aresample=48000,aformat=sample_fmts=fltp:channel_layouts=stereo,volume=${volume.toFixed(3)},adelay=${delayMs}:all=1[sfx${index}]`
+  })
+  const soundEffectLabels = soundEffects.map((_, index) => `[sfx${index}]`).join('')
 
   if (!input.hasSourceAudio) {
+    const filters = [
+      `[1:a]atrim=0:${input.durationSeconds.toFixed(3)},asetpts=PTS-STARTPTS,afade=t=in:st=0:d=${fadeDuration.toFixed(3)},afade=t=out:st=${fadeOutStart.toFixed(3)}:d=${fadeDuration.toFixed(3)},loudnorm=${loudnormApplyFilter(BGM_AUDIO_TARGET, bgmMeasurement)},volume=${input.volume.toFixed(3)}[bgm_norm]`,
+      ...soundEffectFilters,
+      soundEffects.length > 0
+        ? `[bgm_norm]${soundEffectLabels}amix=inputs=${soundEffects.length + 1}:duration=first:dropout_transition=0,alimiter=limit=0.95[aout]`
+        : '[bgm_norm]alimiter=limit=0.95[aout]',
+    ]
     await input.runCommand('ffmpeg', [
       '-y',
       '-i',
       input.stitchedPath,
       '-i',
       input.musicPath,
+      ...soundEffectInputs,
       '-filter_complex',
-      `[1:a]atrim=0:${input.durationSeconds.toFixed(3)},asetpts=PTS-STARTPTS,afade=t=in:st=0:d=${fadeDuration.toFixed(3)},afade=t=out:st=${fadeOutStart.toFixed(3)}:d=${fadeDuration.toFixed(3)},loudnorm=${loudnormApplyFilter(BGM_AUDIO_TARGET, bgmMeasurement)},volume=${input.volume.toFixed(3)},alimiter=limit=0.95[aout]`,
+      filters.join(';'),
       '-map',
       '0:v:0',
       '-map',
@@ -269,13 +300,17 @@ export async function muxFinalRenderAudio(input: {
       input.mainAudioPath,
       '-i',
       input.musicPath,
+      ...soundEffectInputs,
     '-filter_complex',
     [
       `[1:a]loudnorm=${loudnormApplyFilter(MAIN_AUDIO_TARGET, mainMeasurement)}[main_norm]`,
       `[2:a]atrim=0:${input.durationSeconds.toFixed(3)},asetpts=PTS-STARTPTS,afade=t=in:st=0:d=${fadeDuration.toFixed(3)},afade=t=out:st=${fadeOutStart.toFixed(3)}:d=${fadeDuration.toFixed(3)},loudnorm=${loudnormApplyFilter(BGM_AUDIO_TARGET, bgmMeasurement)},volume=${input.volume.toFixed(3)}[bgm_norm]`,
+      ...soundEffectFilters,
       '[main_norm]asplit=2[main_mix][main_sidechain]',
       `[bgm_norm][main_sidechain]sidechaincompress=threshold=${BGM_DUCKING_THRESHOLD}:ratio=${BGM_DUCKING_RATIO}:attack=${BGM_DUCKING_ATTACK_MS}:release=${BGM_DUCKING_RELEASE_MS}[ducked_bgm]`,
-      '[main_mix][ducked_bgm]amix=inputs=2:duration=first:dropout_transition=0,alimiter=limit=0.95[aout]',
+      soundEffects.length > 0
+        ? `[main_mix][ducked_bgm]${soundEffectLabels}amix=inputs=${soundEffects.length + 2}:duration=first:dropout_transition=0,alimiter=limit=0.95[aout]`
+        : '[main_mix][ducked_bgm]amix=inputs=2:duration=first:dropout_transition=0,alimiter=limit=0.95[aout]',
     ].join(';'),
     '-map',
     '0:v:0',

@@ -103,6 +103,12 @@ function inferTaskContractFromOperation(params: {
         targetType: 'ProjectEpisode',
         targetId: typeof input.episodeId === 'string' ? input.episodeId : 'episode-1',
       }
+    case 'generate_episode_sound_effect_score':
+      return {
+        type: TASK_TYPE.SOUND_EFFECT_SCORE_PLAN,
+        targetType: 'ProjectEpisode',
+        targetId: typeof input.episodeId === 'string' ? input.episodeId : 'episode-1',
+      }
     case 'regenerate_group':
       return {
         type: TASK_TYPE.REGENERATE_GROUP,
@@ -418,6 +424,20 @@ export const DIRECT_MEDIA_CASES: ReadonlyArray<DirectRouteCase> = [
       episodeId: 'episode-1',
       musicModel: 'google::lyria-3-clip-preview',
       outputFormat: 'mp3',
+    },
+  },
+  {
+    routeFile: 'src/app/api/projects/[projectId]/generate-sfx/route.ts',
+    body: {
+      confirmed: true,
+      episodeId: 'episode-1',
+    },
+    params: { projectId: 'project-1' },
+    expectedTaskType: TASK_TYPE.SOUND_EFFECT_SCORE_PLAN,
+    expectedTargetType: 'ProjectEpisode',
+    expectedProjectId: 'project-1',
+    expectedPayloadSubset: {
+      episodeId: 'episode-1',
     },
   },
   {

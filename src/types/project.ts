@@ -373,6 +373,7 @@ export interface ProjectEditScriptGenerationSegment {
 }
 
 export type ProjectMusicScoreStatus = 'pending' | 'generating' | 'completed' | 'failed'
+export type ProjectSoundEffectScoreStatus = 'pending' | 'generating' | 'completed' | 'failed'
 
 export interface ProjectMusicScoreTimedTextSection {
   category?: string | null
@@ -427,6 +428,37 @@ export interface ProjectMusicScore {
   errorMessage?: string | null
 }
 
+export interface ProjectSoundEffectCue {
+  cueId: string
+  index: number | null
+  startSeconds: number | null
+  durationSeconds: number | null
+  label: string
+  prompt: string
+  sourceClipOrders: unknown[]
+  shotIds: unknown[]
+  shotNumbers: unknown[]
+  mediaId: string | null
+  url: string | null
+  storageKey: string | null
+  mimeType: string | null
+  durationMs: number | null
+}
+
+export interface ProjectSoundEffectScore {
+  id?: string | null
+  status: ProjectSoundEffectScoreStatus
+  version?: number | null
+  taskId?: string | null
+  timelineSignature?: string | null
+  soundModel?: string | null
+  durationSeconds?: number | null
+  plan?: unknown
+  cues: ProjectSoundEffectCue[]
+  diagnostics?: unknown
+  errorMessage?: string | null
+}
+
 export interface ProjectFinalVideo {
   id: string
   episodeId: string
@@ -435,6 +467,7 @@ export interface ProjectFinalVideo {
   outputUrl: string | null
   updatedAt: string | null
   musicScore?: ProjectMusicScore | null
+  soundEffectScore?: ProjectSoundEffectScore | null
 }
 
 export interface ProjectVideoGroup {

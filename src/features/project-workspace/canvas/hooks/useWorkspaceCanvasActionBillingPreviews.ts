@@ -169,6 +169,9 @@ export function resolveWorkspaceCanvasActionPlanRequest(params: {
       context,
     }
   }
+  if (params.action.type === 'generate_sound_effect_score' && params.episodeId) {
+    return null
+  }
   return null
 }
 

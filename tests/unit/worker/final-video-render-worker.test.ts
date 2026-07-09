@@ -14,6 +14,9 @@ const prismaMock = vi.hoisted(() => ({
   projectEditMusicScore: {
     findUnique: vi.fn(),
   },
+  projectEditSoundEffectScore: {
+    findUnique: vi.fn(),
+  },
   project: {
     findUnique: vi.fn(),
   },
@@ -298,6 +301,20 @@ describe('final video render worker', () => {
         durationMs: 3000,
       },
     })
+    prismaMock.projectEditSoundEffectScore.findUnique.mockResolvedValue({
+      status: 'completed',
+      timelineSignature: buildDefaultChapterTimelineSignature(),
+      cuesJson: {
+        schemaVersion: 1,
+        status: 'completed',
+        taskId: 'task-sfx-1',
+        editScriptId: 'episode:episode-1',
+        timelineSignature: buildDefaultChapterTimelineSignature(),
+        durationSeconds: 3,
+        soundModel: 'eleven_text_to_sound_v2',
+        cues: [],
+      },
+    })
   })
 
   afterEach(() => {
@@ -392,6 +409,21 @@ describe('final video render worker', () => {
 
     expect(generateMusicMock).not.toHaveBeenCalled()
     expect(storageMock.getObjectBuffer).not.toHaveBeenCalledWith('music/bgm-score.m4a')
+    expect(storageMock.uploadObject).not.toHaveBeenCalled()
+    expect(prismaMock.projectEpisodeFinalOutput.upsert).toHaveBeenNthCalledWith(2, expect.objectContaining({
+      where: { episodeId: 'episode-1' },
+      update: expect.objectContaining({ renderStatus: 'failed', renderTaskId: 'task-1' }),
+    }))
+  })
+
+  it('fails explicitly when sound effects have not completed', async () => {
+    prismaMock.projectEditSoundEffectScore.findUnique.mockResolvedValue(null)
+    const { handleFinalVideoRenderTask } = await import('@/lib/workers/final-video-render')
+
+    await expect(handleFinalVideoRenderTask(buildJob({
+      episodeId: 'episode-1',
+    }))).rejects.toThrow('FINAL_VIDEO_RENDER_SFX_REQUIRED')
+
     expect(storageMock.uploadObject).not.toHaveBeenCalled()
     expect(prismaMock.projectEpisodeFinalOutput.upsert).toHaveBeenNthCalledWith(2, expect.objectContaining({
       where: { episodeId: 'episode-1' },

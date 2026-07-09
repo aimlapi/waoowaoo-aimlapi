@@ -83,6 +83,7 @@ export type WorkspaceCanvasNodeAction =
     }
   | { readonly type: 'render_final_video' }
   | { readonly type: 'generate_bgm_score' }
+  | { readonly type: 'generate_sound_effect_score' }
   | { readonly type: 'generate_edit_assets'; readonly editScriptId: string }
   | { readonly type: 'generate_edit_asset'; readonly editScriptId: string; readonly requirementId: string }
   | { readonly type: 'regenerate_edit_asset_image'; readonly assetId: string; readonly kind: 'character' | 'location' }
@@ -167,6 +168,11 @@ export interface WorkspaceCanvasBgmScoreDetails {
     readonly content: string
   }[]
   readonly finalPrompt?: string | null
+  readonly soundEffectStatus?: string | null
+  readonly soundEffectModel?: string | null
+  readonly soundEffectCueCount: number
+  readonly soundEffectErrorMessage?: string | null
+  readonly soundEffectCues: readonly WorkspaceCanvasSoundEffectCue[]
 }
 
 export interface WorkspaceCanvasBgmScoreTimedTextSection {
@@ -176,6 +182,17 @@ export interface WorkspaceCanvasBgmScoreTimedTextSection {
   readonly startSec?: number | null
   readonly endSec?: number | null
   readonly content: string
+}
+
+export interface WorkspaceCanvasSoundEffectCue {
+  readonly cueId: string
+  readonly index: number | null
+  readonly startSeconds: number | null
+  readonly durationSeconds: number | null
+  readonly label: string
+  readonly prompt: string
+  readonly url: string | null
+  readonly shotNumbers: readonly string[]
 }
 
 export interface WorkspaceCanvasEditScriptDetails {

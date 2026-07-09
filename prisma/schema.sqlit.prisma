@@ -135,6 +135,7 @@ model ProjectEpisode {
   project                 Project                    @relation(fields: [projectId], references: [id], onDelete: Cascade)
   storyboards             ProjectStoryboard[]
   musicScore              ProjectEditMusicScore?
+  soundEffectScore        ProjectEditSoundEffectScore?
   finalOutput             ProjectEpisodeFinalOutput?
   editBible          ProjectEditBible?
   editStylePreviews       ProjectEditStylePreview[]
@@ -302,6 +303,25 @@ model ProjectEditMusicScore {
   @@index([episodeId])
   @@index([taskId])
   @@map("project_edit_music_scores")
+}
+
+model ProjectEditSoundEffectScore {
+  id                String         @id @default(uuid())
+  episodeId         String         @unique
+  cuesJson          Json?
+  diagnosticsJson   Json?
+  version           Int            @default(1)
+  status            String         @default("pending")
+  taskId            String?
+  timelineSignature String?
+  soundModel        String?
+  createdAt         DateTime       @default(now())
+  updatedAt         DateTime       @default(now()) @updatedAt
+  episode           ProjectEpisode @relation(fields: [episodeId], references: [id], onDelete: Cascade)
+
+  @@index([episodeId])
+  @@index([taskId])
+  @@map("project_edit_sound_effect_scores")
 }
 
 model ProjectVideoGroup {

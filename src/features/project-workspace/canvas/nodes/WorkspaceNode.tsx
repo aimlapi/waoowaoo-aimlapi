@@ -437,6 +437,7 @@ function nodeActionIconName(action: WorkspaceCanvasNodeAction): AppIconName {
     case 'generate_asset_reference_video':
       return 'video'
     case 'generate_bgm_score':
+    case 'generate_sound_effect_score':
       return 'audioWave'
     case 'render_final_video':
       return 'film'
@@ -994,6 +995,70 @@ function BgmScoreContent({
       <audio src={displayMixUrl} controls preload="metadata" className="w-full" />
     </div>
   ) : null
+  const soundEffectSection = details.soundEffectCues.length > 0 ? (
+    <div className="space-y-2">
+      <div className="flex items-center justify-between gap-2">
+        <p className={`${SELECTABLE_TEXT_CLASS} text-[10px] font-semibold uppercase text-[var(--glass-text-tertiary)]`}>
+          {labels('soundEffects')}
+        </p>
+        <span className={`${SELECTABLE_TEXT_CLASS} text-[10px] text-[var(--glass-text-tertiary)]`}>
+          {details.soundEffectCueCount}
+        </span>
+      </div>
+      <div className="relative h-3 overflow-hidden rounded-full bg-slate-100">
+        {details.soundEffectCues.map((cue) => {
+          const total = details.durationSeconds && details.durationSeconds > 0 ? details.durationSeconds : null
+          const start = total && typeof cue.startSeconds === 'number' ? Math.max(0, Math.min(100, cue.startSeconds / total * 100)) : 0
+          const width = total && typeof cue.durationSeconds === 'number' ? Math.max(2, Math.min(100 - start, cue.durationSeconds / total * 100)) : 8
+          return (
+            <span
+              key={`timeline-${cue.cueId}`}
+              className="absolute top-0 h-full rounded-full bg-cyan-500"
+              style={{ left: `${start}%`, width: `${width}%` }}
+              title={cue.label}
+            />
+          )
+        })}
+      </div>
+      <div className="space-y-2">
+        {details.soundEffectCues.map((cue) => {
+          const cueUrl = cue.url ? toDisplayImageUrl(cue.url) ?? cue.url : null
+          const timeLabel = typeof cue.startSeconds === 'number' && typeof cue.durationSeconds === 'number'
+            ? `${cue.startSeconds.toFixed(1)}s / ${cue.durationSeconds.toFixed(1)}s`
+            : null
+          return (
+            <section key={cue.cueId} className="space-y-2 rounded-[16px] bg-slate-50 p-3 ring-1 ring-slate-100">
+              <div className="flex items-start justify-between gap-2">
+                <div className="min-w-0">
+                  <p className={`${SELECTABLE_TEXT_CLASS} break-words text-xs font-semibold text-[var(--glass-text-primary)]`}>{cue.label}</p>
+                  {cue.shotNumbers.length > 0 ? (
+                    <p className={`${SELECTABLE_TEXT_CLASS} text-[10px] text-[var(--glass-text-tertiary)]`}>
+                      {labels('linkedShots')}: {cue.shotNumbers.join(', ')}
+                    </p>
+                  ) : null}
+                </div>
+                {timeLabel ? (
+                  <span className={`${SELECTABLE_TEXT_CLASS} shrink-0 text-[10px] text-[var(--glass-text-tertiary)]`}>{timeLabel}</span>
+                ) : null}
+              </div>
+              {renderSummaryText(cue.prompt, 3)}
+              {cueUrl ? (
+                <div className="nodrag nowheel">
+                  <audio src={cueUrl} controls preload="metadata" className="w-full" />
+                </div>
+              ) : null}
+            </section>
+          )
+        })}
+      </div>
+    </div>
+  ) : details.soundEffectStatus ? renderSection(labels('soundEffects'), (
+    <div className="space-y-1">
+      {renderValue(labels('status'), details.soundEffectStatus)}
+      {renderValue(labels('soundEffectModel'), details.soundEffectModel)}
+      {renderTextSection(labels('error'), details.soundEffectErrorMessage)}
+    </div>
+  )) : null
   const statsSection = renderSection(labels('bgmScoreStats'), (
     <div className="space-y-1">
       {renderValue(labels('status'), details.status)}
@@ -1002,6 +1067,8 @@ function BgmScoreContent({
       {details.hasPromptDesign ? renderValue(labels('promptSectionCount'), details.promptSectionCount) : null}
       {details.hasPromptDesign ? renderValue(labels('virtualLayerCount'), details.virtualLayerCount) : null}
       {renderValue(labels('musicModel'), details.musicModel)}
+      {renderValue(labels('soundEffectModel'), details.soundEffectModel)}
+      {renderValue(labels('soundEffectCueCount'), details.soundEffectCueCount)}
     </div>
   ))
   const missingPromptSection = details.promptDesignMissing
@@ -1029,6 +1096,7 @@ function BgmScoreContent({
     <div className={`grid gap-3 rounded-[18px] lg:grid-cols-[minmax(260px,320px)_minmax(0,1fr)] ${data.__running === true ? 'workspace-node-loading-surface' : ''}`}>
       <div className="space-y-2">
         {mixSection}
+        {soundEffectSection}
         {statsSection}
         {missingPromptSection}
         {errorSection}
@@ -1049,6 +1117,7 @@ function BgmScoreContent({
   const standardContent = (
     <div className={`space-y-2 rounded-[18px] ${data.__running === true ? 'workspace-node-loading-surface' : ''}`}>
       {mixSection}
+      {soundEffectSection}
       {statsSection}
       {missingPromptSection}
       <WorkspaceCanvasMotionPresence visible={expanded} className="space-y-2">

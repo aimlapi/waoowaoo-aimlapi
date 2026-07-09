@@ -660,6 +660,11 @@ function buildBgmRuntimeEntry(
           content: layer.content,
         })),
         finalPrompt: null,
+        soundEffectStatus: null,
+        soundEffectModel: null,
+        soundEffectCueCount: 0,
+        soundEffectErrorMessage: null,
+        soundEffectCues: [],
       },
     },
   })

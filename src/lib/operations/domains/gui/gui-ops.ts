@@ -932,6 +932,19 @@ export function createGuiOperations(): ProjectAgentOperationRegistryDraft {
                 updatedAt: true,
               },
             },
+            soundEffectScore: {
+              select: {
+                id: true,
+                status: true,
+                version: true,
+                taskId: true,
+                timelineSignature: true,
+                soundModel: true,
+                cuesJson: true,
+                diagnosticsJson: true,
+                updatedAt: true,
+              },
+            },
           },
         })
         if (!episode) throw new ApiError('NOT_FOUND')
@@ -962,7 +975,7 @@ export function createGuiOperations(): ProjectAgentOperationRegistryDraft {
             editScript,
             editScripts,
             editShotExecutionPlans,
-            finalVideo: normalizeFinalVideoSummary(episode.finalOutput, episode.musicScore),
+            finalVideo: normalizeFinalVideoSummary(episode.finalOutput, episode.musicScore, episode.soundEffectScore),
           },
         }
       },

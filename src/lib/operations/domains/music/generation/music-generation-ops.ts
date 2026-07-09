@@ -56,6 +56,13 @@ const bgmScoreGenerationInputSchema = z.object({
 
 type BgmScoreGenerationInput = z.infer<typeof bgmScoreGenerationInputSchema>
 
+const soundEffectScoreGenerationInputSchema = z.object({
+  confirmed: z.boolean().optional(),
+  episodeId: z.string().min(1).optional(),
+}).passthrough()
+
+type SoundEffectScoreGenerationInput = z.infer<typeof soundEffectScoreGenerationInputSchema>
+
 function normalizeString(value: unknown): string {
   return typeof value === 'string' ? value.trim() : ''
 }
@@ -299,6 +306,46 @@ async function planGenerateEpisodeBgmScoreOperation(
   }
 }
 
+async function resolveSoundEffectScoreEpisodeDurationSeconds(episodeId: string, projectId: string): Promise<number> {
+  return await resolveBgmScoreEpisodeDurationSeconds(episodeId, projectId)
+}
+
+async function planGenerateEpisodeSoundEffectScoreOperation(
+  ctx: ProjectAgentOperationContext,
+  input: SoundEffectScoreGenerationInput,
+): Promise<OperationPlan> {
+  const episodeId = normalizeString(input.episodeId) || normalizeString(ctx.context.episodeId)
+  if (!episodeId) throw new Error('PROJECT_AGENT_EPISODE_REQUIRED')
+  const durationSeconds = await resolveSoundEffectScoreEpisodeDurationSeconds(episodeId, ctx.projectId)
+  const payload: Record<string, unknown> = {
+    episodeId,
+    durationSeconds,
+  }
+
+  return {
+    kind: 'task_submission',
+    operationId: 'generate_episode_sound_effect_score',
+    projectId: ctx.projectId,
+    userId: ctx.userId,
+    tasks: [
+      createPlannedTask({
+        id: `generate_episode_sound_effect_score:${episodeId}`,
+        taskType: TASK_TYPE.SOUND_EFFECT_SCORE_PLAN,
+        targetType: 'ProjectEpisode',
+        targetId: episodeId,
+        payload,
+        locale: resolveRequiredTaskLocale(ctx.request, payload),
+        episodeId,
+        dedupeKey: `sound_effect_score_plan:${ctx.projectId}:${episodeId}:${hashPayload(payload)}`,
+        billingInfo: { billable: false },
+      }),
+    ],
+    metadata: {
+      episodeId,
+    },
+  }
+}
+
 async function commitGenerateEpisodeBgmScoreOperation(
   ctx: ProjectAgentOperationContext,
   input: BgmScoreGenerationInput,
@@ -338,6 +385,46 @@ async function commitGenerateEpisodeBgmScoreOperation(
     ...result,
     musicModel,
     taskType: TASK_TYPE.MUSIC_SCORE_PLAN,
+    targetType: 'ProjectEpisode',
+    targetId: episodeId,
+  }
+}
+
+async function commitGenerateEpisodeSoundEffectScoreOperation(
+  ctx: ProjectAgentOperationContext,
+  input: SoundEffectScoreGenerationInput,
+  plan: OperationPlan,
+) {
+  const task = plan.tasks[0]
+  if (!task) throw new Error('PROJECT_AGENT_OPERATION_PLAN_EMPTY')
+  const episodeId = (typeof plan.metadata?.episodeId === 'string' ? plan.metadata.episodeId : '')
+    || normalizeString(input.episodeId)
+    || normalizeString(ctx.context.episodeId)
+  if (!episodeId) throw new Error('PROJECT_AGENT_EPISODE_REQUIRED')
+  const result = await submitPlannedOperationTask({
+    ctx,
+    task,
+    operationId: 'generate_episode_sound_effect_score',
+    confirmed: input.confirmed === true,
+  })
+
+  writeOperationDataPart<TaskSubmittedPartData>(ctx.writer, 'data-task-submitted', {
+    operationId: 'generate_episode_sound_effect_score',
+    taskId: result.taskId,
+    status: result.status,
+    runId: result.runId || null,
+    deduped: result.deduped,
+    billingReceipt: result.billingReceiptView,
+    projectId: ctx.projectId,
+    episodeId,
+    taskType: TASK_TYPE.SOUND_EFFECT_SCORE_PLAN,
+    targetType: 'ProjectEpisode',
+    targetId: episodeId,
+  })
+
+  return {
+    ...result,
+    taskType: TASK_TYPE.SOUND_EFFECT_SCORE_PLAN,
     targetType: 'ProjectEpisode',
     targetId: episodeId,
   }
@@ -409,6 +496,33 @@ export function createMusicGenerationOperations(): ProjectAgentOperationRegistry
           confirmedMaxCost: await resolveConfirmedMaxCostForExecution({ ctx, input, plan }),
         })
         return await commitGenerateEpisodeBgmScoreOperation(ctx, input, plan)
+      },
+    }),
+    generate_episode_sound_effect_score: defineOperation({
+      id: 'generate_episode_sound_effect_score',
+      summary: 'Generate episode sound effects from the rendered chapter timeline.',
+      intent: 'act',
+      prerequisites: { episodeId: 'required' },
+      effects: {
+        writes: true,
+        billable: false,
+        destructive: false,
+        overwrite: true,
+        bulk: true,
+        externalSideEffects: true,
+        longRunning: true,
+      },
+      confirmation: {
+        required: false,
+      },
+      toolInputSchema: EDIT_FIRST_EMPTY_TOOL_INPUT_SCHEMA,
+      inputSchema: soundEffectScoreGenerationInputSchema,
+      outputSchema: taskSubmitOperationOutputSchemaBase.passthrough(),
+      plan: async (ctx, input) => planGenerateEpisodeSoundEffectScoreOperation(ctx, input),
+      commit: async (ctx, input, plan) => commitGenerateEpisodeSoundEffectScoreOperation(ctx, input, plan),
+      execute: async (ctx, input) => {
+        const plan = await planGenerateEpisodeSoundEffectScoreOperation(ctx, input)
+        return await commitGenerateEpisodeSoundEffectScoreOperation(ctx, input, plan)
       },
     }),
   }

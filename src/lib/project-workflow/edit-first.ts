@@ -1,5 +1,9 @@
 import { prisma } from '@/lib/prisma'
 import { readCompletedMusicScoreMix, readMusicScoreStatus } from '@/lib/music-score/project-data'
+import {
+  readCompletedSoundEffectCues,
+  readSoundEffectScoreStatus,
+} from '@/lib/sound-effects/project-data'
 import { editScriptStructureSchema } from '@/lib/edit-script/types'
 import { TASK_TYPE } from '@/lib/task/types'
 import {
@@ -115,6 +119,9 @@ export interface EditFirstWorkflowSnapshot {
   bgmScoreStatus: string | null
   bgmScoreHasMix: boolean
   activeBgmScoreTaskCount: number
+  soundEffectScoreStatus: string | null
+  soundEffectScoreReady: boolean
+  activeSoundEffectScoreTaskCount: number
   finalRenderStatus: string | null
   finalRenderHasOutput: boolean
   activeFinalRenderTaskCount: number
@@ -545,6 +552,9 @@ export function resolveEditFirstWorkflowStateFromSnapshot(
   const bgmReady = snapshot.bgmScoreHasMix
   const bgmRunning = snapshot.activeBgmScoreTaskCount > 0 || snapshot.bgmScoreStatus === 'generating'
   const bgmFailed = snapshot.bgmScoreStatus === 'failed'
+  const sfxReady = snapshot.soundEffectScoreReady
+  const sfxRunning = snapshot.activeSoundEffectScoreTaskCount > 0 || snapshot.soundEffectScoreStatus === 'generating'
+  const sfxFailed = snapshot.soundEffectScoreStatus === 'failed'
   const finalRendering = snapshot.activeFinalRenderTaskCount > 0 || isActiveWorkflowStatus(snapshot.finalRenderStatus)
 
   if (snapshot.finalRenderHasOutput && snapshot.finalRenderStatus === 'completed') {
@@ -631,6 +641,15 @@ export function resolveEditFirstWorkflowStateFromSnapshot(
     return state({
       stage: 'bgm_score_generating',
       blocking: { kind: 'processing', reason: 'BGM score generation is still running' },
+      allowedOperationIds: sfxReady || sfxRunning ? [] : ['generate_episode_sound_effect_score'],
+    })
+  }
+
+  if (sfxRunning) {
+    return state({
+      stage: 'bgm_score_generating',
+      blocking: { kind: 'processing', reason: 'sound effect generation is still running' },
+      allowedOperationIds: bgmReady || bgmRunning ? [] : ['generate_episode_bgm_score'],
     })
   }
 
@@ -644,12 +663,28 @@ export function resolveEditFirstWorkflowStateFromSnapshot(
     })
   }
 
-  if (!bgmReady) {
-    const nextAction = workflowAction('generate_episode_bgm_score', 'Generate BGM score')
+  if (sfxFailed) {
+    const nextAction = workflowAction('generate_episode_sound_effect_score', 'Regenerate sound effects')
+    return state({
+      stage: 'failed',
+      blocking: { kind: 'failed', reason: 'sound effect generation failed' },
+      nextAction,
+      allowedOperationIds: [nextAction.operationId],
+    })
+  }
+
+  if (!bgmReady || !sfxReady) {
+    const nextAction = !bgmReady
+      ? workflowAction('generate_episode_bgm_score', 'Generate BGM score')
+      : workflowAction('generate_episode_sound_effect_score', 'Generate sound effects')
+    const allowedOperationIds: EditFirstWorkflowOperationId[] = [
+      ...(!bgmReady ? ['generate_episode_bgm_score' as const] : []),
+      ...(!sfxReady ? ['generate_episode_sound_effect_score' as const] : []),
+    ]
     return state({
       stage: 'ready_to_generate_bgm_score',
       nextAction,
-      allowedOperationIds: [nextAction.operationId],
+      allowedOperationIds,
     })
   }
 
@@ -711,7 +746,7 @@ export function resolveEditFirstWorkflowCapabilityOperationIds(
     case 'chapters_rendering':
       return []
     case 'ready_to_generate_bgm_score':
-      return ['generate_episode_bgm_score']
+      return [...workflow.allowedOperationIds]
     case 'bgm_score_generating':
       return [...workflow.allowedOperationIds]
     case 'ready_to_render_final':
@@ -755,9 +790,11 @@ export async function resolveEditFirstWorkflowState(params: {
     chapters,
     finalOutput,
     musicScore,
+    soundEffectScore,
     activeEditScriptTaskCount,
     activeShotExecutionPlanTaskCount,
     activeBgmScoreTaskCount,
+    activeSoundEffectScoreTaskCount,
     activeChapterRenderTaskCount,
     activeFinalRenderTaskCount,
   ] = await Promise.all([
@@ -891,6 +928,15 @@ export async function resolveEditFirstWorkflowState(params: {
         mixJson: true,
       },
     }),
+    prisma.projectEditSoundEffectScore.findUnique({
+      where: {
+        episodeId: params.episodeId,
+      },
+      select: {
+        status: true,
+        cuesJson: true,
+      },
+    }),
     prisma.task.count({
       where: {
         projectId: params.projectId,
@@ -914,6 +960,16 @@ export async function resolveEditFirstWorkflowState(params: {
         targetType: 'ProjectEpisode',
         targetId: params.episodeId,
         type: TASK_TYPE.MUSIC_SCORE_PLAN,
+        status: { in: [...ACTIVE_WORKFLOW_TASK_STATUSES] },
+      },
+    }),
+    prisma.task.count({
+      where: {
+        projectId: params.projectId,
+        episodeId: params.episodeId,
+        targetType: 'ProjectEpisode',
+        targetId: params.episodeId,
+        type: TASK_TYPE.SOUND_EFFECT_SCORE_PLAN,
         status: { in: [...ACTIVE_WORKFLOW_TASK_STATUSES] },
       },
     }),
@@ -1023,6 +1079,7 @@ export async function resolveEditFirstWorkflowState(params: {
       videoGroupHasOutput(findVideoGroupForShotIds(videoGroupCandidates, segment.chapterId, segment.shotIds)))
   }).length
   const bgmScoreStatus = readMusicScoreStatus(musicScore)
+  const soundEffectScoreStatus = readSoundEffectScoreStatus(soundEffectScore)
   const editScriptStoryboardIds = new Set(storyboardPlanStageSummary.matchingStoryboardIds)
   const editScriptPanels = panels.filter((panel) => editScriptStoryboardIds.has(panel.storyboardId))
   const storyboardImageReadiness = resolveStoryboardImageReadiness(editScriptPanels)
@@ -1106,6 +1163,9 @@ export async function resolveEditFirstWorkflowState(params: {
     bgmScoreStatus,
     bgmScoreHasMix: Boolean(readCompletedMusicScoreMix(musicScore)),
     activeBgmScoreTaskCount,
+    soundEffectScoreStatus,
+    soundEffectScoreReady: readCompletedSoundEffectCues(soundEffectScore) !== null,
+    activeSoundEffectScoreTaskCount,
     finalRenderStatus: finalOutput?.renderStatus ?? null,
     finalRenderHasOutput: Boolean(
       hasOutputReference(finalOutput?.outputUrl ?? null)

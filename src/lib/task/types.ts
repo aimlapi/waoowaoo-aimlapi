@@ -52,6 +52,7 @@ export const TASK_TYPE = {
   IMAGE_LOCATION: 'image_location',
   MUSIC_GENERATE: 'music_generate',
   MUSIC_SCORE_PLAN: 'music_score_plan',
+  SOUND_EFFECT_SCORE_PLAN: 'sound_effect_score_plan',
   FINAL_VIDEO_RENDER: 'final_video_render',
   CHAPTER_RENDER: 'chapter_render',
   VIDEO_PANEL: 'video_panel',

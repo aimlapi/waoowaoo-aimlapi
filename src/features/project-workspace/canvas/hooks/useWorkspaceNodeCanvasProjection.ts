@@ -552,23 +552,38 @@ function executionItems(plan: ProjectEditShotExecutionPlan, translate: Translate
 
 function bgmScoreDetails(finalVideo: ProjectFinalVideo | null | undefined): WorkspaceCanvasBgmScoreDetails | undefined {
   const bgmScore = finalVideo?.musicScore
-  if (!bgmScore) return undefined
+  const soundEffectScore = finalVideo?.soundEffectScore
+  if (!bgmScore && !soundEffectScore) return undefined
   return {
-    status: bgmScore.status,
-    durationSeconds: bgmScore.durationSeconds ?? null,
-    musicModel: bgmScore.musicModel ?? null,
-    hasPromptDesign: Boolean(bgmScore.plan),
-    promptDesignMissing: !bgmScore.plan,
-    designSectionCount: bgmScore.plan?.scoreDesign.sections.length ?? 0,
-    promptSectionCount: bgmScore.plan?.promptSections.length ?? 0,
-    virtualLayerCount: bgmScore.plan?.virtualLayers.length ?? 0,
-    mixUrl: bgmScore.mix?.url ?? null,
-    errorMessage: bgmScore.errorMessage ?? null,
-    scoreOverview: bgmScore.plan?.scoreDesign.overview ?? null,
-    designSections: bgmScore.plan?.scoreDesign.sections ?? [],
-    promptSections: bgmScore.plan?.promptSections ?? [],
-    virtualLayers: bgmScore.plan?.virtualLayers ?? [],
-    finalPrompt: bgmScore.plan?.finalPrompt ?? null,
+    status: bgmScore?.status ?? soundEffectScore?.status ?? null,
+    durationSeconds: bgmScore?.durationSeconds ?? soundEffectScore?.durationSeconds ?? null,
+    musicModel: bgmScore?.musicModel ?? null,
+    hasPromptDesign: Boolean(bgmScore?.plan),
+    promptDesignMissing: Boolean(bgmScore) && !bgmScore?.plan,
+    designSectionCount: bgmScore?.plan?.scoreDesign.sections.length ?? 0,
+    promptSectionCount: bgmScore?.plan?.promptSections.length ?? 0,
+    virtualLayerCount: bgmScore?.plan?.virtualLayers.length ?? 0,
+    mixUrl: bgmScore?.mix?.url ?? null,
+    errorMessage: bgmScore?.errorMessage ?? null,
+    scoreOverview: bgmScore?.plan?.scoreDesign.overview ?? null,
+    designSections: bgmScore?.plan?.scoreDesign.sections ?? [],
+    promptSections: bgmScore?.plan?.promptSections ?? [],
+    virtualLayers: bgmScore?.plan?.virtualLayers ?? [],
+    finalPrompt: bgmScore?.plan?.finalPrompt ?? null,
+    soundEffectStatus: soundEffectScore?.status ?? null,
+    soundEffectModel: soundEffectScore?.soundModel ?? null,
+    soundEffectCueCount: soundEffectScore?.cues.length ?? 0,
+    soundEffectErrorMessage: soundEffectScore?.errorMessage ?? null,
+    soundEffectCues: soundEffectScore?.cues.map((cue) => ({
+      cueId: cue.cueId,
+      index: cue.index,
+      startSeconds: cue.startSeconds,
+      durationSeconds: cue.durationSeconds,
+      label: cue.label,
+      prompt: cue.prompt,
+      url: cue.url,
+      shotNumbers: cue.shotNumbers.map((shotNumber) => String(shotNumber)),
+    })) ?? [],
   }
 }
 
@@ -1263,6 +1278,8 @@ export function buildWorkspaceNodeCanvasProjection(input: BuildWorkspaceNodeCanv
         ...(bgmPresentation ?? { statusLabel: '', isRunning: false }),
         actionLabel: translate('actions.generateBgmScore'),
         action: { type: 'generate_bgm_score' },
+        secondaryActionLabel: translate('actions.generateSoundEffects'),
+        secondaryAction: { type: 'generate_sound_effect_score' },
         runtimeTargets: runtimeTargets(TASK_RUNTIME_TARGETS.projectEpisodeBgmScore(episodeId)),
         bgmScoreDetails: bgmDetails,
         onAction,

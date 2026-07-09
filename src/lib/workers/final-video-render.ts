@@ -11,6 +11,10 @@ import {
   readCompletedMusicScoreMix,
   readMusicScoreTimelineSignature,
 } from '@/lib/music-score/project-data'
+import {
+  readCompletedSoundEffectCues,
+  readSoundEffectScoreTimelineSignature,
+} from '@/lib/sound-effects/project-data'
 import { parseNullableEditScriptStyleBible } from '@/lib/edit-script/style-bible-prompt'
 import { ensureMediaObjectFromStorageKey, resolveStorageKeyFromMediaValue } from '@/lib/media/service'
 import { generateUniqueKey, getObjectBuffer, toFetchableUrl, uploadObject } from '@/lib/storage'
@@ -84,6 +88,22 @@ function assertBgmMixMatchesTimeline(input: {
   }
 }
 
+function assertSoundEffectsMatchTimeline(input: {
+  readonly soundEffectScore: {
+    readonly status: string | null
+    readonly timelineSignature?: string | null
+  } | null
+  readonly currentTimelineSignature: string
+}): void {
+  const scoreSignature = readSoundEffectScoreTimelineSignature(input.soundEffectScore)
+  if (!scoreSignature) {
+    throw new Error('FINAL_VIDEO_RENDER_SFX_TIMELINE_SIGNATURE_MISSING')
+  }
+  if (scoreSignature !== input.currentTimelineSignature) {
+    throw new Error(`FINAL_VIDEO_RENDER_SFX_TIMELINE_STALE:${scoreSignature}:${input.currentTimelineSignature}`)
+  }
+}
+
 function assertMusicScoreReadyForFinalRender(input: {
   readonly musicScore: {
     readonly status: string | null
@@ -98,6 +118,23 @@ function assertMusicScoreReadyForFinalRender(input: {
   }
   if (!input.hasMix) {
     throw new Error('FINAL_VIDEO_RENDER_BGM_MIX_INVALID')
+  }
+}
+
+function assertSoundEffectScoreReadyForFinalRender(input: {
+  readonly soundEffectScore: {
+    readonly status: string | null
+  } | null
+  readonly hasCues: boolean
+}): void {
+  if (!input.soundEffectScore) {
+    throw new Error('FINAL_VIDEO_RENDER_SFX_REQUIRED')
+  }
+  if (input.soundEffectScore.status !== 'completed') {
+    throw new Error(`FINAL_VIDEO_RENDER_SFX_NOT_READY:${input.soundEffectScore.status ?? 'unknown'}`)
+  }
+  if (!input.hasCues) {
+    throw new Error('FINAL_VIDEO_RENDER_SFX_CUES_INVALID')
   }
 }
 
@@ -299,7 +336,7 @@ export async function handleFinalVideoRenderTask(job: Job<TaskJobData>) {
     ])
     if (!project) throw new Error('FINAL_VIDEO_RENDER_PROJECT_NOT_FOUND')
     if (!episode) throw new Error('FINAL_VIDEO_RENDER_EPISODE_NOT_FOUND')
-    const [clips, musicScore] = await Promise.all([
+    const [clips, musicScore, soundEffectScore] = await Promise.all([
       loadEpisodeChapterOutputClips({
         episodeId,
         projectId: job.data.projectId,
@@ -308,11 +345,20 @@ export async function handleFinalVideoRenderTask(job: Job<TaskJobData>) {
         where: { episodeId },
         select: { status: true, mixJson: true, timelineSignature: true },
       }),
+      prisma.projectEditSoundEffectScore.findUnique({
+        where: { episodeId },
+        select: { status: true, cuesJson: true, timelineSignature: true },
+      }),
     ])
     const bgmMix = readCompletedMusicScoreMix(musicScore)
+    const soundEffectCues = readCompletedSoundEffectCues(soundEffectScore)
     assertMusicScoreReadyForFinalRender({
       musicScore,
       hasMix: Boolean(bgmMix),
+    })
+    assertSoundEffectScoreReadyForFinalRender({
+      soundEffectScore,
+      hasCues: soundEffectCues !== null,
     })
     if (clips.length === 0) throw new Error('FINAL_VIDEO_RENDER_NO_VIDEO_CLIPS')
     assertFinalRenderClipsHaveSources({
@@ -371,14 +417,29 @@ export async function handleFinalVideoRenderTask(job: Job<TaskJobData>) {
         bgmDurationMs: bgmMix.durationMs,
         renderDurationSeconds: stitchedDurationSeconds,
       })
+      assertSoundEffectsMatchTimeline({
+        soundEffectScore,
+        currentTimelineSignature: buildBgmTimelineSignature(clips),
+      })
       const musicPath = path.join(workspaceDir, `bgm.${extensionFromMimeType(bgmMix.mimeType)}`)
       await writeFile(musicPath, await getObjectBuffer(bgmMix.storageKey))
+      const soundEffects = []
+      for (const cue of soundEffectCues ?? []) {
+        const effectPath = path.join(workspaceDir, `sfx-${cue.index}.${extensionFromMimeType(cue.mimeType)}`)
+        await writeFile(effectPath, await getObjectBuffer(cue.storageKey))
+        soundEffects.push({
+          path: effectPath,
+          startSeconds: cue.startSeconds,
+          durationSeconds: cue.durationSeconds,
+        })
+      }
       await muxFinalRenderAudio({
         runCommand,
         stitchedPath,
         mainAudioPath,
         hasSourceAudio,
         musicPath,
+        soundEffects,
         outputPath: finalPath,
         durationSeconds: stitchedDurationSeconds,
         volume: readBgmVolume(payload.bgmVolume),

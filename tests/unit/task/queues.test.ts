@@ -62,6 +62,7 @@ describe('task queues', () => {
 
     expect(queuesModule.getQueueTypeByTaskType(taskTypes.TASK_TYPE.MUSIC_GENERATE)).toBe('music')
     expect(queuesModule.getQueueTypeByTaskType(taskTypes.TASK_TYPE.MUSIC_SCORE_PLAN)).toBe('music')
+    expect(queuesModule.getQueueTypeByTaskType(taskTypes.TASK_TYPE.SOUND_EFFECT_SCORE_PLAN)).toBe('music')
 
     const queue = queuesModule.getQueueByType('music')
     expect(queue).toBeDefined()
