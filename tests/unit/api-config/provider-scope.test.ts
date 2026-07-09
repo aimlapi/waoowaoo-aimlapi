@@ -24,6 +24,7 @@ describe('api config provider scope', () => {
     expect(getAddableModelTypesForProvider('openrouter')).toEqual(['llm', 'video'])
     expect(getAddableModelTypesForProvider('fal')).toEqual(['image', 'video'])
     expect(getAddableModelTypesForProvider('google')).toEqual(['llm', 'image', 'video', 'music'])
+    expect(getAddableModelTypesForProvider('elevenlabs')).toEqual([])
     expect(getAddableModelTypesForProvider('unsupported-provider')).toEqual([])
   })
 

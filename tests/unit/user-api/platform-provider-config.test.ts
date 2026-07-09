@@ -6,6 +6,7 @@ const ORIGINAL_ENV = {
   DEPLOYMENT_EDITION: process.env.DEPLOYMENT_EDITION,
   PROVIDER_CREDENTIAL_MODE: process.env.PROVIDER_CREDENTIAL_MODE,
   PLATFORM_GOOGLE_API_KEY: process.env.PLATFORM_GOOGLE_API_KEY,
+  PLATFORM_ELEVENLABS_API_KEY: process.env.PLATFORM_ELEVENLABS_API_KEY,
   PLATFORM_OPENROUTER_API_KEY: process.env.PLATFORM_OPENROUTER_API_KEY,
   PLATFORM_OPENROUTER_BASE_URL: process.env.PLATFORM_OPENROUTER_BASE_URL,
   BILLING_MODE: process.env.BILLING_MODE,
@@ -39,6 +40,20 @@ describe('platform provider config', () => {
       baseUrl: 'https://openrouter.example/api/v1',
     })
     await expect(hasApiConfig('user-1')).resolves.toBe(true)
+  })
+
+  it('reads ElevenLabs platform provider key in platform-key mode', async () => {
+    process.env.DEPLOYMENT_EDITION = 'cloud'
+    process.env.PROVIDER_CREDENTIAL_MODE = 'platform-key'
+    process.env.PLATFORM_ELEVENLABS_API_KEY = 'platform-elevenlabs-key'
+
+    const config = await getProviderConfig('user-1', 'elevenlabs')
+
+    expect(config).toEqual({
+      id: 'elevenlabs',
+      name: 'elevenlabs',
+      apiKey: 'platform-elevenlabs-key',
+    })
   })
 
   it('fails explicitly when a required platform key is missing', async () => {

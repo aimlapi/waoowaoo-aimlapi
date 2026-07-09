@@ -134,6 +134,7 @@ const ZH_PROVIDER_NAME_MAP: Record<string, string> = {
     google: 'Google',
     fal: 'FAL',
     openrouter: 'OpenRouter',
+    elevenlabs: 'ElevenLabs',
 }
 
 function isZhLocale(locale?: string): boolean {
@@ -204,6 +205,15 @@ export const PROVIDER_TUTORIALS: ProviderTutorial[] = [
             {
                 text: 'google_step1',
                 url: 'https://aistudio.google.com/api-keys'
+            }
+        ]
+    },
+    {
+        providerId: 'elevenlabs',
+        steps: [
+            {
+                text: 'elevenlabs_step1',
+                url: 'https://elevenlabs.io/app/settings/api-keys'
             }
         ]
     },

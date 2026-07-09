@@ -9,6 +9,7 @@ describe('provider scope', () => {
   it('registers only the supported provider set', () => {
     expect(API_CONFIG_CATALOG_PROVIDERS.map((provider) => provider.id).sort()).toEqual([
       'ark',
+      'elevenlabs',
       'fal',
       'google',
       'openrouter',

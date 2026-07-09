@@ -1,5 +1,6 @@
-import { isPlatformProviderCredentialMode } from '@/lib/deployment/config'
+import { fetchWithProviderProxy } from '@/lib/http/outbound-proxy'
 import { ELEVENLABS_SOUND_EFFECT_MODEL } from '@/lib/sound-effects/types'
+import { getProviderConfig } from '@/lib/user-api/runtime-config'
 
 export interface ElevenLabsSoundEffectResult {
   readonly buffer: Buffer
@@ -11,32 +12,24 @@ function readString(value: unknown): string {
   return typeof value === 'string' ? value.trim() : ''
 }
 
-function requireElevenLabsApiKey(): string {
-  const key = isPlatformProviderCredentialMode()
-    ? readString(process.env.PLATFORM_ELEVENLABS_API_KEY)
-    : readString(process.env.ELEVENLABS_API_KEY)
-  if (!key) {
-    throw new Error(isPlatformProviderCredentialMode()
-      ? 'ELEVENLABS_PLATFORM_API_KEY_REQUIRED'
-      : 'ELEVENLABS_API_KEY_REQUIRED')
-  }
-  return key
-}
-
 export async function generateElevenLabsSoundEffect(input: {
+  readonly userId: string
   readonly text: string
   readonly durationSeconds: number
 }): Promise<ElevenLabsSoundEffectResult> {
+  const userId = readString(input.userId)
+  if (!userId) throw new Error('ELEVENLABS_USER_REQUIRED')
   const text = readString(input.text)
   if (!text) throw new Error('ELEVENLABS_SOUND_EFFECT_TEXT_REQUIRED')
   if (!Number.isFinite(input.durationSeconds) || input.durationSeconds <= 0) {
     throw new Error('ELEVENLABS_SOUND_EFFECT_DURATION_INVALID')
   }
 
-  const response = await fetch('https://api.elevenlabs.io/v1/sound-generation', {
+  const { apiKey } = await getProviderConfig(userId, 'elevenlabs')
+  const response = await fetchWithProviderProxy('https://api.elevenlabs.io/v1/sound-generation', {
     method: 'POST',
     headers: {
-      'xi-api-key': requireElevenLabsApiKey(),
+      'xi-api-key': apiKey,
       'Content-Type': 'application/json',
       Accept: 'audio/mpeg',
     },

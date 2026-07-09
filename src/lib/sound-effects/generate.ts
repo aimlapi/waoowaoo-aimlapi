@@ -106,8 +106,9 @@ async function writeSoundEffectScoreProjectData(input: {
   })
 }
 
-async function renderCue(cue: SoundEffectCuePlan): Promise<SoundEffectCueRender> {
+async function renderCue(userId: string, cue: SoundEffectCuePlan): Promise<SoundEffectCueRender> {
   const generated = await generateElevenLabsSoundEffect({
+    userId,
     text: cue.prompt,
     durationSeconds: cue.durationSeconds,
   })
@@ -229,7 +230,7 @@ export async function handleSoundEffectScoreGenerateTask(job: Job<TaskJobData>) 
         cueIndex: cue.index,
         cueCount: plan.cues.length,
       })
-      renderedCues.push(await renderCue(cue))
+      renderedCues.push(await renderCue(job.data.userId, cue))
     }
 
     await reportTaskProgress(job, 88, { stage: 'sound_effect_score_persist' })

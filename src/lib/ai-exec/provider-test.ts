@@ -2,7 +2,7 @@ import OpenAI from 'openai'
 import { ARK_PROVIDER_TEST_LLM_MODEL_ID } from '@/lib/ai-providers/ark/models'
 import { fetchWithProviderProxy } from '@/lib/http/outbound-proxy'
 
-export type TestStepName = 'models' | 'textGen' | 'imageGen' | 'credits'
+export type TestStepName = 'models' | 'textGen' | 'imageGen' | 'soundGen' | 'credits'
 export type TestStepStatus = 'pass' | 'fail' | 'skip'
 
 export interface TestStep {
@@ -18,7 +18,7 @@ export interface TestProviderResult {
   steps: TestStep[]
 }
 
-type PresetProviderType = 'ark' | 'google' | 'openrouter' | 'fal'
+type PresetProviderType = 'ark' | 'google' | 'openrouter' | 'fal' | 'elevenlabs'
 
 type TestProviderPayload = {
   apiType: PresetProviderType
@@ -133,6 +133,26 @@ async function testFalProvider(apiKey: string): Promise<TestProviderResult> {
   }
 }
 
+async function testElevenLabsProvider(apiKey: string): Promise<TestProviderResult> {
+  const steps: TestStep[] = []
+  try {
+    const response = await fetchWithProviderProxy('https://api.elevenlabs.io/v1/user', {
+      method: 'GET',
+      headers: { 'xi-api-key': apiKey },
+    })
+    if (!response.ok) {
+      steps.push({ name: 'credits', status: 'fail', message: classifyFetchFailure(response.status) })
+      return { success: false, steps }
+    }
+    steps.push({ name: 'credits', status: 'pass', message: 'ElevenLabs account endpoint ok' })
+    steps.push({ name: 'soundGen', status: 'skip', message: 'Sound generation probe skipped to avoid spend' })
+    return { success: true, steps }
+  } catch (error) {
+    steps.push({ name: 'credits', status: 'fail', message: toErrorMessage(error) })
+    return { success: false, steps }
+  }
+}
+
 export async function testProviderConnection(payload: TestProviderPayload): Promise<TestProviderResult> {
   const apiKey = payload.apiKey.trim()
   if (!apiKey) {
@@ -161,6 +181,8 @@ export async function testProviderConnection(payload: TestProviderPayload): Prom
       return await testGoogleProvider(apiKey)
     case 'fal':
       return await testFalProvider(apiKey)
+    case 'elevenlabs':
+      return await testElevenLabsProvider(apiKey)
     default:
       return {
         success: false,

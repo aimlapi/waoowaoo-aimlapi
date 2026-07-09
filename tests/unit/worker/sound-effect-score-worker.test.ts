@@ -150,6 +150,7 @@ describe('sound effect score worker', () => {
       audioUrls: ['/m/sfx-1'],
     })
     expect(generateElevenLabsSoundEffectMock).toHaveBeenCalledWith({
+      userId: 'user-1',
       text: '干净的电影拟音：门轴轻轻吱呀响，无音乐，无人声',
       durationSeconds: 1.2,
     })

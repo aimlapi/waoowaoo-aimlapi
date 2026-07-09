@@ -49,5 +49,5 @@ export type ProviderCardTranslator = (
  * UI 层（是否显示"测试连接"按钮）和 逻辑层（保存时是否自动测试）共享此列表
  */
 export const VERIFIABLE_PROVIDER_KEYS = new Set([
-  'ark', 'google', 'openrouter', 'fal',
+  'ark', 'google', 'openrouter', 'fal', 'elevenlabs',
 ])

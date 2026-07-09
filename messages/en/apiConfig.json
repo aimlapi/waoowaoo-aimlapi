@@ -120,6 +120,7 @@
     "models": "Model List",
     "textGen": "Text Generation",
     "imageGen": "Image Generation",
+    "soundGen": "Sound Generation",
     "credits": "Credits Check",
     "skipped": "Skipped"
   },
@@ -163,7 +164,8 @@
       "ark_step2": "On the model management page, click 'Enable All Models' button in the top right corner",
       "openrouter_step1": "Go to OpenRouter platform and create an API Key (must select models with image capabilities)",
       "fal_step1": "Go to FAL platform and create an API Key",
-      "google_step1": "Go to Google AI Studio and create an API Key"
+      "google_step1": "Go to Google AI Studio and create an API Key",
+      "elevenlabs_step1": "Go to ElevenLabs and create an API Key"
     }
   }
 }
