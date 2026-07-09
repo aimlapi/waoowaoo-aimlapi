@@ -14,8 +14,8 @@ vi.mock('@/lib/user-api/runtime-config', () => ({
 
 import { executeElevenLabsAudioGeneration } from '@/lib/ai-providers/elevenlabs/audio'
 
-function readSubmittedJson(): unknown {
-  const init = fetchMock.mock.calls[0]?.[1] as RequestInit | undefined
+function readSubmittedJson(callIndex = 0): unknown {
+  const init = fetchMock.mock.calls[callIndex]?.[1] as RequestInit | undefined
   return JSON.parse(String(init?.body || '{}')) as unknown
 }
 
@@ -79,7 +79,39 @@ describe('ElevenLabs audio generation', () => {
     })
   })
 
-  it('fails explicitly when a non spot-SFX generation kind is requested', async () => {
+  it('accepts Foley and ambience sound generation kinds', async () => {
+    fetchMock
+      .mockResolvedValueOnce(new Response(new Uint8Array([1]), { status: 200 }))
+      .mockResolvedValueOnce(new Response(new Uint8Array([2]), { status: 200 }))
+
+    const generationKinds = ['foley', 'ambience'] as const
+    for (const generationKind of generationKinds) {
+      await executeElevenLabsAudioGeneration({
+        userId: 'user-1',
+        selection: {
+          provider: 'elevenlabs',
+          modelId: 'eleven_text_to_sound_v2',
+          modelKey: 'elevenlabs::eleven_text_to_sound_v2',
+          variantSubKind: 'official',
+        },
+        prompt: `${generationKind} prompt.`,
+        options: {
+          generationKind,
+        },
+      })
+    }
+
+    expect(readSubmittedJson(0)).toEqual({
+      text: 'foley prompt.',
+      model_id: 'eleven_text_to_sound_v2',
+    })
+    expect(readSubmittedJson(1)).toEqual({
+      text: 'ambience prompt.',
+      model_id: 'eleven_text_to_sound_v2',
+    })
+  })
+
+  it('fails explicitly when a non sound-design generation kind is requested', async () => {
     await expect(executeElevenLabsAudioGeneration({
       userId: 'user-1',
       selection: {
@@ -90,8 +122,8 @@ describe('ElevenLabs audio generation', () => {
       },
       prompt: 'Room tone.',
       options: {
-        generationKind: 'ambience',
+        generationKind: 'dialogue_tts',
       },
-    })).rejects.toThrow('ELEVENLABS_AUDIO_GENERATION_KIND_UNSUPPORTED:ambience')
+    })).rejects.toThrow('ELEVENLABS_AUDIO_GENERATION_KIND_UNSUPPORTED:dialogue_tts')
   })
 })

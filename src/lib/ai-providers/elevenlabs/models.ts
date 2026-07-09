@@ -8,6 +8,7 @@ import {
 } from '@/lib/ai-providers/shared/option-schema'
 
 export const ELEVENLABS_TEXT_TO_SOUND_V2_MODEL_ID = 'eleven_text_to_sound_v2'
+export const ELEVENLABS_TEXT_TO_SOUND_V2_GENERATION_KINDS = ['foley', 'spot_sfx', 'ambience'] as const
 
 export const ELEVENLABS_PLATFORM_MODEL_PRESETS = [
   {
@@ -25,7 +26,7 @@ export const ELEVENLABS_BUILTIN_CAPABILITY_CATALOG_ENTRIES = [
     modelId: ELEVENLABS_TEXT_TO_SOUND_V2_MODEL_ID,
     capabilities: {
       audio: {
-        generationKindOptions: ['spot_sfx'],
+        generationKindOptions: ELEVENLABS_TEXT_TO_SOUND_V2_GENERATION_KINDS,
         outputFormatOptions: ['mp3'],
       },
     },
@@ -49,7 +50,7 @@ export function resolveElevenLabsOptionSchema(modelId: string): AiOptionSchema {
   }
   return buildMediaOptionSchema('audio', {
     validators: {
-      generationKind: enumValidator(['spot_sfx']),
+      generationKind: enumValidator(ELEVENLABS_TEXT_TO_SOUND_V2_GENERATION_KINDS),
       outputFormat: enumValidator(['mp3']),
       durationSeconds: numberRangeValidator({ min: 0.5, max: 22 }),
       promptInfluence: numberRangeValidator({ min: 0, max: 1 }),

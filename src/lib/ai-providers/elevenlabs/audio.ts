@@ -1,7 +1,10 @@
 import { getProviderConfig } from '@/lib/user-api/runtime-config'
 import type { AiProviderAudioExecutionContext, GenerateResult } from '@/lib/ai-providers/runtime-types'
 import { requireSelectedModelId } from '@/lib/ai-providers/shared/model-selection'
-import { ELEVENLABS_TEXT_TO_SOUND_V2_MODEL_ID } from './models'
+import {
+  ELEVENLABS_TEXT_TO_SOUND_V2_GENERATION_KINDS,
+  ELEVENLABS_TEXT_TO_SOUND_V2_MODEL_ID,
+} from './models'
 
 type ElevenLabsAudioOptions = NonNullable<AiProviderAudioExecutionContext['options']>
 
@@ -30,7 +33,12 @@ function buildElevenLabsSoundPayload(
   if (modelId !== ELEVENLABS_TEXT_TO_SOUND_V2_MODEL_ID) {
     throw new Error(`ELEVENLABS_AUDIO_MODEL_UNSUPPORTED:${modelId}`)
   }
-  if (options.generationKind && options.generationKind !== 'spot_sfx') {
+  if (
+    options.generationKind
+    && !ELEVENLABS_TEXT_TO_SOUND_V2_GENERATION_KINDS.includes(
+      options.generationKind as (typeof ELEVENLABS_TEXT_TO_SOUND_V2_GENERATION_KINDS)[number],
+    )
+  ) {
     throw new Error(`ELEVENLABS_AUDIO_GENERATION_KIND_UNSUPPORTED:${options.generationKind}`)
   }
 

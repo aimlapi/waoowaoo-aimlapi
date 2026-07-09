@@ -40,36 +40,43 @@ describe('audio stem generation', () => {
     })
   })
 
-  it('routes spot sound effects to the ElevenLabs sound executor', async () => {
-    await generateAudioStem({
-      userId: 'user-1',
-      role: 'spot_sfx',
-      prompt: 'A heavy wooden door slam.',
-      outputFormat: 'mp3',
-      durationSeconds: 2.5,
-      promptInfluence: 0.75,
-      loop: false,
-    })
+  it('routes non-dialogue sound design stems to the ElevenLabs sound executor', async () => {
+    const roles = ['foley', 'spot_sfx', 'ambience'] as const
 
-    expect(executeMediaGenerationMock).toHaveBeenCalledWith({
-      modality: 'audio',
-      userId: 'user-1',
-      modelKey: 'elevenlabs::eleven_text_to_sound_v2',
-      prompt: 'A heavy wooden door slam.',
-      options: {
-        generationKind: 'spot_sfx',
-        voice: undefined,
+    for (const role of roles) {
+      await generateAudioStem({
+        userId: 'user-1',
+        role,
+        prompt: `${role} prompt.`,
         outputFormat: 'mp3',
         durationSeconds: 2.5,
         promptInfluence: 0.75,
         loop: false,
-        audioUrls: undefined,
-        imageUrl: undefined,
-        sampleRate: undefined,
-        speed: undefined,
-        volume: undefined,
-        pitch: undefined,
-      },
+      })
+    }
+
+    expect(executeMediaGenerationMock).toHaveBeenCalledTimes(roles.length)
+    roles.forEach((role, index) => {
+      expect(executeMediaGenerationMock).toHaveBeenNthCalledWith(index + 1, {
+        modality: 'audio',
+        userId: 'user-1',
+        modelKey: 'elevenlabs::eleven_text_to_sound_v2',
+        prompt: `${role} prompt.`,
+        options: {
+          generationKind: role,
+          voice: undefined,
+          outputFormat: 'mp3',
+          durationSeconds: 2.5,
+          promptInfluence: 0.75,
+          loop: false,
+          audioUrls: undefined,
+          imageUrl: undefined,
+          sampleRate: undefined,
+          speed: undefined,
+          volume: undefined,
+          pitch: undefined,
+        },
+      })
     })
   })
 

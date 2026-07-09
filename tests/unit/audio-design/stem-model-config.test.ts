@@ -14,9 +14,9 @@ describe('audio stem model config', () => {
         generationKind: 'dialogue_tts',
       }),
       foley: expect.objectContaining({
-        provider: 'fal',
-        modelId: 'bytedance/seed-audio-1.0',
-        modelKey: 'fal::bytedance/seed-audio-1.0',
+        provider: 'elevenlabs',
+        modelId: 'eleven_text_to_sound_v2',
+        modelKey: 'elevenlabs::eleven_text_to_sound_v2',
         generationKind: 'foley',
       }),
       spot_sfx: expect.objectContaining({
@@ -26,9 +26,9 @@ describe('audio stem model config', () => {
         generationKind: 'spot_sfx',
       }),
       ambience: expect.objectContaining({
-        provider: 'fal',
-        modelId: 'bytedance/seed-audio-1.0',
-        modelKey: 'fal::bytedance/seed-audio-1.0',
+        provider: 'elevenlabs',
+        modelId: 'eleven_text_to_sound_v2',
+        modelKey: 'elevenlabs::eleven_text_to_sound_v2',
         generationKind: 'ambience',
       }),
       bgm: expect.objectContaining({

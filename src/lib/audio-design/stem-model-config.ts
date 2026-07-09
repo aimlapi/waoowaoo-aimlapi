@@ -4,7 +4,6 @@ import {
 } from '@/lib/ai-providers/elevenlabs/models'
 import {
   FAL_LYRIA_3_PRO_MODEL_ID,
-  FAL_SEED_AUDIO_MODEL_ID,
   FAL_XAI_TTS_MODEL_ID,
 } from '@/lib/ai-providers/fal/models'
 import {
@@ -63,8 +62,8 @@ export const DEFAULT_AUDIO_STEM_MODEL_CONFIGS = {
   }),
   foley: audioStemConfig({
     role: 'foley',
-    provider: 'fal',
-    modelId: FAL_SEED_AUDIO_MODEL_ID,
+    provider: 'elevenlabs',
+    modelId: ELEVENLABS_TEXT_TO_SOUND_V2_MODEL_ID,
     generationKind: 'foley',
   }),
   spot_sfx: audioStemConfig({
@@ -75,8 +74,8 @@ export const DEFAULT_AUDIO_STEM_MODEL_CONFIGS = {
   }),
   ambience: audioStemConfig({
     role: 'ambience',
-    provider: 'fal',
-    modelId: FAL_SEED_AUDIO_MODEL_ID,
+    provider: 'elevenlabs',
+    modelId: ELEVENLABS_TEXT_TO_SOUND_V2_MODEL_ID,
     generationKind: 'ambience',
   }),
   bgm: audioStemConfig({

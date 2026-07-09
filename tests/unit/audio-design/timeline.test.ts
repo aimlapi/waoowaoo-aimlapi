@@ -88,9 +88,9 @@ describe('audio design timeline', () => {
     ])
     expect(timelineAudio.stemPlan.map((stem) => [stem.role, stem.modelKey, stem.generationKind])).toEqual([
       ['native_video', null, 'native_reference'],
-      ['foley', 'fal::bytedance/seed-audio-1.0', 'foley'],
+      ['foley', 'elevenlabs::eleven_text_to_sound_v2', 'foley'],
       ['spot_sfx', 'elevenlabs::eleven_text_to_sound_v2', 'spot_sfx'],
-      ['ambience', 'fal::bytedance/seed-audio-1.0', 'ambience'],
+      ['ambience', 'elevenlabs::eleven_text_to_sound_v2', 'ambience'],
       ['bgm', 'fal::fal-ai/lyria3/pro', 'music'],
     ])
     expect(timelineAudio.duckingProfile).toEqual([
