@@ -65,6 +65,9 @@ export type AiAudioExecutionOptions = {
   voice?: string
   language?: string
   outputFormat?: 'mp3' | 'wav'
+  durationSeconds?: number
+  promptInfluence?: number
+  loop?: boolean
   audioUrls?: string[]
   imageUrl?: string
   sampleRate?: number

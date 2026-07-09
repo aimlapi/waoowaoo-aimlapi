@@ -8,6 +8,7 @@ import { arkAsyncTaskProvider } from '@/lib/ai-providers/ark/async-task'
 import { arkSeedance2VideoTokenPricingContract } from '@/lib/ai-providers/ark/video-token-pricing'
 import { falAdapter } from '@/lib/ai-providers/fal/adapter'
 import { falAsyncTaskProvider } from '@/lib/ai-providers/fal/async-task'
+import { elevenLabsAdapter } from '@/lib/ai-providers/elevenlabs/adapter'
 import { googleAdapter } from '@/lib/ai-providers/google/adapter'
 import { geminiBatchAsyncTaskProvider, googleVideoAsyncTaskProvider } from '@/lib/ai-providers/google/async-task'
 import { openRouterAdapter } from '@/lib/ai-providers/openrouter/adapter'
@@ -18,6 +19,7 @@ import type { VideoTokenPricingContract } from '@/lib/ai-providers/shared/video-
 const runtimeProviderRegistry = new AiRegistry<AiProviderAdapter>([
   arkAdapter,
   falAdapter,
+  elevenLabsAdapter,
   googleAdapter,
   openRouterAdapter,
 ])

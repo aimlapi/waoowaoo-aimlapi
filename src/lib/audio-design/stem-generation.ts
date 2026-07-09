@@ -22,6 +22,9 @@ export type SoundStemGenerationInput = StemGenerationCommonInput & {
   readonly role: 'foley' | 'spot_sfx' | 'ambience'
   readonly voice?: string
   readonly outputFormat?: 'mp3' | 'wav'
+  readonly durationSeconds?: number
+  readonly promptInfluence?: number
+  readonly loop?: boolean
   readonly audioUrls?: readonly string[]
   readonly imageUrl?: string
   readonly sampleRate?: number
@@ -74,6 +77,9 @@ function buildAudioOptions(input: DialogueStemGenerationInput | SoundStemGenerat
     generationKind: modelConfig.generationKind,
     voice: input.voice,
     outputFormat: input.outputFormat,
+    durationSeconds: input.durationSeconds,
+    promptInfluence: input.promptInfluence,
+    loop: input.loop,
     audioUrls: normalizeReadonlyStrings(input.audioUrls),
     imageUrl: input.imageUrl,
     sampleRate: input.sampleRate,

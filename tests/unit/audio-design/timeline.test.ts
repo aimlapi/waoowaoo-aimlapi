@@ -72,10 +72,15 @@ describe('audio design timeline', () => {
     })
 
     expect(timelineAudio.timelineSignature).toBe(timelineSignature)
+    expect(timelineAudio.nativeDialogueSource).toEqual({
+      mode: 'native_video_dialogue',
+      provider: 'seedance_2_0',
+      policy: 'keep_for_dialogue_and_lip_sync',
+      description: 'Dialogue, vocal performance, and lip sync are authored by the upstream video model. The audio post module only adds non-dialogue Foley, spot SFX, ambience, and score.',
+    })
     expect(timelineAudio.clips.map((item) => [item.startSec, item.endSec])).toEqual([[0, 3], [3, 5]])
     expect(timelineAudio.stemPlan.map((stem) => stem.role)).toEqual([
       'native_video',
-      'dialogue',
       'foley',
       'spot_sfx',
       'ambience',
@@ -83,9 +88,8 @@ describe('audio design timeline', () => {
     ])
     expect(timelineAudio.stemPlan.map((stem) => [stem.role, stem.modelKey, stem.generationKind])).toEqual([
       ['native_video', null, 'native_reference'],
-      ['dialogue', 'fal::xai/tts/v1', 'dialogue_tts'],
       ['foley', 'fal::bytedance/seed-audio-1.0', 'foley'],
-      ['spot_sfx', 'fal::bytedance/seed-audio-1.0', 'spot_sfx'],
+      ['spot_sfx', 'elevenlabs::eleven_text_to_sound_v2', 'spot_sfx'],
       ['ambience', 'fal::bytedance/seed-audio-1.0', 'ambience'],
       ['bgm', 'fal::fal-ai/lyria3/pro', 'music'],
     ])

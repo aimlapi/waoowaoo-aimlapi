@@ -52,7 +52,7 @@ type PlatformProviderEnvResolution =
   | { ok: true; env: PlatformProviderEnv }
   | { ok: false; error: Error }
 
-const SUPPORTED_PROVIDER_IDS = new Set(['ark', 'openrouter', 'fal', 'google'])
+const SUPPORTED_PROVIDER_IDS = new Set(['ark', 'openrouter', 'fal', 'google', 'elevenlabs'])
 
 function isPlainObject(value: unknown): value is object {
   return !!value && typeof value === 'object' && !Array.isArray(value)
@@ -84,6 +84,8 @@ function resolvePlatformProviderEnvCandidate(providerId: string): PlatformProvid
         return 'PLATFORM_ARK'
       case 'openrouter':
         return 'PLATFORM_OPENROUTER'
+      case 'elevenlabs':
+        return 'PLATFORM_ELEVENLABS'
       default:
         throw new Error(`PLATFORM_PROVIDER_UNSUPPORTED: ${providerId}`)
     }

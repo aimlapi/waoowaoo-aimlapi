@@ -44,6 +44,10 @@ const TypeIcon = ({
       return (
         <AppIcon name="audioWave" className={className} />
       )
+    case 'audio':
+      return (
+        <AppIcon name="audioWave" className={className} />
+      )
   }
 }
 
@@ -70,6 +74,7 @@ export function getAddableModelTypesForProvider(providerId: string): ProviderCar
   const providerKey = getProviderKey(providerId)
   if (providerKey === 'openrouter') return ['llm', 'video']
   if (providerKey === 'fal') return ['image', 'video', 'audio', 'music']
+  if (providerKey === 'elevenlabs') return ['audio']
   if (providerKey === 'google') return ['llm', 'image', 'video', 'music']
   if (providerKey === 'ark') return ['llm', 'image', 'video']
   return []

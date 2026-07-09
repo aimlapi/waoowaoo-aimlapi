@@ -134,6 +134,7 @@ const ZH_PROVIDER_NAME_MAP: Record<string, string> = {
     google: 'Google',
     fal: 'FAL',
     openrouter: 'OpenRouter',
+    elevenlabs: 'ElevenLabs',
 }
 
 function isZhLocale(locale?: string): boolean {

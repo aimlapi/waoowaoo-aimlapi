@@ -5,7 +5,7 @@ import {
 } from '@/lib/audio-design/stem-model-config'
 
 describe('audio stem model config', () => {
-  it('routes cinematic audio stems to the selected FAL models', () => {
+  it('routes cinematic audio stems to the selected provider models', () => {
     expect(DEFAULT_AUDIO_STEM_MODEL_CONFIGS).toEqual({
       dialogue: expect.objectContaining({
         provider: 'fal',
@@ -20,9 +20,9 @@ describe('audio stem model config', () => {
         generationKind: 'foley',
       }),
       spot_sfx: expect.objectContaining({
-        provider: 'fal',
-        modelId: 'bytedance/seed-audio-1.0',
-        modelKey: 'fal::bytedance/seed-audio-1.0',
+        provider: 'elevenlabs',
+        modelId: 'eleven_text_to_sound_v2',
+        modelKey: 'elevenlabs::eleven_text_to_sound_v2',
         generationKind: 'spot_sfx',
       }),
       ambience: expect.objectContaining({

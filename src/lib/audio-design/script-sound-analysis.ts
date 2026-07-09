@@ -2,7 +2,10 @@ import { executeAiTextStep } from '@/lib/ai-exec/engine'
 import { safeParseJsonObject } from '@/lib/json-repair'
 import {
   scriptSoundAnalysisSchema,
+  type ScoreLayer,
   type ScriptSoundAnalysis,
+  type SoundMixFoleyLayer,
+  type SoundMixSpotSfxLayer,
 } from './types'
 
 export interface ScriptSoundAnalysisInput {
@@ -21,6 +24,34 @@ export interface SoundDescriptionMarkdownInput {
   readonly targetDurationSeconds?: number
   readonly projectId?: string
   readonly locale?: string
+}
+
+export interface SoundMixProjectMetadata {
+  readonly bpm: number
+  readonly key: string
+  readonly overallMood: string
+}
+
+export interface ScoreStemAdapterPromptInput {
+  readonly projectMetadata: SoundMixProjectMetadata
+  readonly scoreLayer: ScoreLayer
+}
+
+export interface SfxFoleyAdapterPromptInput {
+  readonly layerKind: 'foley' | 'spot_sfx'
+  readonly layer: SoundMixFoleyLayer | SoundMixSpotSfxLayer
+}
+
+export interface ScoreStemPromptAdapterInput extends ScoreStemAdapterPromptInput {
+  readonly userId: string
+  readonly model: string
+  readonly projectId?: string
+}
+
+export interface SfxFoleyPromptAdapterInput extends SfxFoleyAdapterPromptInput {
+  readonly userId: string
+  readonly model: string
+  readonly projectId?: string
 }
 
 function readTrimmedString(value: string | null | undefined): string {
@@ -84,13 +115,12 @@ function buildAnalysisJsonShape(sourceKind: 'script' | 'sound_description'): str
     '  "targetDurationSeconds": number,',
     '  "summary": string,',
     '  "emotionalArc": string,',
-    '  "voiceBible": [{ "characterName": string, "voiceTraits": string, "speakingPace": string, "emotionalRange": string, "constraints": string[] }],',
-    '  "dialogueLayer": [{ "cueId": string, "shotNumber": number, "speaker": string|null, "text": string, "emotion": string, "delivery": string, "startSec": number|null, "endSec": number|null }],',
-    '  "foleyPlan": [{ "cueId": string, "beatNumber": number, "label": string, "description": string, "startSec": number|null, "durationSec": number|null }],',
-    '  "spotSfxPlan": [{ "cueId": string, "shotNumber": number, "label": string, "description": string, "priority": "story"|"critical", "startSec": number|null, "durationSec": number|null }],',
-    '  "ambiencePlan": [{ "cueId": string, "shotNumbers": number[], "description": string, "startSec": number, "endSec": number }],',
-    '  "bgmPlan": { "overallDirection": string, "sections": [{ "sectionId": string, "startSec": number, "endSec": number, "intensity": 1|2|3|4|5, "description": string }] },',
-    '  "stemPromptSeeds": { "dialogue": string, "foley": string, "spotSfx": string, "ambience": string, "bgm": string }',
+    '  "projectMetadata": { "bpm": number, "key": string, "overallMood": string },',
+    '  "dialogueStrategy": { "action": "keep_native"|"enhance"|"mute", "duckingTrigger": boolean },',
+    '  "scoreLayers": [{ "id": string, "role": "tension_bed"|"rhythmic"|"theme"|"accent"|"atmospheric_pad", "instrument": string, "startSec": number, "endSec": number, "duckingRequired": boolean, "description": string }],',
+    '  "foleyLayers": [{ "id": string, "type": string, "timestamps": number[], "material": string, "description": string }],',
+    '  "spotSfxLayers": [{ "id": string, "effectName": string, "startSec": number, "durationSec": number, "priority": "high"|"critical", "material": string, "description": string }],',
+    '  "ambienceLayers": [{ "id": string, "space": string, "layers": string[], "startSec": number, "endSec": number, "description": string }]',
     '}',
   ].join('\n')
 }
@@ -105,28 +135,35 @@ export function buildScriptSoundAnalysisPrompt(input: {
   const targetDurationSeconds = normalizeTargetDurationSeconds(input.targetDurationSeconds)
 
   return [
-    'You are a cinematic sound designer preparing a script-first audio spotting sheet.',
+    '# Role: Supervising Sound Editor & Composer',
     '',
-    'Do not generate audio. Analyze the script and return only strict JSON.',
-    'The JSON must be usable before video analysis: it should define what sound exists, why it exists, and which stem it belongs to.',
+    '# Mission',
+    'Analyze the input script excerpt as scene data and design a dynamic, multi-layer Sound Mix Plan.',
+    'Do not generate audio. Return strict JSON only.',
     '',
     `Target duration seconds: ${targetDurationSeconds}`,
     `Locale for natural-language descriptions: ${readTrimmedString(input.locale) || 'en'}`,
     '',
-    'Required JSON shape:',
+    '# Core Logic',
+    '1. Dynamic score layering: never output a single monolithic bgm plan. Represent music as functional scoreLayers such as low drone, rhythmic pulse, motif, accent, or atmospheric pad.',
+    '2. Musical consistency: every score layer must share projectMetadata.bpm and projectMetadata.key.',
+    '3. Dialogue strategy: assume dialogue is handled by native video audio when usable. Use dialogueStrategy.action instead of producing a dialogue generation stem.',
+    '4. Ducking logic: mark score layers that must duck against native dialogue or enhanced dialogue.',
+    '5. Granular foley: split physical movement into individual timestamp triggers instead of one continuous recording.',
+    '6. Dynamic quantity: scoreLayers, foleyLayers, spotSfxLayers, and ambienceLayers may be empty or multi-item based on scene needs.',
+    '',
+    '# Output Format',
+    'You must output JSON matching this shape exactly. No markdown fences. No prose.',
     buildAnalysisJsonShape('script'),
     '',
     'Rules:',
-    '- Use script beats as shotNumber/beatNumber when no storyboard exists. Start at 1 and increase monotonically.',
-    '- Estimate timing within the target duration, but do not exceed it.',
-    '- Separate body movement foley from supernatural/impact spot SFX.',
-    '- Dialogue stem contains spoken lines, gasps, whispers, exertion, and nonverbal vocalizations only when script-relevant.',
-    '- Foley stem contains human movement, cloth, floor contact, breath movement, props, and realistic physical performance details.',
-    '- Spot SFX stem contains highlighted story sound events that need precise placement and control.',
-    '- Ambience stem contains continuous room tone, spatial resonance, environmental beds, and location-specific air.',
-    '- BGM stem contains score direction only, not sound effects.',
-    '- Do not invent unrelated characters or dialogue.',
-    '- Return JSON only. No markdown fences.',
+    '- Set sourceKind to "script".',
+    '- Estimate all startSec/endSec/timestamps within the target duration.',
+    '- Split Foley from Spot SFX: Foley is realistic body, cloth, floor, prop, and contact performance; Spot SFX is precise story-impact sound.',
+    '- Split Ambience into spatial beds and room/location layers.',
+    '- Use scoreLayers for music only; never put foley, ambience, or impact SFX into scoreLayers.',
+    '- Use projectMetadata.bpm and projectMetadata.key as the shared score anchor for every score layer.',
+    '- Do not invent unrelated scenes or characters.',
     '',
     'Script:',
     scriptText,
@@ -143,34 +180,95 @@ export function buildSoundDescriptionImportPrompt(input: {
   const targetDurationSeconds = resolveSoundDescriptionDurationSeconds(input.targetDurationSeconds, markdownText)
 
   return [
-    'You are importing a cinematic sound-description-only Markdown file into a structured audio design schema.',
+    '# Role: Supervising Sound Editor & Composer',
     '',
+    '# Mission',
+    'Import the sound-description-only Markdown into the dynamic Sound Mix Plan schema.',
     'Do not generate audio. Do not rewrite this as prose. Convert the document into strict JSON for the audio pipeline.',
-    'This Markdown is already a sound design blueprint, so preserve its beat order, stem separation, motif logic, spatial rules, and mixer automation intent.',
+    'Preserve beat order, dynamic score layering, Foley/SFX separation, motif logic, spatial rules, ducking, and mixer automation intent.',
     '',
     `Target duration seconds: ${targetDurationSeconds}`,
     `Locale for natural-language descriptions: ${readTrimmedString(input.locale) || 'en'}`,
     '',
-    'Required JSON shape:',
+    '# Core Logic',
+    '1. Dynamic score layering: map music into scoreLayers, never one bgm field.',
+    '2. Musical consistency: all scoreLayers must share projectMetadata.bpm and projectMetadata.key.',
+    '3. Dialogue strategy: represent native dialogue handling through dialogueStrategy, not a generated dialogue stem.',
+    '4. Foley granularity: map action sounds to timestamped foleyLayers.',
+    '5. SFX control: map highlighted story impacts and one-shots to spotSfxLayers.',
+    '6. Ambience beds: map space, room tone, pressure, and air into ambienceLayers.',
+    '',
+    '# Output Format',
+    'You must output JSON matching this shape exactly. No markdown fences. No prose.',
     buildAnalysisJsonShape('sound_description'),
     '',
     'Rules:',
     '- Set sourceKind to "sound_description".',
-    '- Use Ordered Sound Beats as the authority for shotNumber and beatNumber. K-0001 maps to 1, K-0002 maps to 2, and so on.',
-    '- Preserve dialogue text exactly when dialogue is present.',
-    '- Map "Foley / SFX focus" into foleyPlan for realistic movement, cloth, breath, floor, prop, and performance sounds.',
-    '- Map highlighted story events, impacts, supernatural effects, wounds, hits, stings, and one-shot events into spotSfxPlan.',
-    '- Map location acoustic space, ambient strategy, room tone, reverb, and spatialization into ambiencePlan.',
-    '- Map score identity, motifs, harmonic strategy, rhythm, register shift, and continuity bridge into bgmPlan.',
-    '- Map mixer automation into stemPromptSeeds so downstream stem generation and FFmpeg mixing can use it.',
+    '- Use Ordered Sound Beats as the authority for timing order. K-0001 maps to the earliest cue group, K-0002 to the next, and so on.',
+    '- Preserve native dialogue intent through dialogueStrategy, especially whether native video dialogue should be kept, enhanced, or muted.',
+    '- Map "Foley / SFX focus" physical movement into foleyLayers.',
+    '- Map highlighted story events, impacts, supernatural effects, wounds, hits, stings, and one-shot events into spotSfxLayers.',
+    '- Map location acoustic space, ambient strategy, room tone, reverb, and spatialization into ambienceLayers.',
+    '- Map score identity, motifs, harmonic strategy, rhythm, register shift, and continuity bridge into scoreLayers.',
     '- Estimate cue timings across the target duration when the Markdown has beat order but no exact seconds.',
     '- Do not exceed the target duration.',
     '- Do not invent unrelated scenes, characters, or dialogue.',
-    '- Return JSON only. No markdown fences.',
     '',
     'Sound-description-only Markdown:',
     markdownText,
   ].join('\n')
+}
+
+export function buildScoreStemAdapterPrompt(input: ScoreStemAdapterPromptInput): string {
+  return [
+    '# Role: Digital Audio Workstation Arrangement Assistant',
+    '',
+    '# Task',
+    'Convert the input Score Layer JSON into one English music-generation prompt for an isolated score stem.',
+    '',
+    '# Prompt Engineering Rules',
+    '1. Isolation: include "isolated stem", "solo instrument", "pure", and "no other instruments".',
+    '2. Drums: include "no drums" unless the score layer role is rhythmic and the instrument explicitly names percussion or drums.',
+    '3. Frequency constraint: low drone or tension bed should focus on sub-bass/low frequency; theme/motif should focus on mid-high frequency; accents should remain short and controllable.',
+    '4. Mandatory metadata: inject the exact BPM and Key from projectMetadata.',
+    '5. Output English prompt only. No JSON. No markdown.',
+    '',
+    '# Output Template',
+    '"Isolated [Instrument] stem, [Role] for cinematic score, [BPM] BPM, Key of [Key], [Mood Description], [Playing Technique], high-fidelity studio recording, no background noise, no other instruments, 48kHz."',
+    '',
+    '# Project Metadata',
+    JSON.stringify(input.projectMetadata),
+    '',
+    '# Score Layer JSON',
+    JSON.stringify(input.scoreLayer),
+  ].join('\n')
+}
+
+export function buildSfxFoleyAdapterPrompt(input: SfxFoleyAdapterPromptInput): string {
+  return [
+    '# Role: Hollywood Foley Recordist',
+    '',
+    '# Task',
+    'Write one English prompt for a clean isolated action sound effect.',
+    '',
+    '# Constraints',
+    '1. Absolute ban: do not request music, melody, song, background beat, dialogue, or voice.',
+    '2. Physical properties: describe material, intensity, contact/impact type, and acoustic space.',
+    '3. Purity: include "crystal clear", "highly detailed", "isolated sound", "close-mic recording", "no background music", and "no ambient noise".',
+    '4. Output English prompt only. No JSON. No markdown.',
+    '',
+    '# Output Template',
+    '"Foley sound effect: [Material] [Action], [Intensity], [Acoustic Space], crystal clear, highly detailed, isolated sound, close-mic recording, no background music, no ambient noise."',
+    '',
+    `# Layer Kind: ${input.layerKind}`,
+    JSON.stringify(input.layer),
+  ].join('\n')
+}
+
+function readAdapterPromptOutput(text: string, errorCode: string): string {
+  const trimmed = readTrimmedString(text).replace(/^"|"$/g, '').trim()
+  if (!trimmed) throw new Error(errorCode)
+  return trimmed
 }
 
 export function parseScriptSoundAnalysis(text: string): ScriptSoundAnalysis {
@@ -206,6 +304,54 @@ export async function analyzeScriptSound(input: ScriptSoundAnalysisInput): Promi
     },
   })
   return parseScriptSoundAnalysis(completion.text)
+}
+
+export async function adaptScoreStemPrompt(input: ScoreStemPromptAdapterInput): Promise<string> {
+  const completion = await executeAiTextStep({
+    userId: input.userId,
+    model: input.model,
+    messages: [{
+      role: 'user',
+      content: buildScoreStemAdapterPrompt({
+        projectMetadata: input.projectMetadata,
+        scoreLayer: input.scoreLayer,
+      }),
+    }],
+    temperature: 0.1,
+    projectId: input.projectId,
+    action: 'score_stem_prompt_adapter',
+    meta: {
+      stepId: 'score_stem_prompt_adapter',
+      stepTitle: 'score_stem_prompt_adapter',
+      stepIndex: 1,
+      stepTotal: 1,
+    },
+  })
+  return readAdapterPromptOutput(completion.text, 'SCORE_STEM_ADAPTER_PROMPT_EMPTY')
+}
+
+export async function adaptSfxFoleyPrompt(input: SfxFoleyPromptAdapterInput): Promise<string> {
+  const completion = await executeAiTextStep({
+    userId: input.userId,
+    model: input.model,
+    messages: [{
+      role: 'user',
+      content: buildSfxFoleyAdapterPrompt({
+        layerKind: input.layerKind,
+        layer: input.layer,
+      }),
+    }],
+    temperature: 0.1,
+    projectId: input.projectId,
+    action: 'sfx_foley_prompt_adapter',
+    meta: {
+      stepId: `sfx_foley_prompt_adapter:${input.layerKind}`,
+      stepTitle: 'sfx_foley_prompt_adapter',
+      stepIndex: 1,
+      stepTotal: 1,
+    },
+  })
+  return readAdapterPromptOutput(completion.text, 'SFX_FOLEY_ADAPTER_PROMPT_EMPTY')
 }
 
 export async function importSoundDescriptionMarkdown(input: SoundDescriptionMarkdownInput): Promise<ScriptSoundAnalysis> {

@@ -50,6 +50,7 @@ export const API_CONFIG_CATALOG_PROVIDERS: ApiConfigCatalogProvider[] = [
   { id: 'openrouter', name: 'OpenRouter', baseUrl: 'https://openrouter.ai/api/v1' },
   { id: 'fal', name: 'FAL' },
   { id: 'google', name: 'Google AI Studio' },
+  { id: 'elevenlabs', name: 'ElevenLabs' },
 ]
 
 const CATALOG_PROVIDER_ORDER = new Map(API_CONFIG_CATALOG_PROVIDERS.map((provider, index) => [provider.id, index]))
@@ -156,6 +157,7 @@ export function matchesApiConfigModelKey(key: string | undefined | null, provide
 
 const ZH_PROVIDER_NAME_MAP: Readonly<Record<string, string>> = {
   ark: '火山引擎 Ark',
+  elevenlabs: 'ElevenLabs',
 }
 
 function isZhLocale(locale?: string): boolean {

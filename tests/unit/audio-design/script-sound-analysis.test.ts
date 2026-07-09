@@ -7,8 +7,12 @@ vi.mock('@/lib/ai-exec/engine', () => ({
 }))
 
 import {
+  adaptScoreStemPrompt,
+  adaptSfxFoleyPrompt,
   analyzeScriptSound,
+  buildScoreStemAdapterPrompt,
   buildScriptSoundAnalysisPrompt,
+  buildSfxFoleyAdapterPrompt,
   buildSoundDescriptionImportPrompt,
   importSoundDescriptionMarkdown,
   inferSoundDescriptionDurationSeconds,
@@ -22,64 +26,56 @@ function validAnalysisJson(sourceKind: 'script' | 'sound_description' = 'script'
     targetDurationSeconds: 30,
     summary: 'Susie begins the ritual dance while Olga is trapped in the mirrored studio.',
     emotionalArc: 'Controlled ritual tension escalates into body horror.',
-    voiceBible: [{
-      characterName: 'Blanc',
-      voiceTraits: 'calm, precise, low authority',
-      speakingPace: 'measured',
-      emotionalRange: 'contained concern to command',
-      constraints: ['never melodramatic'],
-    }],
-    dialogueLayer: [{
-      cueId: 'dialogue-blanc-and',
-      shotNumber: 1,
-      speaker: 'Blanc',
-      text: 'And--',
-      emotion: 'commanding',
-      delivery: 'soft cue into motion',
-      startSec: 0.5,
-      endSec: 1.2,
-    }],
-    foleyPlan: [{
-      cueId: 'foley-susie-floorwork',
-      beatNumber: 1,
-      label: 'dance floor impacts',
-      description: 'Bare feet and body weight striking the studio floor with controlled force.',
-      startSec: 1.2,
-      durationSec: 24,
-    }],
-    spotSfxPlan: [{
-      cueId: 'sfx-jaw-dislocation',
-      shotNumber: 2,
-      label: 'jaw dislocation',
-      description: 'A dry internal joint crack caused by an invisible blow.',
-      priority: 'critical',
-      startSec: 7,
-      durationSec: 0.5,
-    }],
-    ambiencePlan: [{
-      cueId: 'ambience-mirrored-studio',
-      shotNumbers: [1, 2],
-      description: 'Cold mirrored room tone with hard reflections and distant building hush.',
+    projectMetadata: {
+      bpm: 84,
+      key: 'D_minor',
+      overallMood: 'ritualistic body-horror dread',
+    },
+    dialogueStrategy: {
+      action: 'keep_native',
+      duckingTrigger: true,
+    },
+    scoreLayers: [{
+      id: 'score_low_drone',
+      role: 'tension_bed',
+      instrument: 'cello_sub_bass',
       startSec: 0,
       endSec: 30,
+      duckingRequired: true,
+      description: 'A low sub-bass cello pressure bed under the ritual dance.',
+    }, {
+      id: 'score_strings_pulse',
+      role: 'rhythmic',
+      instrument: 'staccato_violins',
+      startSec: 8,
+      endSec: 26,
+      duckingRequired: true,
+      description: 'Fast string pulses that intensify as the body trauma accelerates.',
     }],
-    bgmPlan: {
-      overallDirection: 'Ritual drum-led dread with no vocals.',
-      sections: [{
-        sectionId: 'bgm-rise',
-        startSec: 0,
-        endSec: 30,
-        intensity: 5,
-        description: 'Escalating dance pulse synchronized to body horror impacts.',
-      }],
-    },
-    stemPromptSeeds: {
-      dialogue: 'Subtle whispered dance instruction and strained nonverbal pain sounds.',
-      foley: 'Precise dance floor impacts, cloth movement, breath, and controlled body turns.',
-      spotSfx: 'Internal body trauma impacts: jaw, throat, ribs, sternum, shoulder.',
-      ambience: 'Large dance studio and mirrored room air, cold reflective resonance.',
-      bgm: 'Ritualistic drum-led cinematic dread, escalating, no vocals.',
-    },
+    foleyLayers: [{
+      id: 'foley_susie_floorwork',
+      type: 'dance_floor_impact',
+      timestamps: [1.2, 4.5, 9.8],
+      material: 'bare feet and body weight on polished wooden dance floor',
+      description: 'Controlled floor hits, pivots, cloth movement, and breath motion.',
+    }],
+    spotSfxLayers: [{
+      id: 'sfx_jaw_dislocation',
+      effectName: 'jaw_dislocation',
+      startSec: 7,
+      durationSec: 0.5,
+      priority: 'critical',
+      material: 'bone and cartilage internal joint crack',
+      description: 'A dry internal joint crack caused by an invisible blow.',
+    }],
+    ambienceLayers: [{
+      id: 'ambience_mirrored_studio',
+      space: 'mirrored_dance_studio',
+      layers: ['cold room tone', 'hard mirror reflections', 'distant building hush'],
+      startSec: 0,
+      endSec: 30,
+      description: 'Cold mirrored room tone with hard reflections and distant building hush.',
+    }],
   })
 }
 
@@ -88,7 +84,7 @@ describe('script sound analysis', () => {
     vi.clearAllMocks()
   })
 
-  it('builds a script-first sound analysis prompt that rejects direct audio generation', () => {
+  it('builds an Audio Director prompt that outputs the new dynamic Sound Mix Plan schema', () => {
     const prompt = buildScriptSoundAnalysisPrompt({
       scriptText: 'Susie and the music begin.',
       targetDurationSeconds: 30,
@@ -96,10 +92,13 @@ describe('script sound analysis', () => {
     })
 
     expect(prompt).toContain('Do not generate audio')
-    expect(prompt).toContain('script-first audio spotting sheet')
-    expect(prompt).toContain('"foleyPlan"')
-    expect(prompt).toContain('"spotSfxPlan"')
-    expect(prompt).toContain('"stemPromptSeeds"')
+    expect(prompt).toContain('Dynamic score layering')
+    expect(prompt).toContain('"dialogueStrategy"')
+    expect(prompt).toContain('"scoreLayers"')
+    expect(prompt).toContain('"foleyLayers"')
+    expect(prompt).toContain('"spotSfxLayers"')
+    expect(prompt).not.toContain('"bgmPlan"')
+    expect(prompt).not.toContain('"stemPromptSeeds"')
     expect(prompt).toContain('Target duration seconds: 30')
     expect(prompt).toContain('Susie and the music begin.')
   })
@@ -136,8 +135,9 @@ describe('script sound analysis', () => {
 
     expect(prompt).toContain('sound-description-only Markdown')
     expect(prompt).toContain('"sourceKind": "sound_description"')
+    expect(prompt).toContain('map music into scoreLayers')
     expect(prompt).toContain('Target duration seconds: 30')
-    expect(prompt).toContain('K-0001 maps to 1')
+    expect(prompt).toContain('K-0001 maps to the earliest cue group')
     expect(prompt).toContain('soft shoe shift on dance floor')
   })
 
@@ -145,10 +145,15 @@ describe('script sound analysis', () => {
     const analysis = parseScriptSoundAnalysis(validAnalysisJson())
 
     expect(analysis.targetDurationSeconds).toBe(30)
-    expect(analysis.dialogueLayer[0]?.cueId).toBe('dialogue-blanc-and')
-    expect(analysis.foleyPlan[0]?.cueId).toBe('foley-susie-floorwork')
-    expect(analysis.spotSfxPlan[0]?.priority).toBe('critical')
-    expect(analysis.stemPromptSeeds.bgm).toContain('Ritualistic')
+    expect(analysis.dialogueStrategy.action).toBe('keep_native')
+    expect(analysis.projectMetadata).toEqual({
+      bpm: 84,
+      key: 'D_minor',
+      overallMood: 'ritualistic body-horror dread',
+    })
+    expect(analysis.scoreLayers.map((layer) => layer.id)).toEqual(['score_low_drone', 'score_strings_pulse'])
+    expect(analysis.foleyLayers[0]?.id).toBe('foley_susie_floorwork')
+    expect(analysis.spotSfxLayers[0]?.priority).toBe('critical')
   })
 
   it('parses imported sound-description analysis JSON', () => {
@@ -156,20 +161,49 @@ describe('script sound analysis', () => {
 
     expect(analysis.sourceKind).toBe('sound_description')
     expect(analysis.targetDurationSeconds).toBe(30)
-    expect(analysis.foleyPlan[0]?.label).toBe('dance floor impacts')
+    expect(analysis.foleyLayers[0]?.type).toBe('dance_floor_impact')
   })
 
   it('fails explicitly when analysis timing exceeds the script clip duration', () => {
     const raw = JSON.parse(validAnalysisJson()) as Record<string, unknown>
-    raw.ambiencePlan = [{
-      cueId: 'ambience-too-long',
-      shotNumbers: [1],
-      description: 'too long',
+    raw.ambienceLayers = [{
+      id: 'ambience_too_long',
+      space: 'too_long',
+      layers: ['room tone'],
       startSec: 0,
       endSec: 31,
+      description: 'too long',
     }]
 
     expect(() => parseScriptSoundAnalysis(JSON.stringify(raw))).toThrow('SCRIPT_SOUND_ANALYSIS_TIMING_OUT_OF_RANGE')
+  })
+
+  it('builds a Score Stem Adapter prompt with shared BPM and key isolation rules', () => {
+    const analysis = parseScriptSoundAnalysis(validAnalysisJson())
+    const prompt = buildScoreStemAdapterPrompt({
+      projectMetadata: analysis.projectMetadata,
+      scoreLayer: analysis.scoreLayers[0]!,
+    })
+
+    expect(prompt).toContain('isolated score stem')
+    expect(prompt).toContain('no other instruments')
+    expect(prompt).toContain('"bpm":84')
+    expect(prompt).toContain('"key":"D_minor"')
+    expect(prompt).toContain('score_low_drone')
+  })
+
+  it('builds an SFX/Foley Adapter prompt that bans music and ambience contamination', () => {
+    const analysis = parseScriptSoundAnalysis(validAnalysisJson())
+    const prompt = buildSfxFoleyAdapterPrompt({
+      layerKind: 'foley',
+      layer: analysis.foleyLayers[0]!,
+    })
+
+    expect(prompt).toContain('Hollywood Foley Recordist')
+    expect(prompt).toContain('do not request music')
+    expect(prompt).toContain('no background music')
+    expect(prompt).toContain('no ambient noise')
+    expect(prompt).toContain('bare feet and body weight')
   })
 
   it('calls the text engine for analysis only and parses the returned JSON', async () => {
@@ -201,7 +235,56 @@ describe('script sound analysis', () => {
       }),
     }))
     const call = executeAiTextStepMock.mock.calls[0]?.[0] as { messages?: Array<{ content?: string }> } | undefined
-    expect(call?.messages?.[0]?.content).toContain('Return JSON only')
+    expect(call?.messages?.[0]?.content).toContain('Sound Mix Plan')
+  })
+
+  it('adapts a score layer through the text engine only', async () => {
+    executeAiTextStepMock.mockResolvedValueOnce({
+      text: '"Isolated cello sub-bass stem, tension bed for cinematic score, 84 BPM, Key of D minor, ritual dread, sustained bow pressure, high-fidelity studio recording, no background noise, no other instruments, 48kHz."',
+      reasoning: '',
+      usage: { promptTokens: 0, completionTokens: 0, totalTokens: 0 },
+      completion: {},
+    })
+    const analysis = parseScriptSoundAnalysis(validAnalysisJson())
+
+    const prompt = await adaptScoreStemPrompt({
+      userId: 'user-1',
+      model: 'openrouter::anthropic/claude-sonnet-4.6',
+      projectId: 'project-1',
+      projectMetadata: analysis.projectMetadata,
+      scoreLayer: analysis.scoreLayers[0]!,
+    })
+
+    expect(prompt).toContain('Isolated cello sub-bass stem')
+    expect(prompt).not.toMatch(/^"/)
+    expect(executeAiTextStepMock).toHaveBeenCalledWith(expect.objectContaining({
+      action: 'score_stem_prompt_adapter',
+      temperature: 0.1,
+    }))
+  })
+
+  it('adapts a Foley layer through the text engine only', async () => {
+    executeAiTextStepMock.mockResolvedValueOnce({
+      text: 'Foley sound effect: bare feet on polished wooden dance floor, controlled medium impact, dry studio close perspective, crystal clear, highly detailed, isolated sound, close-mic recording, no background music, no ambient noise.',
+      reasoning: '',
+      usage: { promptTokens: 0, completionTokens: 0, totalTokens: 0 },
+      completion: {},
+    })
+    const analysis = parseScriptSoundAnalysis(validAnalysisJson())
+
+    const prompt = await adaptSfxFoleyPrompt({
+      userId: 'user-1',
+      model: 'openrouter::anthropic/claude-sonnet-4.6',
+      projectId: 'project-1',
+      layerKind: 'foley',
+      layer: analysis.foleyLayers[0]!,
+    })
+
+    expect(prompt).toContain('Foley sound effect')
+    expect(executeAiTextStepMock).toHaveBeenCalledWith(expect.objectContaining({
+      action: 'sfx_foley_prompt_adapter',
+      temperature: 0.1,
+    }))
   })
 
   it('imports a sound-description Markdown blueprint through the text engine only', async () => {
@@ -242,6 +325,7 @@ describe('script sound analysis', () => {
     }))
     const call = executeAiTextStepMock.mock.calls[0]?.[0] as { messages?: Array<{ content?: string }> } | undefined
     expect(call?.messages?.[0]?.content).toContain('Do not generate audio')
+    expect(call?.messages?.[0]?.content).toContain('scoreLayers')
     expect(call?.messages?.[0]?.content).toContain('clip-relative `09:00-09:30`')
   })
 })

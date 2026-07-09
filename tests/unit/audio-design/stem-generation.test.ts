@@ -40,27 +40,32 @@ describe('audio stem generation', () => {
     })
   })
 
-  it('routes spot sound effects to the Seed Audio executor', async () => {
+  it('routes spot sound effects to the ElevenLabs sound executor', async () => {
     await generateAudioStem({
       userId: 'user-1',
       role: 'spot_sfx',
       prompt: 'A heavy wooden door slam.',
-      outputFormat: 'wav',
-      sampleRate: 48000,
+      outputFormat: 'mp3',
+      durationSeconds: 2.5,
+      promptInfluence: 0.75,
+      loop: false,
     })
 
     expect(executeMediaGenerationMock).toHaveBeenCalledWith({
       modality: 'audio',
       userId: 'user-1',
-      modelKey: 'fal::bytedance/seed-audio-1.0',
+      modelKey: 'elevenlabs::eleven_text_to_sound_v2',
       prompt: 'A heavy wooden door slam.',
       options: {
         generationKind: 'spot_sfx',
         voice: undefined,
-        outputFormat: 'wav',
+        outputFormat: 'mp3',
+        durationSeconds: 2.5,
+        promptInfluence: 0.75,
+        loop: false,
         audioUrls: undefined,
         imageUrl: undefined,
-        sampleRate: 48000,
+        sampleRate: undefined,
         speed: undefined,
         volume: undefined,
         pitch: undefined,

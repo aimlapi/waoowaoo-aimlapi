@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest'
 import { API_CONFIG_CATALOG_PROVIDERS } from '@/lib/ai-registry/api-config-catalog'
 import { resolveAiProviderAdapter, resolveAsyncTaskProviderByCode } from '@/lib/ai-providers'
+import { ELEVENLABS_API_CONFIG_CATALOG_MODELS } from '@/lib/ai-providers/elevenlabs/models'
 import { falAdapter } from '@/lib/ai-providers/fal/adapter'
 import { openRouterAdapter } from '@/lib/ai-providers/openrouter/adapter'
 import { OPENROUTER_API_CONFIG_CATALOG_MODELS } from '@/lib/ai-providers/openrouter/models'
@@ -9,6 +10,7 @@ describe('provider scope', () => {
   it('registers only the supported provider set', () => {
     expect(API_CONFIG_CATALOG_PROVIDERS.map((provider) => provider.id).sort()).toEqual([
       'ark',
+      'elevenlabs',
       'fal',
       'google',
       'openrouter',
@@ -16,6 +18,7 @@ describe('provider scope', () => {
     expect(resolveAiProviderAdapter('ark').providerKey).toBe('ark')
     expect(resolveAiProviderAdapter('openrouter').providerKey).toBe('openrouter')
     expect(resolveAiProviderAdapter('fal').providerKey).toBe('fal')
+    expect(resolveAiProviderAdapter('elevenlabs').providerKey).toBe('elevenlabs')
     expect(resolveAiProviderAdapter('google').providerKey).toBe('google')
   })
 
@@ -36,7 +39,17 @@ describe('provider scope', () => {
   })
 
   it('exposes image, video, and music generation on FAL', () => {
-    expect(Object.keys(falAdapter).sort()).toEqual(['image', 'music', 'providerKey', 'video'])
+    expect(Object.keys(falAdapter).sort()).toEqual(['audio', 'image', 'music', 'providerKey', 'video'])
+  })
+
+  it('exposes ElevenLabs sound effects through the provider catalog', () => {
+    expect(Object.keys(resolveAiProviderAdapter('elevenlabs')).sort()).toEqual(['audio', 'providerKey'])
+    expect(ELEVENLABS_API_CONFIG_CATALOG_MODELS).toContainEqual({
+      modelId: 'eleven_text_to_sound_v2',
+      name: 'ElevenLabs Text to Sound v2',
+      type: 'audio',
+      provider: 'elevenlabs',
+    })
   })
 
   it('exposes OpenRouter LLM and video models through the provider catalog', () => {

@@ -1,5 +1,8 @@
 import { z } from 'zod'
 import {
+  ELEVENLABS_TEXT_TO_SOUND_V2_MODEL_ID,
+} from '@/lib/ai-providers/elevenlabs/models'
+import {
   FAL_LYRIA_3_PRO_MODEL_ID,
   FAL_SEED_AUDIO_MODEL_ID,
   FAL_XAI_TTS_MODEL_ID,
@@ -19,7 +22,7 @@ export const generativeAudioStemRoleSchema = z.enum([
 
 export const audioStemModelConfigSchema = z.object({
   role: generativeAudioStemRoleSchema,
-  provider: z.literal('fal'),
+  provider: z.enum(['fal', 'elevenlabs']),
   modelId: z.string().trim().min(1),
   modelKey: z.string().trim().min(1),
   generationKind: audioStemGenerationKindSchema.exclude(['native_reference']),
@@ -32,47 +35,53 @@ export type GenerativeAudioStemGenerationKind = Exclude<
 >
 export type AudioStemModelConfig = z.infer<typeof audioStemModelConfigSchema>
 
-function createFalModelKey(modelId: string): string {
-  return `fal::${modelId}`
+function createProviderModelKey(provider: AudioStemModelConfig['provider'], modelId: string): string {
+  return `${provider}::${modelId}`
 }
 
-function falAudioStemConfig(input: {
+function audioStemConfig(input: {
   readonly role: GenerativeAudioStemRole
+  readonly provider: AudioStemModelConfig['provider']
   readonly modelId: string
   readonly generationKind: GenerativeAudioStemGenerationKind
 }): AudioStemModelConfig {
   return audioStemModelConfigSchema.parse({
     role: input.role,
-    provider: 'fal',
+    provider: input.provider,
     modelId: input.modelId,
-    modelKey: createFalModelKey(input.modelId),
+    modelKey: createProviderModelKey(input.provider, input.modelId),
     generationKind: input.generationKind,
   })
 }
 
 export const DEFAULT_AUDIO_STEM_MODEL_CONFIGS = {
-  dialogue: falAudioStemConfig({
+  dialogue: audioStemConfig({
     role: 'dialogue',
+    provider: 'fal',
     modelId: FAL_XAI_TTS_MODEL_ID,
     generationKind: 'dialogue_tts',
   }),
-  foley: falAudioStemConfig({
+  foley: audioStemConfig({
     role: 'foley',
+    provider: 'fal',
     modelId: FAL_SEED_AUDIO_MODEL_ID,
     generationKind: 'foley',
   }),
-  spot_sfx: falAudioStemConfig({
+  spot_sfx: audioStemConfig({
     role: 'spot_sfx',
-    modelId: FAL_SEED_AUDIO_MODEL_ID,
+    provider: 'elevenlabs',
+    modelId: ELEVENLABS_TEXT_TO_SOUND_V2_MODEL_ID,
     generationKind: 'spot_sfx',
   }),
-  ambience: falAudioStemConfig({
+  ambience: audioStemConfig({
     role: 'ambience',
+    provider: 'fal',
     modelId: FAL_SEED_AUDIO_MODEL_ID,
     generationKind: 'ambience',
   }),
-  bgm: falAudioStemConfig({
+  bgm: audioStemConfig({
     role: 'bgm',
+    provider: 'fal',
     modelId: FAL_LYRIA_3_PRO_MODEL_ID,
     generationKind: 'music',
   }),

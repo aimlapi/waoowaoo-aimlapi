@@ -7,6 +7,7 @@ import {
   type AudioStemPlan,
   type DialogueCue,
   type DuckingSegment,
+  type NativeDialogueSourceProvider,
   type SpotSfxCue,
   type TimelineAudioDesign,
   type TimelineClipAudio,
@@ -193,6 +194,7 @@ export function buildTimelineAudioDesign(input: {
   readonly clips: readonly FinalRenderClipPlan[]
   readonly timelineSignature: string
   readonly durationSeconds: number
+  readonly nativeDialogueProvider?: NativeDialogueSourceProvider
   readonly dialogueCues?: readonly DialogueCue[]
   readonly spotSfx?: readonly SpotSfxCue[]
 }): TimelineAudioDesign {
@@ -218,6 +220,12 @@ export function buildTimelineAudioDesign(input: {
     schemaVersion: 1,
     timelineSignature: input.timelineSignature,
     durationSeconds: input.durationSeconds,
+    nativeDialogueSource: {
+      mode: 'native_video_dialogue',
+      provider: input.nativeDialogueProvider ?? 'seedance_2_0',
+      policy: 'keep_for_dialogue_and_lip_sync',
+      description: 'Dialogue, vocal performance, and lip sync are authored by the upstream video model. The audio post module only adds non-dialogue Foley, spot SFX, ambience, and score.',
+    },
     clips: timelineClips,
     stemPlan: [
       {
@@ -232,19 +240,14 @@ export function buildTimelineAudioDesign(input: {
           : 'Use generated video audio only when present as native scene reference.',
       },
       createGeneratedStemPlan({
-        role: 'dialogue',
-        status: dialogueCues.length > 0 ? 'planned' : 'planned',
-        description: 'Authoritative dialogue and narration stem generated from the script dialogue layer.',
-      }),
-      createGeneratedStemPlan({
         role: 'foley',
         status: 'planned',
-        description: 'Action-synchronized foley stem for footsteps, cloth, handling, and contact sounds.',
+        description: 'Video-locked action foley for footsteps, cloth, handling, and contact sounds. Timing must come from visual action events, not script-estimated seconds.',
       }),
       createGeneratedStemPlan({
         role: 'spot_sfx',
         status: spotSfx.length > 0 ? 'planned' : 'planned',
-        description: 'Critical spot sound effects that must remain controllable at final mix time.',
+        description: 'Video-locked critical spot sound effects that must remain controllable at final mix time.',
       }),
       createGeneratedStemPlan({
         role: 'ambience',
