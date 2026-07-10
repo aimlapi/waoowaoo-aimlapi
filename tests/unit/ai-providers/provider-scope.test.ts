@@ -42,7 +42,7 @@ describe('provider scope', () => {
     expect(Object.keys(falAdapter).sort()).toEqual(['audio', 'image', 'music', 'providerKey', 'video'])
   })
 
-  it('exposes ElevenLabs sound effects through the provider catalog', () => {
+  it('exposes ElevenLabs ambience generation through the provider catalog', () => {
     expect(Object.keys(resolveAiProviderAdapter('elevenlabs')).sort()).toEqual(['audio', 'providerKey'])
     expect(ELEVENLABS_API_CONFIG_CATALOG_MODELS).toContainEqual({
       modelId: 'eleven_text_to_sound_v2',

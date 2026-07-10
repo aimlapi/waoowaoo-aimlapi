@@ -1,17 +1,28 @@
+import { mkdtemp, rm } from 'node:fs/promises'
+import { tmpdir } from 'node:os'
+import path from 'node:path'
 import type { Job } from 'bullmq'
-import { executeAiTextStep, generateMusic } from '@/lib/ai-exec/engine'
-import { buildTimelineAudioDesign, createTimelineSignature } from '@/lib/audio-design/timeline'
-import type { TimelineAudioDesign } from '@/lib/audio-design/types'
-import { prisma } from '@/lib/prisma'
-import { safeParseJsonObject } from '@/lib/json-repair'
+import { generateMusic } from '@/lib/ai-exec/engine'
+import { analyzeAudioContinuity } from '@/lib/audio-design/continuity-analysis'
+import { analyzeLockedVideoFrames } from '@/lib/audio-design/video-visual-analysis'
+import type { VideoVisualAnalysis } from '@/lib/audio-design/video-visual-types'
+import {
+  buildAudioTimelineV2,
+  buildTimelineClips,
+  createTimelineClock,
+  createTimelineSignature,
+} from '@/lib/audio-design/timeline'
+import {
+  framesToSeconds,
+  type AudioTimelineV2,
+} from '@/lib/audio-design/types'
 import { parseNullableEditScriptStyleBible } from '@/lib/edit-script/style-bible-prompt'
-import { withInternalLLMStreamCallbacks } from '@/lib/llm-observe/internal-stream-context'
-import { ensureMediaObjectFromStorageKey } from '@/lib/media/service'
-import { generateUniqueKey, toFetchableUrl, uploadObject } from '@/lib/storage'
+import { prisma } from '@/lib/prisma'
 import type { TaskJobData } from '@/lib/task/types'
-import { createWorkerLLMStreamCallbacks, createWorkerLLMStreamContext } from '@/lib/workers/handlers/llm-stream'
 import {
   buildFinalRenderClips,
+  FINAL_RENDER_FPS_DENOMINATOR,
+  FINAL_RENDER_FPS_NUMERATOR,
   parseFinalRenderEditScriptShots,
   parseFinalRenderEditScriptVideoBlocks,
   selectFinalRenderMusicDurationSeconds,
@@ -19,12 +30,17 @@ import {
   type FinalRenderEditScriptInput,
 } from '@/lib/video-compose/final-render-plan'
 import { reportTaskProgress } from '@/lib/workers/shared'
-import { buildBgmScorePlanPrompt, buildFinalBgmMusicPrompt } from './prompt'
+import {
+  generateAmbienceAssets,
+  loadGeneratedAudioBuffer,
+  uploadGeneratedAudio,
+} from './audio-assets'
+import { buildDisplayBgmPlan, buildFinalBgmMusicPrompt } from './prompt'
 import { mergeBgmScoreProjectData, parseEditorProjectData } from './project-data'
 import {
   BGM_SCORE_STATUS,
-  bgmScorePlanSchema,
-  type BgmScoreMix,
+  bgmScoreProjectDataSchema,
+  type AmbienceAsset,
   type BgmScorePlan,
   type BgmScoreProjectData,
 } from './types'
@@ -35,11 +51,6 @@ type BgmScoreGeneratePayload = {
   readonly outputFormat?: unknown
 }
 
-type GeneratedAudioBuffer = {
-  readonly buffer: Buffer
-  readonly mimeType: string
-}
-
 function readString(value: unknown): string {
   return typeof value === 'string' ? value.trim() : ''
 }
@@ -48,50 +59,6 @@ function readOutputFormat(value: unknown): 'mp3' | 'wav' {
   if (value === undefined || value === null || value === '') return 'mp3'
   if (value === 'mp3' || value === 'wav') return value
   throw new Error('BGM_SCORE_OUTPUT_FORMAT_INVALID')
-}
-
-function extensionFromMimeType(mimeType: string): string {
-  if (mimeType.includes('wav')) return 'wav'
-  if (mimeType.includes('ogg')) return 'ogg'
-  if (mimeType.includes('mp4') || mimeType.includes('m4a')) return 'm4a'
-  return 'mp3'
-}
-
-function decodeAudioDataUrl(dataUrl: string): GeneratedAudioBuffer | null {
-  const match = /^data:(audio\/[^;]+);base64,(.+)$/i.exec(dataUrl.trim())
-  if (!match) return null
-  return {
-    mimeType: match[1],
-    buffer: Buffer.from(match[2], 'base64'),
-  }
-}
-
-async function loadAudioBuffer(input: {
-  readonly audioBase64?: string
-  readonly audioUrl?: string
-  readonly mimeType?: string
-}): Promise<GeneratedAudioBuffer> {
-  const explicitMimeType = readString(input.mimeType) || 'audio/mpeg'
-  if (input.audioBase64) {
-    return {
-      buffer: Buffer.from(input.audioBase64, 'base64'),
-      mimeType: explicitMimeType,
-    }
-  }
-
-  const audioUrl = readString(input.audioUrl)
-  if (!audioUrl) throw new Error('BGM_SCORE_EMPTY_AUDIO_RESULT')
-  const decoded = decodeAudioDataUrl(audioUrl)
-  if (decoded) return decoded
-
-  const response = await fetch(toFetchableUrl(audioUrl))
-  if (!response.ok) {
-    throw new Error(`BGM_SCORE_AUDIO_DOWNLOAD_FAILED:${response.status}`)
-  }
-  return {
-    buffer: Buffer.from(await response.arrayBuffer()),
-    mimeType: response.headers.get('content-type') || explicitMimeType,
-  }
 }
 
 async function buildEditScript(episodeId: string): Promise<FinalRenderEditScriptInput | null> {
@@ -119,40 +86,14 @@ async function buildEditScript(episodeId: string): Promise<FinalRenderEditScript
     durationSec: script.durationSec,
     styleBible: parseNullableEditScriptStyleBible(script.styleBibleJson),
     shots,
-    videoBlocks: parseFinalRenderEditScriptVideoBlocks({
-      value: script.videoBlocksJson,
-      shots,
-    }),
+    videoBlocks: parseFinalRenderEditScriptVideoBlocks({ value: script.videoBlocksJson, shots }),
   }
 }
 
 function ensureSchedulableTimeline(clips: readonly FinalRenderClipPlan[]): void {
   if (clips.length === 0) throw new Error('BGM_SCORE_VIDEO_TIMELINE_INCOMPLETE')
   const invalidClip = clips.find((clip) => !Number.isFinite(clip.durationSeconds) || clip.durationSeconds <= 0)
-  if (invalidClip) {
-    throw new Error(`BGM_SCORE_VIDEO_TIMELINE_INCOMPLETE:${invalidClip.groupId ?? invalidClip.panelId}`)
-  }
-}
-
-function normalizePlanDuration(plan: BgmScorePlan, durationSeconds: number): BgmScorePlan {
-  return {
-    ...plan,
-    durationSeconds,
-  }
-}
-
-function parseBgmScorePlan(text: string, durationSeconds: number): BgmScorePlan {
-  const parsed = safeParseJsonObject(text)
-  const result = bgmScorePlanSchema.safeParse(parsed)
-  if (!result.success) {
-    throw new Error(`BGM_SCORE_PLAN_INVALID:${result.error.issues.map((issue) => issue.message).join(',')}`)
-  }
-  const normalized = normalizePlanDuration(result.data, durationSeconds)
-  const normalizedResult = bgmScorePlanSchema.safeParse(normalized)
-  if (!normalizedResult.success) {
-    throw new Error(`BGM_SCORE_PLAN_INVALID:${normalizedResult.error.issues.map((issue) => issue.message).join(',')}`)
-  }
-  return normalizedResult.data
+  if (invalidClip) throw new Error(`BGM_SCORE_VIDEO_TIMELINE_INCOMPLETE:${invalidClip.groupId ?? invalidClip.panelId}`)
 }
 
 async function writeBgmScoreProjectData(input: {
@@ -176,34 +117,15 @@ async function writeBgmScoreProjectData(input: {
       renderTaskId: null,
       outputUrl: null,
     },
-    update: {
-      projectData: JSON.stringify(projectData),
-    },
+    update: { projectData: JSON.stringify(projectData) },
   })
 }
 
-async function uploadGeneratedBgmMix(input: {
-  readonly audio: GeneratedAudioBuffer
-  readonly durationSeconds: number
-}): Promise<BgmScoreMix> {
-  const storageKey = await uploadObject(
-    input.audio.buffer,
-    generateUniqueKey('music/bgm-score', extensionFromMimeType(input.audio.mimeType)),
-    1,
-    input.audio.mimeType,
-  )
-  const media = await ensureMediaObjectFromStorageKey(storageKey, {
-    mimeType: input.audio.mimeType,
-    sizeBytes: input.audio.buffer.byteLength,
-    durationMs: Math.round(input.durationSeconds * 1000),
-  })
-  return {
-    mediaId: media.id,
-    url: media.url,
-    storageKey,
-    mimeType: input.audio.mimeType,
-    durationMs: Math.round(input.durationSeconds * 1000),
-  }
+function readReusableProjectData(value: string | null | undefined, signature: string): BgmScoreProjectData | null {
+  const record = parseEditorProjectData(value)
+  const parsed = bgmScoreProjectDataSchema.safeParse(record.bgmScore)
+  if (!parsed.success || parsed.data.timelineSignature !== signature) return null
+  return parsed.data
 }
 
 export async function handleBgmScoreGenerateTask(job: Job<TaskJobData>) {
@@ -213,20 +135,22 @@ export async function handleBgmScoreGenerateTask(job: Job<TaskJobData>) {
   if (!episodeId) throw new Error('BGM_SCORE_EPISODE_REQUIRED')
   if (!musicModel) throw new Error('BGM_SCORE_MUSIC_MODEL_REQUIRED')
 
-  let editScriptId = ''
-  let signature = ''
+  let editScriptId: string | null = null
+  let analysisMode: BgmScoreProjectData['analysisMode'] = 'video_only'
+  let timelineSignature = ''
   let durationSeconds = 0
-  let timelineAudio: TimelineAudioDesign | undefined
+  let timelineAudio: AudioTimelineV2 | undefined
+  let plan: BgmScorePlan | undefined
+  let ambienceAssets: readonly AmbienceAsset[] = []
+  let visualAnalysis: VideoVisualAnalysis | undefined
+  const workspaceDir = await mkdtemp(path.join(tmpdir(), 'waoowaoo-audio-design-'))
 
   try {
-    await reportTaskProgress(job, 8, { stage: 'bgm_score_prepare' })
-    const [project, episode, editScript, panels, videoGroups] = await Promise.all([
+    await reportTaskProgress(job, 8, { stage: 'audio_timeline_lock' })
+    const [project, episode, editScript, panels, videoGroups, editorProject] = await Promise.all([
       prisma.project.findUnique({
         where: { id: job.data.projectId },
-        select: {
-          analysisModel: true,
-          videoRatio: true,
-        },
+        select: { analysisModel: true, videoRatio: true },
       }),
       prisma.projectEpisode.findFirst({
         where: { id: episodeId, projectId: job.data.projectId },
@@ -251,113 +175,184 @@ export async function handleBgmScoreGenerateTask(job: Job<TaskJobData>) {
         where: { episodeId, projectId: job.data.projectId },
         include: { videoMedia: true },
       }),
+      prisma.videoEditorProject.findUnique({
+        where: { episodeId },
+        select: { projectData: true },
+      }),
     ])
     if (!project) throw new Error('BGM_SCORE_PROJECT_NOT_FOUND')
     if (!episode) throw new Error('BGM_SCORE_EPISODE_NOT_FOUND')
-    if (!editScript) throw new Error('BGM_SCORE_EDIT_SCRIPT_REQUIRED')
     const analysisModel = readString(project.analysisModel)
     if (!analysisModel) throw new Error('BGM_SCORE_ANALYSIS_MODEL_REQUIRED')
 
     const clips = buildFinalRenderClips({ panels, videoGroups, editScript })
     ensureSchedulableTimeline(clips)
-    editScriptId = editScript.id
-    durationSeconds = clips.reduce((total, clip) => total + clip.durationSeconds, 0)
-    signature = createTimelineSignature(clips)
-    timelineAudio = buildTimelineAudioDesign({
+    const clock = createTimelineClock({
       clips,
-      timelineSignature: signature,
-      durationSeconds,
+      fpsNumerator: FINAL_RENDER_FPS_NUMERATOR,
+      fpsDenominator: FINAL_RENDER_FPS_DENOMINATOR,
     })
+    timelineSignature = createTimelineSignature({ clips, clock })
+    durationSeconds = framesToSeconds(clock.totalFrames, clock)
+    editScriptId = editScript?.id ?? null
+    analysisMode = editScript ? 'script_assisted' : 'video_only'
+    const timelineClips = buildTimelineClips(clips, clock)
+
+    const reusable = readReusableProjectData(editorProject?.projectData ?? null, timelineSignature)
+    if (reusable?.visualAnalysis) {
+      visualAnalysis = reusable.visualAnalysis
+    } else {
+      await reportTaskProgress(job, 14, { stage: 'audio_video_visual_analysis' })
+      visualAnalysis = await analyzeLockedVideoFrames({
+        userId: job.data.userId,
+        model: analysisModel,
+        projectId: job.data.projectId,
+        clips,
+        timelineClips,
+        clock,
+      })
+      await writeBgmScoreProjectData({
+        episodeId,
+        bgmScore: {
+          schemaVersion: 4,
+          status: BGM_SCORE_STATUS.GENERATING,
+          taskId: job.data.taskId,
+          analysisMode,
+          editScriptId,
+          timelineSignature,
+          durationSeconds,
+          musicModel,
+          visualAnalysis,
+          ambienceAssets,
+          stage: 'audio_video_visual_analyzed',
+        },
+      })
+    }
+    if (reusable?.timelineAudio && reusable.plan) {
+      timelineAudio = reusable.timelineAudio
+      plan = reusable.plan
+      ambienceAssets = reusable.ambienceAssets ?? []
+    } else {
+      await reportTaskProgress(job, 18, { stage: 'audio_continuity_plan' })
+      const continuityPlan = await analyzeAudioContinuity({
+        userId: job.data.userId,
+        model: analysisModel,
+        clock,
+        clips: timelineClips,
+        narrativeContext: {
+          analysisMode,
+          visualAnalysis,
+          scriptContext: editScript ? {
+            title: editScript.title,
+            logline: editScript.logline,
+            styleBible: editScript.styleBible,
+            shots: editScript.shots,
+            videoBlocks: editScript.videoBlocks,
+          } : null,
+          videoRatio: project.videoRatio,
+        },
+        projectId: job.data.projectId,
+        locale: job.data.locale,
+      })
+      timelineAudio = buildAudioTimelineV2({
+        clips,
+        clock,
+        timelineSignature,
+        continuityPlan,
+      })
+      const scoreCue = timelineAudio.scoreCues[0]
+      if (!scoreCue) throw new Error('BGM_SCORE_CONTINUOUS_CUE_REQUIRED')
+      plan = buildDisplayBgmPlan({ cue: scoreCue, clock, locale: job.data.locale })
+    }
 
     await writeBgmScoreProjectData({
       episodeId,
       bgmScore: {
-        schemaVersion: 2,
+        schemaVersion: 4,
         status: BGM_SCORE_STATUS.GENERATING,
         taskId: job.data.taskId,
+        analysisMode,
         editScriptId,
-        timelineSignature: signature,
+        timelineSignature,
         durationSeconds,
         musicModel,
         timelineAudio,
+        plan,
+        visualAnalysis,
+        ambienceAssets,
+        stage: 'audio_continuity_planned',
       },
     })
 
-    await reportTaskProgress(job, 18, { stage: 'bgm_score_plan' })
-    const streamContext = createWorkerLLMStreamContext(job, 'bgm_score_generate')
-    const streamCallbacks = createWorkerLLMStreamCallbacks(job, streamContext)
-    const completion = await withInternalLLMStreamCallbacks(
-      streamCallbacks,
-      async () => {
-        try {
-          return await executeAiTextStep({
-            userId: job.data.userId,
-            model: analysisModel,
-            messages: [{
-              role: 'user',
-              content: buildBgmScorePlanPrompt({
-                editScript,
-                projectContext: {
-                  videoRatio: project.videoRatio,
-                },
-                clips,
-                totalDurationSeconds: durationSeconds,
-                locale: job.data.locale,
-              }),
-            }],
-            temperature: 0.35,
-            projectId: job.data.projectId,
-            action: 'bgm_score_plan',
-            meta: {
-              stepId: 'bgm_score_plan',
-              stepTitle: 'bgm_score_plan',
-              stepIndex: 1,
-              stepTotal: 1,
-            },
-          })
-        } finally {
-          await streamCallbacks.flush()
-        }
+    await reportTaskProgress(job, 35, { stage: 'audio_ambience_generate' })
+    ambienceAssets = await generateAmbienceAssets({
+      userId: job.data.userId,
+      timeline: timelineAudio,
+      workspaceDir,
+      reusableAssets: ambienceAssets,
+      onProgress: async (assets) => {
+        await writeBgmScoreProjectData({
+          episodeId,
+          bgmScore: {
+            schemaVersion: 4,
+            status: BGM_SCORE_STATUS.GENERATING,
+            taskId: job.data.taskId,
+            analysisMode,
+            editScriptId,
+            timelineSignature,
+            durationSeconds,
+            musicModel,
+            timelineAudio,
+            plan,
+            visualAnalysis,
+            ambienceAssets: assets,
+            stage: 'audio_ambience_generate',
+          },
+        })
+      },
+    })
+
+    await reportTaskProgress(job, 65, { stage: 'audio_score_generate' })
+    const outputFormat = readOutputFormat(payload.outputFormat)
+    const generated = await generateMusic(
+      job.data.userId,
+      musicModel,
+      buildFinalBgmMusicPrompt(plan),
+      {
+        durationSeconds: selectFinalRenderMusicDurationSeconds(musicModel, durationSeconds),
+        vocalMode: 'instrumental',
+        bpm: timelineAudio.scoreCues[0]?.generationSpec.bpm,
+        outputFormat,
       },
     )
-    const plan = parseBgmScorePlan(completion.text, durationSeconds)
-
-    const outputFormat = readOutputFormat(payload.outputFormat)
-    await reportTaskProgress(job, 45, {
-      stage: 'bgm_score_generate_music',
-      designSectionCount: plan.scoreDesign.sections.length,
-      promptSectionCount: plan.promptSections.length,
-      virtualLayerCount: plan.virtualLayers.length,
-    })
-    const generated = await generateMusic(job.data.userId, musicModel, buildFinalBgmMusicPrompt(plan, { locale: job.data.locale }), {
-      durationSeconds: selectFinalRenderMusicDurationSeconds(musicModel, durationSeconds),
-      vocalMode: 'instrumental',
-      outputFormat,
-    })
-    if (!generated.success) {
-      throw new Error(generated.error || 'BGM_SCORE_PROVIDER_FAILED')
-    }
-    const audio = await loadAudioBuffer({
+    if (!generated.success) throw new Error(generated.error || 'BGM_SCORE_PROVIDER_FAILED')
+    const audio = await loadGeneratedAudioBuffer({
       audioBase64: generated.audioBase64,
       audioUrl: generated.audioUrl,
       mimeType: generated.audioMimeType,
     })
+    const mix = await uploadGeneratedAudio({ audio, durationSeconds, prefix: 'music/bgm-score' })
 
-    await reportTaskProgress(job, 88, { stage: 'bgm_score_persist' })
-    const mix = await uploadGeneratedBgmMix({ audio, durationSeconds })
-    const bgmScore: BgmScoreProjectData = {
-      schemaVersion: 2,
-      status: BGM_SCORE_STATUS.COMPLETED,
-      taskId: job.data.taskId,
-      editScriptId,
-      timelineSignature: signature,
-      durationSeconds,
-      musicModel,
-      timelineAudio,
-      plan,
-      mix,
-    }
-    await writeBgmScoreProjectData({ episodeId, bgmScore })
+    await reportTaskProgress(job, 90, { stage: 'audio_assets_persist' })
+    await writeBgmScoreProjectData({
+      episodeId,
+      bgmScore: {
+        schemaVersion: 4,
+        status: BGM_SCORE_STATUS.COMPLETED,
+        taskId: job.data.taskId,
+        analysisMode,
+        editScriptId,
+        timelineSignature,
+        durationSeconds,
+        musicModel,
+        timelineAudio,
+        plan,
+        visualAnalysis,
+        mix,
+        ambienceAssets,
+        stage: 'audio_assets_ready',
+      },
+    })
 
     return {
       episodeId,
@@ -365,29 +360,35 @@ export async function handleBgmScoreGenerateTask(job: Job<TaskJobData>) {
       audioUrl: mix.url,
       storageKey: mix.storageKey,
       musicModel,
-      designSectionCount: plan.scoreDesign.sections.length,
-      promptSectionCount: plan.promptSections.length,
-      virtualLayerCount: plan.virtualLayers.length,
+      ambienceSourceCount: timelineAudio.ambienceSources.length,
+      ambienceCandidateCount: ambienceAssets.length,
       durationMs: mix.durationMs,
     }
   } catch (error) {
     const message = error instanceof Error ? error.message : String(error)
-    if (editScriptId && signature && durationSeconds > 0) {
+    if (timelineSignature && durationSeconds > 0) {
       await writeBgmScoreProjectData({
         episodeId,
         bgmScore: {
-          schemaVersion: 2,
+          schemaVersion: 4,
           status: BGM_SCORE_STATUS.FAILED,
           taskId: job.data.taskId,
+          analysisMode,
           editScriptId,
-          timelineSignature: signature,
+          timelineSignature,
           durationSeconds,
           musicModel,
           ...(timelineAudio ? { timelineAudio } : {}),
+          ...(plan ? { plan } : {}),
+          ...(visualAnalysis ? { visualAnalysis } : {}),
+          ambienceAssets,
+          stage: 'failed',
           errorMessage: message,
         },
       })
     }
     throw error
+  } finally {
+    await rm(workspaceDir, { recursive: true, force: true })
   }
 }

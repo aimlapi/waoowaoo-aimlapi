@@ -8,7 +8,7 @@ import {
 } from '@/lib/ai-providers/shared/option-schema'
 
 export const ELEVENLABS_TEXT_TO_SOUND_V2_MODEL_ID = 'eleven_text_to_sound_v2'
-export const ELEVENLABS_TEXT_TO_SOUND_V2_GENERATION_KINDS = ['foley', 'spot_sfx', 'ambience'] as const
+export const ELEVENLABS_TEXT_TO_SOUND_V2_GENERATION_KINDS = ['ambience'] as const
 
 export const ELEVENLABS_PLATFORM_MODEL_PRESETS = [
   {

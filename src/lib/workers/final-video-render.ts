@@ -8,9 +8,12 @@ import type { Job } from 'bullmq'
 import { prisma } from '@/lib/prisma'
 import {
   parseEditorProjectData,
+  readCompletedAmbienceAssets,
   readCompletedBgmScoreMix,
   readCompletedBgmScoreTimelineAudio,
 } from '@/lib/bgm-score/project-data'
+import { createTimelineClock, createTimelineSignature } from '@/lib/audio-design/timeline'
+import { framesToSeconds } from '@/lib/audio-design/types'
 import { parseNullableEditScriptStyleBible } from '@/lib/edit-script/style-bible-prompt'
 import { ensureMediaObjectFromStorageKey, resolveStorageKeyFromMediaValue } from '@/lib/media/service'
 import { generateUniqueKey, getObjectBuffer, toFetchableUrl, uploadObject } from '@/lib/storage'
@@ -18,6 +21,8 @@ import type { TaskJobData } from '@/lib/task/types'
 import { reportTaskProgress } from './shared'
 import {
   buildFinalRenderClips,
+  FINAL_RENDER_FPS_DENOMINATOR,
+  FINAL_RENDER_FPS_NUMERATOR,
   parseFinalRenderEditScriptShots,
   parseFinalRenderEditScriptVideoBlocks,
   resolveFinalRenderDimensions,
@@ -164,7 +169,7 @@ async function normalizeClip(input: {
     '-t',
     input.durationSeconds.toFixed(3),
     '-vf',
-    `scale=${input.width}:${input.height}:force_original_aspect_ratio=decrease,pad=${input.width}:${input.height}:(ow-iw)/2:(oh-ih)/2,setsar=1,fps=30,format=yuv420p`,
+    `scale=${input.width}:${input.height}:force_original_aspect_ratio=decrease,pad=${input.width}:${input.height}:(ow-iw)/2:(oh-ih)/2,setsar=1,fps=${FINAL_RENDER_FPS_NUMERATOR}/${FINAL_RENDER_FPS_DENOMINATOR},format=yuv420p`,
     '-an',
     '-c:v',
     'libx264',
@@ -282,6 +287,7 @@ export async function handleFinalVideoRenderTask(job: Job<TaskJobData>) {
     const bgmMix = readCompletedBgmScoreMix(editorProject?.projectData ?? null)
     if (!bgmMix) throw new Error('FINAL_VIDEO_RENDER_BGM_REQUIRED')
     const timelineAudio = readCompletedBgmScoreTimelineAudio(editorProject?.projectData ?? null)
+    const ambienceAssets = readCompletedAmbienceAssets(editorProject?.projectData ?? null)
     const existingProjectData = parseEditorProjectData(editorProject?.projectData ?? null)
 
     const clips = buildFinalRenderClips({ panels, videoGroups, editScript })
@@ -290,6 +296,16 @@ export async function handleFinalVideoRenderTask(job: Job<TaskJobData>) {
       clips,
       locale: normalizeFinalRenderErrorLocale(job.data.locale),
     })
+    if (!timelineAudio) throw new Error('FINAL_VIDEO_RENDER_AUDIO_TIMELINE_V2_REQUIRED')
+    const renderClock = createTimelineClock({
+      clips,
+      fpsNumerator: FINAL_RENDER_FPS_NUMERATOR,
+      fpsDenominator: FINAL_RENDER_FPS_DENOMINATOR,
+    })
+    const renderSignature = createTimelineSignature({ clips, clock: renderClock })
+    if (renderSignature !== timelineAudio.timelineSignature) {
+      throw new Error('FINAL_VIDEO_RENDER_AUDIO_TIMELINE_STALE')
+    }
 
     const dimensions = resolveFinalRenderDimensions(project.videoRatio)
     const normalizedPaths: string[] = []
@@ -298,12 +314,18 @@ export async function handleFinalVideoRenderTask(job: Job<TaskJobData>) {
     for (const clip of clips) {
       const sourcePath = path.join(workspaceDir, `source-${clip.order}.mp4`)
       const normalizedPath = path.join(workspaceDir, `clip-${clip.order}.mp4`)
-      const clipAudioPath = path.join(workspaceDir, `clip-audio-${clip.order}.m4a`)
+      const clipAudioPath = path.join(workspaceDir, `clip-audio-${clip.order}.wav`)
+      const timelineClip = timelineAudio.clips.find((item) => item.order === clip.order)
+      if (!timelineClip) throw new Error(`FINAL_VIDEO_RENDER_AUDIO_CLIP_MISSING:${clip.order}`)
+      const clipDurationSeconds = framesToSeconds(
+        timelineClip.range.endFrameExclusive - timelineClip.range.startFrame,
+        timelineAudio.clock,
+      )
       await writeVideoSourceToFile(clip.source, sourcePath)
       await normalizeClip({
         sourcePath,
         outputPath: normalizedPath,
-        durationSeconds: clip.durationSeconds,
+        durationSeconds: clipDurationSeconds,
         width: dimensions.width,
         height: dimensions.height,
       })
@@ -311,7 +333,7 @@ export async function handleFinalVideoRenderTask(job: Job<TaskJobData>) {
         runCommand,
         sourcePath,
         outputPath: clipAudioPath,
-        durationSeconds: clip.durationSeconds,
+        durationSeconds: clipDurationSeconds,
       })
       hasSourceAudio = hasSourceAudio || clipHasAudio
       normalizedPaths.push(normalizedPath)
@@ -325,7 +347,12 @@ export async function handleFinalVideoRenderTask(job: Job<TaskJobData>) {
       outputPath: stitchedPath,
     })
     const stitchedDurationSeconds = await probeDurationSeconds(stitchedPath)
-    const mainAudioPath = path.join(workspaceDir, 'main-audio.m4a')
+    const expectedDurationSeconds = framesToSeconds(timelineAudio.clock.totalFrames, timelineAudio.clock)
+    const frameDurationSeconds = timelineAudio.clock.fpsDenominator / timelineAudio.clock.fpsNumerator
+    if (Math.abs(stitchedDurationSeconds - expectedDurationSeconds) > frameDurationSeconds) {
+      throw new Error(`FINAL_VIDEO_RENDER_FRAME_DURATION_MISMATCH:${stitchedDurationSeconds}:${expectedDurationSeconds}`)
+    }
+    const mainAudioPath = path.join(workspaceDir, 'main-audio.wav')
     await concatFinalRenderAudioClips({
       runCommand,
       clipAudioPaths,
@@ -335,6 +362,25 @@ export async function handleFinalVideoRenderTask(job: Job<TaskJobData>) {
     await reportTaskProgress(job, 55, { stage: 'final_render_music' })
     const musicPath = path.join(workspaceDir, `bgm.${extensionFromMimeType(bgmMix.mimeType)}`)
     await writeFile(musicPath, await getObjectBuffer(bgmMix.storageKey))
+    const ambienceTracks = await Promise.all(ambienceAssets.map(async (asset, index) => {
+      const source = timelineAudio.ambienceSources.find((item) => item.sourceId === asset.sourceId)
+      if (!source) throw new Error(`FINAL_VIDEO_RENDER_AMBIENCE_SOURCE_MISSING:${asset.sourceId}`)
+      const world = timelineAudio.soundWorlds.find((item) => item.worldId === source.worldId)
+      if (!world) throw new Error(`FINAL_VIDEO_RENDER_SOUND_WORLD_MISSING:${source.worldId}`)
+      const ambiencePath = path.join(workspaceDir, `ambience-${index}.${extensionFromMimeType(asset.mimeType)}`)
+      await writeFile(ambiencePath, await getObjectBuffer(asset.storageKey))
+      return {
+        sourceId: asset.sourceId,
+        sourceContinuityId: source.sourceContinuityId,
+        path: ambiencePath,
+        range: asset.range,
+        loop: asset.loop,
+        crossfadeFrames: asset.crossfadeFrames,
+        phaseOffsetFrames: asset.phaseOffsetFrames,
+        perspectives: world.perspectives,
+        transitions: timelineAudio.acousticTransitions,
+      }
+    }))
 
     await reportTaskProgress(job, 78, { stage: 'final_render_compose' })
     const finalPath = path.join(workspaceDir, 'final.mp4')
@@ -344,10 +390,11 @@ export async function handleFinalVideoRenderTask(job: Job<TaskJobData>) {
       mainAudioPath,
       hasSourceAudio,
       musicPath,
+      ambienceTracks,
       outputPath: finalPath,
-      durationSeconds: stitchedDurationSeconds,
+      clock: timelineAudio.clock,
       volume: readBgmVolume(payload.bgmVolume),
-      duckingProfile: timelineAudio?.duckingProfile,
+      automationLanes: timelineAudio.automationLanes,
     })
     const outputBuffer = await readFile(finalPath)
 
@@ -363,7 +410,7 @@ export async function handleFinalVideoRenderTask(job: Job<TaskJobData>) {
       sizeBytes: outputBuffer.byteLength,
       width: dimensions.width,
       height: dimensions.height,
-      durationMs: Math.round(stitchedDurationSeconds * 1000),
+      durationMs: Math.round(expectedDurationSeconds * 1000),
     })
 
     const projectData = {
@@ -371,12 +418,13 @@ export async function handleFinalVideoRenderTask(job: Job<TaskJobData>) {
       type: 'linear_final_render',
       taskId: job.data.taskId,
       dimensions,
-      durationSeconds: stitchedDurationSeconds,
+      durationSeconds: expectedDurationSeconds,
       bgmScore: existingProjectData.bgmScore ?? null,
       timelineAudio: timelineAudio ?? null,
       audioMix: {
         hasSourceAudio: audioMix.hasSourceAudio,
-        duckingSegmentCount: timelineAudio?.duckingProfile.length ?? 0,
+        automationLaneCount: timelineAudio.automationLanes.length,
+        ambienceTrackCount: audioMix.ambienceTrackCount,
         targets: {
           mainIntegratedLufs: MAIN_AUDIO_TARGET.integratedLufs,
           bgmIntegratedLufs: BGM_AUDIO_TARGET.integratedLufs,
@@ -387,13 +435,18 @@ export async function handleFinalVideoRenderTask(job: Job<TaskJobData>) {
           bgm: audioMix.bgm,
         },
       },
-      timeline: clips.map((clip) => ({
+      timeline: timelineAudio.clips.map((clip) => ({
         order: clip.order,
         sourceKind: clip.sourceKind,
         panelId: clip.panelId,
         groupId: clip.groupId ?? null,
         shotNumber: clip.shotNumber,
-        durationSeconds: clip.durationSeconds,
+        startFrame: clip.range.startFrame,
+        endFrameExclusive: clip.range.endFrameExclusive,
+        durationSeconds: framesToSeconds(
+          clip.range.endFrameExclusive - clip.range.startFrame,
+          timelineAudio.clock,
+        ),
       })),
     }
     await upsertEditorProject({
@@ -410,7 +463,7 @@ export async function handleFinalVideoRenderTask(job: Job<TaskJobData>) {
       storageKey,
       episodeId,
       clipCount: clips.length,
-      durationSeconds: stitchedDurationSeconds,
+      durationSeconds: expectedDurationSeconds,
       width: dimensions.width,
       height: dimensions.height,
     }

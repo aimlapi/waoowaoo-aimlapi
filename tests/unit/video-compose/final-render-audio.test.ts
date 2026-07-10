@@ -1,86 +1,135 @@
 import { describe, expect, it, vi } from 'vitest'
 import {
-  buildBgmVolumeFilter,
   muxFinalRenderAudio,
   type FinalRenderAudioCommandRunner,
 } from '@/lib/video-compose/final-render-audio'
+import { TEST_CLOCK } from '../audio-design/audio-timeline-fixture'
 
-function loudnormJson() {
-  return [
-    '{',
-    '  "input_i": "-14.72",',
-    '  "input_tp": "-1.22",',
-    '  "input_lra": "6.30",',
-    '  "input_thresh": "-25.05",',
-    '  "target_offset": "0.00"',
-    '}',
-  ].join('\n')
+function loudnormJson(): string {
+  return JSON.stringify({
+    input_i: '-14.72',
+    input_tp: '-1.22',
+    input_lra: '6.30',
+    input_thresh: '-25.05',
+    target_offset: '0.00',
+  })
 }
 
 describe('final render audio mix', () => {
-  it('builds explicit BGM volume automation from the locked audio timeline', () => {
-    const filter = buildBgmVolumeFilter({
-      baseVolume: 0.8,
-      durationSeconds: 10,
-      duckingProfile: [
-        {
-          startSec: 2,
-          endSec: 4,
-          bgmVolume: 0.25,
-          reason: 'dialogue',
-          sourceId: 'dialogue-1',
-        },
-        {
-          startSec: 6,
-          endSec: 7,
-          bgmVolume: 0.5,
-          reason: 'critical_sfx',
-          sourceId: 'sfx-1',
-        },
-      ],
-    })
-
-    expect(filter).toBe("volume='if(between(t\\,2.000\\,4.000)\\,0.200\\,if(between(t\\,6.000\\,7.000)\\,0.400\\,0.800))':eval=frame")
-  })
-
-  it('splits the main audio before sidechain ducking so the mix graph does not reuse one label twice', async () => {
-    const runCommandMock = vi.fn<FinalRenderAudioCommandRunner>(async (command) => {
-      if (command === 'ffmpeg') return { stdout: '', stderr: loudnormJson() }
+  it('mixes native, continuous score, and looped ambience without full-track sidechain pumping', async () => {
+    const runCommandMock = vi.fn<FinalRenderAudioCommandRunner>(async (command, args) => {
+      if (command === 'ffprobe' && args.includes('format=duration')) return { stdout: '10\n', stderr: '' }
+      if (command === 'ffmpeg' && args.includes('-f') && args.includes('null')) {
+        return { stdout: '', stderr: loudnormJson() }
+      }
       return { stdout: '', stderr: '' }
     })
 
-    await muxFinalRenderAudio({
+    const result = await muxFinalRenderAudio({
       runCommand: runCommandMock,
       stitchedPath: '/tmp/stitched.mp4',
-      mainAudioPath: '/tmp/main-audio.m4a',
+      mainAudioPath: '/tmp/main-audio.wav',
       hasSourceAudio: true,
       musicPath: '/tmp/bgm.mp3',
+      ambienceTracks: [{
+        sourceId: 'stadium-bed',
+        sourceContinuityId: 'stadium-continuity',
+        path: '/tmp/stadium.mp3',
+        range: { startFrame: 0, endFrameExclusive: 240 },
+        loop: true,
+        crossfadeFrames: 12,
+        phaseOffsetFrames: 0,
+        perspectives: [{
+          perspectiveId: 'inside',
+          zoneId: 'stadium-inside',
+          range: { startFrame: 0, endFrameExclusive: 120 },
+          enclosure: 'enclosed',
+          distance: 'far',
+          occlusion: 0.7,
+          description: 'same crowd and rain filtered by the stadium shell',
+        }, {
+          perspectiveId: 'outside',
+          zoneId: 'stadium-outside',
+          range: { startFrame: 120, endFrameExclusive: 240 },
+          enclosure: 'open',
+          distance: 'near',
+          occlusion: 0.1,
+          description: 'same crowd and rain heard outside',
+        }],
+        transitions: [{
+          transitionId: 'exit-stadium',
+          sourceContinuityId: 'stadium-continuity',
+          range: { startFrame: 108, endFrameExclusive: 132 },
+          fromZoneId: 'stadium-inside',
+          toZoneId: 'stadium-outside',
+          transitionType: 'exiting_enclosure',
+          preservePlaybackPhase: true,
+          automationIntent: {
+            gain: 'smooth increase',
+            frequency: 'restore highs',
+            spatialWidth: 'widen',
+            reverb: 'move outdoors',
+          },
+        }],
+      }],
       outputPath: '/tmp/final.mp4',
-      durationSeconds: 57,
+      clock: TEST_CLOCK,
       volume: 0.42,
-      duckingProfile: [{
-        startSec: 10,
-        endSec: 14,
-        bgmVolume: 0.22,
-        reason: 'dialogue',
-        sourceId: 'dialogue-1',
+      automationLanes: [{
+        laneId: 'score-space',
+        targetBus: 'score',
+        targetSourceId: null,
+        parameter: 'gain_db',
+        keyframes: [
+          { frame: 48, value: 0, interpolation: 'smooth' },
+          { frame: 60, value: -4, interpolation: 'smooth' },
+          { frame: 96, value: 0, interpolation: 'smooth' },
+        ],
+        postBehavior: 'hold',
+        reason: 'smooth space for native action',
+        sourceEventId: 'action-1',
       }],
     })
 
-    const finalFfmpegCall = runCommandMock.mock.calls.find((call) => {
-      const args = call[1]
-      return call[0] === 'ffmpeg' && args.includes('-filter_complex') && args.includes('/tmp/final.mp4')
+    expect(result.ambienceTrackCount).toBe(1)
+    const finalCall = runCommandMock.mock.calls.find(([command, args]) => (
+      command === 'ffmpeg' && args.includes('/tmp/final.mp4')
+    ))
+    const args = finalCall?.[1] ?? []
+    const filterGraph = args[args.indexOf('-filter_complex') + 1]
+    expect(args).toContain('-stream_loop')
+    expect(filterGraph).toContain('[native_bus]')
+    expect(filterGraph).toContain('[score_bus]')
+    expect(filterGraph).toContain('[amb_0]')
+    expect(filterGraph).toContain('[amb_1]')
+    expect(filterGraph).toContain('afade=t=out')
+    expect(filterGraph).toContain('afade=t=in')
+    expect(filterGraph).toContain('curve=qsin')
+    expect(filterGraph).toContain('lowpass=f=')
+    expect(filterGraph).toContain('stereotools=')
+    expect(filterGraph).toContain('atrim=start=4.500000')
+    expect(filterGraph).toContain('pow(10')
+    expect(filterGraph).not.toContain('between(')
+    expect(filterGraph).not.toContain('sidechaincompress')
+  })
+
+  it('fails explicitly instead of looping a short BGM', async () => {
+    const runCommandMock = vi.fn<FinalRenderAudioCommandRunner>(async (command, args) => {
+      if (command === 'ffprobe' && args.includes('format=duration')) return { stdout: '9\n', stderr: '' }
+      return { stdout: '', stderr: loudnormJson() }
     })
-    expect(finalFfmpegCall).toBeTruthy()
-    const args = finalFfmpegCall?.[1] ?? []
-    const filterComplexIndex = args.indexOf('-filter_complex')
-    expect(filterComplexIndex).toBeGreaterThanOrEqual(0)
-    const filterGraph = args[filterComplexIndex + 1]
-    expect(filterGraph).toContain('[main_norm]asplit=2[main_mix][main_sidechain]')
-    expect(filterGraph).toContain("volume='if(between(t\\,10.000\\,14.000)\\,0.092\\,0.420)':eval=frame")
-    expect(filterGraph).toContain('[bgm_norm][main_sidechain]sidechaincompress=threshold=0.08:ratio=3:attack=80:release=450')
-    expect(filterGraph).toContain('[main_mix][ducked_bgm]amix=inputs=2')
-    expect(filterGraph).not.toContain('[bgm][main]sidechaincompress')
-    expect(filterGraph).not.toContain('[main][ducked_bgm]amix')
+
+    await expect(muxFinalRenderAudio({
+      runCommand: runCommandMock,
+      stitchedPath: '/tmp/stitched.mp4',
+      mainAudioPath: '/tmp/main-audio.wav',
+      hasSourceAudio: false,
+      musicPath: '/tmp/bgm.mp3',
+      ambienceTracks: [],
+      outputPath: '/tmp/final.mp4',
+      clock: TEST_CLOCK,
+      volume: 0.4,
+      automationLanes: [],
+    })).rejects.toThrow('FINAL_VIDEO_RENDER_BGM_TOO_SHORT:9:10')
   })
 })

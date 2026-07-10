@@ -2,231 +2,128 @@ import { createHash } from 'node:crypto'
 import type { FinalRenderClipPlan } from '@/lib/video-compose/final-render-plan'
 import { resolveDefaultAudioStemModelConfig } from './stem-model-config'
 import {
-  timelineAudioDesignSchema,
-  type AmbienceCue,
+  AUDIO_SAMPLE_RATE,
+  AUDIO_TIMELINE_SCHEMA_VERSION,
+  audioTimelineV2Schema,
+  type AudioContinuityPlan,
   type AudioStemPlan,
-  type DialogueCue,
-  type DuckingSegment,
-  type NativeDialogueSourceProvider,
-  type SpotSfxCue,
-  type TimelineAudioDesign,
+  type AudioTimelineV2,
+  type TimelineClock,
   type TimelineClipAudio,
 } from './types'
-
-const DIALOGUE_DUCKING_VOLUME = 0.22
-const CRITICAL_SFX_DUCKING_VOLUME = 0.48
-const NATIVE_VIDEO_SOUND_DUCKING_VOLUME = 0.82
 
 function normalizeString(value: string | null | undefined): string {
   return typeof value === 'string' ? value.trim() : ''
 }
 
-function clampTimelineEnd(value: number, durationSeconds: number): number {
-  return Math.min(Math.max(value, 0), durationSeconds)
-}
-
-function hasExplicitSoundDirection(clip: FinalRenderClipPlan): boolean {
-  return normalizeString(clip.sound).length > 0
-}
-
-function resolveShotNumberForCue(
-  cueShotNumber: number,
-  clips: readonly TimelineClipAudio[],
-): TimelineClipAudio | null {
-  return clips.find((clip) => clip.shotNumbers.includes(cueShotNumber)) ?? null
-}
-
-function resolveCueRange(input: {
-  readonly cueStartSec?: number | null
-  readonly cueEndSec?: number | null
-  readonly cueDurationSec?: number | null
-  readonly clip: TimelineClipAudio
-  readonly durationSeconds: number
-}): { readonly startSec: number; readonly endSec: number } {
-  const clipStart = input.clip.startSec
-  const clipEnd = input.clip.endSec
-  const startSec = typeof input.cueStartSec === 'number'
-    ? clampTimelineEnd(input.cueStartSec, input.durationSeconds)
-    : clipStart
-  const explicitEnd = typeof input.cueEndSec === 'number'
-    ? input.cueEndSec
-    : typeof input.cueDurationSec === 'number'
-      ? startSec + input.cueDurationSec
-      : clipEnd
-  const endSec = clampTimelineEnd(explicitEnd, input.durationSeconds)
-  if (endSec <= startSec) {
-    throw new Error('AUDIO_DESIGN_CUE_TIME_RANGE_INVALID')
+export function createTimelineClock(input: {
+  readonly clips: readonly FinalRenderClipPlan[]
+  readonly fpsNumerator: number
+  readonly fpsDenominator: number
+}): TimelineClock {
+  if (!Number.isInteger(input.fpsNumerator) || input.fpsNumerator <= 0) {
+    throw new Error('AUDIO_TIMELINE_FPS_NUMERATOR_INVALID')
   }
-  return { startSec, endSec }
+  if (!Number.isInteger(input.fpsDenominator) || input.fpsDenominator <= 0) {
+    throw new Error('AUDIO_TIMELINE_FPS_DENOMINATOR_INVALID')
+  }
+  const totalSeconds = input.clips.reduce((total, clip) => total + clip.durationSeconds, 0)
+  const totalFrames = Math.round((totalSeconds * input.fpsNumerator) / input.fpsDenominator)
+  if (totalFrames <= 0) throw new Error('AUDIO_TIMELINE_TOTAL_FRAMES_INVALID')
+  return {
+    fpsNumerator: input.fpsNumerator,
+    fpsDenominator: input.fpsDenominator,
+    sampleRate: AUDIO_SAMPLE_RATE,
+    totalFrames,
+  }
 }
 
-function buildTimelineClips(clips: readonly FinalRenderClipPlan[]): readonly TimelineClipAudio[] {
-  let cursorSeconds = 0
-  return clips.map((clip) => {
-    const startSec = cursorSeconds
-    cursorSeconds += clip.durationSeconds
-    return {
+export function buildTimelineClips(
+  clips: readonly FinalRenderClipPlan[],
+  clock: TimelineClock,
+): readonly TimelineClipAudio[] {
+  let cumulativeSeconds = 0
+  let startFrame = 0
+  return clips.map((clip, index) => {
+    cumulativeSeconds += clip.durationSeconds
+    const isLast = index === clips.length - 1
+    const endFrameExclusive = isLast
+      ? clock.totalFrames
+      : Math.round((cumulativeSeconds * clock.fpsNumerator) / clock.fpsDenominator)
+    if (endFrameExclusive <= startFrame) {
+      throw new Error(`AUDIO_TIMELINE_CLIP_FRAME_RANGE_INVALID:${clip.order}`)
+    }
+    const timelineClip: TimelineClipAudio = {
       order: clip.order,
       sourceKind: clip.sourceKind,
       panelId: clip.panelId,
       groupId: clip.groupId ?? null,
       shotNumber: clip.shotNumber,
       shotNumbers: [...clip.shotNumbers],
-      startSec,
-      endSec: cursorSeconds,
+      range: { startFrame, endFrameExclusive },
+      visualSummary: normalizeString(clip.description) || null,
       soundDirection: normalizeString(clip.sound) || null,
     }
+    startFrame = endFrameExclusive
+    return timelineClip
   })
 }
 
-function buildNativeVideoSoundDucking(clips: readonly TimelineClipAudio[]): readonly DuckingSegment[] {
-  return clips
-    .filter((clip) => normalizeString(clip.soundDirection).length > 0)
-    .map((clip) => ({
-      startSec: clip.startSec,
-      endSec: clip.endSec,
-      bgmVolume: NATIVE_VIDEO_SOUND_DUCKING_VOLUME,
-      reason: 'native_video_sound' as const,
-      sourceId: `clip:${clip.order}`,
-    }))
-}
-
-function buildDialogueDucking(input: {
-  readonly dialogueCues: readonly DialogueCue[]
-  readonly timelineClips: readonly TimelineClipAudio[]
-  readonly durationSeconds: number
-}): readonly DuckingSegment[] {
-  return input.dialogueCues.map((cue) => {
-    const clip = resolveShotNumberForCue(cue.shotNumber, input.timelineClips)
-    if (!clip) throw new Error(`AUDIO_DESIGN_DIALOGUE_SHOT_NOT_IN_TIMELINE:${cue.shotNumber}`)
-    const range = resolveCueRange({
-      cueStartSec: cue.startSec,
-      cueEndSec: cue.endSec,
-      clip,
-      durationSeconds: input.durationSeconds,
-    })
-    return {
-      ...range,
-      bgmVolume: DIALOGUE_DUCKING_VOLUME,
-      reason: 'dialogue' as const,
-      sourceId: cue.cueId,
-    }
-  })
-}
-
-function buildSpotSfxDucking(input: {
-  readonly spotSfx: readonly SpotSfxCue[]
-  readonly timelineClips: readonly TimelineClipAudio[]
-  readonly durationSeconds: number
-}): readonly DuckingSegment[] {
-  return input.spotSfx
-    .filter((cue) => cue.priority === 'critical')
-    .map((cue) => {
-      const clip = resolveShotNumberForCue(cue.shotNumber, input.timelineClips)
-      if (!clip) throw new Error(`AUDIO_DESIGN_SFX_SHOT_NOT_IN_TIMELINE:${cue.shotNumber}`)
-      const range = resolveCueRange({
-        cueStartSec: cue.startSec,
-        cueDurationSec: cue.durationSec,
-        clip,
-        durationSeconds: input.durationSeconds,
-      })
-      return {
-        ...range,
-        bgmVolume: CRITICAL_SFX_DUCKING_VOLUME,
-        reason: 'critical_sfx' as const,
-        sourceId: cue.cueId,
-      }
-    })
-}
-
-function sortDuckingProfile(segments: readonly DuckingSegment[]): readonly DuckingSegment[] {
-  return [...segments].sort((left, right) => {
-    if (left.startSec !== right.startSec) return left.startSec - right.startSec
-    return left.bgmVolume - right.bgmVolume
-  })
-}
-
-function buildAmbiencePlan(clips: readonly TimelineClipAudio[]): readonly AmbienceCue[] {
-  return clips
-    .filter((clip) => normalizeString(clip.soundDirection).length > 0)
-    .map((clip) => ({
-      cueId: `ambience:${clip.order}`,
-      shotNumbers: clip.shotNumbers.length > 0 ? [...clip.shotNumbers] : [clip.order],
-      description: clip.soundDirection ?? '',
-      startSec: clip.startSec,
-      endSec: clip.endSec,
-    }))
-}
-
-function createGeneratedStemPlan(input: {
-  readonly role: Exclude<AudioStemPlan['role'], 'native_video'>
-  readonly status: AudioStemPlan['status']
-  readonly description: string
-}): AudioStemPlan {
-  const modelConfig = resolveDefaultAudioStemModelConfig(input.role)
-  if (!modelConfig) {
-    throw new Error(`AUDIO_DESIGN_STEM_MODEL_NOT_CONFIGURED:${input.role}`)
-  }
+function createGeneratedStemPlan(role: 'ambience' | 'bgm', description: string): AudioStemPlan {
+  const modelConfig = resolveDefaultAudioStemModelConfig(role)
+  if (!modelConfig) throw new Error(`AUDIO_DESIGN_STEM_MODEL_NOT_CONFIGURED:${role}`)
   return {
-    role: input.role,
-    status: input.status,
+    role,
+    status: 'planned',
     provider: modelConfig.provider,
     modelId: modelConfig.modelId,
     modelKey: modelConfig.modelKey,
     generationKind: modelConfig.generationKind,
-    description: input.description,
+    description,
   }
 }
 
-export function createTimelineSignature(clips: readonly FinalRenderClipPlan[]): string {
-  const payload = clips.map((clip) => ({
-    order: clip.order,
-    sourceKind: clip.sourceKind,
-    panelId: clip.panelId,
-    groupId: clip.groupId ?? null,
-    shotNumbers: clip.shotNumbers,
-    durationSeconds: clip.durationSeconds,
-  }))
+export function createTimelineSignature(input: {
+  readonly clips: readonly FinalRenderClipPlan[]
+  readonly clock: TimelineClock
+}): string {
+  const payload = {
+    clock: input.clock,
+    clips: buildTimelineClips(input.clips, input.clock).map((clip) => ({
+      order: clip.order,
+      sourceKind: clip.sourceKind,
+      panelId: clip.panelId,
+      groupId: clip.groupId ?? null,
+      shotNumbers: clip.shotNumbers,
+      range: clip.range,
+    })),
+  }
   return createHash('sha256').update(JSON.stringify(payload)).digest('hex').slice(0, 24)
 }
 
-export function buildTimelineAudioDesign(input: {
+export function buildAudioTimelineV2(input: {
   readonly clips: readonly FinalRenderClipPlan[]
+  readonly clock: TimelineClock
   readonly timelineSignature: string
-  readonly durationSeconds: number
-  readonly nativeDialogueProvider?: NativeDialogueSourceProvider
-  readonly dialogueCues?: readonly DialogueCue[]
-  readonly spotSfx?: readonly SpotSfxCue[]
-}): TimelineAudioDesign {
-  const timelineClips = buildTimelineClips(input.clips)
-  const dialogueCues = input.dialogueCues ?? []
-  const spotSfx = input.spotSfx ?? []
-  const hasNativeSoundDirection = input.clips.some(hasExplicitSoundDirection)
-  const duckingProfile = sortDuckingProfile([
-    ...buildNativeVideoSoundDucking(timelineClips),
-    ...buildDialogueDucking({
-      dialogueCues,
-      timelineClips,
-      durationSeconds: input.durationSeconds,
-    }),
-    ...buildSpotSfxDucking({
-      spotSfx,
-      timelineClips,
-      durationSeconds: input.durationSeconds,
-    }),
-  ])
-
-  const parsed = timelineAudioDesignSchema.safeParse({
-    schemaVersion: 1,
+  readonly continuityPlan: AudioContinuityPlan
+}): AudioTimelineV2 {
+  const parsed = audioTimelineV2Schema.safeParse({
+    schemaVersion: AUDIO_TIMELINE_SCHEMA_VERSION,
     timelineSignature: input.timelineSignature,
-    durationSeconds: input.durationSeconds,
-    nativeDialogueSource: {
-      mode: 'native_video_dialogue',
-      provider: input.nativeDialogueProvider ?? 'seedance_2_0',
-      policy: 'keep_for_dialogue_and_lip_sync',
-      description: 'Dialogue, vocal performance, and lip sync are authored by the upstream video model. The audio post module only adds non-dialogue Foley, spot SFX, ambience, and score.',
+    clock: input.clock,
+    nativeAudioPolicy: {
+      provider: 'video_model_native',
+      dialogueAndActionPolicy: 'keep_native_dialogue_and_synchronized_actions',
+      generatedPostRoles: ['ambience', 'bgm'],
+      missingCriticalActionPolicy: 'fail_and_regenerate_video_segment',
     },
-    clips: timelineClips,
+    clips: buildTimelineClips(input.clips, input.clock),
+    soundWorlds: input.continuityPlan.soundWorlds,
+    acousticTransitions: input.continuityPlan.acousticTransitions,
+    nativeActionEvents: [],
+    ambienceSources: input.continuityPlan.ambienceSources,
+    scoreCues: input.continuityPlan.scoreCues,
+    automationLanes: input.continuityPlan.automationLanes,
     stemPlan: [
       {
         role: 'native_video',
@@ -235,38 +132,15 @@ export function buildTimelineAudioDesign(input: {
         modelId: null,
         modelKey: null,
         generationKind: 'native_reference',
-        description: hasNativeSoundDirection
-          ? 'Use generated video audio as native scene reference and ambience bed.'
-          : 'Use generated video audio only when present as native scene reference.',
+        description: 'Native video audio is the authority for dialogue and synchronized physical action sounds.',
       },
-      createGeneratedStemPlan({
-        role: 'foley',
-        status: 'planned',
-        description: 'Video-locked action foley for footsteps, cloth, handling, and contact sounds. Timing must come from visual action events, not script-estimated seconds.',
-      }),
-      createGeneratedStemPlan({
-        role: 'spot_sfx',
-        status: spotSfx.length > 0 ? 'planned' : 'planned',
-        description: 'Video-locked critical spot sound effects that must remain controllable at final mix time.',
-      }),
-      createGeneratedStemPlan({
-        role: 'ambience',
-        status: 'planned',
-        description: 'Continuous scene ambience beds derived from shot-level sound direction.',
-      }),
-      createGeneratedStemPlan({
-        role: 'bgm',
-        status: 'planned',
-        description: 'Continuous instrumental score generated after the final timeline is locked.',
-      }),
+      createGeneratedStemPlan('ambience', 'Continuous SoundWorld ambience generated by ElevenLabs with loop phase preserved across shots.'),
+      createGeneratedStemPlan('bgm', 'Continuous instrumental score cues generated by Lyria after the frame timeline is locked.'),
     ],
-    dialogueCues,
-    spotSfxPlan: spotSfx,
-    ambiencePlan: buildAmbiencePlan(timelineClips),
-    duckingProfile,
   })
   if (!parsed.success) {
-    throw new Error(`AUDIO_DESIGN_TIMELINE_INVALID:${parsed.error.issues.map((issue) => issue.message).join(',')}`)
+    const messages = parsed.error.issues.map((issue) => `${issue.path.join('.')}:${issue.message}`).join(',')
+    throw new Error(`AUDIO_TIMELINE_V2_INVALID:${messages}`)
   }
   return parsed.data
 }

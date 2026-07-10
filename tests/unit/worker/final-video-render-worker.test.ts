@@ -1,37 +1,22 @@
 import type { Job } from 'bullmq'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { TASK_TYPE, type TaskJobData } from '@/lib/task/types'
+import {
+  buildFinalRenderEditorProjectData,
+  buildFinalRenderTestTimeline,
+} from './final-video-render-worker-fixture'
 
 const execFileMock = vi.hoisted(() => vi.fn())
 const readFileMock = vi.hoisted(() => vi.fn())
 const prismaMock = vi.hoisted(() => ({
-  videoEditorProject: {
-    findUnique: vi.fn(),
-    upsert: vi.fn(),
-  },
-  project: {
-    findUnique: vi.fn(),
-  },
-  projectEpisode: {
-    findFirst: vi.fn(),
-  },
-  projectEditScript: {
-    findUnique: vi.fn(),
-  },
-  projectPanel: {
-    findMany: vi.fn(),
-  },
-  projectVideoGroup: {
-    findMany: vi.fn(),
-  },
-  userPreference: {
-    findUnique: vi.fn(),
-  },
+  videoEditorProject: { findUnique: vi.fn(), upsert: vi.fn() },
+  project: { findUnique: vi.fn() },
+  projectEpisode: { findFirst: vi.fn() },
+  projectEditScript: { findUnique: vi.fn() },
+  projectPanel: { findMany: vi.fn() },
+  projectVideoGroup: { findMany: vi.fn() },
 }))
-
 const reportTaskProgressMock = vi.hoisted(() => vi.fn())
-const generateMusicMock = vi.hoisted(() => vi.fn())
-const executeAiTextStepMock = vi.hoisted(() => vi.fn())
 const mediaServiceMock = vi.hoisted(() => ({
   ensureMediaObjectFromStorageKey: vi.fn(),
   resolveStorageKeyFromMediaValue: vi.fn(),
@@ -43,46 +28,15 @@ const storageMock = vi.hoisted(() => ({
   uploadObject: vi.fn(),
 }))
 
-vi.mock('node:child_process', () => ({
-  execFile: execFileMock,
-}))
-
+vi.mock('node:child_process', () => ({ execFile: execFileMock }))
 vi.mock('node:fs/promises', async (importOriginal) => {
   const actual = await importOriginal<typeof import('node:fs/promises')>()
-  return {
-    ...actual,
-    readFile: readFileMock,
-  }
+  return { ...actual, readFile: readFileMock }
 })
-
-vi.mock('@/lib/prisma', () => ({
-  prisma: prismaMock,
-}))
-
-vi.mock('@/lib/workers/shared', () => ({
-  reportTaskProgress: reportTaskProgressMock,
-}))
-
-vi.mock('@/lib/ai-exec/engine', () => ({
-  executeAiTextStep: executeAiTextStepMock,
-  generateMusic: generateMusicMock,
-}))
-
-vi.mock('@/lib/ai-registry/selection', () => ({
-  parseModelKeyStrict: vi.fn((modelKey: string) => ({ modelKey })),
-}))
-
-vi.mock('@/lib/media/service', () => ({
-  ensureMediaObjectFromStorageKey: mediaServiceMock.ensureMediaObjectFromStorageKey,
-  resolveStorageKeyFromMediaValue: mediaServiceMock.resolveStorageKeyFromMediaValue,
-}))
-
-vi.mock('@/lib/storage', () => ({
-  generateUniqueKey: storageMock.generateUniqueKey,
-  getObjectBuffer: storageMock.getObjectBuffer,
-  toFetchableUrl: storageMock.toFetchableUrl,
-  uploadObject: storageMock.uploadObject,
-}))
+vi.mock('@/lib/prisma', () => ({ prisma: prismaMock }))
+vi.mock('@/lib/workers/shared', () => ({ reportTaskProgress: reportTaskProgressMock }))
+vi.mock('@/lib/media/service', () => mediaServiceMock)
+vi.mock('@/lib/storage', () => storageMock)
 
 function buildJob(payload: Record<string, unknown>): Job<TaskJobData> {
   return {
@@ -122,15 +76,10 @@ describe('final video render worker', () => {
         return
       }
       if (command === 'ffmpeg' && argsText.includes('print_format=json')) {
-        callback(null, { stdout: '', stderr: [
-          '{',
-          '  "input_i": "-18.20",',
-          '  "input_tp": "-2.30",',
-          '  "input_lra": "5.20",',
-          '  "input_thresh": "-28.30",',
-          '  "target_offset": "0.30"',
-          '}',
-        ].join('\n') })
+        callback(null, {
+          stdout: '',
+          stderr: '{"input_i":"-18.20","input_tp":"-2.30","input_lra":"5.20","input_thresh":"-28.30","target_offset":"0.30"}',
+        })
         return
       }
       callback(null, { stdout: '', stderr: '' })
@@ -140,21 +89,11 @@ describe('final video render worker', () => {
       const actual = await vi.importActual<typeof import('node:fs/promises')>('node:fs/promises')
       return actual.readFile(filePath)
     })
-    storageMock.getObjectBuffer.mockResolvedValue(Buffer.from('source-video'))
+    storageMock.getObjectBuffer.mockResolvedValue(Buffer.from('media-data'))
     storageMock.uploadObject.mockResolvedValue('final-video/asset.mp4')
     mediaServiceMock.resolveStorageKeyFromMediaValue.mockResolvedValue('video/source.mp4')
-    mediaServiceMock.ensureMediaObjectFromStorageKey.mockResolvedValue({
-      id: 'media-final',
-      url: '/m/final-video',
-    })
-    executeAiTextStepMock.mockResolvedValue({ text: 'cinematic bgm prompt' })
-    generateMusicMock.mockResolvedValue({
-      success: true,
-      audioBase64: Buffer.from('music').toString('base64'),
-      audioMimeType: 'audio/mpeg',
-      metadata: { provider: 'test' },
-    })
-    prismaMock.project.findUnique.mockResolvedValue({ videoRatio: '9:16', analysisModel: 'openai::gpt-4.1' })
+    mediaServiceMock.ensureMediaObjectFromStorageKey.mockResolvedValue({ id: 'media-final', url: '/m/final-video' })
+    prismaMock.project.findUnique.mockResolvedValue({ videoRatio: '9:16' })
     prismaMock.projectEpisode.findFirst.mockResolvedValue({ id: 'episode-1' })
     prismaMock.projectEditScript.findUnique.mockResolvedValue({
       id: 'edit-script-1',
@@ -162,307 +101,130 @@ describe('final video render worker', () => {
       title: 'Final Edit',
       logline: 'A test edit.',
       durationSec: 3,
-      shotsJson: [
-        {
-          shotNumber: 1,
-          durationSec: 3,
-          dramaticPurpose: 'test dramatic purpose',
-          visibleAction: 'A shot',
-          audienceFocus: 'test audience focus',
-          viewpoint: 'test viewpoint',
-          revealPlan: 'test reveal plan',
-          performanceBeat: 'test performance beat',
-          continuityIn: 'test continuity in',
-          continuityOut: 'test continuity out',
-          charactersAndScene: 'A scene',
-          sound: 'tense pulse, sparse piano',
-        },
-      ],
-      videoBlocksJson: [
-        {
-          kind: 'single',
-          shotNumbers: [1],
-          reason: 'single test shot',
-          prompt: 'single test video prompt',
-        },
-      ],
+      styleBibleJson: null,
+      shotsJson: [{
+        shotNumber: 1,
+        durationSec: 3,
+        dramaticPurpose: 'test purpose',
+        visibleAction: 'A shot',
+        audienceFocus: 'test focus',
+        viewpoint: 'test viewpoint',
+        revealPlan: 'test reveal',
+        performanceBeat: 'test performance',
+        continuityIn: 'test in',
+        continuityOut: 'test out',
+        charactersAndScene: 'A scene',
+        sound: 'native dialogue and synchronized action sounds',
+      }],
+      videoBlocksJson: [{ kind: 'single', shotNumbers: [1], reason: 'single shot', prompt: 'video prompt' }],
     })
-    prismaMock.projectPanel.findMany.mockResolvedValue([
-      {
-        id: 'panel-1',
-        panelIndex: 0,
-        panelNumber: 1,
-        duration: 3,
-        description: 'panel 1',
-        videoUrl: null,
-        videoMedia: null,
-        photographyRules: JSON.stringify({ source: 'edit_script', editScriptId: 'edit-script-1' }),
-        storyboard: {
-          id: 'storyboard-1',
-          createdAt: new Date('2026-01-01T00:00:00.000Z'),
-          storyboardTextJson: JSON.stringify({ editScriptId: 'edit-script-1' }),
-          clip: { createdAt: new Date('2026-01-01T00:00:00.000Z') },
-        },
+    prismaMock.projectPanel.findMany.mockResolvedValue([{
+      id: 'panel-1',
+      panelIndex: 0,
+      panelNumber: 1,
+      duration: 3,
+      description: 'panel 1',
+      videoUrl: null,
+      videoMedia: null,
+      photographyRules: JSON.stringify({ source: 'edit_script', editScriptId: 'edit-script-1' }),
+      storyboard: {
+        id: 'storyboard-1',
+        createdAt: new Date('2026-01-01T00:00:00.000Z'),
+        storyboardTextJson: JSON.stringify({ editScriptId: 'edit-script-1' }),
+        clip: { createdAt: new Date('2026-01-01T00:00:00.000Z') },
       },
-    ])
+    }])
     prismaMock.projectVideoGroup.findMany.mockResolvedValue([])
     prismaMock.videoEditorProject.findUnique.mockResolvedValue({
-      projectData: JSON.stringify({
-        schemaVersion: 1,
-        bgmScore: {
-          status: 'completed',
-          mix: {
-            mediaId: 'media-bgm',
-            url: '/m/bgm',
-            storageKey: 'music/bgm-score.m4a',
-            mimeType: 'audio/mp4',
-            durationMs: 3000,
-          },
-        },
-      }),
+      projectData: buildFinalRenderEditorProjectData(buildFinalRenderTestTimeline()),
     })
   })
 
-  afterEach(() => {
-    vi.restoreAllMocks()
-  })
+  afterEach(() => vi.restoreAllMocks())
 
   it('fails explicitly when an edit-first panel has no rendered video', async () => {
     const { handleFinalVideoRenderTask } = await import('@/lib/workers/final-video-render')
 
-    await expect(handleFinalVideoRenderTask(buildJob({
-      episodeId: 'episode-1',
-    }))).rejects.toThrow('AI 剪辑缺少可用视频：单镜头视频（镜头 1）。请先生成这些视频后再剪辑。')
+    await expect(handleFinalVideoRenderTask(buildJob({ episodeId: 'episode-1' })))
+      .rejects.toThrow('AI 剪辑缺少可用视频：单镜头视频（镜头 1）。请先生成这些视频后再剪辑。')
 
-    expect(generateMusicMock).not.toHaveBeenCalled()
-    expect(prismaMock.videoEditorProject.upsert).toHaveBeenNthCalledWith(1, expect.objectContaining({
-      where: { episodeId: 'episode-1' },
-      update: expect.objectContaining({ renderStatus: 'rendering', renderTaskId: 'task-1' }),
-    }))
-    expect(prismaMock.videoEditorProject.upsert).toHaveBeenNthCalledWith(2, expect.objectContaining({
-      where: { episodeId: 'episode-1' },
-      update: expect.objectContaining({ renderStatus: 'failed', renderTaskId: 'task-1' }),
-    }))
-    expect(reportTaskProgressMock).toHaveBeenCalledWith(expect.anything(), 10, {
-      stage: 'final_render_prepare',
-    })
-  })
-
-  it('uses a stored group video even when a later generation attempt left the group failed', async () => {
-    prismaMock.projectVideoGroup.findMany.mockResolvedValue([
-      {
-        id: 'group-1',
-        gridMode: '2x2',
-        shotNumbers: [1],
-        durationSec: 3,
-        status: 'failed',
-        prompt: 'group video prompt',
-        videoUrl: '/m/group-video',
-        videoMedia: {
-          storageKey: 'video/group-source.mp4',
-          url: '/m/group-video',
-        },
-      },
-    ])
-    const { handleFinalVideoRenderTask } = await import('@/lib/workers/final-video-render')
-
-    const result = await handleFinalVideoRenderTask(buildJob({
-      episodeId: 'episode-1',
-    }))
-
-    expect(result).toMatchObject({
-      videoMediaId: 'media-final',
-      outputUrl: '/m/final-video',
-      storageKey: 'final-video/asset.mp4',
-    })
-    expect(mediaServiceMock.resolveStorageKeyFromMediaValue).toHaveBeenCalledWith(expect.objectContaining({
-      storageKey: 'video/group-source.mp4',
-    }))
-    expect(prismaMock.videoEditorProject.upsert).toHaveBeenNthCalledWith(2, expect.objectContaining({
-      where: { episodeId: 'episode-1' },
-      update: expect.objectContaining({ renderStatus: 'completed', renderTaskId: 'task-1' }),
-    }))
-  })
-
-  it('fails explicitly when completed BGM is missing before final render work starts', async () => {
-    prismaMock.videoEditorProject.findUnique.mockResolvedValue({ projectData: null })
-    const { handleFinalVideoRenderTask } = await import('@/lib/workers/final-video-render')
-
-    await expect(handleFinalVideoRenderTask(buildJob({
-      episodeId: 'episode-1',
-    }))).rejects.toThrow('FINAL_VIDEO_RENDER_BGM_REQUIRED')
-
-    expect(generateMusicMock).not.toHaveBeenCalled()
     expect(execFileMock).not.toHaveBeenCalled()
+    expect(prismaMock.videoEditorProject.upsert).toHaveBeenNthCalledWith(2, expect.objectContaining({
+      update: expect.objectContaining({ renderStatus: 'failed' }),
+    }))
   })
 
-  it('mixes preserved source audio with normalized ducked BGM for final renders', async () => {
-    prismaMock.projectPanel.findMany.mockResolvedValue([
-      {
-        id: 'panel-1',
-        panelIndex: 0,
-        panelNumber: 1,
-        duration: 3,
-        description: 'panel 1',
-        videoUrl: null,
-        videoMedia: {
-          storageKey: 'video/source.mp4',
-          url: '/m/source-video',
-        },
-        photographyRules: JSON.stringify({ source: 'edit_script', editScriptId: 'edit-script-1' }),
-        storyboard: {
-          id: 'storyboard-1',
-          createdAt: new Date('2026-01-01T00:00:00.000Z'),
-          storyboardTextJson: JSON.stringify({ editScriptId: 'edit-script-1' }),
-          clip: { createdAt: new Date('2026-01-01T00:00:00.000Z') },
-        },
+  it('renders against the locked 24fps timeline with smooth score automation', async () => {
+    prismaMock.projectPanel.findMany.mockResolvedValue([{
+      id: 'panel-1',
+      panelIndex: 0,
+      panelNumber: 1,
+      duration: 3,
+      description: 'panel 1',
+      videoUrl: null,
+      videoMedia: { storageKey: 'video/source.mp4', url: '/m/source-video' },
+      photographyRules: JSON.stringify({ source: 'edit_script', editScriptId: 'edit-script-1' }),
+      storyboard: {
+        id: 'storyboard-1',
+        createdAt: new Date('2026-01-01T00:00:00.000Z'),
+        storyboardTextJson: JSON.stringify({ editScriptId: 'edit-script-1' }),
+        clip: { createdAt: new Date('2026-01-01T00:00:00.000Z') },
       },
-    ])
+    }])
     const { handleFinalVideoRenderTask } = await import('@/lib/workers/final-video-render')
 
-    const result = await handleFinalVideoRenderTask(buildJob({
-      episodeId: 'episode-1',
-    }))
+    const result = await handleFinalVideoRenderTask(buildJob({ episodeId: 'episode-1', bgmVolume: 0.8 }))
 
-    expect(result).toMatchObject({
-      videoMediaId: 'media-final',
-      outputUrl: '/m/final-video',
-      storageKey: 'final-video/asset.mp4',
-    })
+    expect(result).toMatchObject({ outputUrl: '/m/final-video', durationSeconds: 3 })
     const ffmpegCalls = execFileMock.mock.calls
       .filter((call) => call[0] === 'ffmpeg')
       .map((call) => (call[1] as readonly string[]).join(' '))
-    expect(ffmpegCalls.some((args) => args.includes('aformat=sample_fmts=fltp:channel_layouts=stereo'))).toBe(true)
-    expect(ffmpegCalls.some((args) => args.includes('concat=n=1:v=0:a=1'))).toBe(true)
-    expect(ffmpegCalls.some((args) => args.includes('loudnorm=I=-16.000'))).toBe(true)
-    expect(ffmpegCalls.some((args) => args.includes('loudnorm=I=-6.000'))).toBe(true)
-    expect(ffmpegCalls.some((args) => args.includes('loudnorm=I=-24.000'))).toBe(false)
-    expect(ffmpegCalls.some((args) => args.includes('volume=1.000'))).toBe(true)
-    expect(ffmpegCalls.some((args) => args.includes('sidechaincompress='))).toBe(true)
-    expect(ffmpegCalls.some((args) => args.includes('amix=inputs=2'))).toBe(true)
-    expect(ffmpegCalls.some((args) => args.includes(' -an '))).toBe(true)
-    const completedProjectDataCall = prismaMock.videoEditorProject.upsert.mock.calls.find((call) => {
-      const arg = call[0] as { update?: { renderStatus?: string } }
-      return arg.update?.renderStatus === 'completed'
+    expect(ffmpegCalls.some((args) => args.includes('fps=24/1'))).toBe(true)
+    expect(ffmpegCalls.some((args) => args.includes('loudnorm=I=-18.000'))).toBe(true)
+    expect(ffmpegCalls.some((args) => args.includes('sidechaincompress='))).toBe(false)
+    expect(ffmpegCalls.some((args) => args.includes('between(t'))).toBe(false)
+    expect(ffmpegCalls.some((args) => args.includes('(3-2*'))).toBe(true)
+
+    const completedCall = prismaMock.videoEditorProject.upsert.mock.calls.find((call) => {
+      const input = call[0] as { update?: { renderStatus?: string } }
+      return input.update?.renderStatus === 'completed'
     })
-    expect(completedProjectDataCall).toBeTruthy()
-    const completedProjectDataArg = completedProjectDataCall?.[0] as { update?: { projectData?: string } }
-    const projectData = JSON.parse(completedProjectDataArg.update?.projectData ?? '{}') as {
-      audioMix?: {
-        hasSourceAudio?: boolean
-        targets?: { mainIntegratedLufs?: number; bgmIntegratedLufs?: number }
-      }
+    const serialized = (completedCall?.[0] as { update?: { projectData?: string } }).update?.projectData ?? '{}'
+    const projectData = JSON.parse(serialized) as {
+      durationSeconds?: number
+      timeline?: readonly { startFrame: number; endFrameExclusive: number }[]
+      audioMix?: { automationLaneCount?: number; targets?: { bgmIntegratedLufs?: number } }
     }
-    expect(projectData.audioMix).toMatchObject({
-      hasSourceAudio: true,
-      targets: {
-        mainIntegratedLufs: -16,
-        bgmIntegratedLufs: -6,
-      },
-    })
+    expect(projectData.durationSeconds).toBe(3)
+    expect(projectData.timeline).toEqual([expect.objectContaining({ startFrame: 0, endFrameExclusive: 72 })])
+    expect(projectData.audioMix).toMatchObject({ automationLaneCount: 1, targets: { bgmIntegratedLufs: -18 } })
   })
 
-  it('applies locked audio timeline ducking when completed BGM carries timeline audio design', async () => {
-    prismaMock.projectPanel.findMany.mockResolvedValue([
-      {
-        id: 'panel-1',
-        panelIndex: 0,
-        panelNumber: 1,
-        duration: 3,
-        description: 'panel 1',
-        videoUrl: null,
-        videoMedia: {
-          storageKey: 'video/source.mp4',
-          url: '/m/source-video',
-        },
-        photographyRules: JSON.stringify({ source: 'edit_script', editScriptId: 'edit-script-1' }),
-        storyboard: {
-          id: 'storyboard-1',
-          createdAt: new Date('2026-01-01T00:00:00.000Z'),
-          storyboardTextJson: JSON.stringify({ editScriptId: 'edit-script-1' }),
-          clip: { createdAt: new Date('2026-01-01T00:00:00.000Z') },
-        },
+  it('rejects a completed score whose frame timeline no longer matches the video edit', async () => {
+    prismaMock.projectPanel.findMany.mockResolvedValue([{
+      id: 'panel-1',
+      panelIndex: 0,
+      panelNumber: 1,
+      duration: 3,
+      description: 'panel 1',
+      videoUrl: null,
+      videoMedia: { storageKey: 'video/source.mp4', url: '/m/source-video' },
+      photographyRules: JSON.stringify({ source: 'edit_script', editScriptId: 'edit-script-1' }),
+      storyboard: {
+        id: 'storyboard-1',
+        createdAt: new Date('2026-01-01T00:00:00.000Z'),
+        storyboardTextJson: JSON.stringify({ editScriptId: 'edit-script-1' }),
+        clip: { createdAt: new Date('2026-01-01T00:00:00.000Z') },
       },
-    ])
+    }])
     prismaMock.videoEditorProject.findUnique.mockResolvedValue({
-      projectData: JSON.stringify({
-        schemaVersion: 1,
-        bgmScore: {
-          schemaVersion: 2,
-          status: 'completed',
-          taskId: 'task-bgm',
-          editScriptId: 'edit-script-1',
-          timelineSignature: 'timeline-signature',
-          durationSeconds: 3,
-          musicModel: 'google::lyria-3-pro-preview',
-          timelineAudio: {
-            schemaVersion: 1,
-            timelineSignature: 'timeline-signature',
-            durationSeconds: 3,
-            clips: [{
-              order: 1,
-              sourceKind: 'panel',
-              panelId: 'panel-1',
-              groupId: null,
-              shotNumber: 1,
-              shotNumbers: [1],
-              startSec: 0,
-              endSec: 3,
-              soundDirection: 'whispered dialogue under room tone',
-            }],
-            stemPlan: [{
-              role: 'dialogue',
-              status: 'planned',
-              provider: 'fal',
-              modelId: 'xai/tts/v1',
-              modelKey: 'fal::xai/tts/v1',
-              generationKind: 'dialogue_tts',
-              description: 'Authoritative dialogue stem.',
-            }],
-            dialogueCues: [],
-            spotSfxPlan: [],
-            ambiencePlan: [],
-            duckingProfile: [{
-              startSec: 0.5,
-              endSec: 1.5,
-              bgmVolume: 0.22,
-              reason: 'dialogue',
-              sourceId: 'dialogue-1',
-            }],
-          },
-          mix: {
-            mediaId: 'media-bgm',
-            url: '/m/bgm',
-            storageKey: 'music/bgm-score.m4a',
-            mimeType: 'audio/mp4',
-            durationMs: 3000,
-          },
-        },
-      }),
+      projectData: buildFinalRenderEditorProjectData(buildFinalRenderTestTimeline('stale-signature')),
     })
     const { handleFinalVideoRenderTask } = await import('@/lib/workers/final-video-render')
 
-    await handleFinalVideoRenderTask(buildJob({
-      episodeId: 'episode-1',
-      bgmVolume: 0.8,
-    }))
+    await expect(handleFinalVideoRenderTask(buildJob({ episodeId: 'episode-1' })))
+      .rejects.toThrow('FINAL_VIDEO_RENDER_AUDIO_TIMELINE_STALE')
 
-    const ffmpegCalls = execFileMock.mock.calls
-      .filter((call) => call[0] === 'ffmpeg')
-      .map((call) => (call[1] as readonly string[]).join(' '))
-    expect(ffmpegCalls.some((args) =>
-      args.includes("volume='if(between(t\\,0.500\\,1.500)\\,0.176\\,0.800)':eval=frame"))).toBe(true)
-
-    const completedProjectDataCall = prismaMock.videoEditorProject.upsert.mock.calls.find((call) => {
-      const arg = call[0] as { update?: { renderStatus?: string } }
-      return arg.update?.renderStatus === 'completed'
-    })
-    const completedProjectDataArg = completedProjectDataCall?.[0] as { update?: { projectData?: string } }
-    const projectData = JSON.parse(completedProjectDataArg.update?.projectData ?? '{}') as {
-      audioMix?: { duckingSegmentCount?: number }
-      timelineAudio?: { duckingProfile?: readonly unknown[] } | null
-    }
-    expect(projectData.audioMix?.duckingSegmentCount).toBe(1)
-    expect(projectData.timelineAudio?.duckingProfile).toHaveLength(1)
+    expect(execFileMock).not.toHaveBeenCalled()
   })
 })

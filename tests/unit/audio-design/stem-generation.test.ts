@@ -12,83 +12,41 @@ vi.mock('@/lib/ai-exec/engine', () => ({
 import { generateAudioStem } from '@/lib/audio-design/stem-generation'
 
 describe('audio stem generation', () => {
-  beforeEach(() => {
-    vi.clearAllMocks()
-  })
+  beforeEach(() => vi.clearAllMocks())
 
-  it('routes dialogue stems to the FAL TTS audio executor', async () => {
+  it('routes loopable ambience to ElevenLabs only', async () => {
     await generateAudioStem({
       userId: 'user-1',
-      role: 'dialogue',
-      prompt: 'Stay quiet.',
-      voice: 'alloy',
-      language: 'en',
+      role: 'ambience',
+      prompt: 'Seamless stadium crowd ambience.',
       outputFormat: 'mp3',
+      durationSeconds: 20,
+      promptInfluence: 0.75,
+      loop: true,
     })
 
     expect(executeMediaGenerationMock).toHaveBeenCalledWith({
       modality: 'audio',
       userId: 'user-1',
-      modelKey: 'fal::xai/tts/v1',
-      prompt: 'Stay quiet.',
+      modelKey: 'elevenlabs::eleven_text_to_sound_v2',
+      prompt: 'Seamless stadium crowd ambience.',
       options: {
-        generationKind: 'dialogue_tts',
-        voice: 'alloy',
-        language: 'en',
+        generationKind: 'ambience',
         outputFormat: 'mp3',
+        durationSeconds: 20,
+        promptInfluence: 0.75,
+        loop: true,
       },
     })
   })
 
-  it('routes non-dialogue sound design stems to the ElevenLabs sound executor', async () => {
-    const roles = ['foley', 'spot_sfx', 'ambience'] as const
-
-    for (const role of roles) {
-      await generateAudioStem({
-        userId: 'user-1',
-        role,
-        prompt: `${role} prompt.`,
-        outputFormat: 'mp3',
-        durationSeconds: 2.5,
-        promptInfluence: 0.75,
-        loop: false,
-      })
-    }
-
-    expect(executeMediaGenerationMock).toHaveBeenCalledTimes(roles.length)
-    roles.forEach((role, index) => {
-      expect(executeMediaGenerationMock).toHaveBeenNthCalledWith(index + 1, {
-        modality: 'audio',
-        userId: 'user-1',
-        modelKey: 'elevenlabs::eleven_text_to_sound_v2',
-        prompt: `${role} prompt.`,
-        options: {
-          generationKind: role,
-          voice: undefined,
-          outputFormat: 'mp3',
-          durationSeconds: 2.5,
-          promptInfluence: 0.75,
-          loop: false,
-          audioUrls: undefined,
-          imageUrl: undefined,
-          sampleRate: undefined,
-          speed: undefined,
-          volume: undefined,
-          pitch: undefined,
-        },
-      })
-    })
-  })
-
-  it('routes BGM stems to the existing music executor', async () => {
+  it('routes the continuous master score to Lyria', async () => {
     await generateAudioStem({
       userId: 'user-1',
       role: 'bgm',
-      prompt: 'Continuous tense instrumental score.',
+      prompt: 'Instrumental minimalist cinematic underscore.',
       durationSeconds: 60,
-      genre: 'cinematic',
-      mood: 'tense',
-      bpm: 92,
+      bpm: 60,
       outputFormat: 'mp3',
     })
 
@@ -96,24 +54,13 @@ describe('audio stem generation', () => {
       modality: 'music',
       userId: 'user-1',
       modelKey: 'fal::fal-ai/lyria3/pro',
-      prompt: 'Continuous tense instrumental score.',
+      prompt: 'Instrumental minimalist cinematic underscore.',
       options: {
         durationSeconds: 60,
         vocalMode: 'instrumental',
-        genre: 'cinematic',
-        mood: 'tense',
-        bpm: 92,
+        bpm: 60,
         outputFormat: 'mp3',
       },
     })
-  })
-
-  it('fails explicitly when dialogue stem voice is missing', async () => {
-    await expect(generateAudioStem({
-      userId: 'user-1',
-      role: 'dialogue',
-      prompt: 'Stay quiet.',
-      voice: '',
-    })).rejects.toThrow('AUDIO_STEM_DIALOGUE_VOICE_REQUIRED')
   })
 })

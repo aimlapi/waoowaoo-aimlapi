@@ -5,6 +5,9 @@ import { normalizeVideoBlockPlanResponse } from '@/lib/video-groups/planner'
 
 export type FinalRenderAspectRatio = '9:16' | '16:9' | '21:9'
 
+export const FINAL_RENDER_FPS_NUMERATOR = 24 as const
+export const FINAL_RENDER_FPS_DENOMINATOR = 1 as const
+
 export interface FinalRenderDimensions {
   readonly width: number
   readonly height: number

@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { bgmScorePlanSchema } from '@/lib/bgm-score/types'
+import { bgmScorePlanSchema, bgmScoreProjectDataSchema } from '@/lib/bgm-score/types'
 
 const basePlan = {
   durationSeconds: 30,
@@ -51,6 +51,49 @@ const basePlan = {
 }
 
 describe('bgm score plan schema', () => {
+  it('rejects legacy project data that is not schema version 4', () => {
+    const result = bgmScoreProjectDataSchema.safeParse({
+      schemaVersion: 3,
+      status: 'completed',
+      taskId: 'task-1',
+      analysisMode: 'script_assisted',
+      editScriptId: 'script-1',
+      timelineSignature: 'signature',
+      durationSeconds: 30,
+      musicModel: 'fal::fal-ai/lyria3/pro',
+    })
+    expect(result.success).toBe(false)
+  })
+
+  it('accepts persisted video-only analysis without a screenplay id', () => {
+    const result = bgmScoreProjectDataSchema.safeParse({
+      schemaVersion: 4,
+      status: 'generating',
+      taskId: 'task-1',
+      analysisMode: 'video_only',
+      editScriptId: null,
+      timelineSignature: 'signature',
+      durationSeconds: 30,
+      musicModel: 'fal::fal-ai/lyria3/pro',
+      visualAnalysis: {
+        schemaVersion: 1,
+        sampleStepFrames: 24,
+        observations: [{
+          frame: 0,
+          location: 'interior room',
+          enclosure: 'enclosed',
+          weather: null,
+          persistentEnvironment: ['room tone'],
+          activityLevel: 0.2,
+          suggestedScoreEnergy: 0.1,
+          description: 'quiet interior',
+        }],
+      },
+      stage: 'audio_video_visual_analyzed',
+    })
+    expect(result.success).toBe(true)
+  })
+
   it('accepts a valid dynamic single-track score plan', () => {
     const result = bgmScorePlanSchema.safeParse(basePlan)
     expect(result.success).toBe(true)

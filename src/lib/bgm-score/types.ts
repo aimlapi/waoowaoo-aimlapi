@@ -1,5 +1,10 @@
 import { z } from 'zod'
-import { timelineAudioDesignSchema, type TimelineAudioDesign } from '@/lib/audio-design/types'
+import {
+  frameRangeSchema,
+  timelineAudioDesignSchema,
+  type TimelineAudioDesign,
+} from '@/lib/audio-design/types'
+import { videoVisualAnalysisSchema, type VideoVisualAnalysis } from '@/lib/audio-design/video-visual-types'
 
 export const BGM_SCORE_STATUS = {
   PENDING: 'pending',
@@ -108,22 +113,44 @@ export interface BgmScoreMix {
   readonly durationMs: number
 }
 
+export const ambienceAssetSchema = z.object({
+  sourceId: z.string().trim().min(1),
+  candidateIndex: z.number().int().min(0).max(1),
+  selected: z.boolean(),
+  mediaId: z.string().trim().min(1),
+  url: z.string().trim().min(1),
+  storageKey: z.string().trim().min(1),
+  mimeType: z.string().trim().min(1),
+  durationMs: z.number().positive(),
+  range: frameRangeSchema,
+  loop: z.boolean(),
+  crossfadeFrames: z.number().int().min(0),
+  phaseOffsetFrames: z.number().int().min(0),
+  boundaryScore: z.number().min(0),
+})
+
+export type AmbienceAsset = z.infer<typeof ambienceAssetSchema>
+
 export interface BgmScoreProjectData {
-  readonly schemaVersion: 2
+  readonly schemaVersion: 4
   readonly status: BgmScoreStatus
   readonly taskId: string
-  readonly editScriptId: string
+  readonly analysisMode: 'video_only' | 'script_assisted'
+  readonly editScriptId: string | null
   readonly timelineSignature: string
   readonly durationSeconds: number
   readonly musicModel: string
   readonly timelineAudio?: TimelineAudioDesign
   readonly plan?: BgmScorePlan
   readonly mix?: BgmScoreMix
+  readonly ambienceAssets?: readonly AmbienceAsset[]
+  readonly visualAnalysis?: VideoVisualAnalysis
+  readonly stage?: string
   readonly errorMessage?: string | null
 }
 
 export const bgmScoreProjectDataSchema = z.object({
-  schemaVersion: z.literal(2),
+  schemaVersion: z.literal(4),
   status: z.enum([
     BGM_SCORE_STATUS.PENDING,
     BGM_SCORE_STATUS.GENERATING,
@@ -131,7 +158,8 @@ export const bgmScoreProjectDataSchema = z.object({
     BGM_SCORE_STATUS.FAILED,
   ]),
   taskId: z.string().trim().min(1),
-  editScriptId: z.string().trim().min(1),
+  analysisMode: z.enum(['video_only', 'script_assisted']),
+  editScriptId: z.string().trim().min(1).nullable(),
   timelineSignature: z.string().trim().min(1),
   durationSeconds: z.number().positive(),
   musicModel: z.string().trim().min(1),
@@ -144,5 +172,8 @@ export const bgmScoreProjectDataSchema = z.object({
     mimeType: z.string().trim().min(1),
     durationMs: z.number().positive(),
   }).optional(),
+  ambienceAssets: z.array(ambienceAssetSchema).optional(),
+  visualAnalysis: videoVisualAnalysisSchema.optional(),
+  stage: z.string().trim().min(1).optional(),
   errorMessage: z.string().optional().nullable(),
 })

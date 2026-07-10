@@ -1,4 +1,15 @@
-import type { DuckingSegment } from '@/lib/audio-design/types'
+import { buildGainAutomationVolumeFilter } from '@/lib/audio-design/automation'
+import {
+  framesToSeconds,
+  type AutomationLane,
+  type TimelineClock,
+} from '@/lib/audio-design/types'
+import {
+  buildFinalRenderAmbienceGraph,
+  type FinalRenderAmbienceTrack,
+} from './final-render-ambience'
+
+export { AMBIENCE_AUDIO_TARGET, type FinalRenderAmbienceTrack } from './final-render-ambience'
 
 export type FinalRenderAudioCommandResult = {
   readonly stdout: string
@@ -28,6 +39,7 @@ export type FinalRenderAudioMixResult = {
   readonly hasSourceAudio: boolean
   readonly mainAudio?: AudioLoudnessMeasurement
   readonly bgm: AudioLoudnessMeasurement
+  readonly ambienceTrackCount: number
 }
 
 export const MAIN_AUDIO_TARGET: AudioLoudnessTarget = {
@@ -37,29 +49,25 @@ export const MAIN_AUDIO_TARGET: AudioLoudnessTarget = {
 }
 
 export const BGM_AUDIO_TARGET: AudioLoudnessTarget = {
-  integratedLufs: -6,
-  truePeakDb: -1.5,
-  loudnessRange: 11,
+  integratedLufs: -18,
+  truePeakDb: -2,
+  loudnessRange: 14,
 }
-
-const BGM_DUCKING_THRESHOLD = 0.08
-const BGM_DUCKING_RATIO = 3
-const BGM_DUCKING_ATTACK_MS = 80
-const BGM_DUCKING_RELEASE_MS = 450
 
 async function hasAudioStream(runCommand: FinalRenderAudioCommandRunner, filePath: string): Promise<boolean> {
   const result = await runCommand('ffprobe', [
-    '-v',
-    'error',
-    '-select_streams',
-    'a:0',
-    '-show_entries',
-    'stream=index',
-    '-of',
-    'csv=p=0',
-    filePath,
+    '-v', 'error', '-select_streams', 'a:0', '-show_entries', 'stream=index', '-of', 'csv=p=0', filePath,
   ])
   return result.stdout.trim().length > 0
+}
+
+async function probeAudioDuration(runCommand: FinalRenderAudioCommandRunner, filePath: string): Promise<number> {
+  const result = await runCommand('ffprobe', [
+    '-v', 'error', '-show_entries', 'format=duration', '-of', 'default=noprint_wrappers=1:nokey=1', filePath,
+  ])
+  const duration = Number.parseFloat(result.stdout.trim())
+  if (!Number.isFinite(duration) || duration <= 0) throw new Error('FINAL_VIDEO_RENDER_AUDIO_DURATION_INVALID')
+  return duration
 }
 
 function parseLoudnormNumber(value: unknown): number | null {
@@ -82,98 +90,31 @@ function parseLoudnormMeasurement(stderr: string): AudioLoudnessMeasurement {
   const inputLra = parseLoudnormNumber(record.input_lra)
   const inputThreshold = parseLoudnormNumber(record.input_thresh)
   const targetOffset = parseLoudnormNumber(record.target_offset)
-  if (
-    inputIntegrated === null ||
-    inputTruePeak === null ||
-    inputLra === null ||
-    inputThreshold === null ||
-    targetOffset === null
-  ) {
+  if (inputIntegrated === null || inputTruePeak === null || inputLra === null || inputThreshold === null || targetOffset === null) {
     throw new Error('FINAL_VIDEO_RENDER_LOUDNESS_ANALYSIS_FAILED')
   }
-  return {
-    inputIntegrated,
-    inputTruePeak,
-    inputLra,
-    inputThreshold,
-    targetOffset,
-  }
+  return { inputIntegrated, inputTruePeak, inputLra, inputThreshold, targetOffset }
 }
 
-function formatFilterNumber(value: number): string {
+function format(value: number): string {
   if (!Number.isFinite(value)) throw new Error('FINAL_VIDEO_RENDER_AUDIO_FILTER_NUMBER_INVALID')
-  return value.toFixed(3)
-}
-
-function escapeFfmpegExpressionComma(value: string): string {
-  return value.replace(/,/g, '\\,')
-}
-
-function assertValidDuckingSegment(segment: DuckingSegment, durationSeconds: number): void {
-  if (
-    !Number.isFinite(segment.startSec)
-    || !Number.isFinite(segment.endSec)
-    || !Number.isFinite(segment.bgmVolume)
-    || segment.startSec < 0
-    || segment.endSec <= segment.startSec
-    || segment.endSec > durationSeconds + 0.001
-    || segment.bgmVolume < 0
-    || segment.bgmVolume > 1
-  ) {
-    throw new Error('FINAL_VIDEO_RENDER_DUCKING_SEGMENT_INVALID')
-  }
-}
-
-export function buildBgmVolumeFilter(input: {
-  readonly baseVolume: number
-  readonly durationSeconds: number
-  readonly duckingProfile?: readonly DuckingSegment[]
-}): string {
-  if (!Number.isFinite(input.baseVolume) || input.baseVolume < 0 || input.baseVolume > 1) {
-    throw new Error('FINAL_VIDEO_RENDER_BGM_VOLUME_INVALID')
-  }
-  const segments = [...(input.duckingProfile ?? [])]
-    .filter((segment) => segment.endSec > 0 && segment.startSec < input.durationSeconds)
-    .sort((left, right) => {
-      if (left.startSec !== right.startSec) return left.startSec - right.startSec
-      return left.bgmVolume - right.bgmVolume
-    })
-  if (segments.length === 0) return `volume=${formatFilterNumber(input.baseVolume)}`
-
-  let expression = formatFilterNumber(input.baseVolume)
-  for (const segment of [...segments].reverse()) {
-    assertValidDuckingSegment(segment, input.durationSeconds)
-    const startSec = formatFilterNumber(segment.startSec)
-    const endSec = formatFilterNumber(Math.min(segment.endSec, input.durationSeconds))
-    const segmentVolume = formatFilterNumber(input.baseVolume * segment.bgmVolume)
-    expression = `if(between(t,${startSec},${endSec}),${segmentVolume},${expression})`
-  }
-  return `volume='${escapeFfmpegExpressionComma(expression)}':eval=frame`
+  return value.toFixed(6)
 }
 
 function loudnormAnalyzeFilter(target: AudioLoudnessTarget): string {
-  return [
-    `I=${formatFilterNumber(target.integratedLufs)}`,
-    `TP=${formatFilterNumber(target.truePeakDb)}`,
-    `LRA=${formatFilterNumber(target.loudnessRange)}`,
-    'print_format=json',
-  ].join(':')
-}
-
-function loudnormNormalizeFilter(target: AudioLoudnessTarget): string {
-  return loudnormAnalyzeFilter(target).replace(':print_format=json', '')
+  return `I=${format(target.integratedLufs)}:TP=${format(target.truePeakDb)}:LRA=${format(target.loudnessRange)}:print_format=json`
 }
 
 function loudnormApplyFilter(target: AudioLoudnessTarget, measurement: AudioLoudnessMeasurement): string {
   return [
-    `I=${formatFilterNumber(target.integratedLufs)}`,
-    `TP=${formatFilterNumber(target.truePeakDb)}`,
-    `LRA=${formatFilterNumber(target.loudnessRange)}`,
-    `measured_I=${formatFilterNumber(measurement.inputIntegrated)}`,
-    `measured_TP=${formatFilterNumber(measurement.inputTruePeak)}`,
-    `measured_LRA=${formatFilterNumber(measurement.inputLra)}`,
-    `measured_thresh=${formatFilterNumber(measurement.inputThreshold)}`,
-    `offset=${formatFilterNumber(measurement.targetOffset)}`,
+    `I=${format(target.integratedLufs)}`,
+    `TP=${format(target.truePeakDb)}`,
+    `LRA=${format(target.loudnessRange)}`,
+    `measured_I=${format(measurement.inputIntegrated)}`,
+    `measured_TP=${format(measurement.inputTruePeak)}`,
+    `measured_LRA=${format(measurement.inputLra)}`,
+    `measured_thresh=${format(measurement.inputThreshold)}`,
+    `offset=${format(measurement.targetOffset)}`,
     'linear=true',
     'print_format=summary',
   ].join(':')
@@ -185,15 +126,7 @@ async function analyzeAudioLoudness(
   target: AudioLoudnessTarget,
 ): Promise<AudioLoudnessMeasurement> {
   const result = await runCommand('ffmpeg', [
-    '-hide_banner',
-    '-nostats',
-    '-i',
-    inputPath,
-    '-af',
-    `loudnorm=${loudnormAnalyzeFilter(target)}`,
-    '-f',
-    'null',
-    '-',
+    '-hide_banner', '-nostats', '-i', inputPath, '-af', `loudnorm=${loudnormAnalyzeFilter(target)}`, '-f', 'null', '-',
   ])
   return parseLoudnormMeasurement(result.stderr)
 }
@@ -207,36 +140,15 @@ export async function renderFinalRenderClipAudio(input: {
   const hasAudio = await hasAudioStream(input.runCommand, input.sourcePath)
   if (!hasAudio) {
     await input.runCommand('ffmpeg', [
-      '-y',
-      '-f',
-      'lavfi',
-      '-t',
-      input.durationSeconds.toFixed(3),
-      '-i',
-      'anullsrc=r=48000:cl=stereo',
-      '-c:a',
-      'aac',
-      '-b:a',
-      '192k',
-      input.outputPath,
+      '-y', '-f', 'lavfi', '-t', input.durationSeconds.toFixed(6), '-i',
+      'anullsrc=r=48000:cl=stereo', '-c:a', 'pcm_s24le', input.outputPath,
     ])
     return false
   }
-
   await input.runCommand('ffmpeg', [
-    '-y',
-    '-i',
-    input.sourcePath,
-    '-t',
-    input.durationSeconds.toFixed(3),
-    '-vn',
-    '-af',
-    `aresample=48000,aformat=sample_fmts=fltp:channel_layouts=stereo,loudnorm=${loudnormNormalizeFilter(MAIN_AUDIO_TARGET)}`,
-    '-c:a',
-    'aac',
-    '-b:a',
-    '192k',
-    input.outputPath,
+    '-y', '-i', input.sourcePath, '-t', input.durationSeconds.toFixed(6), '-vn',
+    '-af', 'aresample=48000,aformat=sample_fmts=fltp:channel_layouts=stereo',
+    '-c:a', 'pcm_s24le', input.outputPath,
   ])
   return true
 }
@@ -250,17 +162,9 @@ export async function concatFinalRenderAudioClips(input: {
   const audioInputs = input.clipAudioPaths.flatMap((clipPath) => ['-i', clipPath])
   const filterInputs = input.clipAudioPaths.map((_, index) => `[${index}:a]`).join('')
   await input.runCommand('ffmpeg', [
-    '-y',
-    ...audioInputs,
-    '-filter_complex',
+    '-y', ...audioInputs, '-filter_complex',
     `${filterInputs}concat=n=${input.clipAudioPaths.length}:v=0:a=1[aout]`,
-    '-map',
-    '[aout]',
-    '-c:a',
-    'aac',
-    '-b:a',
-    '192k',
-    input.outputPath,
+    '-map', '[aout]', '-c:a', 'pcm_s24le', input.outputPath,
   ])
 }
 
@@ -270,89 +174,55 @@ export async function muxFinalRenderAudio(input: {
   readonly mainAudioPath: string
   readonly hasSourceAudio: boolean
   readonly musicPath: string
+  readonly ambienceTracks: readonly FinalRenderAmbienceTrack[]
   readonly outputPath: string
-  readonly durationSeconds: number
+  readonly clock: TimelineClock
   readonly volume: number
-  readonly duckingProfile?: readonly DuckingSegment[]
+  readonly automationLanes: readonly AutomationLane[]
 }): Promise<FinalRenderAudioMixResult> {
-  const fadeDuration = Math.min(2, Math.max(0.4, input.durationSeconds / 8))
-  const fadeOutStart = Math.max(0, input.durationSeconds - fadeDuration)
-  const bgmMeasurement = await analyzeAudioLoudness(input.runCommand, input.musicPath, BGM_AUDIO_TARGET)
-  const bgmVolumeFilter = buildBgmVolumeFilter({
-    baseVolume: input.volume,
-    durationSeconds: input.durationSeconds,
-    duckingProfile: input.duckingProfile,
-  })
-
-  if (!input.hasSourceAudio) {
-    await input.runCommand('ffmpeg', [
-      '-y',
-      '-i',
-      input.stitchedPath,
-      '-stream_loop',
-      '-1',
-      '-i',
-      input.musicPath,
-      '-filter_complex',
-      `[1:a]atrim=0:${input.durationSeconds.toFixed(3)},asetpts=PTS-STARTPTS,afade=t=in:st=0:d=${fadeDuration.toFixed(3)},afade=t=out:st=${fadeOutStart.toFixed(3)}:d=${fadeDuration.toFixed(3)},loudnorm=${loudnormApplyFilter(BGM_AUDIO_TARGET, bgmMeasurement)},${bgmVolumeFilter},alimiter=limit=0.95[aout]`,
-      '-map',
-      '0:v:0',
-      '-map',
-      '[aout]',
-      '-c:v',
-      'copy',
-      '-c:a',
-      'aac',
-      '-b:a',
-      '192k',
-      '-movflags',
-      '+faststart',
-      '-shortest',
-      input.outputPath,
-    ])
-    return {
-      hasSourceAudio: false,
-      bgm: bgmMeasurement,
-    }
+  const durationSeconds = framesToSeconds(input.clock.totalFrames, input.clock)
+  const musicDuration = await probeAudioDuration(input.runCommand, input.musicPath)
+  if (musicDuration + 0.01 < durationSeconds) {
+    throw new Error(`FINAL_VIDEO_RENDER_BGM_TOO_SHORT:${musicDuration}:${durationSeconds}`)
   }
+  const bgmMeasurement = await analyzeAudioLoudness(input.runCommand, input.musicPath, BGM_AUDIO_TARGET)
+  const mainMeasurement = input.hasSourceAudio
+    ? await analyzeAudioLoudness(input.runCommand, input.mainAudioPath, MAIN_AUDIO_TARGET)
+    : undefined
+  const scoreLanes = input.automationLanes.filter((lane) => lane.targetBus === 'score')
+  const scoreVolume = buildGainAutomationVolumeFilter({
+    baseVolume: input.volume,
+    lanes: scoreLanes,
+    clock: input.clock,
+  })
+  const filters: string[] = [
+    input.hasSourceAudio && mainMeasurement
+      ? `[1:a]loudnorm=${loudnormApplyFilter(MAIN_AUDIO_TARGET, mainMeasurement)}[native_bus]`
+      : '[1:a]volume=0[native_bus]',
+    `[2:a]atrim=0:${format(durationSeconds)},asetpts=PTS-STARTPTS,loudnorm=${loudnormApplyFilter(BGM_AUDIO_TARGET, bgmMeasurement)},${scoreVolume}[score_bus]`,
+  ]
+  const mixInputs = ['[native_bus]', '[score_bus]']
+  const ambienceGraph = buildFinalRenderAmbienceGraph({
+    tracks: input.ambienceTracks,
+    clock: input.clock,
+    automationLanes: input.automationLanes,
+    firstInputIndex: 3,
+  })
+  filters.push(...ambienceGraph.filters)
+  mixInputs.push(...ambienceGraph.outputLabels)
+  filters.push(`${mixInputs.join('')}amix=inputs=${mixInputs.length}:duration=first:normalize=0:dropout_transition=0,alimiter=limit=0.95[aout]`)
 
-  const mainMeasurement = await analyzeAudioLoudness(input.runCommand, input.mainAudioPath, MAIN_AUDIO_TARGET)
   await input.runCommand('ffmpeg', [
-    '-y',
-    '-i',
-    input.stitchedPath,
-    '-i',
-    input.mainAudioPath,
-    '-stream_loop',
-    '-1',
-    '-i',
-    input.musicPath,
-    '-filter_complex',
-    [
-      `[1:a]loudnorm=${loudnormApplyFilter(MAIN_AUDIO_TARGET, mainMeasurement)}[main_norm]`,
-      `[2:a]atrim=0:${input.durationSeconds.toFixed(3)},asetpts=PTS-STARTPTS,afade=t=in:st=0:d=${fadeDuration.toFixed(3)},afade=t=out:st=${fadeOutStart.toFixed(3)}:d=${fadeDuration.toFixed(3)},loudnorm=${loudnormApplyFilter(BGM_AUDIO_TARGET, bgmMeasurement)},${bgmVolumeFilter}[bgm_norm]`,
-      '[main_norm]asplit=2[main_mix][main_sidechain]',
-      `[bgm_norm][main_sidechain]sidechaincompress=threshold=${BGM_DUCKING_THRESHOLD}:ratio=${BGM_DUCKING_RATIO}:attack=${BGM_DUCKING_ATTACK_MS}:release=${BGM_DUCKING_RELEASE_MS}[ducked_bgm]`,
-      '[main_mix][ducked_bgm]amix=inputs=2:duration=first:dropout_transition=0,alimiter=limit=0.95[aout]',
-    ].join(';'),
-    '-map',
-    '0:v:0',
-    '-map',
-    '[aout]',
-    '-c:v',
-    'copy',
-    '-c:a',
-    'aac',
-    '-b:a',
-    '192k',
-    '-movflags',
-    '+faststart',
-    '-shortest',
-    input.outputPath,
+    '-y', '-i', input.stitchedPath, '-i', input.mainAudioPath, '-i', input.musicPath,
+    ...ambienceGraph.inputArgs,
+    '-filter_complex', filters.join(';'),
+    '-map', '0:v:0', '-map', '[aout]', '-c:v', 'copy', '-c:a', 'aac', '-b:a', '256k',
+    '-movflags', '+faststart', '-shortest', input.outputPath,
   ])
   return {
-    hasSourceAudio: true,
-    mainAudio: mainMeasurement,
+    hasSourceAudio: input.hasSourceAudio,
+    ...(mainMeasurement ? { mainAudio: mainMeasurement } : {}),
     bgm: bgmMeasurement,
+    ambienceTrackCount: input.ambienceTracks.length,
   }
 }

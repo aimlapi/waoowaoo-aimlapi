@@ -44,12 +44,12 @@ describe('ElevenLabs audio generation', () => {
         modelKey: 'elevenlabs::eleven_text_to_sound_v2',
         variantSubKind: 'official',
       },
-      prompt: 'A sharp metal dental tool taps against a tooth enamel surface.',
+      prompt: 'Seamless loopable indoor stadium crowd ambience.',
       options: {
-        generationKind: 'spot_sfx',
-        durationSeconds: 2.5,
+        generationKind: 'ambience',
+        durationSeconds: 20,
         promptInfluence: 0.8,
-        loop: false,
+        loop: true,
       },
     })
 
@@ -62,11 +62,11 @@ describe('ElevenLabs audio generation', () => {
       },
     }))
     expect(readSubmittedJson()).toEqual({
-      text: 'A sharp metal dental tool taps against a tooth enamel surface.',
+      text: 'Seamless loopable indoor stadium crowd ambience.',
       model_id: 'eleven_text_to_sound_v2',
-      duration_seconds: 2.5,
+      duration_seconds: 20,
       prompt_influence: 0.8,
-      loop: false,
+      loop: true,
     })
     expect(result).toEqual({
       success: true,
@@ -79,39 +79,7 @@ describe('ElevenLabs audio generation', () => {
     })
   })
 
-  it('accepts Foley and ambience sound generation kinds', async () => {
-    fetchMock
-      .mockResolvedValueOnce(new Response(new Uint8Array([1]), { status: 200 }))
-      .mockResolvedValueOnce(new Response(new Uint8Array([2]), { status: 200 }))
-
-    const generationKinds = ['foley', 'ambience'] as const
-    for (const generationKind of generationKinds) {
-      await executeElevenLabsAudioGeneration({
-        userId: 'user-1',
-        selection: {
-          provider: 'elevenlabs',
-          modelId: 'eleven_text_to_sound_v2',
-          modelKey: 'elevenlabs::eleven_text_to_sound_v2',
-          variantSubKind: 'official',
-        },
-        prompt: `${generationKind} prompt.`,
-        options: {
-          generationKind,
-        },
-      })
-    }
-
-    expect(readSubmittedJson(0)).toEqual({
-      text: 'foley prompt.',
-      model_id: 'eleven_text_to_sound_v2',
-    })
-    expect(readSubmittedJson(1)).toEqual({
-      text: 'ambience prompt.',
-      model_id: 'eleven_text_to_sound_v2',
-    })
-  })
-
-  it('fails explicitly when a non sound-design generation kind is requested', async () => {
+  it('fails explicitly when Foley is routed to ElevenLabs', async () => {
     await expect(executeElevenLabsAudioGeneration({
       userId: 'user-1',
       selection: {
@@ -122,8 +90,8 @@ describe('ElevenLabs audio generation', () => {
       },
       prompt: 'Room tone.',
       options: {
-        generationKind: 'dialogue_tts',
+        generationKind: 'foley',
       },
-    })).rejects.toThrow('ELEVENLABS_AUDIO_GENERATION_KIND_UNSUPPORTED:dialogue_tts')
+    })).rejects.toThrow('ELEVENLABS_AUDIO_GENERATION_KIND_UNSUPPORTED:foley')
   })
 })

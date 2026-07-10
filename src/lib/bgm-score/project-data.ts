@@ -2,6 +2,7 @@ import type { TimelineAudioDesign } from '@/lib/audio-design/types'
 import {
   BGM_SCORE_STATUS,
   bgmScoreProjectDataSchema,
+  type AmbienceAsset,
   type BgmScoreMix,
   type BgmScoreProjectData,
 } from './types'
@@ -70,4 +71,9 @@ export function readCompletedBgmScoreProjectData(projectDataJson: string | null 
 
 export function readCompletedBgmScoreTimelineAudio(projectDataJson: string | null | undefined): TimelineAudioDesign | null {
   return readCompletedBgmScoreProjectData(projectDataJson)?.timelineAudio ?? null
+}
+
+export function readCompletedAmbienceAssets(projectDataJson: string | null | undefined): readonly AmbienceAsset[] {
+  const projectData = readCompletedBgmScoreProjectData(projectDataJson)
+  return projectData?.ambienceAssets?.filter((asset) => asset.selected) ?? []
 }
