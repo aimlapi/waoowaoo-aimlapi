@@ -42,12 +42,15 @@ export const nativeAudioPolicySchema = z.object({
   missingCriticalActionPolicy: z.literal('fail_and_regenerate_video_segment'),
 })
 
+export const ACOUSTIC_ENCLOSURE_VALUES = ['open', 'semi_open', 'enclosed'] as const
+export const ACOUSTIC_DISTANCE_VALUES = ['near', 'medium', 'far'] as const
+
 export const acousticPerspectiveSchema = z.object({
   perspectiveId: z.string().trim().min(1),
   zoneId: z.string().trim().min(1),
   range: frameRangeSchema,
-  enclosure: z.enum(['open', 'semi_open', 'enclosed']),
-  distance: z.enum(['near', 'medium', 'far']),
+  enclosure: z.enum(ACOUSTIC_ENCLOSURE_VALUES),
+  distance: z.enum(ACOUSTIC_DISTANCE_VALUES),
   occlusion: z.number().min(0).max(1),
   description: z.string().trim().min(1),
 })
@@ -63,7 +66,7 @@ export const soundWorldSchema = z.object({
   perspectives: z.array(acousticPerspectiveSchema).min(1),
 })
 
-export const acousticTransitionTypeSchema = z.enum([
+export const ACOUSTIC_TRANSITION_TYPE_VALUES = [
   'entering_enclosure',
   'exiting_enclosure',
   'approaching_source',
@@ -74,7 +77,8 @@ export const acousticTransitionTypeSchema = z.enum([
   'portal_closing',
   'room_to_room',
   'perspective_shift',
-])
+] as const
+export const acousticTransitionTypeSchema = z.enum(ACOUSTIC_TRANSITION_TYPE_VALUES)
 
 export const acousticTransitionSchema = z.object({
   transitionId: z.string().trim().min(1),
@@ -118,11 +122,12 @@ export const nativeActionEventSchema = z.object({
   }
 })
 
-export const ambiencePlaybackTypeSchema = z.enum([
+export const AMBIENCE_PLAYBACK_TYPE_VALUES = [
   'seamless_loop',
   'ambient_event',
   'continuous_evolving',
-])
+] as const
+export const ambiencePlaybackTypeSchema = z.enum(AMBIENCE_PLAYBACK_TYPE_VALUES)
 
 export const ambienceLoopPolicySchema = z.object({
   enabled: z.literal(true),
@@ -169,13 +174,14 @@ export const ambienceSourceSchema = z.object({
   }
 })
 
-export const scoreScoringStanceSchema = z.enum([
+export const SCORE_SCORING_STANCE_VALUES = [
   'detached_observer',
   'subjective_pressure',
   'empathetic_support',
   'procedural_control',
   'minimal_presence',
-])
+] as const
+export const scoreScoringStanceSchema = z.enum(SCORE_SCORING_STANCE_VALUES)
 
 export const scoreNarrativeDiagnosisSchema = z.object({
   surfaceEmotion: z.string().trim().min(1),
@@ -186,16 +192,17 @@ export const scoreNarrativeDiagnosisSchema = z.object({
   musicShouldNotDo: z.string().trim().min(1),
 })
 
-export const scoreStyleSchema = z.enum([
+export const SCORE_STYLE_VALUES = [
   'cinematic_underscore',
   'minimalist_underscore',
   'hybrid_cinematic',
   'ambient_cinematic',
   'orchestral_cinematic',
   'electronic_cinematic',
-])
+] as const
+export const scoreStyleSchema = z.enum(SCORE_STYLE_VALUES)
 
-export const scoreMusicalEmotionSchema = z.enum([
+export const SCORE_MUSICAL_EMOTION_VALUES = [
   'restrained_tension',
   'cold_procedural_tension',
   'quiet_unease',
@@ -206,9 +213,10 @@ export const scoreMusicalEmotionSchema = z.enum([
   'detached_observation',
   'mysterious_suspense',
   'solemn_gravity',
-])
+] as const
+export const scoreMusicalEmotionSchema = z.enum(SCORE_MUSICAL_EMOTION_VALUES)
 
-export const scoreHarmonicLanguageSchema = z.enum([
+export const SCORE_HARMONIC_LANGUAGE_VALUES = [
   'sparse_unresolved_minor',
   'modal_ambiguity',
   'slow_diatonic_motion',
@@ -217,11 +225,12 @@ export const scoreHarmonicLanguageSchema = z.enum([
   'tonal_pedal',
   'gentle_consonance',
   'controlled_dissonance',
-])
+] as const
+export const scoreHarmonicLanguageSchema = z.enum(SCORE_HARMONIC_LANGUAGE_VALUES)
 
-export const scoreDensitySchema = z.enum(['minimal', 'sparse', 'moderate', 'dense'])
-export const scoreRegisterSchema = z.enum(['sub', 'low', 'low_mid', 'mid', 'high_mid', 'high'])
-export const scoreInstrumentSchema = z.enum([
+export const SCORE_DENSITY_VALUES = ['minimal', 'sparse', 'moderate', 'dense'] as const
+export const SCORE_REGISTER_VALUES = ['sub', 'low', 'low_mid', 'mid', 'high_mid', 'high'] as const
+export const SCORE_INSTRUMENT_VALUES = [
   'analog_synthesizer_pad',
   'muted_analog_synthesizer',
   'soft_sub_bass',
@@ -241,9 +250,12 @@ export const scoreInstrumentSchema = z.enum([
   'electronic_pulse',
   'noise_texture',
   'wordless_synth_texture',
-])
+] as const
+export const scoreDensitySchema = z.enum(SCORE_DENSITY_VALUES)
+export const scoreRegisterSchema = z.enum(SCORE_REGISTER_VALUES)
+export const scoreInstrumentSchema = z.enum(SCORE_INSTRUMENT_VALUES)
 
-export const scoreArticulationSchema = z.enum([
+export const SCORE_ARTICULATION_VALUES = [
   'sustained',
   'widely_spaced',
   'soft_attack',
@@ -252,12 +264,22 @@ export const scoreArticulationSchema = z.enum([
   'gentle_ostinato',
   'gradual_swell',
   'natural_decay',
-])
+] as const
+export const scoreArticulationSchema = z.enum(SCORE_ARTICULATION_VALUES)
+
+export const SCORE_SECTION_FUNCTION_VALUES = [
+  'opening',
+  'development',
+  'transition',
+  'climax',
+  'release',
+  'closing',
+] as const
 
 export const scoreGenerationSectionSchema = z.object({
   sectionId: z.string().trim().min(1),
   range: frameRangeSchema,
-  function: z.enum(['opening', 'development', 'transition', 'climax', 'release', 'closing']),
+  function: z.enum(SCORE_SECTION_FUNCTION_VALUES),
   energy: z.number().min(0).max(1),
   density: scoreDensitySchema,
   harmonicTension: z.number().min(0).max(1),
@@ -288,12 +310,14 @@ export const scoreCueSchema = z.object({
   intentionalSilenceRanges: z.array(frameRangeSchema),
 })
 
-export const automationTargetBusSchema = z.enum(['native', 'ambience', 'score', 'master'])
+export const AUTOMATION_TARGET_BUS_VALUES = ['native', 'ambience', 'score', 'master'] as const
+export const AUTOMATION_INTERPOLATION_VALUES = ['linear', 'smooth', 'equal_power'] as const
+export const automationTargetBusSchema = z.enum(AUTOMATION_TARGET_BUS_VALUES)
 // Perspective EQ, width, and reverb are derived from structured SoundWorld
 // perspectives. Free-form automation is intentionally limited to gain so the
 // planner cannot emit filter parameters the renderer interprets differently.
 export const automationParameterSchema = z.literal('gain_db')
-export const automationInterpolationSchema = z.enum(['linear', 'smooth', 'equal_power'])
+export const automationInterpolationSchema = z.enum(AUTOMATION_INTERPOLATION_VALUES)
 
 export const automationKeyframeSchema = z.object({
   frame: z.number().int().min(0),

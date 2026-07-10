@@ -2,7 +2,22 @@ import { executeAiTextStep } from '@/lib/ai-exec/engine'
 import type { AiPromptLocale } from '@/lib/ai-prompts'
 import { safeParseJsonObject } from '@/lib/json-repair'
 import {
+  ACOUSTIC_DISTANCE_VALUES,
+  ACOUSTIC_ENCLOSURE_VALUES,
+  ACOUSTIC_TRANSITION_TYPE_VALUES,
+  AMBIENCE_PLAYBACK_TYPE_VALUES,
   AUDIO_TIMELINE_SCHEMA_VERSION,
+  AUTOMATION_INTERPOLATION_VALUES,
+  AUTOMATION_TARGET_BUS_VALUES,
+  SCORE_ARTICULATION_VALUES,
+  SCORE_DENSITY_VALUES,
+  SCORE_HARMONIC_LANGUAGE_VALUES,
+  SCORE_INSTRUMENT_VALUES,
+  SCORE_MUSICAL_EMOTION_VALUES,
+  SCORE_REGISTER_VALUES,
+  SCORE_SCORING_STANCE_VALUES,
+  SCORE_SECTION_FUNCTION_VALUES,
+  SCORE_STYLE_VALUES,
   audioContinuityPlanSchema,
   type AudioContinuityPlan,
   type TimelineClock,
@@ -130,6 +145,41 @@ function outputShape(clock: TimelineClock): string {
   })
 }
 
+function strictEnumContract(clock: TimelineClock): string {
+  return json({
+    acousticPerspective: {
+      enclosure: ACOUSTIC_ENCLOSURE_VALUES,
+      distance: ACOUSTIC_DISTANCE_VALUES,
+    },
+    acousticTransition: {
+      transitionType: ACOUSTIC_TRANSITION_TYPE_VALUES,
+    },
+    ambienceSource: {
+      playbackType: AMBIENCE_PLAYBACK_TYPE_VALUES,
+    },
+    narrativeDiagnosis: {
+      scoringStance: SCORE_SCORING_STANCE_VALUES,
+    },
+    generationSpec: {
+      style: SCORE_STYLE_VALUES,
+      emotionalProfile: SCORE_MUSICAL_EMOTION_VALUES,
+      harmonicLanguage: SCORE_HARMONIC_LANGUAGE_VALUES,
+      density: SCORE_DENSITY_VALUES,
+      registers: SCORE_REGISTER_VALUES,
+      instruments: SCORE_INSTRUMENT_VALUES,
+      articulations: SCORE_ARTICULATION_VALUES,
+      sectionFunction: SCORE_SECTION_FUNCTION_VALUES,
+    },
+    automationLane: {
+      targetBus: AUTOMATION_TARGET_BUS_VALUES,
+      parameter: ['gain_db'],
+      interpolation: AUTOMATION_INTERPOLATION_VALUES,
+      keyframeMinimum: 0,
+      keyframeMaximumInclusive: clock.totalFrames - 1,
+    },
+  })
+}
+
 function buildChinesePrompt(input: Pick<AudioContinuityAnalysisInput, 'clock' | 'clips' | 'narrativeContext'>): string {
   return [
     '# 角色',
@@ -165,6 +215,11 @@ function buildChinesePrompt(input: Pick<AudioContinuityAnalysisInput, 'clock' | 
     '3. 不得输出 finalLyriaPrompt；最终 Prompt 将由代码从 generationSpec 确定性生成。',
     '4. 当前 Lyria 输出不提供同步 stems；必须为完整时间轴输出且只输出一个连续 Score Cue，并通过 sections 表达内部音乐结构，不得按镜头机械拆分。',
     '5. 普通动作不得创建音乐静默；intentionalSilenceRanges 只用于有明确剧情和音乐理由的乐句级静默。',
+    '',
+    '# 严格枚举契约',
+    '以下列表是唯一允许值。不得创造近义词、新风格、新乐器、新情绪或新段落名称；需要表达列表外概念时，选择音乐含义最接近的允许值。',
+    '范围的 endFrameExclusive 可以等于 totalFrames；automation keyframe.frame 最大只能等于 totalFrames-1。',
+    strictEnumContract(input.clock),
     '',
     '# 混音自动化规则',
     '1. 不得输出矩形静音窗口或瞬时阶跃。',
@@ -219,6 +274,11 @@ function buildEnglishPrompt(input: Pick<AudioContinuityAnalysisInput, 'clock' | 
     '2. generationSpec contains only the schema musical enums and numbers. Never include people, body parts, tools, injury, violence, gore, crime, actions, or screenplay sentences.',
     '3. Never output finalLyriaPrompt. Code will deterministically render it from generationSpec.',
     '4. Current Lyria output has no synchronized stems. Return exactly one continuous Score Cue spanning the full timeline and express internal form through sections. Ordinary actions never create silence.',
+    '',
+    '# Strict enum contract',
+    'The following lists are the only allowed values. Never invent synonyms, styles, instruments, emotions, articulations, densities, or section function names. Map every desired concept to the closest allowed value.',
+    'A range endFrameExclusive may equal totalFrames. An automation keyframe.frame must be at most totalFrames-1.',
+    strictEnumContract(input.clock),
     '',
     '# Automation',
     'Never output rectangular mute windows or instantaneous steps. automationLanes may only use parameter=gain_db. Frequency response, width, and reverb are deterministically derived in code from SoundWorld perspective enclosure, distance, and occlusion. Keyframes are strictly increasing, every lane explicitly declares postBehavior, and shot cuts alone create no automation.',

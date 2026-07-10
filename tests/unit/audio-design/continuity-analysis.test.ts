@@ -26,6 +26,12 @@ describe('audio continuity director', () => {
     expect(prompt).toContain('保留 sourceContinuityId、素材、Loop 播放位置和相位')
     expect(prompt).toContain('不得规划生成 Foley、Spot SFX、对白或动作替代音')
     expect(prompt).toContain('不得输出 finalLyriaPrompt')
+    expect(prompt).toContain('# 严格枚举契约')
+    expect(prompt).toContain('"distance": [')
+    expect(prompt).toContain('"near"')
+    expect(prompt).toContain('"style": [')
+    expect(prompt).toContain('"ambient_cinematic"')
+    expect(prompt).toContain('"keyframeMaximumInclusive": 239')
   })
 
   it('parses the strict SoundWorld and loop plan schema', () => {
