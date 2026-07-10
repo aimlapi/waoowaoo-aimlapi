@@ -2,7 +2,7 @@ import { describe, expect, it } from 'vitest'
 import {
   DEFAULT_AUDIO_STEM_MODEL_CONFIGS,
   resolveDefaultAudioStemModelConfig,
-} from '@/lib/audio-design/stem-model-config'
+} from '@/lib/ai-registry/audio-stem-model-config'
 
 describe('audio stem model ownership', () => {
   it('only assigns generated post roles to ElevenLabs ambience and Lyria score', () => {

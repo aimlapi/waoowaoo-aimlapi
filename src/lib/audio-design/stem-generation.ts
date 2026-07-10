@@ -1,6 +1,10 @@
-import { executeMediaGeneration, type AiAudioExecutionOptions, type AiMusicExecutionOptions } from '@/lib/ai-exec/engine'
-import type { GenerateResult } from '@/lib/ai-providers/runtime-types'
-import { resolveDefaultAudioStemModelConfig } from './stem-model-config'
+import {
+  executeMediaGeneration,
+  type AiAudioExecutionOptions,
+  type AiMusicExecutionOptions,
+  type GenerateResult,
+} from '@/lib/ai-exec/engine'
+import { resolveDefaultAudioStemModelConfig } from '@/lib/ai-registry/audio-stem-model-config'
 
 type StemGenerationCommonInput = {
   readonly userId: string

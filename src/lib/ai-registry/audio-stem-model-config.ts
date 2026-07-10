@@ -1,7 +1,7 @@
 import { z } from 'zod'
 import { ELEVENLABS_TEXT_TO_SOUND_V2_MODEL_ID } from '@/lib/ai-providers/elevenlabs/models'
 import { FAL_LYRIA_3_PRO_MODEL_ID } from '@/lib/ai-providers/fal/models'
-import { audioStemGenerationKindSchema, type AudioStemRole } from './types'
+import { audioStemGenerationKindSchema, type AudioStemRole } from '@/lib/audio-design/types'
 
 export const generativeAudioStemRoleSchema = z.enum(['ambience', 'bgm'])
 

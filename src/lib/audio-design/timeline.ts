@@ -1,6 +1,6 @@
 import { createHash } from 'node:crypto'
 import type { FinalRenderClipPlan } from '@/lib/video-compose/final-render-plan'
-import { resolveDefaultAudioStemModelConfig } from './stem-model-config'
+import { resolveDefaultAudioStemModelConfig } from '@/lib/ai-registry/audio-stem-model-config'
 import {
   AUDIO_SAMPLE_RATE,
   AUDIO_TIMELINE_SCHEMA_VERSION,

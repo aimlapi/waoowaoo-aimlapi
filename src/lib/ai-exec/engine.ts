@@ -1,6 +1,6 @@
 import OpenAI from 'openai'
 import { logInfo as _ulogInfo } from '@/lib/logging/core'
-import type { GenerateResult } from '@/lib/ai-providers/runtime-types'
+import type { GenerateResult as ProviderGenerateResult } from '@/lib/ai-providers/runtime-types'
 import type {
   AiModality,
   AiStepExecutionInput,
@@ -24,6 +24,7 @@ import { getCompletionContent, getCompletionParts } from '@/lib/ai-exec/llm-help
 import { toAiRuntimeError } from '@/lib/ai-exec/governance'
 
 export type AiMediaExecutionModality = Extract<AiModality, 'image' | 'video' | 'music' | 'audio'>
+export type GenerateResult = ProviderGenerateResult
 
 export type AiImageExecutionOptions = {
   referenceImages?: string[]
