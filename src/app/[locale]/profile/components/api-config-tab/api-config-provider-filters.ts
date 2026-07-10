@@ -56,6 +56,7 @@ export function groupEnabledApiConfigModelsByType(
     if (!model.enabled) continue
     if (!isProviderModelType(model.type)) continue
     const provider = providersById.get(model.provider)
+    if (!provider) continue
     if (!hasProviderApiKey(provider)) continue
     if (!shouldExposeModelForProvider(provider, model)) continue
 

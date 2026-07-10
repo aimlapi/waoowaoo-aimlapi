@@ -88,6 +88,12 @@ describe('api config provider scope', () => {
     ])
   })
 
+  it('ignores enabled models whose provider is absent from the provider configuration', () => {
+    const grouped = groupEnabledApiConfigModelsByType([], [model('audio', 'elevenlabs')])
+
+    expect(grouped.audio).toEqual([])
+  })
+
   it('has empty-state copy for the supported default model types', () => {
     const t = (key: string) => key
     expect(getDefaultModelEmptyStateText('llm', t).description).toBe('defaultModelEmptyState.llmDescription')
