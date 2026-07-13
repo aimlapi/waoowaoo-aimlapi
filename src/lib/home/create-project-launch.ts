@@ -80,7 +80,7 @@ async function readEpisodeId(response: Response): Promise<string> {
   return episodeId
 }
 
-export function buildHomeWorkspaceLaunchTarget(projectId: string, episodeId: string): HomeWorkspaceLaunchTarget {
+function buildHomeWorkspaceLaunchTarget(projectId: string, episodeId: string): HomeWorkspaceLaunchTarget {
   const params = new URLSearchParams({
     episode: episodeId,
     [HOME_ASSISTANT_AUTOSTART_QUERY]: HOME_ASSISTANT_AUTOSTART_VALUE,
@@ -88,7 +88,7 @@ export function buildHomeWorkspaceLaunchTarget(projectId: string, episodeId: str
   return `/workspace/${encodeURIComponent(projectId)}?${params.toString()}`
 }
 
-export function buildHomeAssistantAutoStartStorageKey(projectId: string, episodeId: string): string {
+function buildHomeAssistantAutoStartStorageKey(projectId: string, episodeId: string): string {
   return `${HOME_ASSISTANT_AUTOSTART_STORAGE_PREFIX}:${projectId}:${episodeId}`
 }
 

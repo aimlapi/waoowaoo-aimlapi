@@ -52,7 +52,7 @@ function isStoryboardLike(value: unknown): value is StoryboardLike {
   return typeof value === 'object' && value !== null
 }
 
-export function hasScriptArtifacts(script: unknown | null | undefined) {
+function hasScriptArtifacts(script: unknown | null | undefined) {
   if (!isEpisodeScriptLike(script)) return false
   return hasNonEmptyText(script.content)
     || hasNonEmptyText(script.scriptText)
@@ -63,14 +63,14 @@ export function hasScriptArtifacts(script: unknown | null | undefined) {
     || hasStructuredValue(script.emotionalCurve)
 }
 
-export function hasStoryboardArtifacts(storyboards: unknown[] | null | undefined) {
+function hasStoryboardArtifacts(storyboards: unknown[] | null | undefined) {
   if (!Array.isArray(storyboards) || storyboards.length === 0) return false
   return storyboards.some((storyboard) => isStoryboardLike(storyboard)
     && Array.isArray(storyboard.panels)
     && storyboard.panels.some((panel) => isStoryboardPanelLike(panel)))
 }
 
-export function hasVideoArtifacts(storyboards: unknown[] | null | undefined) {
+function hasVideoArtifacts(storyboards: unknown[] | null | undefined) {
   if (!Array.isArray(storyboards) || storyboards.length === 0) return false
   return storyboards.some((storyboard) => isStoryboardLike(storyboard)
     && Array.isArray(storyboard.panels)

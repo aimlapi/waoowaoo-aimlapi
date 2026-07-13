@@ -23,7 +23,7 @@ function readNoProxyEntries(): string[] {
     : []
 }
 
-export function resolveOutboundProxyUrl(): string | null {
+function resolveOutboundProxyUrl(): string | null {
   return readTrimmedEnv('PROXY_URL')
     ?? readTrimmedEnv('HTTPS_PROXY')
     ?? readTrimmedEnv('https_proxy')
@@ -107,7 +107,7 @@ function matchesNoProxy(hostname: string, port: string): boolean {
   })
 }
 
-export function shouldProxyProviderUrl(input: RequestInfo | URL): boolean {
+function shouldProxyProviderUrl(input: RequestInfo | URL): boolean {
   const rawUrl = readFetchInputUrl(input)
   if (!rawUrl) return false
   try {

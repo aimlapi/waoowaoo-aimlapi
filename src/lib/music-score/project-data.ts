@@ -12,7 +12,7 @@ export type PersistedMusicScoreRecord = {
   readonly timelineSignature?: string | null
 }
 
-export function isMusicScoreRecord(value: unknown): value is Record<string, unknown> {
+function isMusicScoreRecord(value: unknown): value is Record<string, unknown> {
   return !!value && typeof value === 'object' && !Array.isArray(value)
 }
 

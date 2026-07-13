@@ -31,7 +31,7 @@ function assertContinuousShotOrder(input: {
   })
 }
 
-export function videoGridCellCount(gridMode: VideoGridMode): number {
+function videoGridCellCount(gridMode: VideoGridMode): number {
   return GRID_CELLS[gridMode]
 }
 
@@ -58,27 +58,6 @@ export function inferVideoGridModeForShotCount(shotCount: number): VideoGridMode
   if (Number.isInteger(shotCount) && shotCount >= 2 && shotCount <= 4) return '2x2'
   if (Number.isInteger(shotCount) && shotCount >= 5 && shotCount <= 9) return '3x3'
   throw new Error(`VIDEO_GROUP_SHOT_COUNT_UNSUPPORTED:${shotCount}`)
-}
-
-export function chunkVideoGroupShotIds(params: {
-  readonly gridMode: VideoGridMode
-  readonly shotIds: readonly string[]
-  readonly shots?: readonly Pick<VideoGroupShot, 'shotId'>[]
-}): string[][] {
-  const normalized = normalizeShotIds(params.shotIds)
-  if (params.shots) {
-    assertContinuousShotOrder({
-      shotIds: normalized,
-      shots: params.shots,
-    })
-  }
-  const cellCount = videoGridCellCount(params.gridMode)
-  const chunks: string[][] = []
-  for (let index = 0; index < normalized.length; index += cellCount) {
-    const chunk = normalized.slice(index, index + cellCount)
-    if (chunk.length >= 2) chunks.push(chunk)
-  }
-  return chunks
 }
 
 export function resolveVideoGroupShots<TShot extends VideoGroupShot>(

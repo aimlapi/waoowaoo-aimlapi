@@ -11,12 +11,6 @@ interface RuntimeDefaultsRecord {
   analysisModel?: string | null
 }
 
-interface UserPreferencePayload {
-  preference?: PreferenceRecord | null
-  deployment?: DeploymentRecord | null
-  runtimeDefaults?: RuntimeDefaultsRecord | null
-}
-
 function isNonEmptyString(value: unknown): value is string {
   return typeof value === 'string' && value.trim().length > 0
 }
@@ -25,11 +19,11 @@ function isObjectLike(value: unknown): value is Record<string, unknown> {
   return typeof value === 'object' && value !== null
 }
 
-export function hasConfiguredAnalysisModel(payload: unknown): boolean {
+function hasConfiguredAnalysisModel(payload: unknown): boolean {
   return readConfiguredAnalysisModel(payload) !== null
 }
 
-export function readConfiguredAnalysisModel(payload: unknown): string | null {
+function readConfiguredAnalysisModel(payload: unknown): string | null {
   if (!isObjectLike(payload)) return null
 
   const preferenceValue = payload.preference
@@ -47,7 +41,7 @@ export function readConfiguredAnalysisModel(payload: unknown): string | null {
   return isNonEmptyString(runtimeDefaults.analysisModel) ? runtimeDefaults.analysisModel.trim() : null
 }
 
-export function usesPlatformProviderKeys(payload: unknown): boolean {
+function usesPlatformProviderKeys(payload: unknown): boolean {
   if (!isObjectLike(payload)) return false
 
   const deploymentValue = payload.deployment
@@ -62,5 +56,3 @@ export function shouldGuideToModelSetup(payload: unknown): boolean {
   if (usesPlatformProviderKeys(payload)) return false
   return !hasConfiguredAnalysisModel(payload)
 }
-
-export type { UserPreferencePayload }

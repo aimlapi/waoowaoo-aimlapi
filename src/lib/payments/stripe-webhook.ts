@@ -52,7 +52,7 @@ function secureCompareHex(expectedHex: string, receivedHex: string): boolean {
   return timingSafeEqual(expected, received)
 }
 
-export function verifyStripeWebhookSignature(
+function verifyStripeWebhookSignature(
   rawBody: string,
   signatureHeader: string | null,
   secret = readStripeWebhookSecret(),

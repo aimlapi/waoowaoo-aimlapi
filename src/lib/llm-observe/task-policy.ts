@@ -1,20 +1,12 @@
 import { TASK_TYPE, type TaskType } from '@/lib/task/types'
 import type { LLMObserveDisplayMode } from './config'
 
-export type LLMTaskPolicy = {
+type LLMTaskPolicy = {
   consoleEnabled: boolean
   displayMode: LLMObserveDisplayMode
   fullscreen: boolean
   priority: number
   captureReasoning: boolean
-}
-
-const DEFAULT_POLICY: LLMTaskPolicy = {
-  consoleEnabled: false,
-  displayMode: 'loading',
-  fullscreen: false,
-  priority: 0,
-  captureReasoning: false,
 }
 
 const LONG_FLOW_POLICY: LLMTaskPolicy = {
@@ -61,11 +53,6 @@ const POLICY_BY_TASK_TYPE: Partial<Record<TaskType, LLMTaskPolicy>> = {
   [TASK_TYPE.ASSET_HUB_AI_MODIFY_PROP]: LLM_STANDARD_POLICY,
   [TASK_TYPE.ASSET_HUB_REFERENCE_TO_CHARACTER]: LLM_STANDARD_POLICY,
   [TASK_TYPE.ASSET_HUB_REFERENCE_CHARACTER_DESCRIPTION_EXTRACT]: LLM_STANDARD_POLICY,
-}
-
-export function getLLMTaskPolicy(taskType: string | null | undefined): LLMTaskPolicy {
-  if (!taskType) return DEFAULT_POLICY
-  return POLICY_BY_TASK_TYPE[taskType as TaskType] || DEFAULT_POLICY
 }
 
 export function isLLMTaskType(taskType: string | null | undefined): taskType is TaskType {

@@ -121,12 +121,3 @@ export function installYunwuFetchTraceIfEnabled(): void {
     }
   }) as typeof fetch
 }
-
-export function uninstallYunwuFetchTraceForTest(): void {
-  if (originalFetch) {
-    globalThis.fetch = originalFetch
-  }
-  originalFetch = null
-  installed = false
-}
-
