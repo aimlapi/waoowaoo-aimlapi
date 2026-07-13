@@ -53,6 +53,7 @@ export type AiVideoExecutionOptions = {
 }
 
 export type AiMusicExecutionOptions = {
+  negativePrompt?: string
   durationSeconds?: number
   vocalMode?: 'instrumental' | 'vocal'
   genre?: string

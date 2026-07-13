@@ -1,5 +1,5 @@
 import type { AiPromptLocale } from '@/lib/ai-prompts'
-import { buildLyriaPrompt } from '@/lib/audio-design/lyria-prompt'
+import { buildLyriaPrompts } from '@/lib/audio-design/lyria-prompt'
 import { framesToSeconds, type ScoreCue, type TimelineClock } from '@/lib/audio-design/types'
 import type { BgmScorePlan } from './types'
 
@@ -16,43 +16,47 @@ export function buildDisplayBgmPlan(input: {
   readonly clock: TimelineClock
   readonly locale?: AiPromptLocale
 }): BgmScorePlan {
-  const spec = input.cue.generationSpec
+  const spec = input.cue.musicTheorySpec
   const durationSeconds = framesToSeconds(
     input.cue.range.endFrameExclusive - input.cue.range.startFrame,
     input.clock,
   )
-  const finalPrompt = buildLyriaPrompt({ cue: input.cue, clock: input.clock })
-  const sections = spec.sections.map((section) => ({
+  const providerPrompts = buildLyriaPrompts({ cue: input.cue, clock: input.clock })
+  const sections = spec.phases.map((phase) => ({
     category: localized(input.locale, '音乐结构', 'Musical structure'),
-    title: humanize(section.function),
-    purpose: localized(input.locale, '在连续配乐内部塑造能量、密度和和声张力', 'Shape energy, density, and harmonic tension inside the continuous cue'),
-    startSec: framesToSeconds(section.range.startFrame, input.clock),
-    endSec: framesToSeconds(section.range.endFrameExclusive, input.clock),
+    title: humanize(phase.function),
+    purpose: localized(input.locale, '在连续配乐内部塑造能量、密度、频谱和瞬态变化', 'Shape energy, density, spectrum, and transient behavior inside the continuous cue'),
+    startSec: framesToSeconds(phase.range.startFrame, input.clock),
+    endSec: framesToSeconds(phase.range.endFrameExclusive, input.clock),
     content: localized(
       input.locale,
-      `${humanize(section.density)} 密度，能量 ${Math.round(section.energy * 100)}%，和声张力 ${Math.round(section.harmonicTension * 100)}%`,
-      `${humanize(section.density)} density, ${Math.round(section.energy * 100)}% energy, ${Math.round(section.harmonicTension * 100)}% harmonic tension`,
+      `${humanize(phase.density)} 密度，能量 ${Math.round(phase.energy * 100)}%，${humanize(phase.spectralBand)} 频谱重心，瞬态密度 ${Math.round(phase.transientDensity * 100)}%`,
+      `${humanize(phase.density)} density, ${Math.round(phase.energy * 100)}% energy, ${humanize(phase.spectralBand)} spectral focus, ${Math.round(phase.transientDensity * 100)}% transient density`,
     ),
   }))
-  const virtualLayers = spec.instruments.map((instrument) => ({
-    name: humanize(instrument),
-    purpose: localized(input.locale, '连续主配乐内部的编曲职责', 'Arrangement role inside the continuous master cue'),
-    content: localized(input.locale, '保持和声、乐句和动态连续，不作为独立生成轨道', 'Remain harmonically, rhythmically, and dynamically coherent; not independently generated'),
+  const virtualLayers = spec.orchestration.map((part) => ({
+    name: humanize(part.instrument),
+    purpose: localized(input.locale, `${humanize(part.role)} 职责`, `${humanize(part.role)} role`),
+    content: localized(
+      input.locale,
+      `${humanize(part.register)} 音区；${part.techniques.map(humanize).join('、')}；保持整体连续，不作为独立生成轨道`,
+      `${humanize(part.register)} register; ${part.techniques.map(humanize).join(', ')}; remain continuous inside the master cue, not an independently generated stem`,
+    ),
   }))
 
   return {
     durationSeconds,
     creativeBrief: {
       cueType: localized(input.locale, '跨镜头连续纯器乐配乐', 'continuous cross-shot instrumental underscore'),
-      genre: humanize(spec.style),
-      mood: humanize(spec.emotionalProfile),
+      genre: humanize(spec.form),
+      mood: `${humanize(spec.pitch.centerType)} / ${humanize(spec.harmony.cadencePolicy)}`,
       narrativeFunction: localized(input.locale, '通过连续音乐结构服务剧情，不在镜头切点重启', 'Support narrative through continuous musical form without restarting at shot cuts'),
     },
     scoreDesign: {
       overview: localized(
         input.locale,
-        `${spec.bpm} BPM，${spec.key}，${spec.meter}，${humanize(spec.harmonicLanguage)}，整体 ${humanize(spec.density)} 密度`,
-        `${spec.bpm} BPM, ${spec.key}, ${spec.meter}, ${humanize(spec.harmonicLanguage)}, ${humanize(spec.density)} overall density`,
+        `${spec.bpm} BPM，${spec.meter}，${humanize(spec.pitch.centerType)}，${humanize(spec.harmony.cadencePolicy)}，整体 ${humanize(spec.texture.density)} 密度`,
+        `${spec.bpm} BPM, ${spec.meter}, ${humanize(spec.pitch.centerType)}, ${humanize(spec.harmony.cadencePolicy)}, ${humanize(spec.texture.density)} overall density`,
       ),
       sections,
     },
@@ -62,11 +66,16 @@ export function buildDisplayBgmPlan(input: {
       category: undefined,
       purpose: localized(input.locale, '由确定性 Lyria Prompt Builder 生成', 'Rendered by the deterministic Lyria Prompt Builder'),
     })),
-    finalPrompt,
-    negativePrompt: 'no vocals, no lyrics, no spoken word, no dialogue, no literal sound effects, no footsteps, no object sounds, no environmental field recording',
+    finalPrompt: providerPrompts.prompt,
+    negativePrompt: providerPrompts.negativePrompt,
   }
 }
 
-export function buildFinalBgmMusicPrompt(plan: BgmScorePlan): string {
-  return plan.finalPrompt
+export function buildFinalBgmMusicRequest(plan: BgmScorePlan): {
+  readonly prompt: string
+  readonly negativePrompt: string
+} {
+  const negativePrompt = plan.negativePrompt?.trim()
+  if (!negativePrompt) throw new Error('BGM_SCORE_NEGATIVE_PROMPT_REQUIRED')
+  return { prompt: plan.finalPrompt, negativePrompt }
 }

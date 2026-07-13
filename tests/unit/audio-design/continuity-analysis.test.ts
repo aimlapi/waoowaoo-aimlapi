@@ -29,8 +29,9 @@ describe('audio continuity director', () => {
     expect(prompt).toContain('# 严格枚举契约')
     expect(prompt).toContain('"distance": [')
     expect(prompt).toContain('"near"')
-    expect(prompt).toContain('"style": [')
-    expect(prompt).toContain('"ambient_cinematic"')
+    expect(prompt).toContain('"pitchCenter": [')
+    expect(prompt).toContain('"weakened_pitch_field"')
+    expect(prompt).toContain('musicTheorySpec')
     expect(prompt).toContain('"keyframeMaximumInclusive": 239')
   })
 

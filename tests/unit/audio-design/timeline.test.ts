@@ -58,7 +58,7 @@ describe('frame-authoritative audio timeline', () => {
       continuityPlan: createTestContinuityPlan(),
     })
 
-    expect(timeline.schemaVersion).toBe(2)
+    expect(timeline.schemaVersion).toBe(3)
     expect(timeline.clips.map((item) => item.range)).toEqual([
       { startFrame: 0, endFrameExclusive: 120 },
       { startFrame: 120, endFrameExclusive: 240 },

@@ -1,83 +1,25 @@
 import {
   framesToSeconds,
+  type MusicTheorySpecV2,
   type ScoreCue,
-  type ScoreGenerationSpec,
   type TimelineClock,
 } from './types'
 
-const STYLE_LABELS: Record<ScoreGenerationSpec['style'], string> = {
-  cinematic_underscore: 'cinematic underscore',
-  minimalist_underscore: 'minimalist cinematic underscore',
-  hybrid_cinematic: 'hybrid cinematic score',
-  ambient_cinematic: 'ambient cinematic score',
-  orchestral_cinematic: 'orchestral cinematic score',
-  electronic_cinematic: 'electronic cinematic score',
-}
-
-const EMOTION_LABELS: Record<ScoreGenerationSpec['emotionalProfile'], string> = {
-  restrained_tension: 'restrained musical tension',
-  cold_procedural_tension: 'controlled procedural tension',
-  quiet_unease: 'quiet harmonic unease',
-  melancholic_reflection: 'melancholic reflection',
-  hopeful_resolve: 'hopeful resolution',
-  warm_intimacy: 'warm intimacy',
-  urgent_momentum: 'urgent musical momentum',
-  detached_observation: 'detached observation',
-  mysterious_suspense: 'mysterious suspense',
-  solemn_gravity: 'solemn gravity',
-}
-
-const HARMONY_LABELS: Record<ScoreGenerationSpec['harmonicLanguage'], string> = {
-  sparse_unresolved_minor: 'sparse unresolved minor harmony',
-  modal_ambiguity: 'modal ambiguity',
-  slow_diatonic_motion: 'slow diatonic harmonic motion',
-  open_fifths: 'open-fifth harmony',
-  chromatic_suspension: 'controlled chromatic suspension',
-  tonal_pedal: 'stable tonal pedal',
-  gentle_consonance: 'gentle consonant harmony',
-  controlled_dissonance: 'controlled musical dissonance',
-}
-
-const INSTRUMENT_LABELS: Record<ScoreGenerationSpec['instruments'][number], string> = {
-  analog_synthesizer_pad: 'analog synthesizer pad',
-  muted_analog_synthesizer: 'muted analog synthesizer',
-  soft_sub_bass: 'soft sub bass',
-  low_piano_resonance: 'low piano resonance',
-  felt_piano: 'felt piano',
-  prepared_piano: 'prepared piano',
-  bass_clarinet: 'bass clarinet',
-  contrabassoon: 'contrabassoon',
-  french_horn: 'French horn',
-  low_brass_ensemble: 'low brass ensemble',
-  restrained_string_ensemble: 'restrained string ensemble',
-  solo_cello: 'solo cello',
-  viola_texture: 'viola texture',
-  glass_harmonica: 'glass harmonica',
-  soft_mallet_percussion: 'soft mallet percussion',
-  frame_drum: 'frame drum',
-  electronic_pulse: 'soft electronic pulse',
-  noise_texture: 'filtered noise texture',
-  wordless_synth_texture: 'non-vocal synthesizer texture',
-}
-
-const ARTICULATION_LABELS: Record<ScoreGenerationSpec['articulations'][number], string> = {
-  sustained: 'sustained notes',
-  widely_spaced: 'widely spaced phrases',
-  soft_attack: 'soft attacks',
-  slow_pulse: 'slow musical pulse',
-  restrained_staccato: 'restrained staccato articulation',
-  gentle_ostinato: 'gentle ostinato',
-  gradual_swell: 'gradual swells',
-  natural_decay: 'natural decay',
-}
-
-const REGISTER_LABELS: Record<ScoreGenerationSpec['registers'][number], string> = {
-  sub: 'sub register',
-  low: 'low register',
-  low_mid: 'low-mid register',
-  mid: 'mid register',
-  high_mid: 'high-mid register',
-  high: 'high register',
+const PROHIBITION_LABELS: Record<MusicTheorySpecV2['prohibitions'][number], string> = {
+  vocals: 'vocals',
+  lyrics: 'lyrics',
+  spoken_word: 'spoken word or dialogue',
+  literal_sound_effects: 'literal sound effects or physical action sounds',
+  environmental_recordings: 'environmental field recordings',
+  functional_dominant_tonic: 'functional dominant-tonic syntax',
+  authentic_cadence: 'authentic cadences or tonal confirmation',
+  heroic_brass: 'heroic or fanfare-like brass writing',
+  triumphant_rhythm: 'triumphant or victory-coded rhythm',
+  romantic_swell: 'romantic string swells',
+  cathartic_climax: 'cathartic climax or redemptive release',
+  trailer_impacts: 'trailer impacts or orchestral hits',
+  stable_groove: 'stable groove or dance-like beat',
+  periodic_phrase_cycle: 'periodic phrase cycles or symmetrical repetition',
 }
 
 const LYRIA_FORBIDDEN_NARRATIVE_TERMS = [
@@ -99,51 +41,93 @@ const LYRIA_FORBIDDEN_NARRATIVE_TERMS = [
   /血|暴力|血腥|折磨|杀|武器|枪|刀|受伤|伤口|牙齿|拔牙/,
 ] as const
 
+export interface LyriaPromptPair {
+  readonly prompt: string
+  readonly negativePrompt: string
+}
+
 export function assertLyriaPromptSafe(prompt: string): void {
   const match = LYRIA_FORBIDDEN_NARRATIVE_TERMS.find((pattern) => pattern.test(prompt))
   if (match) throw new Error(`LYRIA_PROMPT_POLICY_VALIDATION_FAILED:${match.source}`)
+}
+
+function musicalTerm(value: string): string {
+  return value.replace(/_/g, ' ')
 }
 
 function formatList(items: readonly string[]): string {
   return items.join(', ')
 }
 
-export function buildLyriaPrompt(input: {
+function formatPitchField(spec: MusicTheorySpecV2): string {
+  const center = spec.pitch.centerPitch ? ` centered on ${spec.pitch.centerPitch}` : ''
+  return `${musicalTerm(spec.pitch.centerType)}${center}, ${musicalTerm(spec.pitch.collection)}`
+}
+
+function formatOrchestration(spec: MusicTheorySpecV2): string {
+  return spec.orchestration.map((part) => [
+    musicalTerm(part.instrument),
+    `${musicalTerm(part.register)} register`,
+    `${musicalTerm(part.role)} role`,
+    formatList(part.techniques.map(musicalTerm)),
+  ].join(' with ')).join('; ')
+}
+
+function formatPhases(input: {
+  readonly spec: MusicTheorySpecV2
+  readonly cue: ScoreCue
+}): string {
+  const cueLengthFrames = input.cue.range.endFrameExclusive - input.cue.range.startFrame
+  return input.spec.phases.map((phase) => {
+    const startPercent = Math.round(
+      ((phase.range.startFrame - input.cue.range.startFrame) / cueLengthFrames) * 100,
+    )
+    const endPercent = Math.round(
+      ((phase.range.endFrameExclusive - input.cue.range.startFrame) / cueLengthFrames) * 100,
+    )
+    return [
+      `${musicalTerm(phase.function)} from ${startPercent}% to ${endPercent}%`,
+      `${musicalTerm(phase.density)} density`,
+      `${Math.round(phase.energy * 100)}% relative energy`,
+      `${musicalTerm(phase.spectralBand)} spectral focus`,
+      `${Math.round(phase.transientDensity * 100)}% transient density`,
+    ].join(', ')
+  }).join('; ')
+}
+
+export function buildLyriaPrompts(input: {
   readonly cue: ScoreCue
   readonly clock: TimelineClock
-}): string {
-  const spec = input.cue.generationSpec
+}): LyriaPromptPair {
+  const spec = input.cue.musicTheorySpec
   const durationSeconds = framesToSeconds(
     input.cue.range.endFrameExclusive - input.cue.range.startFrame,
     input.clock,
   )
-  const cueLengthFrames = input.cue.range.endFrameExclusive - input.cue.range.startFrame
-  const sections = spec.sections.map((section) => {
-    const startPercent = Math.round(((section.range.startFrame - input.cue.range.startFrame) / cueLengthFrames) * 100)
-    const endPercent = Math.round(((section.range.endFrameExclusive - input.cue.range.startFrame) / cueLengthFrames) * 100)
-    return [
-      `${section.function} section from ${startPercent}% to ${endPercent}%`,
-      `${section.density} density`,
-      `energy ${Math.round(section.energy * 100)}%`,
-      `harmonic tension ${Math.round(section.harmonicTension * 100)}%`,
-      formatList(section.instruments.map((instrument) => INSTRUMENT_LABELS[instrument])),
-      formatList(section.articulations.map((articulation) => ARTICULATION_LABELS[articulation])),
-    ].join(', ')
-  })
-
   const prompt = [
-    `Instrumental ${STYLE_LABELS[spec.style]} for ${durationSeconds.toFixed(3)} seconds.`,
-    `${spec.bpm} BPM, key of ${spec.key}, ${spec.meter} meter.`,
-    `${EMOTION_LABELS[spec.emotionalProfile]}, ${HARMONY_LABELS[spec.harmonicLanguage]}, ${spec.density} overall density.`,
-    `Primary instruments: ${formatList(spec.instruments.map((instrument) => INSTRUMENT_LABELS[instrument]))}.`,
-    `Registers: ${formatList(spec.registers.map((register) => REGISTER_LABELS[register]))}.`,
-    `Articulation: ${formatList(spec.articulations.map((articulation) => ARTICULATION_LABELS[articulation]))}.`,
-    `Continuous musical form: ${sections.join('; ')}.`,
-    'Maintain coherent harmony, phrasing, tempo, orchestration, and natural dynamic transitions across the complete cue.',
-    'Leave spectral and dynamic space for native dialogue, synchronized physical action sounds, and environmental ambience.',
-    'Instrumental only, no vocals, no lyrics, no spoken word, no dialogue, no literal sound effects, no footsteps, no object sounds, no environmental field recording.',
+    `Instrumental ${musicalTerm(spec.form)} composition for cinematic underscore, ${durationSeconds.toFixed(3)} seconds.`,
+    `Tempo fixed at ${spec.bpm} BPM in ${spec.meter}, with ${musicalTerm(spec.metricSalience)} metric salience and ${musicalTerm(spec.eventSpacing)} event spacing.`,
+    `Pitch organization: ${formatPitchField(spec)}; interval relations: ${formatList(spec.pitch.intervalRelations.map(musicalTerm))}; ${musicalTerm(spec.pitch.microtonality)} microtonality.`,
+    `Harmonic organization: ${musicalTerm(spec.harmony.functionalSyntax)} functional syntax, ${musicalTerm(spec.harmony.cadencePolicy)}, ${musicalTerm(spec.harmony.harmonicRhythm)} harmonic rhythm.`,
+    `Voice leading: ${formatList(spec.voiceLeading.map(musicalTerm))}.`,
+    `Texture: ${musicalTerm(spec.texture.organization)}, ${musicalTerm(spec.texture.density)} density, ${Math.round(spec.texture.layerIndependence * 100)}% layer independence.`,
+    `Spectral organization: ${formatList(spec.spectrum.foundation.map((register) => `${musicalTerm(register)} register`))} foundation, ${musicalTerm(spec.spectrum.upperActivity)} upper-register activity, ${musicalTerm(spec.spectrum.evolution)} spectral evolution.`,
+    `Orchestration: ${formatOrchestration(spec)}.`,
+    `Dynamics: ${musicalTerm(spec.dynamics.envelope)} amplitude envelope, ${musicalTerm(spec.dynamics.transientPolicy)} transient policy, energy constrained from ${Math.round(spec.dynamics.minimumEnergy * 100)}% to ${Math.round(spec.dynamics.maximumEnergy * 100)}%.`,
+    `Continuous formal phases: ${formatPhases({ spec, cue: input.cue })}.`,
+    'Maintain continuous harmony, tempo, orchestration, spectral evolution, and long-duration dynamic transitions across the complete cue.',
+    'Preserve controlled midrange headroom, restrained transient occupancy, and uncluttered spectral balance for downstream mixing.',
   ].join(' ')
+  const negativePrompt = formatList(spec.prohibitions.map((item) => PROHIBITION_LABELS[item]))
 
   assertLyriaPromptSafe(prompt)
-  return prompt
+  assertLyriaPromptSafe(negativePrompt)
+  return { prompt, negativePrompt }
+}
+
+export function buildLyriaPrompt(input: {
+  readonly cue: ScoreCue
+  readonly clock: TimelineClock
+}): string {
+  return buildLyriaPrompts(input).prompt
 }

@@ -19,7 +19,7 @@ const CLIP: FinalRenderClipPlan = {
 export function buildFinalRenderTestTimeline(signatureOverride?: string): AudioTimelineV2 {
   const clock = createTimelineClock({ clips: [CLIP], fpsNumerator: 24, fpsDenominator: 1 })
   return {
-    schemaVersion: 2,
+    schemaVersion: 3,
     timelineSignature: signatureOverride ?? createTimelineSignature({ clips: [CLIP], clock }),
     clock,
     nativeAudioPolicy: {
@@ -55,27 +55,35 @@ export function buildFinalRenderTestTimeline(signatureOverride?: string): AudioT
         musicShouldDo: 'stay continuous and leave room for native actions',
         musicShouldNotDo: 'imitate literal actions',
       },
-      generationSpec: {
+      musicTheorySpec: {
+        version: 2,
         bpm: 60,
-        key: 'D minor',
         meter: '4/4',
-        style: 'minimalist_underscore',
-        emotionalProfile: 'cold_procedural_tension',
-        harmonicLanguage: 'sparse_unresolved_minor',
-        density: 'sparse',
-        registers: ['low', 'low_mid'],
-        instruments: ['muted_analog_synthesizer', 'soft_sub_bass'],
-        articulations: ['sustained', 'soft_attack'],
-        sections: [{
-          sectionId: 'full-cue',
+        form: 'through_composed',
+        metricSalience: 'suppressed',
+        eventSpacing: 'asynchronous',
+        pitch: {
+          centerType: 'weakened_pitch_field', centerPitch: 'D', collection: 'chromatic_saturation',
+          intervalRelations: ['minor_second_aggregation', 'tritone_polarity'], microtonality: 'limited',
+        },
+        harmony: { functionalSyntax: 'prohibited', cadencePolicy: 'no_cadence', harmonicRhythm: 'extremely_slow' },
+        voiceLeading: ['incremental_micro_motion', 'semitone_displacement'],
+        texture: { organization: 'independent_sustained_layers', density: 'sparse', layerIndependence: 0.8 },
+        spectrum: { foundation: ['sub', 'low'], upperActivity: 'isolated_partials', evolution: 'continuous_redistribution' },
+        orchestration: [{
+          instrument: 'filtered_analog_synthesizer', register: 'low', role: 'foundation', techniques: ['sustained_tone'],
+        }],
+        dynamics: { envelope: 'long_arc', transientPolicy: 'suppressed', minimumEnergy: 0.15, maximumEnergy: 0.45 },
+        phases: [{
+          phaseId: 'full-cue',
           range: { startFrame: 0, endFrameExclusive: 72 },
-          function: 'development',
+          function: 'transform',
           energy: 0.3,
           density: 'sparse',
-          harmonicTension: 0.4,
-          instruments: ['muted_analog_synthesizer'],
-          articulations: ['sustained'],
+          spectralBand: 'low',
+          transientDensity: 0.05,
         }],
+        prohibitions: ['vocals', 'lyrics', 'spoken_word', 'literal_sound_effects', 'environmental_recordings', 'authentic_cadence'],
       },
       intentionalSilenceRanges: [],
     }],
@@ -128,7 +136,7 @@ export function buildFinalRenderEditorProjectData(timeline: AudioTimelineV2): st
   return JSON.stringify({
     schemaVersion: 1,
     bgmScore: {
-      schemaVersion: 4,
+      schemaVersion: 5,
       status: 'completed',
       taskId: 'task-bgm',
       analysisMode: 'script_assisted',

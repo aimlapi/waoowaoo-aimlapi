@@ -201,15 +201,16 @@ function buildMusicTaskInfo(taskType: TaskType, payload: AnyPayload): TaskBillin
     ...(mood ? { mood } : {}),
     ...(typeof bpm === 'number' ? { bpm } : {}),
   }
+  const quantity = taskType === TASK_TYPE.BGM_SCORE_GENERATE ? 2 : 1
   return {
     billable: true,
     source: 'task',
     taskType,
     apiType: 'music',
     model,
-    quantity: 1,
+    quantity,
     unit: 'call',
-    maxFrozenCost: calcMusic(model, 1, metadata),
+    maxFrozenCost: calcMusic(model, quantity, metadata),
     pricingVersion: BUILTIN_PRICING_VERSION,
     action: String(taskType),
     metadata,

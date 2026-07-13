@@ -1,6 +1,6 @@
 import { z } from 'zod'
 
-export const AUDIO_TIMELINE_SCHEMA_VERSION = 2 as const
+export const AUDIO_TIMELINE_SCHEMA_VERSION = 3 as const
 export const AUDIO_SAMPLE_RATE = 48_000 as const
 
 export const frameRangeSchema = z.object({
@@ -192,113 +192,233 @@ export const scoreNarrativeDiagnosisSchema = z.object({
   musicShouldNotDo: z.string().trim().min(1),
 })
 
-export const SCORE_STYLE_VALUES = [
-  'cinematic_underscore',
-  'minimalist_underscore',
-  'hybrid_cinematic',
-  'ambient_cinematic',
-  'orchestral_cinematic',
-  'electronic_cinematic',
-] as const
-export const scoreStyleSchema = z.enum(SCORE_STYLE_VALUES)
-
-export const SCORE_MUSICAL_EMOTION_VALUES = [
-  'restrained_tension',
-  'cold_procedural_tension',
-  'quiet_unease',
-  'melancholic_reflection',
-  'hopeful_resolve',
-  'warm_intimacy',
-  'urgent_momentum',
-  'detached_observation',
-  'mysterious_suspense',
-  'solemn_gravity',
-] as const
-export const scoreMusicalEmotionSchema = z.enum(SCORE_MUSICAL_EMOTION_VALUES)
-
-export const SCORE_HARMONIC_LANGUAGE_VALUES = [
-  'sparse_unresolved_minor',
-  'modal_ambiguity',
-  'slow_diatonic_motion',
-  'open_fifths',
-  'chromatic_suspension',
-  'tonal_pedal',
-  'gentle_consonance',
-  'controlled_dissonance',
-] as const
-export const scoreHarmonicLanguageSchema = z.enum(SCORE_HARMONIC_LANGUAGE_VALUES)
-
 export const SCORE_DENSITY_VALUES = ['minimal', 'sparse', 'moderate', 'dense'] as const
 export const SCORE_REGISTER_VALUES = ['sub', 'low', 'low_mid', 'mid', 'high_mid', 'high'] as const
 export const SCORE_INSTRUMENT_VALUES = [
-  'analog_synthesizer_pad',
-  'muted_analog_synthesizer',
-  'soft_sub_bass',
-  'low_piano_resonance',
-  'felt_piano',
-  'prepared_piano',
-  'bass_clarinet',
+  'sub_bass_sine',
+  'contrabass',
   'contrabassoon',
-  'french_horn',
-  'low_brass_ensemble',
-  'restrained_string_ensemble',
+  'bass_clarinet',
+  'low_brass',
+  'prepared_piano',
+  'felt_piano',
+  'muted_string_ensemble',
+  'string_harmonics',
   'solo_cello',
-  'viola_texture',
-  'glass_harmonica',
-  'soft_mallet_percussion',
+  'solo_viola',
+  'filtered_analog_synthesizer',
+  'granular_spectral_texture',
+  'controlled_broadband_noise',
+  'soft_mallets',
   'frame_drum',
-  'electronic_pulse',
-  'noise_texture',
-  'wordless_synth_texture',
 ] as const
 export const scoreDensitySchema = z.enum(SCORE_DENSITY_VALUES)
 export const scoreRegisterSchema = z.enum(SCORE_REGISTER_VALUES)
 export const scoreInstrumentSchema = z.enum(SCORE_INSTRUMENT_VALUES)
 
-export const SCORE_ARTICULATION_VALUES = [
-  'sustained',
-  'widely_spaced',
-  'soft_attack',
-  'slow_pulse',
-  'restrained_staccato',
-  'gentle_ostinato',
-  'gradual_swell',
-  'natural_decay',
+export const SCORE_FORM_VALUES = ['through_composed', 'continuous_variation'] as const
+export const SCORE_PITCH_CENTER_VALUES = ['tonal', 'modal', 'weakened_pitch_field', 'atonal'] as const
+export const SCORE_PITCH_COLLECTION_VALUES = [
+  'diatonic',
+  'modal',
+  'chromatic_saturation',
+  'whole_tone_fragments',
+  'octatonic_fragments',
+  'evolving_pitch_class_sets',
 ] as const
-export const scoreArticulationSchema = z.enum(SCORE_ARTICULATION_VALUES)
-
-export const SCORE_SECTION_FUNCTION_VALUES = [
-  'opening',
-  'development',
-  'transition',
-  'climax',
-  'release',
-  'closing',
+export const SCORE_INTERVAL_RELATION_VALUES = [
+  'minor_second_aggregation',
+  'major_seventh_tension',
+  'tritone_polarity',
+  'quartal_structures',
+  'quintal_structures',
+  'sustained_common_tones',
+] as const
+export const SCORE_CADENCE_POLICY_VALUES = [
+  'no_cadence',
+  'withhold_tonic',
+  'deceptive_only',
+  'open_ending',
+  'tonal_resolution',
+] as const
+export const SCORE_HARMONIC_RHYTHM_VALUES = ['static', 'extremely_slow', 'slow', 'moderate'] as const
+export const SCORE_VOICE_LEADING_VALUES = [
+  'incremental_micro_motion',
+  'semitone_displacement',
+  'sustained_common_tones',
+  'contrary_motion_expansion',
+  'gradual_intervallic_transformation',
+] as const
+export const SCORE_TEXTURE_VALUES = [
+  'sound_mass',
+  'micropolyphonic',
+  'independent_sustained_layers',
+  'sparse_counterpoint',
+  'homophonic',
+] as const
+export const SCORE_METRIC_SALIENCE_VALUES = ['suppressed', 'low', 'moderate', 'explicit'] as const
+export const SCORE_EVENT_SPACING_VALUES = ['regular', 'irregular', 'asynchronous', 'stochastic'] as const
+export const SCORE_SPECTRAL_EVOLUTION_VALUES = [
+  'static',
+  'gradual_expansion',
+  'gradual_contraction',
+  'continuous_redistribution',
+] as const
+export const SCORE_DYNAMIC_ENVELOPE_VALUES = [
+  'long_arc',
+  'slow_oscillation',
+  'restrained_plateau',
+  'continuous_redistribution',
+] as const
+export const SCORE_TRANSIENT_POLICY_VALUES = ['suppressed', 'restrained', 'permitted'] as const
+export const SCORE_TECHNIQUE_VALUES = [
+  'sustained_tone',
+  'sul_ponticello',
+  'sul_tasto',
+  'flautando',
+  'harmonic_fingering',
+  'bow_pressure_modulation',
+  'col_legno_tratto',
+  'air_noise',
+  'multiphonics',
+  'key_click_resonance',
+  'sympathetic_resonance',
+  'slow_glissando',
+  'microtonal_deviation',
+] as const
+export const SCORE_PHASE_FUNCTION_VALUES = [
+  'establish',
+  'transform',
+  'intensify',
+  'deplete',
+  'suspend',
+] as const
+export const SCORE_PROHIBITION_VALUES = [
+  'vocals',
+  'lyrics',
+  'spoken_word',
+  'literal_sound_effects',
+  'environmental_recordings',
+  'functional_dominant_tonic',
+  'authentic_cadence',
+  'heroic_brass',
+  'triumphant_rhythm',
+  'romantic_swell',
+  'cathartic_climax',
+  'trailer_impacts',
+  'stable_groove',
+  'periodic_phrase_cycle',
 ] as const
 
-export const scoreGenerationSectionSchema = z.object({
-  sectionId: z.string().trim().min(1),
+export const scoreTheoryPhaseSchema = z.object({
+  phaseId: z.string().trim().min(1),
   range: frameRangeSchema,
-  function: z.enum(SCORE_SECTION_FUNCTION_VALUES),
+  function: z.enum(SCORE_PHASE_FUNCTION_VALUES),
   energy: z.number().min(0).max(1),
   density: scoreDensitySchema,
-  harmonicTension: z.number().min(0).max(1),
-  instruments: z.array(scoreInstrumentSchema).min(1),
-  articulations: z.array(scoreArticulationSchema).min(1),
+  spectralBand: scoreRegisterSchema,
+  transientDensity: z.number().min(0).max(1),
 })
 
-export const scoreGenerationSpecSchema = z.object({
+export const musicTheorySpecV2Schema = z.object({
+  version: z.literal(2),
   bpm: z.number().int().positive().max(260),
-  key: z.string().trim().regex(/^[A-G](?:#|b)? (?:major|minor)$/),
   meter: z.enum(['2/4', '3/4', '4/4', '5/4', '6/8', '7/8']),
-  style: scoreStyleSchema,
-  emotionalProfile: scoreMusicalEmotionSchema,
-  harmonicLanguage: scoreHarmonicLanguageSchema,
-  density: scoreDensitySchema,
-  registers: z.array(scoreRegisterSchema).min(1),
-  instruments: z.array(scoreInstrumentSchema).min(1),
-  articulations: z.array(scoreArticulationSchema).min(1),
-  sections: z.array(scoreGenerationSectionSchema).min(1),
+  form: z.enum(SCORE_FORM_VALUES),
+  metricSalience: z.enum(SCORE_METRIC_SALIENCE_VALUES),
+  eventSpacing: z.enum(SCORE_EVENT_SPACING_VALUES),
+  pitch: z.object({
+    centerType: z.enum(SCORE_PITCH_CENTER_VALUES),
+    centerPitch: z.string().trim().regex(/^[A-G](?:#|b)?$/).optional().nullable(),
+    collection: z.enum(SCORE_PITCH_COLLECTION_VALUES),
+    intervalRelations: z.array(z.enum(SCORE_INTERVAL_RELATION_VALUES)).min(1),
+    microtonality: z.enum(['none', 'limited', 'structural']),
+  }),
+  harmony: z.object({
+    functionalSyntax: z.enum(['prohibited', 'limited', 'allowed']),
+    cadencePolicy: z.enum(SCORE_CADENCE_POLICY_VALUES),
+    harmonicRhythm: z.enum(SCORE_HARMONIC_RHYTHM_VALUES),
+  }),
+  voiceLeading: z.array(z.enum(SCORE_VOICE_LEADING_VALUES)).min(1),
+  texture: z.object({
+    organization: z.enum(SCORE_TEXTURE_VALUES),
+    density: scoreDensitySchema,
+    layerIndependence: z.number().min(0).max(1),
+  }),
+  spectrum: z.object({
+    foundation: z.array(scoreRegisterSchema).min(1),
+    upperActivity: z.enum(['absent', 'isolated_partials', 'restricted', 'active']),
+    evolution: z.enum(SCORE_SPECTRAL_EVOLUTION_VALUES),
+  }),
+  orchestration: z.array(z.object({
+    instrument: scoreInstrumentSchema,
+    register: scoreRegisterSchema,
+    role: z.enum(['foundation', 'mass', 'motion', 'partial', 'resonance', 'pulse']),
+    techniques: z.array(z.enum(SCORE_TECHNIQUE_VALUES)).min(1),
+  })).min(1).max(16),
+  dynamics: z.object({
+    envelope: z.enum(SCORE_DYNAMIC_ENVELOPE_VALUES),
+    transientPolicy: z.enum(SCORE_TRANSIENT_POLICY_VALUES),
+    minimumEnergy: z.number().min(0).max(1),
+    maximumEnergy: z.number().min(0).max(1),
+  }).superRefine((dynamics, ctx) => {
+    if (dynamics.maximumEnergy < dynamics.minimumEnergy) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        path: ['maximumEnergy'],
+        message: 'AUDIO_SCORE_DYNAMIC_RANGE_INVALID',
+      })
+    }
+  }),
+  phases: z.array(scoreTheoryPhaseSchema).min(1).max(12),
+  prohibitions: z.array(z.enum(SCORE_PROHIBITION_VALUES)).min(1),
+}).superRefine((spec, ctx) => {
+  const requiredProhibitions = [
+    'vocals',
+    'lyrics',
+    'spoken_word',
+    'literal_sound_effects',
+    'environmental_recordings',
+  ] as const
+  for (const prohibition of requiredProhibitions) {
+    if (!spec.prohibitions.includes(prohibition)) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        path: ['prohibitions'],
+        message: `AUDIO_SCORE_REQUIRED_PROHIBITION_MISSING:${prohibition}`,
+      })
+    }
+  }
+  if (spec.pitch.centerType === 'atonal' && spec.pitch.centerPitch) {
+    ctx.addIssue({
+      code: z.ZodIssueCode.custom,
+      path: ['pitch', 'centerPitch'],
+      message: 'AUDIO_SCORE_ATONAL_CENTER_NOT_ALLOWED',
+    })
+  }
+  if (spec.pitch.centerType !== 'atonal' && !spec.pitch.centerPitch) {
+    ctx.addIssue({
+      code: z.ZodIssueCode.custom,
+      path: ['pitch', 'centerPitch'],
+      message: 'AUDIO_SCORE_PITCH_CENTER_REQUIRED',
+    })
+  }
+  if (spec.harmony.functionalSyntax === 'prohibited' && spec.harmony.cadencePolicy === 'tonal_resolution') {
+    ctx.addIssue({
+      code: z.ZodIssueCode.custom,
+      path: ['harmony', 'cadencePolicy'],
+      message: 'AUDIO_SCORE_FUNCTIONAL_HARMONY_CONTRADICTION',
+    })
+  }
+  spec.phases.forEach((phase, index) => {
+    if (phase.energy < spec.dynamics.minimumEnergy || phase.energy > spec.dynamics.maximumEnergy) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        path: ['phases', index, 'energy'],
+        message: 'AUDIO_SCORE_PHASE_ENERGY_OUTSIDE_DYNAMIC_RANGE',
+      })
+    }
+  })
 })
 
 export const scoreCueSchema = z.object({
@@ -306,8 +426,27 @@ export const scoreCueSchema = z.object({
   musicalContinuityId: z.string().trim().min(1),
   range: frameRangeSchema,
   narrativeDiagnosis: scoreNarrativeDiagnosisSchema,
-  generationSpec: scoreGenerationSpecSchema,
+  musicTheorySpec: musicTheorySpecV2Schema,
   intentionalSilenceRanges: z.array(frameRangeSchema),
+}).superRefine((cue, ctx) => {
+  const phases = cue.musicTheorySpec.phases
+  if (phases[0]?.range.startFrame !== cue.range.startFrame
+    || phases[phases.length - 1]?.range.endFrameExclusive !== cue.range.endFrameExclusive) {
+    ctx.addIssue({
+      code: z.ZodIssueCode.custom,
+      path: ['musicTheorySpec', 'phases'],
+      message: 'AUDIO_SCORE_PHASES_MUST_COVER_CUE',
+    })
+  }
+  for (let index = 1; index < phases.length; index += 1) {
+    if (phases[index - 1]?.range.endFrameExclusive !== phases[index]?.range.startFrame) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        path: ['musicTheorySpec', 'phases', index, 'range'],
+        message: 'AUDIO_SCORE_PHASES_NOT_CONTIGUOUS',
+      })
+    }
+  }
 })
 
 export const AUTOMATION_TARGET_BUS_VALUES = ['native', 'ambience', 'score', 'master'] as const
@@ -427,7 +566,7 @@ export type AmbienceLoopPolicy = z.infer<typeof ambienceLoopPolicySchema>
 export type AmbienceSource = z.infer<typeof ambienceSourceSchema>
 export type ScoreScoringStance = z.infer<typeof scoreScoringStanceSchema>
 export type ScoreNarrativeDiagnosis = z.infer<typeof scoreNarrativeDiagnosisSchema>
-export type ScoreGenerationSpec = z.infer<typeof scoreGenerationSpecSchema>
+export type MusicTheorySpecV2 = z.infer<typeof musicTheorySpecV2Schema>
 export type ScoreCue = z.infer<typeof scoreCueSchema>
 export type AutomationLane = z.infer<typeof automationLaneSchema>
 export type AudioStemRole = z.infer<typeof audioStemRoleSchema>

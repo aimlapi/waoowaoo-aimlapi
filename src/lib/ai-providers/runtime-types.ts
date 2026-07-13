@@ -125,6 +125,7 @@ export type AiProviderMusicExecutionContext = {
   }
   prompt: string
   options?: {
+    negativePrompt?: string
     durationSeconds?: number
     vocalMode?: 'instrumental' | 'vocal'
     genre?: string

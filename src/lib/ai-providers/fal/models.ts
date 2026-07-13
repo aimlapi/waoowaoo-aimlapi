@@ -389,6 +389,7 @@ export function resolveFalOptionSchema(modality: MediaModality, modelId: string)
     if (modelId === FAL_LYRIA_3_PRO_MODEL_ID) {
       return buildMediaOptionSchema('music', {
         validators: {
+          negativePrompt: nonEmptyStringValidator(),
           durationSeconds: integerRangeValidator({ min: 1, max: 180 }),
           vocalMode: enumValidator(['instrumental', 'vocal']),
           genre: nonEmptyStringValidator(),

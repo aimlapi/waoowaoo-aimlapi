@@ -51,7 +51,7 @@ const basePlan = {
 }
 
 describe('bgm score plan schema', () => {
-  it('rejects legacy project data that is not schema version 4', () => {
+  it('rejects legacy project data that is not schema version 5', () => {
     const result = bgmScoreProjectDataSchema.safeParse({
       schemaVersion: 3,
       status: 'completed',
@@ -67,7 +67,7 @@ describe('bgm score plan schema', () => {
 
   it('accepts persisted video-only analysis without a screenplay id', () => {
     const result = bgmScoreProjectDataSchema.safeParse({
-      schemaVersion: 4,
+      schemaVersion: 5,
       status: 'generating',
       taskId: 'task-1',
       analysisMode: 'video_only',

@@ -155,17 +155,19 @@ async function waitForFalMusicResult(endpoint: string, requestId: string, apiKey
       cache: 'no-store',
     })
 
-    if (statusResponse.ok) {
-      const data = await statusResponse.json() as FalMusicStatusResponse
-      const status = data.status
-      if (status === 'COMPLETED') {
-        const resultUrl = readTrimmedString(data.response_url)
-        return await fetchFalMusicResult(endpoint, requestId, apiKey, resultUrl || undefined)
-      }
-      if (status === 'FAILED') {
-        const error = readTrimmedString(data.error) || 'FAL music task failed'
-        throw new Error(`FAL_MUSIC_FAILED:${error}`)
-      }
+    if (!statusResponse.ok) {
+      const errorText = await statusResponse.text()
+      throw new Error(`FAL_MUSIC_STATUS_FAILED (${statusResponse.status}): ${errorText}`)
+    }
+    const data = await statusResponse.json() as FalMusicStatusResponse
+    const status = data.status
+    if (status === 'COMPLETED') {
+      const resultUrl = readTrimmedString(data.response_url)
+      return await fetchFalMusicResult(endpoint, requestId, apiKey, resultUrl || undefined)
+    }
+    if (status === 'FAILED') {
+      const error = readTrimmedString(data.error) || 'FAL music task failed'
+      throw new Error(`FAL_MUSIC_FAILED:${error}`)
     }
 
     await sleep(intervalMs)
@@ -184,7 +186,11 @@ export async function executeFalMusicGeneration(input: AiProviderMusicExecutionC
 
   const prompt = buildFalLyriaPrompt(input.prompt, options)
   if (!prompt.trim()) throw new Error('FAL_MUSIC_PROMPT_REQUIRED')
+  const negativePrompt = readTrimmedString(options.negativePrompt)
 
-  const requestId = await submitFalMusic(modelId, apiKey, { prompt })
+  const requestId = await submitFalMusic(modelId, apiKey, {
+    prompt,
+    ...(negativePrompt ? { negative_prompt: negativePrompt } : {}),
+  })
   return await waitForFalMusicResult(modelId, requestId, apiKey)
 }

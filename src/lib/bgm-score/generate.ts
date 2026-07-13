@@ -2,7 +2,6 @@ import { mkdtemp, rm } from 'node:fs/promises'
 import { tmpdir } from 'node:os'
 import path from 'node:path'
 import type { Job } from 'bullmq'
-import { generateMusic } from '@/lib/ai-exec/engine'
 import { analyzeAudioContinuity } from '@/lib/audio-design/continuity-analysis'
 import { analyzeLockedVideoFrames } from '@/lib/audio-design/video-visual-analysis'
 import type { VideoVisualAnalysis } from '@/lib/audio-design/video-visual-types'
@@ -30,19 +29,17 @@ import {
   type FinalRenderEditScriptInput,
 } from '@/lib/video-compose/final-render-plan'
 import { reportTaskProgress } from '@/lib/workers/shared'
-import {
-  generateAmbienceAssets,
-  loadGeneratedAudioBuffer,
-  uploadGeneratedAudio,
-} from './audio-assets'
-import { buildDisplayBgmPlan, buildFinalBgmMusicPrompt } from './prompt'
+import { generateAmbienceAssets } from './audio-assets'
+import { buildDisplayBgmPlan, buildFinalBgmMusicRequest } from './prompt'
 import { mergeBgmScoreProjectData, parseEditorProjectData } from './project-data'
+import { generateScoreCandidates } from './score-candidates'
 import {
   BGM_SCORE_STATUS,
   bgmScoreProjectDataSchema,
   type AmbienceAsset,
   type BgmScorePlan,
   type BgmScoreProjectData,
+  type ScoreCandidateAsset,
 } from './types'
 
 type BgmScoreGeneratePayload = {
@@ -142,6 +139,7 @@ export async function handleBgmScoreGenerateTask(job: Job<TaskJobData>) {
   let timelineAudio: AudioTimelineV2 | undefined
   let plan: BgmScorePlan | undefined
   let ambienceAssets: readonly AmbienceAsset[] = []
+  let scoreCandidates: readonly ScoreCandidateAsset[] = []
   let visualAnalysis: VideoVisualAnalysis | undefined
   const workspaceDir = await mkdtemp(path.join(tmpdir(), 'waoowaoo-audio-design-'))
 
@@ -199,6 +197,7 @@ export async function handleBgmScoreGenerateTask(job: Job<TaskJobData>) {
     const timelineClips = buildTimelineClips(clips, clock)
 
     const reusable = readReusableProjectData(editorProject?.projectData ?? null, timelineSignature)
+    scoreCandidates = reusable?.scoreCandidates ?? []
     if (reusable?.visualAnalysis) {
       visualAnalysis = reusable.visualAnalysis
     } else {
@@ -214,7 +213,7 @@ export async function handleBgmScoreGenerateTask(job: Job<TaskJobData>) {
       await writeBgmScoreProjectData({
         episodeId,
         bgmScore: {
-          schemaVersion: 4,
+          schemaVersion: 5,
           status: BGM_SCORE_STATUS.GENERATING,
           taskId: job.data.taskId,
           analysisMode,
@@ -224,6 +223,7 @@ export async function handleBgmScoreGenerateTask(job: Job<TaskJobData>) {
           musicModel,
           visualAnalysis,
           ambienceAssets,
+          scoreCandidates,
           stage: 'audio_video_visual_analyzed',
         },
       })
@@ -268,7 +268,7 @@ export async function handleBgmScoreGenerateTask(job: Job<TaskJobData>) {
     await writeBgmScoreProjectData({
       episodeId,
       bgmScore: {
-        schemaVersion: 4,
+        schemaVersion: 5,
         status: BGM_SCORE_STATUS.GENERATING,
         taskId: job.data.taskId,
         analysisMode,
@@ -280,6 +280,7 @@ export async function handleBgmScoreGenerateTask(job: Job<TaskJobData>) {
         plan,
         visualAnalysis,
         ambienceAssets,
+        scoreCandidates,
         stage: 'audio_continuity_planned',
       },
     })
@@ -294,7 +295,7 @@ export async function handleBgmScoreGenerateTask(job: Job<TaskJobData>) {
         await writeBgmScoreProjectData({
           episodeId,
           bgmScore: {
-            schemaVersion: 4,
+            schemaVersion: 5,
             status: BGM_SCORE_STATUS.GENERATING,
             taskId: job.data.taskId,
             analysisMode,
@@ -306,6 +307,7 @@ export async function handleBgmScoreGenerateTask(job: Job<TaskJobData>) {
             plan,
             visualAnalysis,
             ambienceAssets: assets,
+            scoreCandidates,
             stage: 'audio_ambience_generate',
           },
         })
@@ -314,30 +316,52 @@ export async function handleBgmScoreGenerateTask(job: Job<TaskJobData>) {
 
     await reportTaskProgress(job, 65, { stage: 'audio_score_generate' })
     const outputFormat = readOutputFormat(payload.outputFormat)
-    const generated = await generateMusic(
-      job.data.userId,
+    const musicRequest = buildFinalBgmMusicRequest(plan)
+    const scoreCue = timelineAudio.scoreCues[0]
+    if (!scoreCue) throw new Error('BGM_SCORE_CONTINUOUS_CUE_REQUIRED')
+    const generatedScore = await generateScoreCandidates({
+      userId: job.data.userId,
       musicModel,
-      buildFinalBgmMusicPrompt(plan),
-      {
-        durationSeconds: selectFinalRenderMusicDurationSeconds(musicModel, durationSeconds),
-        vocalMode: 'instrumental',
-        bpm: timelineAudio.scoreCues[0]?.generationSpec.bpm,
-        outputFormat,
+      prompt: musicRequest.prompt,
+      negativePrompt: musicRequest.negativePrompt,
+      providerDurationSeconds: selectFinalRenderMusicDurationSeconds(musicModel, durationSeconds),
+      timelineDurationSeconds: durationSeconds,
+      bpm: scoreCue.musicTheorySpec.bpm,
+      outputFormat,
+      spec: scoreCue.musicTheorySpec,
+      workspaceDir,
+      reusableCandidates: scoreCandidates,
+      onProgress: async (candidates) => {
+        scoreCandidates = candidates
+        await writeBgmScoreProjectData({
+          episodeId,
+          bgmScore: {
+            schemaVersion: 5,
+            status: BGM_SCORE_STATUS.GENERATING,
+            taskId: job.data.taskId,
+            analysisMode,
+            editScriptId,
+            timelineSignature,
+            durationSeconds,
+            musicModel,
+            timelineAudio,
+            plan,
+            visualAnalysis,
+            ambienceAssets,
+            scoreCandidates,
+            stage: 'audio_score_candidate_quality',
+          },
+        })
       },
-    )
-    if (!generated.success) throw new Error(generated.error || 'BGM_SCORE_PROVIDER_FAILED')
-    const audio = await loadGeneratedAudioBuffer({
-      audioBase64: generated.audioBase64,
-      audioUrl: generated.audioUrl,
-      mimeType: generated.audioMimeType,
     })
-    const mix = await uploadGeneratedAudio({ audio, durationSeconds, prefix: 'music/bgm-score' })
+    scoreCandidates = generatedScore.candidates
+    const mix = generatedScore.selected
 
     await reportTaskProgress(job, 90, { stage: 'audio_assets_persist' })
     await writeBgmScoreProjectData({
       episodeId,
       bgmScore: {
-        schemaVersion: 4,
+        schemaVersion: 5,
         status: BGM_SCORE_STATUS.COMPLETED,
         taskId: job.data.taskId,
         analysisMode,
@@ -350,6 +374,7 @@ export async function handleBgmScoreGenerateTask(job: Job<TaskJobData>) {
         visualAnalysis,
         mix,
         ambienceAssets,
+        scoreCandidates,
         stage: 'audio_assets_ready',
       },
     })
@@ -362,6 +387,7 @@ export async function handleBgmScoreGenerateTask(job: Job<TaskJobData>) {
       musicModel,
       ambienceSourceCount: timelineAudio.ambienceSources.length,
       ambienceCandidateCount: ambienceAssets.length,
+      scoreCandidateCount: scoreCandidates.length,
       durationMs: mix.durationMs,
     }
   } catch (error) {
@@ -370,7 +396,7 @@ export async function handleBgmScoreGenerateTask(job: Job<TaskJobData>) {
       await writeBgmScoreProjectData({
         episodeId,
         bgmScore: {
-          schemaVersion: 4,
+          schemaVersion: 5,
           status: BGM_SCORE_STATUS.FAILED,
           taskId: job.data.taskId,
           analysisMode,
@@ -382,6 +408,7 @@ export async function handleBgmScoreGenerateTask(job: Job<TaskJobData>) {
           ...(plan ? { plan } : {}),
           ...(visualAnalysis ? { visualAnalysis } : {}),
           ambienceAssets,
+          scoreCandidates,
           stage: 'failed',
           errorMessage: message,
         },

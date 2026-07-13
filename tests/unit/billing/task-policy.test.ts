@@ -108,7 +108,7 @@ describe('billing/task-policy', () => {
     }))
     expect(proInfo.apiType).toBe('music')
     expect(proInfo.model).toBe('google::lyria-3-pro-preview')
-    expect(proInfo.quantity).toBe(1)
+    expect(proInfo.quantity).toBe(2)
     expect(proInfo.unit).toBe('call')
     expect(proInfo.maxFrozenCost).toBeGreaterThan(0)
 

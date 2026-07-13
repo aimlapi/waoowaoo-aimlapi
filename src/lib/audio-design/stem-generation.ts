@@ -21,6 +21,7 @@ export type AmbienceStemGenerationInput = StemGenerationCommonInput & {
 
 export type BgmStemGenerationInput = StemGenerationCommonInput & {
   readonly role: 'bgm'
+  readonly negativePrompt: string
   readonly durationSeconds: number
   readonly bpm: number
   readonly outputFormat?: 'mp3' | 'wav'
@@ -46,6 +47,7 @@ function buildAmbienceOptions(input: AmbienceStemGenerationInput): AiAudioExecut
 
 function buildMusicOptions(input: BgmStemGenerationInput): AiMusicExecutionOptions {
   return {
+    negativePrompt: input.negativePrompt,
     durationSeconds: input.durationSeconds,
     vocalMode: 'instrumental',
     bpm: input.bpm,

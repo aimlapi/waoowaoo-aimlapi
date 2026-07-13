@@ -45,6 +45,7 @@ describe('audio stem generation', () => {
       userId: 'user-1',
       role: 'bgm',
       prompt: 'Instrumental minimalist cinematic underscore.',
+      negativePrompt: 'vocals, lyrics, literal sound effects',
       durationSeconds: 60,
       bpm: 60,
       outputFormat: 'mp3',
@@ -56,6 +57,7 @@ describe('audio stem generation', () => {
       modelKey: 'fal::fal-ai/lyria3/pro',
       prompt: 'Instrumental minimalist cinematic underscore.',
       options: {
+        negativePrompt: 'vocals, lyrics, literal sound effects',
         durationSeconds: 60,
         vocalMode: 'instrumental',
         bpm: 60,

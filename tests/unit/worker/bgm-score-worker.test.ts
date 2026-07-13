@@ -11,7 +11,7 @@ const prismaMock = vi.hoisted(() => ({
   videoEditorProject: { findUnique: vi.fn(), upsert: vi.fn() },
 }))
 const executeAiTextStepMock = vi.hoisted(() => vi.fn())
-const generateMusicMock = vi.hoisted(() => vi.fn())
+const generateScoreCandidatesMock = vi.hoisted(() => vi.fn())
 const executeMediaGenerationMock = vi.hoisted(() => vi.fn())
 const reportTaskProgressMock = vi.hoisted(() => vi.fn())
 const analyzeLockedVideoFramesMock = vi.hoisted(() => vi.fn())
@@ -26,7 +26,9 @@ vi.mock('@/lib/prisma', () => ({ prisma: prismaMock }))
 vi.mock('@/lib/ai-exec/engine', () => ({
   executeAiTextStep: executeAiTextStepMock,
   executeMediaGeneration: executeMediaGenerationMock,
-  generateMusic: generateMusicMock,
+}))
+vi.mock('@/lib/bgm-score/score-candidates', () => ({
+  generateScoreCandidates: generateScoreCandidatesMock,
 }))
 vi.mock('@/lib/workers/shared', () => ({ reportTaskProgress: reportTaskProgressMock }))
 vi.mock('@/lib/audio-design/video-visual-analysis', () => ({
@@ -63,7 +65,7 @@ function job(): Job<TaskJobData> {
 
 function continuityPlanText(): string {
   return JSON.stringify({
-    schemaVersion: 2,
+    schemaVersion: 3,
     soundWorlds: [],
     acousticTransitions: [],
     ambienceSources: [],
@@ -79,27 +81,35 @@ function continuityPlanText(): string {
         musicShouldDo: 'remain detached',
         musicShouldNotDo: 'imitate the physical event',
       },
-      generationSpec: {
+      musicTheorySpec: {
+        version: 2,
         bpm: 60,
-        key: 'D minor',
         meter: '4/4',
-        style: 'minimalist_underscore',
-        emotionalProfile: 'cold_procedural_tension',
-        harmonicLanguage: 'sparse_unresolved_minor',
-        density: 'sparse',
-        registers: ['low'],
-        instruments: ['muted_analog_synthesizer'],
-        articulations: ['sustained'],
-        sections: [{
-          sectionId: 'full-cue',
+        form: 'through_composed',
+        metricSalience: 'suppressed',
+        eventSpacing: 'asynchronous',
+        pitch: {
+          centerType: 'weakened_pitch_field', centerPitch: 'D', collection: 'chromatic_saturation',
+          intervalRelations: ['minor_second_aggregation', 'tritone_polarity'], microtonality: 'limited',
+        },
+        harmony: { functionalSyntax: 'prohibited', cadencePolicy: 'no_cadence', harmonicRhythm: 'extremely_slow' },
+        voiceLeading: ['incremental_micro_motion', 'semitone_displacement'],
+        texture: { organization: 'independent_sustained_layers', density: 'sparse', layerIndependence: 0.8 },
+        spectrum: { foundation: ['sub', 'low'], upperActivity: 'isolated_partials', evolution: 'continuous_redistribution' },
+        orchestration: [{
+          instrument: 'filtered_analog_synthesizer', register: 'low', role: 'foundation', techniques: ['sustained_tone'],
+        }],
+        dynamics: { envelope: 'long_arc', transientPolicy: 'suppressed', minimumEnergy: 0.15, maximumEnergy: 0.45 },
+        phases: [{
+          phaseId: 'full-cue',
           range: { startFrame: 0, endFrameExclusive: 72 },
-          function: 'development',
+          function: 'transform',
           energy: 0.3,
           density: 'sparse',
-          harmonicTension: 0.4,
-          instruments: ['muted_analog_synthesizer'],
-          articulations: ['sustained'],
+          spectralBand: 'low',
+          transientDensity: 0.05,
         }],
+        prohibitions: ['vocals', 'lyrics', 'spoken_word', 'literal_sound_effects', 'environmental_recordings', 'functional_dominant_tonic', 'authentic_cadence', 'heroic_brass', 'triumphant_rhythm', 'romantic_swell', 'cathartic_climax', 'trailer_impacts'],
       },
       intentionalSilenceRanges: [],
     }],
@@ -152,7 +162,7 @@ function mockReadyProject(): void {
   prismaMock.projectVideoGroup.findMany.mockResolvedValue([])
 }
 
-describe('BGM score worker V4', () => {
+describe('BGM score worker V5', () => {
   beforeEach(() => {
     vi.clearAllMocks()
     mockReadyProject()
@@ -172,10 +182,31 @@ describe('BGM score worker V4', () => {
         description: 'restrained interior scene',
       }],
     })
-    generateMusicMock.mockResolvedValue({
-      success: true,
-      audioBase64: Buffer.from('score').toString('base64'),
-      audioMimeType: 'audio/mpeg',
+    generateScoreCandidatesMock.mockImplementation(async (input: {
+      onProgress: (candidates: readonly unknown[]) => Promise<void>
+    }) => {
+      const quality = {
+        peakAmplitude: 0.5, rmsAmplitude: 0.1, clippingRatio: 0, silenceRatio: 0,
+        transientRate: 0.5, repetitionScore: 0.2, structureError: 0.1, qualityScore: 90, passed: true,
+      }
+      const candidates = [0, 1].map((candidateIndex) => ({
+        candidateIndex,
+        selected: candidateIndex === 0,
+        mediaId: `media-${candidateIndex}`,
+        url: `/m/score-${candidateIndex}`,
+        storageKey: `music/score-${candidateIndex}.mp3`,
+        mimeType: 'audio/mpeg',
+        durationMs: 3000,
+        quality,
+      }))
+      await input.onProgress(candidates)
+      return {
+        candidates,
+        selected: {
+          mediaId: 'media-mix', url: '/m/bgm-mix', storageKey: 'music/score-0.mp3',
+          mimeType: 'audio/mpeg', durationMs: 3000,
+        },
+      }
     })
     storageMock.uploadObject.mockImplementation(async (_buffer: Buffer, key: string) => key)
     mediaServiceMock.ensureMediaObjectFromStorageKey.mockResolvedValue({ id: 'media-mix', url: '/m/bgm-mix' })
@@ -186,9 +217,13 @@ describe('BGM score worker V4', () => {
     const result = await handleBgmScoreGenerateTask(job())
 
     expect(result).toMatchObject({ mediaId: 'media-mix', ambienceSourceCount: 0 })
-    const lyriaPrompt = String(generateMusicMock.mock.calls[0]?.[2])
+    const lyriaPrompt = String(generateScoreCandidatesMock.mock.calls[0]?.[0]?.prompt)
     expect(lyriaPrompt).toContain('60 BPM')
     expect(lyriaPrompt).not.toMatch(/violent|blood|gore|torture/i)
+    expect(generateScoreCandidatesMock).toHaveBeenCalledWith(expect.objectContaining({
+      negativePrompt: expect.stringContaining('heroic or fanfare-like brass writing'),
+      reusableCandidates: [],
+    }))
 
     const completed = prismaMock.videoEditorProject.upsert.mock.calls.find((call) => {
       const data = JSON.parse(String(call[0]?.update?.projectData ?? '{}')) as {
@@ -205,7 +240,7 @@ describe('BGM score worker V4', () => {
         }
       }
     }
-    expect(projectData.bgmScore?.schemaVersion).toBe(4)
+    expect(projectData.bgmScore?.schemaVersion).toBe(5)
     expect(projectData.bgmScore?.timelineAudio?.clock).toEqual({
       fpsNumerator: 24,
       fpsDenominator: 1,
@@ -251,11 +286,11 @@ describe('BGM score worker V4', () => {
 
     await expect(handleBgmScoreGenerateTask(job())).rejects.toThrow('BGM_SCORE_VIDEO_TIMELINE_INCOMPLETE')
     expect(executeAiTextStepMock).not.toHaveBeenCalled()
-    expect(generateMusicMock).not.toHaveBeenCalled()
+    expect(generateScoreCandidatesMock).not.toHaveBeenCalled()
   })
 
   it('persists the failed stage without uploading a score when Lyria rejects the request', async () => {
-    generateMusicMock.mockResolvedValue({ success: false, error: 'provider rejected final BGM' })
+    generateScoreCandidatesMock.mockRejectedValue(new Error('provider rejected final BGM'))
     const { handleBgmScoreGenerateTask } = await import('@/lib/bgm-score/generate')
 
     await expect(handleBgmScoreGenerateTask(job())).rejects.toThrow('provider rejected final BGM')

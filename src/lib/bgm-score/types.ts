@@ -69,7 +69,7 @@ export const bgmScorePlanSchema = z.object({
   virtualLayers: z.array(bgmScoreVirtualLayerSchema).min(1).max(16),
   promptSections: z.array(bgmScorePromptSectionSchema).min(1).max(32),
   finalPrompt: z.string().trim().min(80),
-  negativePrompt: z.string().trim().min(1).optional().nullable(),
+  negativePrompt: z.string().trim().min(1),
 }).superRefine((plan, ctx) => {
   const checkTimedSection = (
     path: Array<string | number>,
@@ -131,8 +131,34 @@ export const ambienceAssetSchema = z.object({
 
 export type AmbienceAsset = z.infer<typeof ambienceAssetSchema>
 
+export const scoreCandidateQualitySchema = z.object({
+  peakAmplitude: z.number().min(0),
+  rmsAmplitude: z.number().min(0),
+  clippingRatio: z.number().min(0).max(1),
+  silenceRatio: z.number().min(0).max(1),
+  transientRate: z.number().min(0),
+  repetitionScore: z.number().min(0).max(1),
+  structureError: z.number().min(0).max(1),
+  qualityScore: z.number().min(0).max(100),
+  passed: z.boolean(),
+})
+
+export const scoreCandidateAssetSchema = z.object({
+  candidateIndex: z.number().int().min(0).max(1),
+  selected: z.boolean(),
+  mediaId: z.string().trim().min(1),
+  url: z.string().trim().min(1),
+  storageKey: z.string().trim().min(1),
+  mimeType: z.string().trim().min(1),
+  durationMs: z.number().positive(),
+  quality: scoreCandidateQualitySchema,
+})
+
+export type ScoreCandidateQuality = z.infer<typeof scoreCandidateQualitySchema>
+export type ScoreCandidateAsset = z.infer<typeof scoreCandidateAssetSchema>
+
 export interface BgmScoreProjectData {
-  readonly schemaVersion: 4
+  readonly schemaVersion: 5
   readonly status: BgmScoreStatus
   readonly taskId: string
   readonly analysisMode: 'video_only' | 'script_assisted'
@@ -144,13 +170,14 @@ export interface BgmScoreProjectData {
   readonly plan?: BgmScorePlan
   readonly mix?: BgmScoreMix
   readonly ambienceAssets?: readonly AmbienceAsset[]
+  readonly scoreCandidates?: readonly ScoreCandidateAsset[]
   readonly visualAnalysis?: VideoVisualAnalysis
   readonly stage?: string
   readonly errorMessage?: string | null
 }
 
 export const bgmScoreProjectDataSchema = z.object({
-  schemaVersion: z.literal(4),
+  schemaVersion: z.literal(5),
   status: z.enum([
     BGM_SCORE_STATUS.PENDING,
     BGM_SCORE_STATUS.GENERATING,
@@ -173,6 +200,7 @@ export const bgmScoreProjectDataSchema = z.object({
     durationMs: z.number().positive(),
   }).optional(),
   ambienceAssets: z.array(ambienceAssetSchema).optional(),
+  scoreCandidates: z.array(scoreCandidateAssetSchema).max(2).optional(),
   visualAnalysis: videoVisualAnalysisSchema.optional(),
   stage: z.string().trim().min(1).optional(),
   errorMessage: z.string().optional().nullable(),

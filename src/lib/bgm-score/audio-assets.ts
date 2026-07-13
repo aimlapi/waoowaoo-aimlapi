@@ -74,7 +74,7 @@ export async function uploadGeneratedAudio(input: {
   return { mediaId: media.id, url: media.url, storageKey, mimeType: input.audio.mimeType, durationMs }
 }
 
-async function decodeMonoFloat32(input: {
+export async function decodeMonoFloat32(input: {
   readonly workspaceDir: string
   readonly fileName: string
   readonly audio: GeneratedAudioBuffer

@@ -152,6 +152,7 @@ function buildAllowedKeys(modality: MediaModality): ReadonlySet<string> {
     'provider',
     'modelId',
     'modelKey',
+    'negativePrompt',
     'durationSeconds',
     'vocalMode',
     'genre',

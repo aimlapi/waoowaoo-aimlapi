@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { buildDisplayBgmPlan, buildFinalBgmMusicPrompt } from '@/lib/bgm-score/prompt'
+import { buildDisplayBgmPlan, buildFinalBgmMusicRequest } from '@/lib/bgm-score/prompt'
 import { createTestContinuityPlan, TEST_CLOCK } from '../audio-design/audio-timeline-fixture'
 
 describe('BGM plan and provider prompt', () => {
@@ -11,7 +11,10 @@ describe('BGM plan and provider prompt', () => {
     expect(plan.creativeBrief.cueType).toBe('跨镜头连续纯器乐配乐')
     expect(plan.virtualLayers).toHaveLength(2)
     expect(plan.finalPrompt).toContain('60 BPM')
-    expect(buildFinalBgmMusicPrompt(plan)).toBe(plan.finalPrompt)
+    expect(buildFinalBgmMusicRequest(plan)).toEqual({
+      prompt: plan.finalPrompt,
+      negativePrompt: plan.negativePrompt,
+    })
   })
 
   it('does not leak internal narrative descriptions into the Lyria prompt', () => {

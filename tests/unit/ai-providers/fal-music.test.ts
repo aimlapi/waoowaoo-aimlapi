@@ -50,6 +50,7 @@ describe('fal music generation', () => {
       },
       prompt: 'quiet tension cue',
       options: {
+        negativePrompt: 'heroic brass, triumphant rhythm, vocals',
         durationSeconds: 60,
         vocalMode: 'instrumental',
         genre: 'cinematic',
@@ -76,6 +77,7 @@ describe('fal music generation', () => {
         'Instrumental only. Do not include vocals or lyrics.',
         'Output format: mp3',
       ].join('\n'),
+      negative_prompt: 'heroic brass, triumphant rhythm, vocals',
     })
     expect(fetchMock).toHaveBeenNthCalledWith(2, 'https://queue.fal.run/fal-ai/lyria3/pro/requests/req-music-1/status?logs=0', expect.objectContaining({
       method: 'GET',
@@ -110,7 +112,7 @@ describe('fal music generation', () => {
         variantSubKind: 'official',
       },
       prompt: 'quiet tension cue',
-      options: {},
+      options: { negativePrompt: 'vocals, lyrics' },
     })).rejects.toThrow('FAL_MUSIC_RESULT_AUDIO_MISSING')
   })
 })
