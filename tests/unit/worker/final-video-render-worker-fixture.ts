@@ -2,7 +2,6 @@ import { createTimelineClock, createTimelineSignature } from '@/lib/audio-design
 import type { AudioTimelineV2 } from '@/lib/audio-design/types'
 import type { BgmScorePlan } from '@/lib/bgm-score/types'
 import type { FinalRenderClipPlan } from '@/lib/video-compose/final-render-plan'
-import { createTestContinuityPlan } from '../audio-design/audio-timeline-fixture'
 
 const CLIP: FinalRenderClipPlan = {
   order: 1,
@@ -19,7 +18,6 @@ const CLIP: FinalRenderClipPlan = {
 
 export function buildFinalRenderTestTimeline(signatureOverride?: string): AudioTimelineV2 {
   const clock = createTimelineClock({ clips: [CLIP], fpsNumerator: 24, fpsDenominator: 1 })
-  const fixtureCue = createTestContinuityPlan().scoreCues[0]!
   return {
     schemaVersion: 3,
     timelineSignature: signatureOverride ?? createTimelineSignature({ clips: [CLIP], clock }),
@@ -46,7 +44,8 @@ export function buildFinalRenderTestTimeline(signatureOverride?: string): AudioT
     nativeActionEvents: [],
     ambienceSources: [],
     scoreCues: [{
-      ...fixtureCue,
+      cueId: 'score-master',
+      musicalContinuityId: 'score-continuity',
       range: { startFrame: 0, endFrameExclusive: 72 },
       narrativeDiagnosis: {
         surfaceEmotion: 'visible tension',
@@ -57,11 +56,34 @@ export function buildFinalRenderTestTimeline(signatureOverride?: string): AudioT
         musicShouldNotDo: 'imitate literal actions',
       },
       musicTheorySpec: {
-        ...fixtureCue.musicTheorySpec,
-        phases: fixtureCue.musicTheorySpec.phases.map((phase) => ({
-          ...phase,
+        version: 2,
+        bpm: 60,
+        meter: '4/4',
+        form: 'through_composed',
+        metricSalience: 'suppressed',
+        eventSpacing: 'asynchronous',
+        pitch: {
+          centerType: 'weakened_pitch_field', centerPitch: 'D', collection: 'chromatic_saturation',
+          intervalRelations: ['minor_second_aggregation', 'tritone_polarity'], microtonality: 'limited',
+        },
+        harmony: { functionalSyntax: 'prohibited', cadencePolicy: 'no_cadence', harmonicRhythm: 'extremely_slow' },
+        voiceLeading: ['incremental_micro_motion', 'semitone_displacement'],
+        texture: { organization: 'independent_sustained_layers', density: 'sparse', layerIndependence: 0.8 },
+        spectrum: { foundation: ['sub', 'low'], upperActivity: 'isolated_partials', evolution: 'continuous_redistribution' },
+        orchestration: [{
+          instrument: 'filtered_analog_synthesizer', register: 'low', role: 'foundation', techniques: ['sustained_tone'],
+        }],
+        dynamics: { envelope: 'long_arc', transientPolicy: 'suppressed', minimumEnergy: 0.15, maximumEnergy: 0.45 },
+        phases: [{
+          phaseId: 'full-cue',
           range: { startFrame: 0, endFrameExclusive: 72 },
-        })),
+          function: 'transform',
+          energy: 0.3,
+          density: 'sparse',
+          spectralBand: 'low',
+          transientDensity: 0.05,
+        }],
+        prohibitions: ['vocals', 'lyrics', 'spoken_word', 'literal_sound_effects', 'environmental_recordings', 'authentic_cadence'],
       },
       intentionalSilenceRanges: [],
     }],

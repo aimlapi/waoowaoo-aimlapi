@@ -1,7 +1,6 @@
 import { generateMusic } from '@/lib/ai-exec/engine'
-import type { LyriaPromptPair } from '@/lib/audio-design/lyria-prompt'
 import { analyzeScoreCandidate, selectScoreCandidate } from '@/lib/audio-design/score-quality'
-import { AUDIO_SAMPLE_RATE, type MusicTheorySpecV3 } from '@/lib/audio-design/types'
+import { AUDIO_SAMPLE_RATE, type MusicTheorySpecV2 } from '@/lib/audio-design/types'
 import { conformScoreDuration } from '@/lib/audio-design/score-duration'
 import {
   decodeMonoFloat32,
@@ -13,12 +12,13 @@ import type { BgmScoreMix, ScoreCandidateAsset } from './types'
 export async function generateScoreCandidates(input: {
   readonly userId: string
   readonly musicModel: string
-  readonly requests: readonly LyriaPromptPair[]
+  readonly prompt: string
+  readonly negativePrompt: string
   readonly providerDurationSeconds: number
   readonly timelineDurationSeconds: number
   readonly bpm: number
   readonly outputFormat: 'mp3' | 'wav'
-  readonly spec: MusicTheorySpecV3
+  readonly spec: MusicTheorySpecV2
   readonly workspaceDir: string
   readonly reusableCandidates: readonly ScoreCandidateAsset[]
   readonly onProgress: (candidates: readonly ScoreCandidateAsset[]) => Promise<void>
@@ -26,22 +26,11 @@ export async function generateScoreCandidates(input: {
   readonly candidates: readonly ScoreCandidateAsset[]
   readonly selected: BgmScoreMix
 }> {
-  if (input.requests.length !== 4) throw new Error('AUDIO_SCORE_FOUR_RENDER_STRATEGIES_REQUIRED')
-  input.requests.forEach((request, index) => {
-    if (request.strategy !== input.spec.renderStrategies[index]) {
-      throw new Error(`AUDIO_SCORE_RENDER_STRATEGY_ORDER_INVALID:${index}`)
-    }
-  })
   const candidates = [...input.reusableCandidates]
-  for (const candidate of candidates) {
-    if (candidate.renderStrategy !== input.spec.renderStrategies[candidate.candidateIndex]) {
-      throw new Error(`AUDIO_SCORE_REUSABLE_CANDIDATE_STRATEGY_MISMATCH:${candidate.candidateIndex}`)
-    }
-  }
-  for (const [candidateIndex, request] of input.requests.entries()) {
+  for (let candidateIndex = 0; candidateIndex < 2; candidateIndex += 1) {
     if (candidates.some((candidate) => candidate.candidateIndex === candidateIndex)) continue
-    const generated = await generateMusic(input.userId, input.musicModel, request.prompt, {
-      negativePrompt: request.negativePrompt,
+    const generated = await generateMusic(input.userId, input.musicModel, input.prompt, {
+      negativePrompt: input.negativePrompt,
       durationSeconds: input.providerDurationSeconds,
       vocalMode: 'instrumental',
       bpm: input.bpm,
@@ -86,7 +75,6 @@ export async function generateScoreCandidates(input: {
     candidates.push({
       ...uploaded,
       candidateIndex,
-      renderStrategy: request.strategy,
       selected: false,
       quality,
     })
@@ -94,7 +82,7 @@ export async function generateScoreCandidates(input: {
   }
 
   const ordered = [...candidates].sort((a, b) => a.candidateIndex - b.candidateIndex)
-  if (ordered.length !== 4) throw new Error('AUDIO_SCORE_FOUR_CANDIDATES_REQUIRED')
+  if (ordered.length !== 2) throw new Error('AUDIO_SCORE_TWO_CANDIDATES_REQUIRED')
   const selectedIndex = selectScoreCandidate(ordered.map((candidate) => candidate.quality))
   const selectedCandidates = ordered.map((candidate, index) => ({
     ...candidate,

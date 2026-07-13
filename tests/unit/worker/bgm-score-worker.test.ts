@@ -1,7 +1,6 @@
 import type { Job } from 'bullmq'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 import { TASK_TYPE, type TaskJobData } from '@/lib/task/types'
-import { createTestContinuityPlan } from '../audio-design/audio-timeline-fixture'
 
 const prismaMock = vi.hoisted(() => ({
   project: { findUnique: vi.fn() },
@@ -65,15 +64,14 @@ function job(): Job<TaskJobData> {
 }
 
 function continuityPlanText(): string {
-  const fixture = createTestContinuityPlan()
-  const cue = fixture.scoreCues[0]!
   return JSON.stringify({
-    ...fixture,
+    schemaVersion: 3,
     soundWorlds: [],
     acousticTransitions: [],
     ambienceSources: [],
     scoreCues: [{
-      ...cue,
+      cueId: 'score-master',
+      musicalContinuityId: 'score-master-continuity',
       range: { startFrame: 0, endFrameExclusive: 72 },
       narrativeDiagnosis: {
         surfaceEmotion: 'violent bloody imagery',
@@ -84,13 +82,38 @@ function continuityPlanText(): string {
         musicShouldNotDo: 'imitate the physical event',
       },
       musicTheorySpec: {
-        ...cue.musicTheorySpec,
-        phases: cue.musicTheorySpec.phases.map((phase) => ({
-          ...phase,
+        version: 2,
+        bpm: 60,
+        meter: '4/4',
+        form: 'through_composed',
+        metricSalience: 'suppressed',
+        eventSpacing: 'asynchronous',
+        pitch: {
+          centerType: 'weakened_pitch_field', centerPitch: 'D', collection: 'chromatic_saturation',
+          intervalRelations: ['minor_second_aggregation', 'tritone_polarity'], microtonality: 'limited',
+        },
+        harmony: { functionalSyntax: 'prohibited', cadencePolicy: 'no_cadence', harmonicRhythm: 'extremely_slow' },
+        voiceLeading: ['incremental_micro_motion', 'semitone_displacement'],
+        texture: { organization: 'independent_sustained_layers', density: 'sparse', layerIndependence: 0.8 },
+        spectrum: { foundation: ['sub', 'low'], upperActivity: 'isolated_partials', evolution: 'continuous_redistribution' },
+        orchestration: [{
+          instrument: 'filtered_analog_synthesizer', register: 'low', role: 'foundation', techniques: ['sustained_tone'],
+        }],
+        dynamics: { envelope: 'long_arc', transientPolicy: 'suppressed', minimumEnergy: 0.15, maximumEnergy: 0.45 },
+        phases: [{
+          phaseId: 'full-cue',
           range: { startFrame: 0, endFrameExclusive: 72 },
-        })),
+          function: 'transform',
+          energy: 0.3,
+          density: 'sparse',
+          spectralBand: 'low',
+          transientDensity: 0.05,
+        }],
+        prohibitions: ['vocals', 'lyrics', 'spoken_word', 'literal_sound_effects', 'environmental_recordings', 'functional_dominant_tonic', 'authentic_cadence', 'heroic_brass', 'triumphant_rhythm', 'romantic_swell', 'cathartic_climax', 'trailer_impacts'],
       },
+      intentionalSilenceRanges: [],
     }],
+    automationLanes: [],
   })
 }
 
@@ -168,17 +191,11 @@ describe('BGM score worker V5', () => {
       onProgress: (candidates: readonly unknown[]) => Promise<void>
     }) => {
       const quality = {
-        actualDurationSeconds: 3, sourceDurationSeconds: 3, durationConformanceRatio: 1,
         peakAmplitude: 0.5, rmsAmplitude: 0.1, clippingRatio: 0, silenceRatio: 0,
         transientRate: 0.5, repetitionScore: 0.2, structureError: 0.1, qualityScore: 90, passed: true,
-        spectralDistribution: { sub: 0.1, low: 0.2, lowMid: 0.2, mid: 0.2, highMid: 0.1, high: 0.1, air: 0.1 },
-        spectralBudgetError: 0.1, spectralCoverage: 7, timbralVariation: 0.1,
-        crestFactorDb: 8, dynamicRangeDb: 12,
       }
-      const strategies = ['balanced_ensemble', 'counterpoint_clarity', 'spectral_depth', 'microdynamic_detail'] as const
-      const candidates = strategies.map((renderStrategy, candidateIndex) => ({
+      const candidates = [0, 1].map((candidateIndex) => ({
         candidateIndex,
-        renderStrategy,
         selected: candidateIndex === 0,
         mediaId: `media-${candidateIndex}`,
         url: `/m/score-${candidateIndex}`,
@@ -205,19 +222,11 @@ describe('BGM score worker V5', () => {
     const result = await handleBgmScoreGenerateTask(job())
 
     expect(result).toMatchObject({ mediaId: 'media-mix', ambienceSourceCount: 0 })
-    const requests = generateScoreCandidatesMock.mock.calls[0]?.[0]?.requests as readonly {
-      prompt: string
-      negativePrompt: string
-      strategy: string
-    }[]
-    const lyriaPrompt = String(requests[0]?.prompt)
+    const lyriaPrompt = String(generateScoreCandidatesMock.mock.calls[0]?.[0]?.prompt)
     expect(lyriaPrompt).toContain('60 BPM')
     expect(lyriaPrompt).not.toMatch(/violent|blood|gore|torture/i)
     expect(generateScoreCandidatesMock).toHaveBeenCalledWith(expect.objectContaining({
-      requests: expect.arrayContaining([expect.objectContaining({
-        strategy: 'spectral_depth',
-        negativePrompt: expect.stringContaining('foreground brass fanfare intervals and parallel triadic voicing'),
-      })]),
+      negativePrompt: expect.stringContaining('foreground brass fanfare intervals and parallel triadic voicing'),
       reusableCandidates: [],
     }))
 

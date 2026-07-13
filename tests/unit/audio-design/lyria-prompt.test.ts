@@ -5,11 +5,7 @@ import { createTestContinuityPlan, TEST_CLOCK } from './audio-timeline-fixture'
 describe('Lyria provider-safe prompt', () => {
   it('never forwards the internal narrative diagnosis to Lyria', () => {
     const cue = createTestContinuityPlan().scoreCues[0]!
-    const { prompt, negativePrompt } = buildLyriaPrompts({
-      cue,
-      clock: TEST_CLOCK,
-      strategy: 'spectral_depth',
-    })
+    const { prompt, negativePrompt } = buildLyriaPrompts({ cue, clock: TEST_CLOCK })
 
     expect(prompt).toContain('60 BPM')
     expect(prompt).toContain('weakened pitch field centered on D')
@@ -18,11 +14,8 @@ describe('Lyria provider-safe prompt', () => {
     expect(prompt).not.toContain(cue.narrativeDiagnosis.surfaceEmotion)
     expect(prompt).not.toContain(cue.narrativeDiagnosis.musicShouldDo)
     expect(prompt).not.toMatch(/blood|violence|torture|tooth/i)
-    expect(prompt).toContain('Target spectral budget')
-    expect(prompt).toContain('bass-clarinet-partial')
-    expect(prompt).toContain('Render priority: full planned spectral depth')
-    expect(negativePrompt).toContain('foreground brass fanfare intervals')
-    expect(negativePrompt).toContain('global energy apex followed by consonant tonal stabilization')
+    expect(negativePrompt).toContain('heroic or fanfare-like brass writing')
+    expect(negativePrompt).toContain('cathartic climax or redemptive release')
   })
 
   it('rejects provider prompts containing violent narrative language', () => {

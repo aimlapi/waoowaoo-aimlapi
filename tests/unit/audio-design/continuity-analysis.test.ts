@@ -30,7 +30,6 @@ describe('audio continuity director', () => {
     expect(prompt).toContain('开放与封闭双向')
     expect(prompt).toContain('保留 sourceContinuityId、素材、Loop 播放位置和相位')
     expect(prompt).toContain('所有 acousticTransitions.preservePlaybackPhase 必须严格为 true')
-    expect(prompt).toContain('不得输出 enabled=false 的伪 Loop')
     expect(prompt).toContain('"preservePlaybackPhase": [')
     expect(prompt).toContain('"forbiddenPositiveActionTerms": [')
     expect(prompt).toContain('"footsteps"')

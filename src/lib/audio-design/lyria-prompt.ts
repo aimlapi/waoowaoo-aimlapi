@@ -1,18 +1,16 @@
 import {
   framesToSeconds,
-  type MusicTheorySpecV3,
+  type MusicTheorySpecV2,
   type ScoreCue,
   type TimelineClock,
 } from './types'
 
-export type LyriaRenderStrategy = MusicTheorySpecV3['renderStrategies'][number]
-
-const PROHIBITION_LABELS: Record<MusicTheorySpecV3['prohibitions'][number], string> = {
+const PROHIBITION_LABELS: Record<MusicTheorySpecV2['prohibitions'][number], string> = {
   vocals: 'pitched vocal timbres',
   lyrics: 'lyrical phoneme sequences',
   spoken_word: 'speech-rate prosody and intelligible vocal articulation',
   literal_sound_effects: 'non-pitched concrete-source transients',
-  environmental_recordings: 'non-musical broadband field recordings',
+  environmental_recordings: 'non-musical broadband noise beds',
   functional_dominant_tonic: 'functional dominant-tonic syntax',
   authentic_cadence: 'dominant-tonic authentic cadence and tonal confirmation',
   heroic_brass: 'foreground brass fanfare intervals and parallel triadic voicing',
@@ -22,13 +20,6 @@ const PROHIBITION_LABELS: Record<MusicTheorySpecV3['prohibitions'][number], stri
   trailer_impacts: 'isolated broadband orchestral transients and low-frequency accent punctuation',
   stable_groove: 'isochronous groove and periodic beat reinforcement',
   periodic_phrase_cycle: 'symmetrical phrase recurrence and periodic sectional repetition',
-}
-
-const STRATEGY_INSTRUCTIONS: Record<LyriaRenderStrategy, string> = {
-  balanced_ensemble: 'Render priority: balanced ensemble audibility, complementary register allocation, stable orchestral blend, and equal preservation of every active functional voice.',
-  counterpoint_clarity: 'Render priority: independent voice-leading clarity, separated attacks, transparent counterlines, and audible relational motion without increasing total density.',
-  spectral_depth: 'Render priority: full planned spectral depth, distinct low, middle, high, and air-band occupancy, controlled masking, and gradual spectral redistribution.',
-  microdynamic_detail: 'Render priority: detailed articulation envelopes, natural microdynamic variation, gradual energy transfer between parts, and preserved long-range dynamic shape.',
 }
 
 const LYRIA_FORBIDDEN_NARRATIVE_TERMS = [
@@ -51,7 +42,6 @@ const LYRIA_FORBIDDEN_NARRATIVE_TERMS = [
 ] as const
 
 export interface LyriaPromptPair {
-  readonly strategy: LyriaRenderStrategy
   readonly prompt: string
   readonly negativePrompt: string
 }
@@ -69,54 +59,22 @@ function formatList(items: readonly string[]): string {
   return items.join(', ')
 }
 
-function formatPitchField(spec: MusicTheorySpecV3): string {
+function formatPitchField(spec: MusicTheorySpecV2): string {
   const center = spec.pitch.centerPitch ? ` centered on ${spec.pitch.centerPitch}` : ''
   return `${musicalTerm(spec.pitch.centerType)}${center}, ${musicalTerm(spec.pitch.collection)}`
 }
 
-function formatSpectralBudget(spec: MusicTheorySpecV3): string {
-  const budget = spec.spectralBudget
-  return [
-    `sub ${budget.sub}%`,
-    `low ${budget.low}%`,
-    `low-mid ${budget.lowMid}%`,
-    `mid ${budget.mid}%`,
-    `high-mid ${budget.highMid}%`,
-    `high ${budget.high}%`,
-    `air ${budget.air}%`,
-  ].join(', ')
-}
-
-function formatPartPhaseStates(part: MusicTheorySpecV3['orchestration'][number]): string {
-  return part.phaseStates.map((state) => [
-    state.phaseId,
-    musicalTerm(state.presence),
-    `${Math.round(state.density * 100)}% density`,
-    `${Math.round(state.energy * 100)}% energy`,
-  ].join(' ')).join('; ')
-}
-
-function formatOrchestration(spec: MusicTheorySpecV3): string {
+function formatOrchestration(spec: MusicTheorySpecV2): string {
   return spec.orchestration.map((part) => [
-    `${part.partId}: ${musicalTerm(part.family)} family, ${musicalTerm(part.instrument)}`,
-    `${musicalTerm(part.register)} register in the ${musicalTerm(part.spectralSlot)} spectral slot`,
-    `${musicalTerm(part.role)} role with ${musicalTerm(part.rhythmicFunction)}`,
-    `techniques ${formatList(part.techniques.map(musicalTerm))}`,
-    `pan ${part.spatial.pan.toFixed(2)}, width ${part.spatial.width.toFixed(2)}, reverb send ${part.spatial.reverbSend.toFixed(2)}`,
-    `phase behavior [${formatPartPhaseStates(part)}]`,
-  ].join(', ')).join('; ')
-}
-
-function formatRelationships(spec: MusicTheorySpecV3): string {
-  return spec.relationships.map((relationship) => [
-    `${relationship.firstPartId} and ${relationship.secondPartId}`,
-    musicalTerm(relationship.relation),
-    musicalTerm(relationship.collisionPolicy),
+    musicalTerm(part.instrument),
+    `${musicalTerm(part.register)} register`,
+    `${musicalTerm(part.role)} role`,
+    formatList(part.techniques.map(musicalTerm)),
   ].join(' with ')).join('; ')
 }
 
 function formatPhases(input: {
-  readonly spec: MusicTheorySpecV3
+  readonly spec: MusicTheorySpecV2
   readonly cue: ScoreCue
 }): string {
   const cueLengthFrames = input.cue.range.endFrameExclusive - input.cue.range.startFrame
@@ -140,12 +98,8 @@ function formatPhases(input: {
 export function buildLyriaPrompts(input: {
   readonly cue: ScoreCue
   readonly clock: TimelineClock
-  readonly strategy: LyriaRenderStrategy
 }): LyriaPromptPair {
   const spec = input.cue.musicTheorySpec
-  if (!spec.renderStrategies.includes(input.strategy)) {
-    throw new Error(`LYRIA_RENDER_STRATEGY_NOT_PLANNED:${input.strategy}`)
-  }
   const durationSeconds = framesToSeconds(
     input.cue.range.endFrameExclusive - input.cue.range.startFrame,
     input.clock,
@@ -157,14 +111,10 @@ export function buildLyriaPrompts(input: {
     `Harmonic organization: ${musicalTerm(spec.harmony.functionalSyntax)} functional syntax, ${musicalTerm(spec.harmony.cadencePolicy)}, ${musicalTerm(spec.harmony.harmonicRhythm)} harmonic rhythm.`,
     `Voice leading: ${formatList(spec.voiceLeading.map(musicalTerm))}.`,
     `Texture: ${musicalTerm(spec.texture.organization)}, ${musicalTerm(spec.texture.density)} density, ${Math.round(spec.texture.layerIndependence * 100)}% layer independence.`,
-    `Ensemble architecture: ${musicalTerm(spec.ensembleComplexity)} complexity with ${spec.orchestration.length} functional voices.`,
-    `Spectral organization: ${formatList(spec.spectrum.foundation.map((register) => `${musicalTerm(register)} register`))} foundation, ${musicalTerm(spec.spectrum.upperActivity)} upper-register activity, ${musicalTerm(spec.spectrum.evolution)} spectral evolution. Target spectral budget: ${formatSpectralBudget(spec)}.`,
-    `Orchestration graph: ${formatOrchestration(spec)}.`,
-    `Part relationships: ${formatRelationships(spec)}.`,
+    `Spectral organization: ${formatList(spec.spectrum.foundation.map((register) => `${musicalTerm(register)} register`))} foundation, ${musicalTerm(spec.spectrum.upperActivity)} upper-register activity, ${musicalTerm(spec.spectrum.evolution)} spectral evolution.`,
+    `Orchestration: ${formatOrchestration(spec)}.`,
     `Dynamics: ${musicalTerm(spec.dynamics.envelope)} amplitude envelope, ${musicalTerm(spec.dynamics.transientPolicy)} transient policy, energy constrained from ${Math.round(spec.dynamics.minimumEnergy * 100)}% to ${Math.round(spec.dynamics.maximumEnergy * 100)}%.`,
     `Continuous formal phases: ${formatPhases({ spec, cue: input.cue })}.`,
-    STRATEGY_INSTRUCTIONS[input.strategy],
-    'Render one complete stereo master. Preserve the specified instrumental identities and functional voices as a coherent ensemble; do not collapse them into an undifferentiated string pad or a single dominant timbre.',
     'Maintain continuous harmony, tempo, orchestration, spectral evolution, and long-duration dynamic transitions across the complete cue.',
     'Preserve controlled midrange headroom, restrained transient occupancy, and uncluttered spectral balance for downstream mixing.',
   ].join(' ')
@@ -172,5 +122,12 @@ export function buildLyriaPrompts(input: {
 
   assertLyriaPromptSafe(prompt)
   assertLyriaPromptSafe(negativePrompt)
-  return { strategy: input.strategy, prompt, negativePrompt }
+  return { prompt, negativePrompt }
+}
+
+export function buildLyriaPrompt(input: {
+  readonly cue: ScoreCue
+  readonly clock: TimelineClock
+}): string {
+  return buildLyriaPrompts(input).prompt
 }
