@@ -1,7 +1,6 @@
 import { createHash, randomUUID } from 'node:crypto'
 import { NextResponse } from 'next/server'
 import { Prisma } from '@prisma/client'
-import { prisma } from '@/lib/prisma'
 import { logError as _ulogError } from '@/lib/logging/core'
 import { getLogContext } from '@/lib/logging/context'
 import { ensureAiCatalogsRegistered } from '@/lib/ai-exec/catalog-bootstrap'

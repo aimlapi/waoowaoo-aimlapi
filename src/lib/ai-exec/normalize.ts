@@ -26,7 +26,7 @@ export function validateAiOptions(input: {
     throw new Error(`AI_OPTIONS_INVALID:${input.context}`)
   }
   const options = input.options
-  for (const [key, value] of Object.entries(options)) {
+  for (const key of Object.keys(options)) {
     if (!input.schema.allowedKeys.has(key)) {
       throw new Error(`AI_OPTION_UNSUPPORTED:${input.context}:${key}`)
     }

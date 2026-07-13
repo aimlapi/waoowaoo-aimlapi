@@ -7,7 +7,6 @@ import {
   getTaskDefinition,
   isBillableTaskType,
   it,
-  type TaskType,
 } from './task-policy.fixture'
 
 describe('billing/task-policy', () => {

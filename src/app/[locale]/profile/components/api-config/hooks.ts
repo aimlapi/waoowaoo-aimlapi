@@ -66,7 +66,7 @@ export function useProviders(): UseProvidersReturn {
     const [defaultModels, setDefaultModels] = useState<DefaultModels>({})
     const [workflowConcurrency, setWorkflowConcurrency] = useState<WorkflowConcurrency>(DEFAULT_WORKFLOW_CONCURRENCY)
     const [capabilityDefaults, setCapabilityDefaults] = useState<CapabilitySelections>({})
-    const { data, loading: queryLoading, error: queryError, reload } = useUserApiConfigQuery()
+    const { data, loading: queryLoading, error: queryError } = useUserApiConfigQuery()
     const catalogProviderIdsRef = useRef<Set<string>>(new Set())
     const catalogModelKeysRef = useRef<Set<string>>(new Set())
 

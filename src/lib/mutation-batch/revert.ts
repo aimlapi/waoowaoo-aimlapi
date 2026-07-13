@@ -68,14 +68,6 @@ function readOptionalNullableNumberField(record: Record<string, unknown>, key: s
   throw new Error(`MUTATION_PANEL_RESTORE_INVALID_${key}`)
 }
 
-function readOptionalNullableIntegerField(record: Record<string, unknown>, key: string): number | null | undefined {
-  if (!hasOwnField(record, key)) return undefined
-  const value = record[key]
-  if (value === null) return null
-  if (typeof value === 'number' && Number.isInteger(value)) return value
-  throw new Error(`MUTATION_PANEL_RESTORE_INVALID_${key}`)
-}
-
 function readOptionalJsonField(record: Record<string, unknown>, key: string): Prisma.InputJsonValue | undefined {
   if (!hasOwnField(record, key)) return undefined
   const value = record[key]
