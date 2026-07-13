@@ -18,6 +18,11 @@ describe('audio continuity director', () => {
         soundDirection: 'native dialogue and action sounds only',
       }],
       narrativeContext: { weather: 'same storm' },
+      sceneContinuityFacts: {
+        confirmedSceneBoundaryFrames: [],
+        persistentSceneRule: 'preserve_until_positive_change_evidence',
+        closeUpRule: 'background_absence_is_not_scene_change',
+      },
       locale: 'zh',
     })
 
@@ -42,7 +47,11 @@ describe('audio continuity director', () => {
   })
 
   it('parses the strict SoundWorld and loop plan schema', () => {
-    const parsed = parseAudioContinuityPlan(JSON.stringify(createTestContinuityPlan()))
+    const parsed = parseAudioContinuityPlan(JSON.stringify(createTestContinuityPlan()), {
+      confirmedSceneBoundaryFrames: [],
+      persistentSceneRule: 'preserve_until_positive_change_evidence',
+      closeUpRule: 'background_absence_is_not_scene_change',
+    })
     expect(parsed.soundWorlds[0]?.continuityKey).toBe('stadium-same-night-same-storm')
     expect(parsed.ambienceSources[0]?.loopPolicy?.candidateCount).toBe(2)
     expect(parsed.acousticTransitions[0]?.preservePlaybackPhase).toBe(true)

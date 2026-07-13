@@ -5,6 +5,7 @@ import type { Job } from 'bullmq'
 import { analyzeAudioContinuity } from '@/lib/audio-design/continuity-analysis'
 import { analyzeLockedVideoFrames } from '@/lib/audio-design/video-visual-analysis'
 import type { VideoVisualAnalysis } from '@/lib/audio-design/video-visual-types'
+import { resolveVisualContinuityFacts } from '@/lib/audio-design/visual-continuity'
 import {
   buildAudioTimelineV2,
   buildTimelineClips,
@@ -251,6 +252,7 @@ export async function handleBgmScoreGenerateTask(job: Job<TaskJobData>) {
           } : null,
           videoRatio: project.videoRatio,
         },
+        sceneContinuityFacts: resolveVisualContinuityFacts(visualAnalysis),
         projectId: job.data.projectId,
         locale: job.data.locale,
       })

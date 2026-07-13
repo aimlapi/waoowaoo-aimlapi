@@ -1,5 +1,6 @@
 import { buildGainAutomationVolumeFilter } from '@/lib/audio-design/automation'
 import {
+  frameToSample,
   framesToSeconds,
   type AcousticPerspective,
   type AcousticTransition,
@@ -118,10 +119,10 @@ function buildBranchFilter(input: {
   readonly lanes: readonly AutomationLane[]
 }): string {
   const { track, perspective, renderRange, incomingTransition, outgoingTransition } = input.branch
-  const startSeconds = framesToSeconds(renderRange.startFrame, input.clock)
-  const durationSeconds = framesToSeconds(renderRange.endFrameExclusive - renderRange.startFrame, input.clock)
   const phaseFrames = track.phaseOffsetFrames + renderRange.startFrame - track.range.startFrame
-  const phaseSeconds = framesToSeconds(phaseFrames, input.clock)
+  const startSample = frameToSample(renderRange.startFrame, input.clock)
+  const durationSamples = frameToSample(renderRange.endFrameExclusive - renderRange.startFrame, input.clock)
+  const phaseSample = frameToSample(phaseFrames, input.clock)
   const volume = buildGainAutomationVolumeFilter({
     baseVolume: 1,
     lanes: input.lanes,
@@ -139,12 +140,12 @@ function buildBranchFilter(input: {
     fades.push(`afade=t=out:st=${format(framesToSeconds(startFrames, input.clock))}:d=${format(framesToSeconds(frames, input.clock))}:curve=qsin`)
   }
   return [
-    `[${input.inputIndex}:a]atrim=start=${format(phaseSeconds)}:duration=${format(durationSeconds)},asetpts=PTS-STARTPTS`,
+    `[${input.inputIndex}:a]atrim=start_sample=${phaseSample}:end_sample=${phaseSample + durationSamples},asetpts=PTS-STARTPTS`,
     ',aresample=48000,aformat=sample_fmts=fltp:channel_layouts=stereo',
     `,loudnorm=I=${format(AMBIENCE_AUDIO_TARGET.integratedLufs)}:TP=${format(AMBIENCE_AUDIO_TARGET.truePeakDb)}:LRA=${format(AMBIENCE_AUDIO_TARGET.loudnessRange)}`,
     `,${acousticFilters(perspective).join(',')},${volume}`,
     fades.length > 0 ? `,${fades.join(',')}` : '',
-    `,adelay=${Math.round(startSeconds * 1000)}|${Math.round(startSeconds * 1000)}[amb_${input.outputIndex}]`,
+    `,adelay=${startSample}S:all=1[amb_${input.outputIndex}]`,
   ].join('')
 }
 
@@ -158,6 +159,18 @@ export function buildFinalRenderAmbienceGraph(input: {
   readonly filters: readonly string[]
   readonly outputLabels: readonly string[]
 } {
+  const transitionIds = new Set(input.tracks.flatMap((track) => (
+    track.transitions.map((transition) => transition.transitionId)
+  )))
+  const duplicateLane = input.automationLanes.find((lane) => (
+    lane.targetBus === 'ambience'
+    && lane.sourceEventId !== null
+    && lane.sourceEventId !== undefined
+    && transitionIds.has(lane.sourceEventId)
+  ))
+  if (duplicateLane) {
+    throw new Error(`FINAL_VIDEO_RENDER_AMBIENCE_TRANSITION_AUTOMATION_DUPLICATED:${duplicateLane.laneId}`)
+  }
   const branches = buildBranches(input.tracks)
   return {
     inputArgs: branches.flatMap((branch) => branch.track.loop

@@ -7,6 +7,7 @@ function sourceWithPrompt(generationPrompt: string): unknown {
     sourceId: 'crowd-bed',
     sourceContinuityId: 'crowd-continuity',
     worldId: 'plaza-world',
+    role: 'bed',
     playbackType: 'seamless_loop',
     semanticRole: 'crowd ambience',
     range: { startFrame: 0, endFrameExclusive: 240 },

@@ -391,6 +391,20 @@ export async function handleFinalVideoRenderTask(job: Job<TaskJobData>) {
       hasSourceAudio,
       musicPath,
       ambienceTracks,
+      ambienceQualityPcmPath: path.join(workspaceDir, 'ambience-quality.f32le'),
+      ambienceQualityBoundaryFrames: [...new Set([
+        ...timelineAudio.clips.map((clip) => clip.range.endFrameExclusive),
+        ...timelineAudio.soundWorlds.map((world) => world.range.startFrame),
+        ...timelineAudio.soundWorlds.flatMap((world) => (
+          world.perspectives.map((perspective) => perspective.range.startFrame)
+        )),
+      ])].filter((frame) => (
+        frame > 0
+        && frame < timelineAudio.clock.totalFrames
+        && !timelineAudio.acousticTransitions.some((transition) => (
+          frame >= transition.range.startFrame && frame < transition.range.endFrameExclusive
+        ))
+      )),
       outputPath: finalPath,
       clock: timelineAudio.clock,
       volume: readBgmVolume(payload.bgmVolume),
@@ -425,6 +439,7 @@ export async function handleFinalVideoRenderTask(job: Job<TaskJobData>) {
         hasSourceAudio: audioMix.hasSourceAudio,
         automationLaneCount: timelineAudio.automationLanes.length,
         ambienceTrackCount: audioMix.ambienceTrackCount,
+        ambienceContinuity: audioMix.ambienceContinuity,
         targets: {
           mainIntegratedLufs: MAIN_AUDIO_TARGET.integratedLufs,
           bgmIntegratedLufs: BGM_AUDIO_TARGET.integratedLufs,

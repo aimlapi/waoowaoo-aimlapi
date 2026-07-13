@@ -169,14 +169,19 @@ describe('BGM score worker V5', () => {
     prismaMock.videoEditorProject.findUnique.mockResolvedValue({ projectData: null })
     executeAiTextStepMock.mockResolvedValue({ text: continuityPlanText() })
     analyzeLockedVideoFramesMock.mockResolvedValue({
-      schemaVersion: 1,
+      schemaVersion: 2,
       sampleStepFrames: 24,
       observations: [{
         frame: 0,
         location: 'interior room',
+        locationEvidence: 'observed',
+        locationConfidence: 0.95,
+        continuityWithPrevious: 'uncertain',
+        transitionEvidence: [],
         enclosure: 'enclosed',
         weather: null,
         persistentEnvironment: ['quiet room'],
+        outOfFramePersistentEnvironment: [],
         activityLevel: 0.3,
         suggestedScoreEnergy: 0.2,
         description: 'restrained interior scene',
@@ -221,7 +226,7 @@ describe('BGM score worker V5', () => {
     expect(lyriaPrompt).toContain('60 BPM')
     expect(lyriaPrompt).not.toMatch(/violent|blood|gore|torture/i)
     expect(generateScoreCandidatesMock).toHaveBeenCalledWith(expect.objectContaining({
-      negativePrompt: expect.stringContaining('heroic or fanfare-like brass writing'),
+      negativePrompt: expect.stringContaining('foreground brass fanfare intervals and parallel triadic voicing'),
       reusableCandidates: [],
     }))
 

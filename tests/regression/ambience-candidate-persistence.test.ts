@@ -26,6 +26,7 @@ const timeline = {
     sourceId: 'room-tone',
     sourceContinuityId: 'room-tone-continuity',
     worldId: 'room',
+    role: 'bed',
     playbackType: 'continuous_evolving',
     semanticRole: 'room air',
     range: { startFrame: 0, endFrameExclusive: 240 },

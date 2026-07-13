@@ -99,6 +99,7 @@ async function extractVisualSamples(input: {
 export function buildVideoVisualAnalysisPrompt(
   samples: readonly VideoVisualSample[],
   clock: TimelineClock,
+  previousObservations: VideoVisualAnalysis['observations'] = [],
 ): string {
   return [
     '# Role',
@@ -107,15 +108,24 @@ export function buildVideoVisualAnalysisPrompt(
     '# Rules',
     '1. Observe visible facts only. Do not invent screenplay facts, dialogue, sound effects, or off-screen actions.',
     '2. Each image corresponds to the frame listed below. Copy every frame number exactly once.',
-    '3. Describe location, enclosure, visible weather, persistent environmental conditions, activity level, and appropriate underscore energy.',
-    '4. Do not describe violence, injury, body parts, or graphic actions. Replace any such visual content with the neutral phrase "restricted narrative event".',
-    '5. Return strict JSON only: {"observations":[...]} with no Markdown or extra fields.',
+    '3. A close-up, low angle, missing landmark, or background leaving frame is not evidence of a new location. Absence of visible evidence is not evidence that a persistent source stopped.',
+    '4. Set locationEvidence=inferred or unknown whenever the location is not directly established. Set continuityWithPrevious=new_scene only when visible positive evidence proves a spatial or temporal discontinuity.',
+    '5. Preserve prior location, weather, and persistent sources across batch boundaries unless positive transition evidence disproves them. Put temporarily invisible persistent sources in outOfFramePersistentEnvironment.',
+    '6. camera_cut_only and background_out_of_frame can never establish new_scene by themselves.',
+    '7. Describe enclosure, visible weather, persistent environmental conditions, activity level, and appropriate underscore energy.',
+    '8. Do not describe violence, injury, body parts, or graphic actions. Replace any such visual content with the neutral phrase "restricted narrative event".',
+    '9. Return strict JSON only: {"observations":[...]} with no Markdown or extra fields.',
     '',
     '# Observation item schema',
-    '{"frame": integer, "location": string, "enclosure":"open|semi_open|enclosed", "weather":string|null, "persistentEnvironment":string[], "activityLevel":0..1, "suggestedScoreEnergy":0..1, "description":string}',
+    '{"frame":integer,"location":string,"locationEvidence":"observed|inferred|unknown","locationConfidence":0..1,"continuityWithPrevious":"same_scene|new_scene|uncertain","transitionEvidence":["continuous_action|camera_cut_only|background_out_of_frame|visible_spatial_passage|establishing_view_of_new_location|time_discontinuity|weather_discontinuity"],"enclosure":"open|semi_open|enclosed","weather":string|null,"persistentEnvironment":string[],"outOfFramePersistentEnvironment":string[],"activityLevel":0..1,"suggestedScoreEnergy":0..1,"description":string}',
     '',
     '# Frame clock',
     JSON.stringify(clock),
+    '',
+    '# Previous batch continuity context',
+    previousObservations.length > 0
+      ? JSON.stringify(previousObservations)
+      : 'No previous batch. Mark the first observation continuityWithPrevious=uncertain.',
     '',
     '# Image order',
     samples.map((sample, index) => `Image ${index + 1}: frame ${sample.frame}`).join('\n'),
@@ -164,13 +174,13 @@ export async function analyzeLockedVideoFrames(input: {
       const completion = await executeAiVisionStep({
         userId: input.userId,
         model: input.model,
-        prompt: buildVideoVisualAnalysisPrompt(batch, input.clock),
+        prompt: buildVideoVisualAnalysisPrompt(batch, input.clock, observations.slice(-3)),
         imageUrls: batch.map((sample) => sample.imageUrl),
         projectId: input.projectId,
-        action: 'audio_video_visual_analysis_v1',
+        action: 'audio_video_visual_analysis_v2',
         meta: {
-          stepId: `audio_video_visual_analysis_v1_${offset / VISION_BATCH_SIZE + 1}`,
-          stepTitle: 'audio_video_visual_analysis_v1',
+          stepId: `audio_video_visual_analysis_v2_${offset / VISION_BATCH_SIZE + 1}`,
+          stepTitle: 'audio_video_visual_analysis_v2',
           stepIndex: offset / VISION_BATCH_SIZE + 1,
           stepTotal: Math.ceil(samples.length / VISION_BATCH_SIZE),
         },
@@ -178,7 +188,7 @@ export async function analyzeLockedVideoFrames(input: {
       })
       observations.push(...parseVideoVisualObservationBatch(completion.text, batch.map((sample) => sample.frame)))
     }
-    return videoVisualAnalysisSchema.parse({ schemaVersion: 1, sampleStepFrames: stepFrames, observations })
+    return videoVisualAnalysisSchema.parse({ schemaVersion: 2, sampleStepFrames: stepFrames, observations })
   } finally {
     await rm(workspaceDir, { recursive: true, force: true })
   }

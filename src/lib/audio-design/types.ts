@@ -128,6 +128,7 @@ export const AMBIENCE_PLAYBACK_TYPE_VALUES = [
   'ambient_event',
   'continuous_evolving',
 ] as const
+export const AMBIENCE_ROLE_VALUES = ['bed', 'detail', 'ambient_event'] as const
 export const ambiencePlaybackTypeSchema = z.enum(AMBIENCE_PLAYBACK_TYPE_VALUES)
 
 export const ambienceLoopPolicySchema = z.object({
@@ -151,6 +152,7 @@ export const ambienceSourceSchema = z.object({
   sourceId: z.string().trim().min(1),
   sourceContinuityId: z.string().trim().min(1),
   worldId: z.string().trim().min(1),
+  role: z.enum(AMBIENCE_ROLE_VALUES),
   playbackType: ambiencePlaybackTypeSchema,
   semanticRole: z.string().trim().min(1),
   range: frameRangeSchema,
@@ -179,6 +181,13 @@ export const ambienceSourceSchema = z.object({
       code: z.ZodIssueCode.custom,
       path: ['loopPolicy'],
       message: 'AUDIO_AMBIENCE_LOOP_POLICY_NOT_ALLOWED',
+    })
+  }
+  if (source.role === 'ambient_event' && source.playbackType !== 'ambient_event') {
+    ctx.addIssue({
+      code: z.ZodIssueCode.custom,
+      path: ['playbackType'],
+      message: 'AUDIO_AMBIENCE_EVENT_PLAYBACK_TYPE_REQUIRED',
     })
   }
 })
@@ -518,6 +527,104 @@ export const audioStemPlanSchema = z.object({
   description: z.string().trim().min(1),
 })
 
+interface AudioContinuityCore {
+  readonly soundWorlds: readonly z.infer<typeof soundWorldSchema>[]
+  readonly acousticTransitions: readonly z.infer<typeof acousticTransitionSchema>[]
+  readonly ambienceSources: readonly z.infer<typeof ambienceSourceSchema>[]
+  readonly automationLanes: readonly z.infer<typeof automationLaneSchema>[]
+}
+
+function validateAudioContinuityRelationships(
+  plan: AudioContinuityCore,
+  ctx: z.RefinementCtx,
+): void {
+  const worldById = new Map(plan.soundWorlds.map((world) => [world.worldId, world]))
+  const sourceByContinuityId = new Map<string, Array<z.infer<typeof ambienceSourceSchema>>>()
+  for (const source of plan.ambienceSources) {
+    const group = sourceByContinuityId.get(source.sourceContinuityId) ?? []
+    group.push(source)
+    sourceByContinuityId.set(source.sourceContinuityId, group)
+    const world = worldById.get(source.worldId)
+    if (!world) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        path: ['ambienceSources'],
+        message: `AUDIO_AMBIENCE_WORLD_MISSING:${source.sourceId}:${source.worldId}`,
+      })
+      continue
+    }
+    if (!world.persistentSourceIds.includes(source.sourceContinuityId) && source.role !== 'ambient_event') {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        path: ['ambienceSources'],
+        message: `AUDIO_AMBIENCE_PERSISTENT_SOURCE_UNDECLARED:${source.sourceId}`,
+      })
+    }
+    if (
+      source.role === 'bed'
+      && (source.range.startFrame > world.range.startFrame || source.range.endFrameExclusive < world.range.endFrameExclusive)
+    ) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        path: ['ambienceSources'],
+        message: `AUDIO_AMBIENCE_BED_WORLD_COVERAGE_REQUIRED:${source.sourceId}`,
+      })
+    }
+  }
+  for (const world of plan.soundWorlds) {
+    const hasBed = plan.ambienceSources.some((source) => source.worldId === world.worldId && source.role === 'bed')
+    if (!hasBed) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        path: ['soundWorlds'],
+        message: `AUDIO_SOUND_WORLD_BED_REQUIRED:${world.worldId}`,
+      })
+    }
+  }
+  const transitionIds = new Set(plan.acousticTransitions.map((transition) => transition.transitionId))
+  for (const transition of plan.acousticTransitions) {
+    const sources = sourceByContinuityId.get(transition.sourceContinuityId) ?? []
+    if (sources.length !== 1) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        path: ['acousticTransitions'],
+        message: `AUDIO_TRANSITION_SOURCE_IDENTITY_REQUIRED:${transition.transitionId}`,
+      })
+      continue
+    }
+    const source = sources[0]
+    if (!source) continue
+    if (
+      source.range.startFrame > transition.range.startFrame
+      || source.range.endFrameExclusive < transition.range.endFrameExclusive
+    ) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        path: ['acousticTransitions'],
+        message: `AUDIO_TRANSITION_SOURCE_COVERAGE_REQUIRED:${transition.transitionId}`,
+      })
+    }
+    const world = worldById.get(source.worldId)
+    const zones = new Set(world?.perspectives.map((perspective) => perspective.zoneId) ?? [])
+    if (!zones.has(transition.fromZoneId) || !zones.has(transition.toZoneId)) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        path: ['acousticTransitions'],
+        message: `AUDIO_TRANSITION_ZONE_COVERAGE_REQUIRED:${transition.transitionId}`,
+      })
+    }
+  }
+  for (const lane of plan.automationLanes) {
+    if (lane.targetBus === 'ambience' && lane.sourceEventId && transitionIds.has(lane.sourceEventId)) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        path: ['automationLanes'],
+        message: `AUDIO_TRANSITION_DUPLICATE_GAIN_AUTOMATION:${lane.laneId}`,
+      })
+    }
+  }
+}
+
 export const audioTimelineV2Schema = z.object({
   schemaVersion: z.literal(AUDIO_TIMELINE_SCHEMA_VERSION),
   timelineSignature: z.string().trim().min(1),
@@ -559,6 +666,7 @@ export const audioTimelineV2Schema = z.object({
       }
     })
   })
+  validateAudioContinuityRelationships(timeline, ctx)
 })
 
 export const audioContinuityPlanSchema = z.object({
@@ -568,6 +676,8 @@ export const audioContinuityPlanSchema = z.object({
   ambienceSources: z.array(ambienceSourceSchema),
   scoreCues: z.array(scoreCueSchema).length(1),
   automationLanes: z.array(automationLaneSchema),
+}).superRefine((plan, ctx) => {
+  validateAudioContinuityRelationships(plan, ctx)
 })
 
 export type FrameRange = z.infer<typeof frameRangeSchema>

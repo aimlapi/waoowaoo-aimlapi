@@ -55,6 +55,7 @@ export function createTestContinuityPlan(): AudioContinuityPlan {
       sourceId: 'rain-bed',
       sourceContinuityId: 'storm-rain',
       worldId: 'stadium-world',
+      role: 'bed',
       playbackType: 'seamless_loop',
       semanticRole: 'continuous storm rain bed',
       range: { startFrame: 0, endFrameExclusive: 240 },
@@ -157,19 +158,7 @@ export function createTestContinuityPlan(): AudioContinuityPlan {
       },
       intentionalSilenceRanges: [],
     }],
-    automationLanes: [{
-      laneId: 'rain-perspective-gain',
-      targetBus: 'ambience',
-      targetSourceId: 'rain-bed',
-      parameter: 'gain_db',
-      keyframes: [
-        { frame: 108, value: -8, interpolation: 'smooth' },
-        { frame: 132, value: -2, interpolation: 'smooth' },
-      ],
-      postBehavior: 'hold',
-      reason: 'same rain source moves from interior to exterior perspective',
-      sourceEventId: 'exit-stadium',
-    }],
+    automationLanes: [],
   }
 }
 

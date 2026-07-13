@@ -1,5 +1,12 @@
+import { readFile } from 'node:fs/promises'
+import {
+  assertAmbienceContinuity,
+  measureAmbienceContinuity,
+  type AmbienceContinuityMeasurement,
+} from '@/lib/audio-design/ambience-continuity-quality'
 import { buildGainAutomationVolumeFilter } from '@/lib/audio-design/automation'
 import {
+  frameToSample,
   framesToSeconds,
   type AutomationLane,
   type TimelineClock,
@@ -40,6 +47,7 @@ export type FinalRenderAudioMixResult = {
   readonly mainAudio?: AudioLoudnessMeasurement
   readonly bgm: AudioLoudnessMeasurement
   readonly ambienceTrackCount: number
+  readonly ambienceContinuity: readonly AmbienceContinuityMeasurement[]
 }
 
 export const MAIN_AUDIO_TARGET: AudioLoudnessTarget = {
@@ -131,6 +139,45 @@ async function analyzeAudioLoudness(
   return parseLoudnormMeasurement(result.stderr)
 }
 
+async function validateAmbienceBusContinuity(input: {
+  readonly runCommand: FinalRenderAudioCommandRunner
+  readonly graph: ReturnType<typeof buildFinalRenderAmbienceGraph>
+  readonly pcmPath: string
+  readonly boundaryFrames: readonly number[]
+  readonly clock: TimelineClock
+}): Promise<readonly AmbienceContinuityMeasurement[]> {
+  if (input.boundaryFrames.length === 0) return []
+  if (input.graph.outputLabels.length === 0) {
+    throw new Error('FINAL_VIDEO_RENDER_AMBIENCE_CONTINUITY_TRACK_REQUIRED')
+  }
+  const totalSamples = frameToSample(input.clock.totalFrames, input.clock)
+  const filters = [
+    ...input.graph.filters,
+    `${input.graph.outputLabels.join('')}amix=inputs=${input.graph.outputLabels.length}:duration=longest:normalize=0:dropout_transition=0,atrim=end_sample=${totalSamples},aformat=sample_fmts=flt:channel_layouts=mono[ambience_qc]`,
+  ]
+  await input.runCommand('ffmpeg', [
+    '-y', ...input.graph.inputArgs,
+    '-filter_complex', filters.join(';'),
+    '-map', '[ambience_qc]', '-c:a', 'pcm_f32le', '-f', 'f32le', input.pcmPath,
+  ])
+  const pcm = await readFile(input.pcmPath)
+  if (pcm.byteLength % Float32Array.BYTES_PER_ELEMENT !== 0) {
+    throw new Error('FINAL_VIDEO_RENDER_AMBIENCE_PCM_INVALID')
+  }
+  const samples = new Float32Array(
+    pcm.buffer,
+    pcm.byteOffset,
+    pcm.byteLength / Float32Array.BYTES_PER_ELEMENT,
+  )
+  const measurements = measureAmbienceContinuity({
+    samples,
+    clock: input.clock,
+    boundaryFrames: input.boundaryFrames,
+  })
+  assertAmbienceContinuity({ measurements })
+  return measurements
+}
+
 export async function renderFinalRenderClipAudio(input: {
   readonly runCommand: FinalRenderAudioCommandRunner
   readonly sourcePath: string
@@ -175,6 +222,8 @@ export async function muxFinalRenderAudio(input: {
   readonly hasSourceAudio: boolean
   readonly musicPath: string
   readonly ambienceTracks: readonly FinalRenderAmbienceTrack[]
+  readonly ambienceQualityPcmPath: string
+  readonly ambienceQualityBoundaryFrames: readonly number[]
   readonly outputPath: string
   readonly clock: TimelineClock
   readonly volume: number
@@ -208,6 +257,18 @@ export async function muxFinalRenderAudio(input: {
     automationLanes: input.automationLanes,
     firstInputIndex: 3,
   })
+  const ambienceContinuity = await validateAmbienceBusContinuity({
+    runCommand: input.runCommand,
+    graph: buildFinalRenderAmbienceGraph({
+      tracks: input.ambienceTracks,
+      clock: input.clock,
+      automationLanes: input.automationLanes,
+      firstInputIndex: 0,
+    }),
+    pcmPath: input.ambienceQualityPcmPath,
+    boundaryFrames: input.ambienceQualityBoundaryFrames,
+    clock: input.clock,
+  })
   filters.push(...ambienceGraph.filters)
   mixInputs.push(...ambienceGraph.outputLabels)
   filters.push(`${mixInputs.join('')}amix=inputs=${mixInputs.length}:duration=first:normalize=0:dropout_transition=0,alimiter=limit=0.95[aout]`)
@@ -224,5 +285,6 @@ export async function muxFinalRenderAudio(input: {
     ...(mainMeasurement ? { mainAudio: mainMeasurement } : {}),
     bgm: bgmMeasurement,
     ambienceTrackCount: input.ambienceTracks.length,
+    ambienceContinuity,
   }
 }

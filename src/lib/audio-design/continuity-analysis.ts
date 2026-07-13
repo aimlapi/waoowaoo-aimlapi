@@ -3,10 +3,15 @@ import type { AiPromptLocale } from '@/lib/ai-prompts'
 import { safeParseJsonObject } from '@/lib/json-repair'
 import { AMBIENCE_FORBIDDEN_ACTION_TERMS } from './ambience-prompt-policy'
 import {
+  assertSoundWorldBoundariesMatchVisualFacts,
+  type VisualContinuityFacts,
+} from './visual-continuity'
+import {
   ACOUSTIC_DISTANCE_VALUES,
   ACOUSTIC_ENCLOSURE_VALUES,
   ACOUSTIC_TRANSITION_TYPE_VALUES,
   AMBIENCE_PLAYBACK_TYPE_VALUES,
+  AMBIENCE_ROLE_VALUES,
   AUDIO_TIMELINE_SCHEMA_VERSION,
   AUTOMATION_INTERPOLATION_VALUES,
   AUTOMATION_TARGET_BUS_VALUES,
@@ -43,6 +48,7 @@ export interface AudioContinuityAnalysisInput {
   readonly clock: TimelineClock
   readonly clips: readonly TimelineClipAudio[]
   readonly narrativeContext: unknown
+  readonly sceneContinuityFacts: VisualContinuityFacts
   readonly projectId?: string
   readonly locale?: AiPromptLocale
 }
@@ -91,6 +97,7 @@ function outputShape(clock: TimelineClock): string {
       sourceId: 'ambience_source_stable_id',
       sourceContinuityId: 'source_stable_id',
       worldId: 'world_stable_id',
+      role: 'bed',
       playbackType: 'seamless_loop',
       semanticRole: 'continuous environmental bed',
       range: { startFrame: 0, endFrameExclusive: clock.totalFrames },
@@ -179,17 +186,17 @@ function outputShape(clock: TimelineClock): string {
       intentionalSilenceRanges: [],
     }],
     automationLanes: [{
-      laneId: 'ambience_perspective_gain',
-      targetBus: 'ambience',
-      targetSourceId: 'ambience_source_stable_id',
+      laneId: 'score_narrative_gain',
+      targetBus: 'score',
+      targetSourceId: 'score_cue_stable_id',
       parameter: 'gain_db',
       keyframes: [
         { frame: 100, value: -8, interpolation: 'smooth' },
         { frame: 130, value: -2, interpolation: 'smooth' },
       ],
       postBehavior: 'hold',
-      reason: 'acoustic perspective transition',
-      sourceEventId: 'transition_stable_id',
+      reason: 'continuous narrative score shaping',
+      sourceEventId: null,
     }],
   })
 }
@@ -205,6 +212,7 @@ function strictEnumContract(clock: TimelineClock): string {
       preservePlaybackPhase: [true],
     },
     ambienceSource: {
+      role: AMBIENCE_ROLE_VALUES,
       playbackType: AMBIENCE_PLAYBACK_TYPE_VALUES,
       forbiddenPositiveActionTerms: AMBIENCE_FORBIDDEN_ACTION_TERMS,
     },
@@ -244,7 +252,7 @@ function strictEnumContract(clock: TimelineClock): string {
   })
 }
 
-function buildChinesePrompt(input: Pick<AudioContinuityAnalysisInput, 'clock' | 'clips' | 'narrativeContext'>): string {
+function buildChinesePrompt(input: Pick<AudioContinuityAnalysisInput, 'clock' | 'clips' | 'narrativeContext' | 'sceneContinuityFacts'>): string {
   return [
     '# 角色',
     '你是一名顶级影视声音总监、声学连续性设计师和电影作曲规划师。',
@@ -253,7 +261,7 @@ function buildChinesePrompt(input: Pick<AudioContinuityAnalysisInput, 'clock' | 
     '根据锁定后的帧时间轴、实际媒体片段信息和剧情语义，建立全局 AudioContinuityPlanV2。只做规划，不生成音频。',
     '',
     '# 权威与边界',
-    '1. 锁定帧时间轴是唯一时间权威；剧情只提供语义。',
+    '1. 锁定帧时间轴是唯一时间权威。script-assisted 模式下，剧本的地点、时间和“连续”标记是场景连续性先验；只有已确认的视频空间或时间变化证据可以覆盖它。',
     '2. 所有位置使用整数帧，所有范围使用 startFrame/endFrameExclusive。',
     '3. 镜头边界不等于声音边界。',
     '4. 视频模型负责对白、呼吸和与画面同步的物理动作声。不得规划生成 Foley、Spot SFX、对白或动作替代音。',
@@ -266,12 +274,14 @@ function buildChinesePrompt(input: Pick<AudioContinuityAnalysisInput, 'clock' | 
     '4. 同一物理声源在同一时空持续存在时，必须保留 sourceContinuityId、素材、Loop 播放位置和相位；只能通过自动化改变音量、频率、宽度和混响。所有 acousticTransitions.preservePlaybackPhase 必须严格为 true。',
     '5. 只有物理声源真实开始或结束、时间跳跃、地点非连续切换或环境状态真实改变时，才允许创建新声源。',
     '6. 声学过渡可提前于画面切点或延续到切点之后，但必须使用连续帧范围。',
+    '7. 只能在 sceneContinuityFacts.confirmedSceneBoundaryFrames 创建新 SoundWorld。特写、低角度、镜头切换、背景出画和地点未知都必须保留当前 SoundWorld。',
     '',
     '# 氛围 Loop 规则',
-    '1. 稳定持续环境使用 seamless_loop；雷声、人群浪涌和远处广播变化使用 ambient_event。',
-    '2. 每个 seamless_loop 必须 candidateCount=2，并给出不超过 ElevenLabs 22 秒限制的整数 targetFrames。',
-    '3. Loop 层数按场景复杂度动态决定。复杂环境优先使用不同周期的低密度层，不得把所有内容塞进一条拥挤素材。',
-    '4. generationPrompt 必须是英文，只描述中性环境声源；禁止对白、可识别语言、脚步、门、碰撞、人物动作、音乐、旋律和节奏。',
+    '1. 每个 SoundWorld 必须至少有一条 role=bed 的稳定常驻底层，完整覆盖该 SoundWorld；细节环境使用 role=detail，非周期环境事件使用 role=ambient_event。',
+    '2. 稳定持续环境使用 seamless_loop；雷声、人群浪涌和远处广播变化使用 ambient_event。',
+    '3. 每个 seamless_loop 必须 candidateCount=2，并给出不超过 ElevenLabs 22 秒限制的整数 targetFrames。',
+    '4. Loop 层数按场景复杂度动态决定。复杂环境优先使用不同周期的低密度层，不得把所有内容塞进一条拥挤素材。',
+    '5. generationPrompt 必须是英文，只描述中性环境声源；禁止对白、可识别语言、脚步、门、碰撞、人物动作、音乐、旋律和节奏。',
     '',
     '# 配乐安全规则',
     '1. narrativeDiagnosis 可保留真实剧情分析，但绝不进入音乐供应商请求。',
@@ -292,6 +302,7 @@ function buildChinesePrompt(input: Pick<AudioContinuityAnalysisInput, 'clock' | 
     '2. automationLanes 只允许 parameter=gain_db。频率、宽度和混响由代码根据 SoundWorld.perspectives 的 enclosure、distance、occlusion 确定性计算，禁止重复规划第二套参数。',
     '3. 自动化关键帧必须严格递增，并使用 smooth、linear 或 equal_power；每条 lane 必须用 postBehavior 明确最后一个值是保持还是回到中性值。',
     '4. 镜头切换本身不得触发自动化。',
+    '5. acousticTransitions 的增益、频率、宽度和混响只能由渲染器确定性实现；不得为同一 transitionId 再输出 ambience automationLane。',
     '',
     '# 输出',
     '只输出严格 JSON，不要 Markdown、解释或额外字段。所有自然语言说明使用中文；generationPrompt 使用英文。',
@@ -303,12 +314,15 @@ function buildChinesePrompt(input: Pick<AudioContinuityAnalysisInput, 'clock' | 
     '# 锁定媒体时间轴',
     json(input.clips),
     '',
+    '# 已确认场景连续性事实',
+    json(input.sceneContinuityFacts),
+    '',
     '# 剧情语义',
     json(input.narrativeContext),
   ].join('\n')
 }
 
-function buildEnglishPrompt(input: Pick<AudioContinuityAnalysisInput, 'clock' | 'clips' | 'narrativeContext'>): string {
+function buildEnglishPrompt(input: Pick<AudioContinuityAnalysisInput, 'clock' | 'clips' | 'narrativeContext' | 'sceneContinuityFacts'>): string {
   return [
     '# Role',
     'You are a supervising sound editor, acoustic continuity designer, and film-score planner.',
@@ -317,7 +331,7 @@ function buildEnglishPrompt(input: Pick<AudioContinuityAnalysisInput, 'clock' | 
     'Build one global AudioContinuityPlanV2 from the locked frame timeline, final media clip facts, and narrative context. Plan only; do not generate audio.',
     '',
     '# Authority and ownership',
-    '1. The locked frame timeline is the only timing authority. Use integer frames and startFrame/endFrameExclusive ranges.',
+    '1. The locked frame timeline is the only timing authority. Use integer frames and startFrame/endFrameExclusive ranges. In script-assisted mode, screenplay place, time, and continuity are scene priors; only confirmed visual spatial or temporal change evidence may override them.',
     '2. Shot boundaries are not sound boundaries.',
     '3. The video model owns dialogue, breathing, and synchronized physical action sounds. Never plan generated Foley, Spot SFX, dialogue, or replacement action sound.',
     '4. ElevenLabs owns ambience only. Lyria owns score only.',
@@ -328,12 +342,14 @@ function buildEnglishPrompt(input: Pick<AudioContinuityAnalysisInput, 'clock' | 
     '3. Analyze transitions in every direction: interior/exterior, room/room, vehicle cabin/exterior, open/enclosed, near/far, increasing/decreasing occlusion, portal opening/closing, and direction changes.',
     '4. If the same physical source persists in the same spacetime, preserve sourceContinuityId, asset identity, loop playback position, and phase. Every acousticTransitions.preservePlaybackPhase value must be exactly true. Express perspective changes only with continuous automation.',
     '5. Create a new source only when the physical source starts or ends, time jumps, location changes discontinuously, or the environment truly changes.',
+    '6. Create a new SoundWorld only at sceneContinuityFacts.confirmedSceneBoundaryFrames. Close-ups, low angles, camera cuts, missing backgrounds, and unknown locations preserve the current SoundWorld.',
     '',
     '# Ambience loops',
-    '1. Use seamless_loop for stable beds and ambient_event for non-periodic environmental events.',
-    '2. Every seamless loop has candidateCount 2 and an integer targetFrames within the ElevenLabs 22-second limit.',
-    '3. Use a dynamic number of sparse layers with different periods for complex worlds.',
-    '4. generationPrompt must be English environmental-only text with no dialogue, identifiable speech, footsteps, doors, impacts, character actions, music, melody, or rhythm.',
+    '1. Every SoundWorld must contain at least one role=bed source spanning its complete range. Use role=detail for environmental detail and role=ambient_event for non-periodic environmental events.',
+    '2. Use seamless_loop for stable beds and ambient_event for non-periodic environmental events.',
+    '3. Every seamless loop has candidateCount 2 and an integer targetFrames within the ElevenLabs 22-second limit.',
+    '4. Use a dynamic number of sparse layers with different periods for complex worlds.',
+    '5. generationPrompt must be English environmental-only text with no dialogue, identifiable speech, footsteps, doors, impacts, character actions, music, melody, or rhythm.',
     '',
     '# Score safety',
     '1. narrativeDiagnosis is internal and never reaches the music provider.',
@@ -350,6 +366,7 @@ function buildEnglishPrompt(input: Pick<AudioContinuityAnalysisInput, 'clock' | 
     '',
     '# Automation',
     'Never output rectangular mute windows or instantaneous steps. automationLanes may only use parameter=gain_db. Frequency response, width, and reverb are deterministically derived in code from SoundWorld perspective enclosure, distance, and occlusion. Keyframes are strictly increasing, every lane explicitly declares postBehavior, and shot cuts alone create no automation.',
+    'The renderer is the sole authority for acousticTransition gain, frequency, width, and reverb. Never output an ambience automationLane whose sourceEventId repeats an acoustic transitionId.',
     '',
     '# Output',
     'Return strict JSON only with no markdown, explanation, or extra fields.',
@@ -361,24 +378,34 @@ function buildEnglishPrompt(input: Pick<AudioContinuityAnalysisInput, 'clock' | 
     '# Locked media timeline',
     json(input.clips),
     '',
+    '# Confirmed scene continuity facts',
+    json(input.sceneContinuityFacts),
+    '',
     '# Narrative context',
     json(input.narrativeContext),
   ].join('\n')
 }
 
 export function buildAudioContinuityPrompt(
-  input: Pick<AudioContinuityAnalysisInput, 'clock' | 'clips' | 'narrativeContext' | 'locale'>,
+  input: Pick<AudioContinuityAnalysisInput, 'clock' | 'clips' | 'narrativeContext' | 'sceneContinuityFacts' | 'locale'>,
 ): string {
   return input.locale === 'zh' ? buildChinesePrompt(input) : buildEnglishPrompt(input)
 }
 
-export function parseAudioContinuityPlan(text: string): AudioContinuityPlan {
+export function parseAudioContinuityPlan(
+  text: string,
+  sceneContinuityFacts: VisualContinuityFacts,
+): AudioContinuityPlan {
   const parsedJson = safeParseJsonObject(text)
   const parsed = audioContinuityPlanSchema.safeParse(parsedJson)
   if (!parsed.success) {
     const messages = parsed.error.issues.map((issue) => `${issue.path.join('.')}:${issue.message}`).join(',')
     throw new Error(`AUDIO_CONTINUITY_PLAN_INVALID:${messages}`)
   }
+  assertSoundWorldBoundariesMatchVisualFacts({
+    soundWorldStartFrames: parsed.data.soundWorlds.map((world) => world.range.startFrame),
+    facts: sceneContinuityFacts,
+  })
   return parsed.data
 }
 
@@ -400,5 +427,5 @@ export async function analyzeAudioContinuity(input: AudioContinuityAnalysisInput
       stepTotal: 1,
     },
   })
-  return parseAudioContinuityPlan(completion.text)
+  return parseAudioContinuityPlan(completion.text, input.sceneContinuityFacts)
 }
