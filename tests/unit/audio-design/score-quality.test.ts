@@ -24,12 +24,16 @@ describe('score candidate structural quality', () => {
       samples: sineCandidate({ seconds: 10, sampleRate: 48_000, amplitude: 0.2 }),
       sampleRate: 48_000,
       expectedDurationSeconds: 10,
+      sourceDurationSeconds: 10,
+      durationConformanceRatio: 1,
       spec,
     })
     const clipped = analyzeScoreCandidate({
       samples: sineCandidate({ seconds: 10, sampleRate: 48_000, amplitude: 1, clipped: true }),
       sampleRate: 48_000,
       expectedDurationSeconds: 10,
+      sourceDurationSeconds: 10,
+      durationConformanceRatio: 1,
       spec,
     })
 
@@ -40,6 +44,9 @@ describe('score candidate structural quality', () => {
 
   it('fails explicitly when neither candidate passes technical quality', () => {
     const failed = {
+      actualDurationSeconds: 10,
+      sourceDurationSeconds: 10,
+      durationConformanceRatio: 1,
       peakAmplitude: 0,
       rmsAmplitude: 0,
       clippingRatio: 0,

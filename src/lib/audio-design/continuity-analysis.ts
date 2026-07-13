@@ -1,6 +1,7 @@
 import { executeAiTextStep } from '@/lib/ai-exec/engine'
 import type { AiPromptLocale } from '@/lib/ai-prompts'
 import { safeParseJsonObject } from '@/lib/json-repair'
+import { AMBIENCE_FORBIDDEN_ACTION_TERMS } from './ambience-prompt-policy'
 import {
   ACOUSTIC_DISTANCE_VALUES,
   ACOUSTIC_ENCLOSURE_VALUES,
@@ -18,6 +19,7 @@ import {
   SCORE_INSTRUMENT_VALUES,
   SCORE_INTERVAL_RELATION_VALUES,
   SCORE_METRIC_SALIENCE_VALUES,
+  SCORE_ORCHESTRATION_ROLE_VALUES,
   SCORE_PHASE_FUNCTION_VALUES,
   SCORE_PITCH_CENTER_VALUES,
   SCORE_PITCH_COLLECTION_VALUES,
@@ -200,9 +202,11 @@ function strictEnumContract(clock: TimelineClock): string {
     },
     acousticTransition: {
       transitionType: ACOUSTIC_TRANSITION_TYPE_VALUES,
+      preservePlaybackPhase: [true],
     },
     ambienceSource: {
       playbackType: AMBIENCE_PLAYBACK_TYPE_VALUES,
+      forbiddenPositiveActionTerms: AMBIENCE_FORBIDDEN_ACTION_TERMS,
     },
     narrativeDiagnosis: {
       scoringStance: SCORE_SCORING_STANCE_VALUES,
@@ -220,6 +224,7 @@ function strictEnumContract(clock: TimelineClock): string {
       density: SCORE_DENSITY_VALUES,
       registers: SCORE_REGISTER_VALUES,
       instruments: SCORE_INSTRUMENT_VALUES,
+      orchestrationRoles: SCORE_ORCHESTRATION_ROLE_VALUES,
       techniques: SCORE_TECHNIQUE_VALUES,
       metricSalience: SCORE_METRIC_SALIENCE_VALUES,
       eventSpacing: SCORE_EVENT_SPACING_VALUES,
@@ -258,7 +263,7 @@ function buildChinesePrompt(input: Pick<AudioContinuityAnalysisInput, 'clock' | 
     '1. 根据地点、时间、天气、持续声源和叙事连续性建立 SoundWorld。',
     '2. 必须区分声源连续性、声学区域和声学视角。',
     '3. 分析所有方向的空间变化：室内与室外双向、房间之间、车辆内外双向、开放与封闭双向、接近与远离、遮挡增加与减少、门窗开关和方向变化。',
-    '4. 同一物理声源在同一时空持续存在时，必须保留 sourceContinuityId、素材、Loop 播放位置和相位；只能通过自动化改变音量、频率、宽度和混响。',
+    '4. 同一物理声源在同一时空持续存在时，必须保留 sourceContinuityId、素材、Loop 播放位置和相位；只能通过自动化改变音量、频率、宽度和混响。所有 acousticTransitions.preservePlaybackPhase 必须严格为 true。',
     '5. 只有物理声源真实开始或结束、时间跳跃、地点非连续切换或环境状态真实改变时，才允许创建新声源。',
     '6. 声学过渡可提前于画面切点或延续到切点之后，但必须使用连续帧范围。',
     '',
@@ -321,7 +326,7 @@ function buildEnglishPrompt(input: Pick<AudioContinuityAnalysisInput, 'clock' | 
     '1. Build SoundWorlds from place, time, weather, persistent physical sources, and narrative continuity.',
     '2. Separate source continuity, acoustic zone, and acoustic perspective.',
     '3. Analyze transitions in every direction: interior/exterior, room/room, vehicle cabin/exterior, open/enclosed, near/far, increasing/decreasing occlusion, portal opening/closing, and direction changes.',
-    '4. If the same physical source persists in the same spacetime, preserve sourceContinuityId, asset identity, loop playback position, and phase. Express perspective changes only with continuous automation.',
+    '4. If the same physical source persists in the same spacetime, preserve sourceContinuityId, asset identity, loop playback position, and phase. Every acousticTransitions.preservePlaybackPhase value must be exactly true. Express perspective changes only with continuous automation.',
     '5. Create a new source only when the physical source starts or ends, time jumps, location changes discontinuously, or the environment truly changes.',
     '',
     '# Ambience loops',

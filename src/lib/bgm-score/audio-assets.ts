@@ -10,7 +10,7 @@ import {
 } from '@/lib/audio-design/ambience-loop'
 import { framesToSeconds, type AmbienceSource, type AudioTimelineV2 } from '@/lib/audio-design/types'
 import { ensureMediaObjectFromStorageKey } from '@/lib/media/service'
-import { generateUniqueKey, toFetchableUrl, uploadObject } from '@/lib/storage'
+import { generateUniqueKey, getObjectBuffer, toFetchableUrl, uploadObject } from '@/lib/storage'
 import type { AmbienceAsset, BgmScoreMix } from './types'
 
 export type GeneratedAudioBuffer = {
@@ -115,12 +115,16 @@ export async function generateAmbienceAssets(input: {
   const assets: AmbienceAsset[] = [...input.reusableAssets]
   for (const source of input.timeline.ambienceSources) {
     const reusable = assets.filter((asset) => asset.sourceId === source.sourceId)
+    if (new Set(reusable.map((asset) => asset.candidateIndex)).size !== reusable.length) {
+      throw new Error(`AUDIO_AMBIENCE_DUPLICATE_CANDIDATE_INDEX:${source.sourceId}`)
+    }
     if (reusable.length === 2 && reusable.filter((asset) => asset.selected).length === 1) continue
 
     const durationSeconds = ambienceDurationSeconds(source, input.timeline)
-    const candidates: AmbienceAsset[] = []
-    const measurements: ReturnType<typeof measureAmbienceLoopBoundary>[] = []
+    const candidates: AmbienceAsset[] = reusable.map((candidate) => ({ ...candidate, selected: false }))
+    const measurements = new Map<number, ReturnType<typeof measureAmbienceLoopBoundary>>()
     for (let candidateIndex = 0; candidateIndex < 2; candidateIndex += 1) {
+      if (candidates.some((candidate) => candidate.candidateIndex === candidateIndex)) continue
       const generated = await generateAudioStem({
         role: 'ambience',
         userId: input.userId,
@@ -149,9 +153,9 @@ export async function generateAmbienceAssets(input: {
         sampleRate: input.timeline.clock.sampleRate,
         ...(analysisWindowSeconds ? { analysisWindowSeconds: Math.min(1, analysisWindowSeconds) } : {}),
       })
-      measurements.push(measurement)
+      measurements.set(candidateIndex, measurement)
       const uploaded = await uploadGeneratedAudio({ audio, durationSeconds, prefix: 'audio/ambience' })
-      candidates.push({
+      const candidate: AmbienceAsset = {
         ...uploaded,
         sourceId: source.sourceId,
         candidateIndex,
@@ -161,13 +165,42 @@ export async function generateAmbienceAssets(input: {
         crossfadeFrames: source.loopPolicy?.crossfadeFrames ?? 0,
         phaseOffsetFrames: source.loopPolicy?.phaseOffsetFrames ?? 0,
         boundaryScore: measurement.boundaryScore,
-      })
+      }
+      candidates.push(candidate)
+      for (let index = assets.length - 1; index >= 0; index -= 1) {
+        const asset = assets[index]
+        if (asset?.sourceId === source.sourceId && asset.candidateIndex === candidateIndex) assets.splice(index, 1)
+      }
+      assets.push(candidate)
+      await input.onProgress(assets)
     }
-    const selectedIndex = selectBestAmbienceLoopCandidate(candidates)
-    const selectedMeasurement = measurements[selectedIndex]
-    if (!selectedMeasurement) throw new Error('AUDIO_AMBIENCE_LOOP_SELECTED_MEASUREMENT_MISSING')
-    if (source.playbackType === 'seamless_loop') assertAmbienceLoopBoundaryQuality(selectedMeasurement)
-    const selectedCandidates = candidates.map((candidate, index) => ({
+    const orderedCandidates = [...candidates].sort((a, b) => a.candidateIndex - b.candidateIndex)
+    const selectedIndex = selectBestAmbienceLoopCandidate(orderedCandidates)
+    const selectedCandidate = orderedCandidates[selectedIndex]
+    if (!selectedCandidate) throw new Error('AUDIO_AMBIENCE_LOOP_SELECTED_CANDIDATE_MISSING')
+    if (source.playbackType === 'seamless_loop') {
+      let selectedMeasurement = measurements.get(selectedCandidate.candidateIndex)
+      if (!selectedMeasurement) {
+        const samples = await decodeMonoFloat32({
+          workspaceDir: input.workspaceDir,
+          fileName: `${source.sourceId}-${selectedCandidate.candidateIndex}-resume`,
+          audio: {
+            buffer: await getObjectBuffer(selectedCandidate.storageKey),
+            mimeType: selectedCandidate.mimeType,
+          },
+        })
+        const analysisWindowSeconds = source.loopPolicy
+          ? framesToSeconds(source.loopPolicy.crossfadeFrames, input.timeline.clock)
+          : undefined
+        selectedMeasurement = measureAmbienceLoopBoundary({
+          samples,
+          sampleRate: input.timeline.clock.sampleRate,
+          ...(analysisWindowSeconds ? { analysisWindowSeconds: Math.min(1, analysisWindowSeconds) } : {}),
+        })
+      }
+      assertAmbienceLoopBoundaryQuality(selectedMeasurement)
+    }
+    const selectedCandidates = orderedCandidates.map((candidate, index) => ({
       ...candidate,
       selected: index === selectedIndex,
     }))

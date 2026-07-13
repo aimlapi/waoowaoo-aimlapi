@@ -242,12 +242,16 @@ export function resolveFinalRenderDimensions(videoRatio: string | null | undefin
 }
 
 export function selectFinalRenderMusicDurationSeconds(modelKey: string, targetDurationSeconds: number): number {
+  if (!Number.isFinite(targetDurationSeconds) || targetDurationSeconds <= 0 || targetDurationSeconds > 180) {
+    throw new Error(`FINAL_RENDER_MUSIC_DURATION_UNSUPPORTED:${targetDurationSeconds}`)
+  }
+  if (modelKey.includes('fal-ai/lyria3/pro')) return targetDurationSeconds
   const target = Math.max(1, Math.ceil(targetDurationSeconds))
   if (modelKey.includes('lyria-3-clip-preview')) return 30
   for (const duration of LYRIA_PRO_DURATIONS) {
     if (target <= duration) return duration
   }
-  return LYRIA_PRO_DURATIONS[LYRIA_PRO_DURATIONS.length - 1]
+  throw new Error(`FINAL_RENDER_MUSIC_DURATION_UNSUPPORTED:${targetDurationSeconds}`)
 }
 
 export function parseFinalRenderEditScriptShots(value: unknown): readonly FinalRenderEditShot[] {

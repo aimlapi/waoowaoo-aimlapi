@@ -132,6 +132,9 @@ export const ambienceAssetSchema = z.object({
 export type AmbienceAsset = z.infer<typeof ambienceAssetSchema>
 
 export const scoreCandidateQualitySchema = z.object({
+  actualDurationSeconds: z.number().positive(),
+  sourceDurationSeconds: z.number().positive(),
+  durationConformanceRatio: z.number().positive(),
   peakAmplitude: z.number().min(0),
   rmsAmplitude: z.number().min(0),
   clippingRatio: z.number().min(0).max(1),

@@ -1,4 +1,5 @@
 import { z } from 'zod'
+import { findAmbiencePromptPolicyViolation } from './ambience-prompt-policy'
 
 export const AUDIO_TIMELINE_SCHEMA_VERSION = 3 as const
 export const AUDIO_SAMPLE_RATE = 48_000 as const
@@ -158,6 +159,14 @@ export const ambienceSourceSchema = z.object({
   promptInfluence: z.number().min(0).max(1),
   loopPolicy: ambienceLoopPolicySchema.optional().nullable(),
 }).superRefine((source, ctx) => {
+  const promptViolation = findAmbiencePromptPolicyViolation(source.generationPrompt)
+  if (promptViolation) {
+    ctx.addIssue({
+      code: z.ZodIssueCode.custom,
+      path: ['generationPrompt'],
+      message: `AUDIO_AMBIENCE_PROMPT_ACTION_SOUND_FORBIDDEN:${promptViolation}`,
+    })
+  }
   if (source.playbackType === 'seamless_loop' && !source.loopPolicy) {
     ctx.addIssue({
       code: z.ZodIssueCode.custom,
@@ -211,6 +220,14 @@ export const SCORE_INSTRUMENT_VALUES = [
   'controlled_broadband_noise',
   'soft_mallets',
   'frame_drum',
+] as const
+export const SCORE_ORCHESTRATION_ROLE_VALUES = [
+  'foundation',
+  'mass',
+  'motion',
+  'partial',
+  'resonance',
+  'pulse',
 ] as const
 export const scoreDensitySchema = z.enum(SCORE_DENSITY_VALUES)
 export const scoreRegisterSchema = z.enum(SCORE_REGISTER_VALUES)
@@ -353,7 +370,7 @@ export const musicTheorySpecV2Schema = z.object({
   orchestration: z.array(z.object({
     instrument: scoreInstrumentSchema,
     register: scoreRegisterSchema,
-    role: z.enum(['foundation', 'mass', 'motion', 'partial', 'resonance', 'pulse']),
+    role: z.enum(SCORE_ORCHESTRATION_ROLE_VALUES),
     techniques: z.array(z.enum(SCORE_TECHNIQUE_VALUES)).min(1),
   })).min(1).max(16),
   dynamics: z.object({

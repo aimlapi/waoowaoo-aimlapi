@@ -15,8 +15,10 @@ describe('music-theory provider prompt regressions', () => {
 
     expect(output.prompt).toContain('weakened pitch field')
     expect(output.prompt).toContain('no cadence')
-    expect(output.negativePrompt).toContain('cathartic climax or redemptive release')
-    expect(`${output.prompt} ${output.negativePrompt}`).not.toMatch(/horror|terror|violent|blood/i)
+    expect(output.negativePrompt).toContain('global energy apex followed by consonant tonal stabilization')
+    expect(`${output.prompt} ${output.negativePrompt}`).not.toMatch(
+      /horror|terror|violent|blood|heroic|triumphant|victory|romantic|cathartic|redemptive|trailer|physical action/i,
+    )
   })
 
   it('compiles restrained mutual affection into incomplete musical resolution', () => {
@@ -65,7 +67,7 @@ describe('music-theory provider prompt regressions', () => {
     })
 
     expect(output.prompt).toContain('explicit metric salience')
-    expect(output.negativePrompt).toContain('triumphant or victory-coded rhythm')
+    expect(output.negativePrompt).toContain('major-mode cadential arrival with metrically reinforced pulse')
     expect(output.prompt).not.toMatch(/action|adventure|exciting/i)
   })
 

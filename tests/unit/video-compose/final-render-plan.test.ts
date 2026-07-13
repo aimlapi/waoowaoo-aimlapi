@@ -160,8 +160,9 @@ describe('final render plan', () => {
   it('selects supported Lyria durations without exceeding Pro limits', () => {
     expect(selectFinalRenderMusicDurationSeconds('google::lyria-3-clip-preview', 118)).toBe(30)
     expect(selectFinalRenderMusicDurationSeconds('google::lyria-3-pro-preview', 31)).toBe(60)
-    expect(selectFinalRenderMusicDurationSeconds('fal::fal-ai/lyria3/pro', 121)).toBe(180)
-    expect(selectFinalRenderMusicDurationSeconds('google::lyria-3-pro-preview', 181)).toBe(180)
+    expect(selectFinalRenderMusicDurationSeconds('fal::fal-ai/lyria3/pro', 121.25)).toBe(121.25)
+    expect(() => selectFinalRenderMusicDurationSeconds('google::lyria-3-pro-preview', 181))
+      .toThrow('FINAL_RENDER_MUSIC_DURATION_UNSUPPORTED:181')
   })
 
   it('writes a music prompt from shot emotions, rhythm, structure, and instrumentation', () => {

@@ -6,20 +6,20 @@ import {
 } from './types'
 
 const PROHIBITION_LABELS: Record<MusicTheorySpecV2['prohibitions'][number], string> = {
-  vocals: 'vocals',
-  lyrics: 'lyrics',
-  spoken_word: 'spoken word or dialogue',
-  literal_sound_effects: 'literal sound effects or physical action sounds',
-  environmental_recordings: 'environmental field recordings',
+  vocals: 'pitched vocal timbres',
+  lyrics: 'lyrical phoneme sequences',
+  spoken_word: 'speech-rate prosody and intelligible vocal articulation',
+  literal_sound_effects: 'non-pitched concrete-source transients',
+  environmental_recordings: 'non-musical broadband noise beds',
   functional_dominant_tonic: 'functional dominant-tonic syntax',
-  authentic_cadence: 'authentic cadences or tonal confirmation',
-  heroic_brass: 'heroic or fanfare-like brass writing',
-  triumphant_rhythm: 'triumphant or victory-coded rhythm',
-  romantic_swell: 'romantic string swells',
-  cathartic_climax: 'cathartic climax or redemptive release',
-  trailer_impacts: 'trailer impacts or orchestral hits',
-  stable_groove: 'stable groove or dance-like beat',
-  periodic_phrase_cycle: 'periodic phrase cycles or symmetrical repetition',
+  authentic_cadence: 'dominant-tonic authentic cadence and tonal confirmation',
+  heroic_brass: 'foreground brass fanfare intervals and parallel triadic voicing',
+  triumphant_rhythm: 'major-mode cadential arrival with metrically reinforced pulse',
+  romantic_swell: 'foreground legato string melody with consonant resolution',
+  cathartic_climax: 'global energy apex followed by consonant tonal stabilization',
+  trailer_impacts: 'isolated broadband orchestral transients and low-frequency accent punctuation',
+  stable_groove: 'isochronous groove and periodic beat reinforcement',
+  periodic_phrase_cycle: 'symmetrical phrase recurrence and periodic sectional repetition',
 }
 
 const LYRIA_FORBIDDEN_NARRATIVE_TERMS = [

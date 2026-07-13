@@ -390,7 +390,7 @@ export function resolveFalOptionSchema(modality: MediaModality, modelId: string)
       return buildMediaOptionSchema('music', {
         validators: {
           negativePrompt: nonEmptyStringValidator(),
-          durationSeconds: integerRangeValidator({ min: 1, max: 180 }),
+          durationSeconds: numberRangeValidator({ min: 1, max: 180 }),
           vocalMode: enumValidator(['instrumental', 'vocal']),
           genre: nonEmptyStringValidator(),
           mood: nonEmptyStringValidator(),

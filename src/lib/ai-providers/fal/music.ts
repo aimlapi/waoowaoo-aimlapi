@@ -8,6 +8,8 @@ type FalMusicOptions = NonNullable<AiProviderMusicExecutionContext['options']>
 
 interface FalMusicSubmitResponse {
   request_id?: unknown
+  status_url?: unknown
+  response_url?: unknown
 }
 
 interface FalMusicStatusResponse {
@@ -24,6 +26,12 @@ interface FalMusicResultResponse {
 interface FalMusicFile {
   url?: unknown
   content_type?: unknown
+}
+
+interface FalMusicQueueRequest {
+  readonly requestId: string
+  readonly statusUrl: string
+  readonly responseUrl: string
 }
 
 const FAL_MUSIC_DEFAULT_TIMEOUT_MS = 10 * 60 * 1000
@@ -87,7 +95,7 @@ function readFalMusicResultAudio(response: FalMusicResultResponse): {
   }
 }
 
-async function submitFalMusic(endpoint: string, apiKey: string, payload: Record<string, unknown>): Promise<string> {
+async function submitFalMusic(endpoint: string, apiKey: string, payload: Record<string, unknown>): Promise<FalMusicQueueRequest> {
   const response = await fetch(buildFalQueueUrl(endpoint), {
     method: 'POST',
     headers: {
@@ -106,11 +114,15 @@ async function submitFalMusic(endpoint: string, apiKey: string, payload: Record<
   const data = await response.json() as FalMusicSubmitResponse
   const requestId = readTrimmedString(data.request_id)
   if (!requestId) throw new Error('FAL_MUSIC_REQUEST_ID_MISSING')
-  return requestId
+  const statusUrl = readTrimmedString(data.status_url)
+  if (!statusUrl) throw new Error('FAL_MUSIC_STATUS_URL_MISSING')
+  const responseUrl = readTrimmedString(data.response_url)
+  if (!responseUrl) throw new Error('FAL_MUSIC_RESPONSE_URL_MISSING')
+  return { requestId, statusUrl, responseUrl }
 }
 
-async function fetchFalMusicResult(endpoint: string, requestId: string, apiKey: string, resultUrl?: string): Promise<GenerateResult> {
-  const response = await fetch(resultUrl || buildFalQueueUrl(`${endpoint}/requests/${requestId}`), {
+async function fetchFalMusicResult(endpoint: string, request: FalMusicQueueRequest, apiKey: string): Promise<GenerateResult> {
+  const response = await fetch(request.responseUrl, {
     method: 'GET',
     headers: {
       Authorization: `Key ${apiKey}`,
@@ -134,19 +146,19 @@ async function fetchFalMusicResult(endpoint: string, requestId: string, apiKey: 
     audioMimeType: audio.audioMimeType || 'audio/mpeg',
     metadata: {
       model: endpoint,
-      requestId,
+      requestId: request.requestId,
       ...(lyrics ? { lyrics } : {}),
     },
   }
 }
 
-async function waitForFalMusicResult(endpoint: string, requestId: string, apiKey: string): Promise<GenerateResult> {
+async function waitForFalMusicResult(endpoint: string, request: FalMusicQueueRequest, apiKey: string): Promise<GenerateResult> {
   const timeoutMs = readEnvPositiveInteger('FAL_MUSIC_TIMEOUT_MS', FAL_MUSIC_DEFAULT_TIMEOUT_MS)
   const intervalMs = readEnvPositiveInteger('FAL_MUSIC_POLL_MS', FAL_MUSIC_DEFAULT_POLL_MS)
   const startAt = Date.now()
 
   while (Date.now() - startAt <= timeoutMs) {
-    const statusResponse = await fetch(buildFalQueueUrl(`${endpoint}/requests/${requestId}/status?logs=0`), {
+    const statusResponse = await fetch(request.statusUrl, {
       method: 'GET',
       headers: {
         Authorization: `Key ${apiKey}`,
@@ -162,8 +174,7 @@ async function waitForFalMusicResult(endpoint: string, requestId: string, apiKey
     const data = await statusResponse.json() as FalMusicStatusResponse
     const status = data.status
     if (status === 'COMPLETED') {
-      const resultUrl = readTrimmedString(data.response_url)
-      return await fetchFalMusicResult(endpoint, requestId, apiKey, resultUrl || undefined)
+      return await fetchFalMusicResult(endpoint, request, apiKey)
     }
     if (status === 'FAILED') {
       const error = readTrimmedString(data.error) || 'FAL music task failed'
@@ -173,7 +184,7 @@ async function waitForFalMusicResult(endpoint: string, requestId: string, apiKey
     await sleep(intervalMs)
   }
 
-  throw new Error(`FAL_MUSIC_TIMEOUT:${requestId}`)
+  throw new Error(`FAL_MUSIC_TIMEOUT:${request.requestId}`)
 }
 
 export async function executeFalMusicGeneration(input: AiProviderMusicExecutionContext): Promise<GenerateResult> {
@@ -188,9 +199,9 @@ export async function executeFalMusicGeneration(input: AiProviderMusicExecutionC
   if (!prompt.trim()) throw new Error('FAL_MUSIC_PROMPT_REQUIRED')
   const negativePrompt = readTrimmedString(options.negativePrompt)
 
-  const requestId = await submitFalMusic(modelId, apiKey, {
+  const request = await submitFalMusic(modelId, apiKey, {
     prompt,
     ...(negativePrompt ? { negative_prompt: negativePrompt } : {}),
   })
-  return await waitForFalMusicResult(modelId, requestId, apiKey)
+  return await waitForFalMusicResult(modelId, request, apiKey)
 }

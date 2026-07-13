@@ -89,6 +89,8 @@ export function analyzeScoreCandidate(input: {
   readonly samples: Float32Array
   readonly sampleRate: number
   readonly expectedDurationSeconds: number
+  readonly sourceDurationSeconds: number
+  readonly durationConformanceRatio: number
   readonly spec: MusicTheorySpecV2
 }): ScoreCandidateQuality {
   if (!Number.isInteger(input.sampleRate) || input.sampleRate <= 0) {
@@ -116,7 +118,8 @@ export function analyzeScoreCandidate(input: {
   const transientRate = transientCount / Math.max(1, actualDurationSeconds)
   const repetitionScore = measureRepetition(envelope, input.sampleRate)
   const structureError = measureStructureError(envelope, input.spec)
-  const durationError = Math.abs(actualDurationSeconds - input.expectedDurationSeconds) / input.expectedDurationSeconds
+  const durationErrorSeconds = Math.abs(actualDurationSeconds - input.expectedDurationSeconds)
+  const durationError = durationErrorSeconds / input.expectedDurationSeconds
   const transientError = Math.min(1, Math.abs(transientRate - targetTransientRate(input.spec.dynamics.transientPolicy)) / 4)
   const periodicPenalty = input.spec.prohibitions.includes('periodic_phrase_cycle')
     ? Math.max(0, repetitionScore - 0.8)
@@ -133,9 +136,12 @@ export function analyzeScoreCandidate(input: {
   const passed = peakAmplitude >= 0.01
     && clippingRatio <= 0.01
     && silenceRatio <= 0.5
-    && durationError <= 0.15
+    && durationErrorSeconds <= 0.001
 
   return {
+    actualDurationSeconds,
+    sourceDurationSeconds: input.sourceDurationSeconds,
+    durationConformanceRatio: input.durationConformanceRatio,
     peakAmplitude,
     rmsAmplitude,
     clippingRatio,

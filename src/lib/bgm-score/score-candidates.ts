@@ -1,6 +1,7 @@
 import { generateMusic } from '@/lib/ai-exec/engine'
 import { analyzeScoreCandidate, selectScoreCandidate } from '@/lib/audio-design/score-quality'
-import type { MusicTheorySpecV2 } from '@/lib/audio-design/types'
+import { AUDIO_SAMPLE_RATE, type MusicTheorySpecV2 } from '@/lib/audio-design/types'
+import { conformScoreDuration } from '@/lib/audio-design/score-duration'
 import {
   decodeMonoFloat32,
   loadGeneratedAudioBuffer,
@@ -41,19 +42,33 @@ export async function generateScoreCandidates(input: {
       audioUrl: generated.audioUrl,
       mimeType: generated.audioMimeType,
     })
+    const sourceSamples = await decodeMonoFloat32({
+      workspaceDir: input.workspaceDir,
+      fileName: `score-candidate-${candidateIndex}-source`,
+      audio,
+    })
+    const conformed = await conformScoreDuration({
+      audio,
+      workspaceDir: input.workspaceDir,
+      fileName: `score-candidate-${candidateIndex}`,
+      sourceDurationSeconds: sourceSamples.length / AUDIO_SAMPLE_RATE,
+      targetDurationSeconds: input.timelineDurationSeconds,
+    })
     const samples = await decodeMonoFloat32({
       workspaceDir: input.workspaceDir,
       fileName: `score-candidate-${candidateIndex}`,
-      audio,
+      audio: conformed.audio,
     })
     const quality = analyzeScoreCandidate({
       samples,
-      sampleRate: 48_000,
-      expectedDurationSeconds: input.providerDurationSeconds,
+      sampleRate: AUDIO_SAMPLE_RATE,
+      expectedDurationSeconds: input.timelineDurationSeconds,
+      sourceDurationSeconds: conformed.conformance.sourceDurationSeconds,
+      durationConformanceRatio: conformed.conformance.tempoRatio,
       spec: input.spec,
     })
     const uploaded = await uploadGeneratedAudio({
-      audio,
+      audio: conformed.audio,
       durationSeconds: input.timelineDurationSeconds,
       prefix: 'music/bgm-score-candidate',
     })
