@@ -48,8 +48,3 @@ export function parseApiErrorPayload(payload: unknown): ParsedApiErrorPayload {
     requestId: readString(details?.requestId) || readString(source.requestId),
   }
 }
-
-export function isInsufficientBalanceApiError(payload: unknown, status?: number): boolean {
-  const parsed = parseApiErrorPayload(payload)
-  return status === 402 || parsed.code === 'INSUFFICIENT_BALANCE'
-}

@@ -139,7 +139,7 @@ interface AuthEpisodeLike {
 /**
  * 基础 projectData 类型
  */
-export interface NovelDataBase {
+interface NovelDataBase {
     id: string
     [key: string]: unknown
 }
@@ -147,7 +147,7 @@ export interface NovelDataBase {
 /**
  * 根据 include 选项推断的 projectData 类型
  */
-export type NovelDataWithIncludes<T extends ProjectAuthIncludes> = NovelDataBase
+type NovelDataWithIncludes<T extends ProjectAuthIncludes> = NovelDataBase
     & (T['characters'] extends true ? { characters: AuthCharacterLike[] } : Record<string, never>)
     & (T['locations'] extends true ? { locations: AuthLocationLike[] } : Record<string, never>)
     & (T['episodes'] extends true ? { episodes: AuthEpisodeLike[] } : Record<string, never>)
@@ -165,11 +165,6 @@ export interface ProjectAuthContextWithIncludes<T extends ProjectAuthIncludes = 
     }
     projectData: NovelDataWithIncludes<T>
 }
-
-/**
- * 向后兼容的类型别名
- */
-export type ProjectAuthContext = ProjectAuthContextWithIncludes<ProjectAuthIncludes>
 
 // ============================================================
 // 错误响应工具
@@ -197,24 +192,16 @@ function buildErrorResponse(code: UnifiedErrorCode, message?: string, details: R
     )
 }
 
-export function unauthorized(message = 'Unauthorized') {
+function unauthorized(message = 'Unauthorized') {
     return buildErrorResponse('UNAUTHORIZED', message)
 }
 
-export function forbidden(message = 'Forbidden') {
+function forbidden(message = 'Forbidden') {
     return buildErrorResponse('FORBIDDEN', message)
 }
 
-export function notFound(resource = 'Resource') {
+function notFound(resource = 'Resource') {
     return buildErrorResponse('NOT_FOUND', `${resource} not found`)
-}
-
-export function badRequest(message: string) {
-    return buildErrorResponse('INVALID_PARAMS', message)
-}
-
-export function serverError(message = 'Internal server error') {
-    return buildErrorResponse('INTERNAL_ERROR', message)
 }
 
 // ============================================================
@@ -225,24 +212,11 @@ export function serverError(message = 'Internal server error') {
  * 验证用户 Session
  * @returns session 或 null
  */
-export async function getAuthSession(): Promise<AuthSession | null> {
+async function getAuthSession(): Promise<AuthSession | null> {
     const internalSession = await getInternalTaskSession()
     if (internalSession) return internalSession
     const session = await getServerSession(authOptions)
     return session as AuthSession | null
-}
-
-/**
- * 要求用户登录
- * @throws 返回 401 响应
- */
-export async function requireAuth(): Promise<AuthSession> {
-    const session = await requireExistingSession()
-    if (!session) {
-        throw { response: unauthorized() }
-    }
-    bindAuthLogContext(session)
-    return session
 }
 
 /**

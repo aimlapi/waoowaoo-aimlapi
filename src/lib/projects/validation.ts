@@ -1,7 +1,7 @@
 import type { Locale } from '@/i18n/routing'
 
-export const PROJECT_NAME_MAX_LENGTH = 100
-export const PROJECT_DESCRIPTION_MAX_LENGTH = 500
+const PROJECT_NAME_MAX_LENGTH = 100
+const PROJECT_DESCRIPTION_MAX_LENGTH = 500
 
 export interface ProjectDraftInput {
   name: string

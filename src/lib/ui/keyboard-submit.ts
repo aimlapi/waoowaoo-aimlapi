@@ -8,7 +8,7 @@ export interface EnterSubmitKeyboardEvent {
   preventDefault: () => void
 }
 
-export function shouldSubmitFromEnterKey(event: EnterSubmitKeyboardEvent): boolean {
+function shouldSubmitFromEnterKey(event: EnterSubmitKeyboardEvent): boolean {
   return event.key === 'Enter'
     && !event.shiftKey
     && event.repeat !== true

@@ -1,10 +1,10 @@
-export interface ParsedSemver {
+interface ParsedSemver {
   major: number
   minor: number
   patch: number
 }
 
-export interface GithubRelease {
+interface GithubRelease {
   tagName: string
   htmlUrl: string
   name: string | null
@@ -46,7 +46,7 @@ export function normalizeSemverTag(value: string): string {
   return `${major}.${minor}.${patch}`
 }
 
-export function parseSemver(value: string): ParsedSemver {
+function parseSemver(value: string): ParsedSemver {
   const normalized = normalizeSemverTag(value)
   const [majorText, minorText, patchText] = normalized.split('.')
 
@@ -57,7 +57,7 @@ export function parseSemver(value: string): ParsedSemver {
   }
 }
 
-export function compareSemver(left: string, right: string): number {
+function compareSemver(left: string, right: string): number {
   const a = parseSemver(left)
   const b = parseSemver(right)
 

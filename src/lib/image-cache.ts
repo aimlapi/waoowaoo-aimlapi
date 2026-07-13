@@ -22,7 +22,6 @@ interface CacheEntry {
 // 缓存配置
 const CACHE_TTL_MS = 5 * 60 * 1000  // 5 分钟 TTL
 const MAX_CACHE_SIZE = 100          // 最多缓存 100 张图片
-const CLEANUP_INTERVAL_MS = 60 * 1000  // 每分钟清理一次
 
 // 全局缓存
 const imageCache = new LRUCache<string, CacheEntry>({
@@ -34,7 +33,6 @@ const imageCache = new LRUCache<string, CacheEntry>({
 // 统计信息
 let cacheHits = 0
 let cacheMisses = 0
-let totalDownloadTime = 0
 
 /**
  * 获取图片的 Base64（带缓存）
@@ -123,7 +121,6 @@ async function downloadImageAsBase64(imageUrl: string, logPrefix: string): Promi
         const contentType = response.headers.get('content-type') || 'image/png'
 
         const duration = Date.now() - startTime
-        totalDownloadTime += duration
         const sizeKB = Math.round(buffer.byteLength / 1024)
 
         _ulogInfo(`${logPrefix} ✅ 下载完成: ${sizeKB}KB, ${duration}ms`)
@@ -141,113 +138,3 @@ async function downloadImageAsBase64(imageUrl: string, logPrefix: string): Promi
         throw error
     }
 }
-
-/**
- * 批量预加载图片（并行下载，共享缓存）
- * 
- * @param imageUrls 图片 URL 列表
- * @param options 选项
- * @returns Base64 图片数组（按原顺序）
- */
-export async function preloadImagesParallel(
-    imageUrls: string[],
-    options: {
-        logPrefix?: string
-        maxConcurrency?: number
-    } = {}
-): Promise<string[]> {
-    const { logPrefix = '[批量预加载]' } = options
-
-    // 去重（支持 http URL 和本地相对路径 /api/files/...）
-    const uniqueUrls = [...new Set(imageUrls.filter(url => url && (url.startsWith('http') || url.startsWith('/'))))]
-
-    if (uniqueUrls.length === 0) {
-        return imageUrls.map(url => url?.startsWith('data:') ? url : '')
-    }
-
-    _ulogInfo(`${logPrefix} 开始预加载 ${uniqueUrls.length} 张唯一图片 (原始: ${imageUrls.length} 张)`)
-
-    const startTime = Date.now()
-
-    // 并行下载所有唯一图片
-    const downloadPromises = uniqueUrls.map(url =>
-        getImageBase64Cached(url, { logPrefix })
-    )
-
-    // 等待所有下载完成
-    const results = await Promise.allSettled(downloadPromises)
-
-    // 构建 URL -> Base64 映射
-    const urlToBase64 = new Map<string, string>()
-    results.forEach((result, index) => {
-        if (result.status === 'fulfilled') {
-            urlToBase64.set(uniqueUrls[index], result.value)
-        }
-    })
-
-    const duration = Date.now() - startTime
-    const successCount = results.filter(r => r.status === 'fulfilled').length
-    _ulogInfo(`${logPrefix} 预加载完成: ${successCount}/${uniqueUrls.length} 成功, ${duration}ms`)
-
-    // 按原顺序返回
-    return imageUrls.map(url => {
-        if (!url) return ''
-        if (url.startsWith('data:')) return url
-        return urlToBase64.get(url) || ''
-    })
-}
-
-/**
- * 清理过期缓存
- */
-function cleanupExpiredCache() {
-    const before = imageCache.size
-    imageCache.purgeStale()
-    const cleaned = before - imageCache.size
-
-    if (cleaned > 0) {
-        _ulogInfo(`[图片缓存] 清理 ${cleaned} 个过期条目，剩余 ${imageCache.size} 个`)
-    }
-}
-
-/**
- * 获取缓存统计信息
- */
-export function getImageCacheStats() {
-    const now = Date.now()
-    let validCount = 0
-    let totalSize = 0
-
-    for (const entry of imageCache.values()) {
-        if (entry.expiresAt > now) {
-            validCount++
-            totalSize += entry.size || 0
-        }
-    }
-
-    return {
-        cacheSize: imageCache.size,
-        validEntries: validCount,
-        totalSizeKB: Math.round(totalSize / 1024),
-        cacheHits,
-        cacheMisses,
-        hitRate: cacheHits + cacheMisses > 0
-            ? Math.round(cacheHits / (cacheHits + cacheMisses) * 100)
-            : 0,
-        totalDownloadTimeMs: totalDownloadTime
-    }
-}
-
-/**
- * 清空缓存
- */
-export function clearImageCache() {
-    imageCache.clear()
-    cacheHits = 0
-    cacheMisses = 0
-    totalDownloadTime = 0
-    _ulogInfo('[图片缓存] 已清空')
-}
-
-// 定期清理
-setInterval(cleanupExpiredCache, CLEANUP_INTERVAL_MS)
