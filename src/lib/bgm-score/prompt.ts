@@ -1,5 +1,8 @@
 import type { AiPromptLocale } from '@/lib/ai-prompts'
-import { buildLyriaPrompts } from '@/lib/audio-design/lyria-prompt'
+import {
+  buildLyriaPrompts,
+  type LyriaPromptPair,
+} from '@/lib/audio-design/lyria-prompt'
 import { framesToSeconds, type ScoreCue, type TimelineClock } from '@/lib/audio-design/types'
 import type { BgmScorePlan } from './types'
 
@@ -21,7 +24,11 @@ export function buildDisplayBgmPlan(input: {
     input.cue.range.endFrameExclusive - input.cue.range.startFrame,
     input.clock,
   )
-  const providerPrompts = buildLyriaPrompts({ cue: input.cue, clock: input.clock })
+  const providerPrompts = buildLyriaPrompts({
+    cue: input.cue,
+    clock: input.clock,
+    strategy: 'balanced_ensemble',
+  })
   const sections = spec.phases.map((phase) => ({
     category: localized(input.locale, '音乐结构', 'Musical structure'),
     title: humanize(phase.function),
@@ -71,11 +78,13 @@ export function buildDisplayBgmPlan(input: {
   }
 }
 
-export function buildFinalBgmMusicRequest(plan: BgmScorePlan): {
-  readonly prompt: string
-  readonly negativePrompt: string
-} {
-  const negativePrompt = plan.negativePrompt?.trim()
-  if (!negativePrompt) throw new Error('BGM_SCORE_NEGATIVE_PROMPT_REQUIRED')
-  return { prompt: plan.finalPrompt, negativePrompt }
+export function buildFinalBgmMusicRequests(input: {
+  readonly cue: ScoreCue
+  readonly clock: TimelineClock
+}): readonly LyriaPromptPair[] {
+  return input.cue.musicTheorySpec.renderStrategies.map((strategy) => buildLyriaPrompts({
+    cue: input.cue,
+    clock: input.clock,
+    strategy,
+  }))
 }

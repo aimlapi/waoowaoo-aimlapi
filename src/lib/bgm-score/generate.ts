@@ -31,7 +31,7 @@ import {
 } from '@/lib/video-compose/final-render-plan'
 import { reportTaskProgress } from '@/lib/workers/shared'
 import { generateAmbienceAssets } from './audio-assets'
-import { buildDisplayBgmPlan, buildFinalBgmMusicRequest } from './prompt'
+import { buildDisplayBgmPlan, buildFinalBgmMusicRequests } from './prompt'
 import { mergeBgmScoreProjectData, parseEditorProjectData } from './project-data'
 import { generateScoreCandidates } from './score-candidates'
 import {
@@ -318,14 +318,13 @@ export async function handleBgmScoreGenerateTask(job: Job<TaskJobData>) {
 
     await reportTaskProgress(job, 65, { stage: 'audio_score_generate' })
     const outputFormat = readOutputFormat(payload.outputFormat)
-    const musicRequest = buildFinalBgmMusicRequest(plan)
     const scoreCue = timelineAudio.scoreCues[0]
     if (!scoreCue) throw new Error('BGM_SCORE_CONTINUOUS_CUE_REQUIRED')
+    const musicRequests = buildFinalBgmMusicRequests({ cue: scoreCue, clock: timelineAudio.clock })
     const generatedScore = await generateScoreCandidates({
       userId: job.data.userId,
       musicModel,
-      prompt: musicRequest.prompt,
-      negativePrompt: musicRequest.negativePrompt,
+      requests: musicRequests,
       providerDurationSeconds: selectFinalRenderMusicDurationSeconds(musicModel, durationSeconds),
       timelineDurationSeconds: durationSeconds,
       bpm: scoreCue.musicTheorySpec.bpm,

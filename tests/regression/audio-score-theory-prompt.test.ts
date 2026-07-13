@@ -1,11 +1,15 @@
 import { describe, expect, it } from 'vitest'
 import { buildLyriaPrompts } from '@/lib/audio-design/lyria-prompt'
-import type { MusicTheorySpecV2 } from '@/lib/audio-design/types'
+import type { MusicTheorySpecV3 } from '@/lib/audio-design/types'
 import { createTestContinuityPlan, TEST_CLOCK } from '../unit/audio-design/audio-timeline-fixture'
 
-function render(spec: MusicTheorySpecV2): ReturnType<typeof buildLyriaPrompts> {
+function render(spec: MusicTheorySpecV3): ReturnType<typeof buildLyriaPrompts> {
   const cue = createTestContinuityPlan().scoreCues[0]!
-  return buildLyriaPrompts({ cue: { ...cue, musicTheorySpec: spec }, clock: TEST_CLOCK })
+  return buildLyriaPrompts({
+    cue: { ...cue, musicTheorySpec: spec },
+    clock: TEST_CLOCK,
+    strategy: 'balanced_ensemble',
+  })
 }
 
 describe('music-theory provider prompt regressions', () => {
@@ -39,11 +43,11 @@ describe('music-theory provider prompt regressions', () => {
         cadencePolicy: 'withhold_tonic',
         harmonicRhythm: 'slow',
       },
-      orchestration: [{
-        instrument: 'felt_piano', register: 'mid', role: 'resonance', techniques: ['sustained_tone'],
-      }, {
-        instrument: 'solo_viola', register: 'low_mid', role: 'motion', techniques: ['flautando'],
-      }],
+      orchestration: base.orchestration.map((part, index) => index === 0
+        ? { ...part, family: 'keyboards', instrument: 'felt_piano', register: 'mid', spectralSlot: 'mid', role: 'resonance', techniques: ['sustained_tone'] }
+        : index === 1
+          ? { ...part, family: 'strings', instrument: 'solo_viola', register: 'low_mid', spectralSlot: 'low_mid', role: 'motion', techniques: ['flautando'] }
+          : part),
     })
 
     expect(output.prompt).toContain('withhold tonic')
@@ -59,11 +63,11 @@ describe('music-theory provider prompt regressions', () => {
       eventSpacing: 'irregular',
       texture: { organization: 'sparse_counterpoint', density: 'moderate', layerIndependence: 0.7 },
       dynamics: { envelope: 'continuous_redistribution', transientPolicy: 'permitted', minimumEnergy: 0.3, maximumEnergy: 0.85 },
-      orchestration: [{
-        instrument: 'frame_drum', register: 'low_mid', role: 'pulse', techniques: ['sustained_tone'],
-      }, {
-        instrument: 'filtered_analog_synthesizer', register: 'low', role: 'motion', techniques: ['sustained_tone'],
-      }],
+      orchestration: base.orchestration.map((part, index) => index === 0
+        ? { ...part, family: 'percussion', instrument: 'frame_drum', register: 'low_mid', spectralSlot: 'low_mid', role: 'pulse', rhythmicFunction: 'ostinato', techniques: ['sustained_tone'] }
+        : index === 1
+          ? { ...part, family: 'synthesizer', instrument: 'filtered_analog_synthesizer', register: 'low', spectralSlot: 'low', role: 'motion', techniques: ['sustained_tone'] }
+          : part),
     })
 
     expect(output.prompt).toContain('explicit metric salience')
