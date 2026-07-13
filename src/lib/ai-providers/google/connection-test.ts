@@ -17,14 +17,6 @@ async function probeGoogleModels(apiKey: string): Promise<Response> {
 }
 
 export const googleConnectionTester: AiProviderConnectionTester = {
-  testLlm: async (input) => {
-    const response = await probeGoogleModels(input.apiKey)
-    if (!response.ok) {
-      const error = await response.text()
-      throw new Error(`Google AI probe failed (${response.status}): ${error}`)
-    }
-    return {}
-  },
   diagnose: async (input) => {
     const steps: AiProviderConnectionTestStep[] = []
     try {

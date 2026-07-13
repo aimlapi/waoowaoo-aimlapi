@@ -40,24 +40,6 @@ export function createOpenAiStyleConnectionTester(defaults: {
   defaultTestModel: string
 }): AiProviderConnectionTester {
   return {
-    testLlm: async (input) => {
-      const client = createOpenAiClient({
-        apiKey: input.apiKey,
-        baseURL: input.baseUrl || defaults.defaultBaseUrl,
-      })
-      const model = input.model || defaults.defaultTestModel
-      const response = await client.chat.completions.create({
-        model,
-        messages: [{ role: 'user', content: '1+1=? Reply with only the number.' }],
-        max_tokens: 8,
-        temperature: 0,
-      })
-      const answer = response.choices[0]?.message?.content?.trim() || ''
-      return {
-        model: response.model || model,
-        answer,
-      }
-    },
     diagnose: async (input) => {
       const client = createOpenAiClient({
         apiKey: input.apiKey,

@@ -196,19 +196,7 @@ export type AiProviderConnectionTestReport = {
   steps: AiProviderConnectionTestStep[]
 }
 
-export type AiProviderLlmConnectionInput = {
-  apiKey: string
-  baseUrl?: string
-  model?: string
-}
-
-export type AiProviderLlmConnectionResult = {
-  model?: string
-  answer?: string
-}
-
 export type AiProviderConnectionTester = {
-  testLlm?: (input: AiProviderLlmConnectionInput) => Promise<AiProviderLlmConnectionResult>
   diagnose: (input: { apiKey: string; baseUrl?: string; llmModel?: string }) => Promise<AiProviderConnectionTestReport>
 }
 

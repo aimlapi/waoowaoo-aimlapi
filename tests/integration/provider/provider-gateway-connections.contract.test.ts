@@ -1,14 +1,11 @@
 import {
   beforeEach,
-  chatCompletionResponse,
   describe,
   ensureAiCatalogsRegistered,
   expect,
   fetchMock,
   it,
-  jsonResponse,
   requestUrlOf,
-  testLlmConnection,
   testProviderConnection,
   vi,
 } from './provider-gateway-dispatch.fixture'
@@ -17,57 +14,6 @@ describe('provider contract - gateway dispatch (connection tests, session, capab
   beforeEach(() => {
     vi.clearAllMocks()
     ensureAiCatalogsRegistered()
-  })
-
-  describe('testLlmConnection routes through provider connection testers', () => {
-    it('uses the Ark default base URL and test model when none are supplied', async () => {
-      fetchMock.mockResolvedValueOnce(chatCompletionResponse('doubao-seed-2-0-lite-260215', '2'))
-
-      const result = await testLlmConnection({ provider: 'ark', apiKey: 'sk-ark' })
-
-      const [, init] = fetchMock.mock.calls[0] as [RequestInfo | URL, RequestInit]
-      const url = requestUrlOf(fetchMock.mock.calls[0] as [RequestInfo | URL, RequestInit?])
-      expect(url).toBe('https://ark.cn-beijing.volces.com/api/v3/chat/completions')
-      const body = JSON.parse(String(init.body)) as Record<string, unknown>
-      expect(body.model).toBe('doubao-seed-2-0-lite-260215')
-      expect(result).toEqual({
-        provider: 'ark',
-        message: 'ark connection ok',
-        model: 'doubao-seed-2-0-lite-260215',
-        answer: '2',
-      })
-    })
-
-    it('uses the OpenRouter default base URL and test model when none are supplied', async () => {
-      fetchMock.mockResolvedValueOnce(chatCompletionResponse('openai/gpt-4o-mini', '2'))
-
-      const result = await testLlmConnection({ provider: 'openrouter', apiKey: 'sk-or' })
-
-      const url = requestUrlOf(fetchMock.mock.calls[0] as [RequestInfo | URL, RequestInit?])
-      expect(url).toBe('https://openrouter.ai/api/v1/chat/completions')
-      expect(result.provider).toBe('openrouter')
-      expect(result.model).toBe('openai/gpt-4o-mini')
-    })
-
-    it('probes the Google models endpoint and surfaces probe failures', async () => {
-      fetchMock.mockResolvedValueOnce(jsonResponse({ models: [] }))
-      const ok = await testLlmConnection({ provider: 'google', apiKey: 'g-key' })
-      expect(ok).toEqual({ provider: 'google', message: 'google connection ok' })
-      const url = requestUrlOf(fetchMock.mock.calls[0] as [RequestInfo | URL, RequestInit?])
-      expect(url).toBe('https://generativelanguage.googleapis.com/v1beta/models?key=g-key')
-
-      fetchMock.mockResolvedValueOnce(new Response('denied', { status: 403 }))
-      await expect(testLlmConnection({ provider: 'google', apiKey: 'bad' }))
-        .rejects.toThrow('Google AI probe failed (403): denied')
-    })
-
-    it('rejects providers without an LLM connection tester', async () => {
-      await expect(testLlmConnection({ provider: 'elevenlabs', apiKey: 'k' }))
-        .rejects.toThrow('Unsupported provider: elevenlabs')
-      await expect(testLlmConnection({ provider: 'no-such-provider', apiKey: 'k' }))
-        .rejects.toThrow('Unsupported provider: no-such-provider')
-      expect(fetchMock.mock.calls).toEqual([])
-    })
   })
 
   describe('testProviderConnection routes through provider diagnose testers', () => {

@@ -2,8 +2,6 @@ import { beforeEach, describe, expect, it, vi } from 'vitest'
 
 import { ensureAiCatalogsRegistered } from '@/lib/ai-exec/catalog-bootstrap'
 
-import { testLlmConnection } from '@/lib/ai-exec/llm-test-connection'
-
 import { testProviderConnection } from '@/lib/ai-exec/provider-test'
 
 import { supportsAssetReferenceMultiReferenceVideoModel } from '@/lib/ai-registry/video-model-helpers'
@@ -66,7 +64,6 @@ function requestUrlOf(call: [RequestInfo | URL, RequestInit?]): string {
 
 export { beforeEach, describe, expect, it, vi } from 'vitest'
 export { ensureAiCatalogsRegistered } from '@/lib/ai-exec/catalog-bootstrap'
-export { testLlmConnection } from '@/lib/ai-exec/llm-test-connection'
 export { testProviderConnection } from '@/lib/ai-exec/provider-test'
 export { supportsAssetReferenceMultiReferenceVideoModel } from '@/lib/ai-registry/video-model-helpers'
 export { arkAdapter } from '@/lib/ai-providers/ark/adapter'
@@ -74,4 +71,4 @@ export { googleAdapter } from '@/lib/ai-providers/google/adapter'
 export { openRouterAdapter } from '@/lib/ai-providers/openrouter/adapter'
 export { buildOpenRouterSessionId, normalizeOpenRouterSessionId } from '@/lib/ai-providers/openrouter/session'
 export { FAL_HAPPY_HORSE_IMAGE_TO_VIDEO_MODEL_ID, FAL_KLING_O3_PRO_IMAGE_TO_VIDEO_MODEL_ID, FAL_KLING_O3_STANDARD_IMAGE_TO_VIDEO_MODEL_ID, FAL_KLING_V3_PRO_IMAGE_TO_VIDEO_MODEL_ID, FAL_KLING_V3_STANDARD_IMAGE_TO_VIDEO_MODEL_ID, FAL_SEEDANCE_2_FAST_VIDEO_MODEL_ID, FAL_SEEDANCE_2_VIDEO_MODEL_ID } from '@/lib/ai-providers/fal/models'
-export { chatCompletionResponse, fetchMock, jsonResponse, requestUrlOf }
+export { chatCompletionResponse, fetchMock, requestUrlOf }
