@@ -680,5 +680,4 @@ export function SettingsModal({
     )
 }
 
-export { SettingsModal as ConfigEditModal }
 export { WorldContextModal } from './WorldContextModal'

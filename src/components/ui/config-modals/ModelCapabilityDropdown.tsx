@@ -6,7 +6,7 @@
  * 触发器显示模型名 + provider + 参数摘要
  *
  * 用于：
- *  - 项目配置中心 (ConfigEditModal / SettingsModal)
+ *  - 项目配置中心 (SettingsModal)
  *  - 系统级设置中心 (ApiConfigTabContainer)
  */
 
