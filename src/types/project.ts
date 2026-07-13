@@ -20,16 +20,7 @@ export interface BaseProject {
 // 通用资产类型
 // ============================================
 
-export interface MediaRef {
-  id: string
-  publicId: string
-  url: string
-  mimeType: string | null
-  sizeBytes: number | null
-  width: number | null
-  height: number | null
-  durationMs: number | null
-}
+export type MediaRef = import('@/lib/media/types').MediaRef
 
 // 角色形象（独立表）
 // 🔥 V6.5: characterId 改为可选以兼容 useProjectAssets 返回的数据
