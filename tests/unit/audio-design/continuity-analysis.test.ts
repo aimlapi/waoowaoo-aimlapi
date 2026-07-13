@@ -30,6 +30,8 @@ describe('audio continuity director', () => {
     expect(prompt).toContain('开放与封闭双向')
     expect(prompt).toContain('保留 sourceContinuityId、素材、Loop 播放位置和相位')
     expect(prompt).toContain('所有 acousticTransitions.preservePlaybackPhase 必须严格为 true')
+    expect(prompt).toContain('每条 role=bed 或 role=detail 的 ambienceSource')
+    expect(prompt).toContain('必须列入所属 SoundWorld.persistentSourceIds')
     expect(prompt).toContain('"preservePlaybackPhase": [')
     expect(prompt).toContain('"forbiddenPositiveActionTerms": [')
     expect(prompt).toContain('"footsteps"')
