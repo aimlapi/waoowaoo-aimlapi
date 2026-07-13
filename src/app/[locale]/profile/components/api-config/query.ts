@@ -4,7 +4,7 @@ import { apiFetch } from '@/lib/api-fetch'
 import { useCallback, useEffect, useState } from 'react'
 import type { ApiConfig } from './types'
 
-export async function fetchUserApiConfig(): Promise<ApiConfig> {
+async function fetchUserApiConfig(): Promise<ApiConfig> {
   const res = await apiFetch('/api/user/api-config')
   if (!res.ok) {
     throw new Error(`api-config load failed: HTTP ${res.status}`)
@@ -46,4 +46,3 @@ export function useUserApiConfigQuery(): {
 
   return { data, loading, error, reload }
 }
-

@@ -15,7 +15,7 @@ function mergeClassNames(...classNames: Array<string | undefined | false>): stri
   return classNames.filter(Boolean).join(' ')
 }
 
-export function readCompletedImageState(image: Pick<HTMLImageElement, 'complete' | 'naturalWidth'>): 'loaded' | 'error' | 'pending' {
+function readCompletedImageState(image: Pick<HTMLImageElement, 'complete' | 'naturalWidth'>): 'loaded' | 'error' | 'pending' {
   if (!image.complete) return 'pending'
   return image.naturalWidth > 0 ? 'loaded' : 'error'
 }

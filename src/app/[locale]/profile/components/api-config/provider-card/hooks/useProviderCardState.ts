@@ -65,7 +65,7 @@ function pickConfiguredLlmModel(params: {
   return (preferredModel ?? enabledLlmModels[0])?.modelId
 }
 
-export function buildProviderConnectionPayload(params: {
+function buildProviderConnectionPayload(params: {
   providerKey: string
   apiKey: string
   llmModel?: string
@@ -85,7 +85,7 @@ function toProviderCardModelType(type: CustomModel['type']): ProviderCardModelTy
   return null
 }
 
-export function buildProviderCardGroupedModels(
+function buildProviderCardGroupedModels(
   models: CustomModel[],
 ): ProviderCardGroupedModels {
   const groupedModels: ProviderCardGroupedModels = {}

@@ -30,8 +30,6 @@ import {
     type WorkflowConcurrency,
 } from './selectors'
 
-export { mergeProvidersForDisplay } from './selectors'
-
 interface UseProvidersReturn {
     providers: Provider[]
     models: CustomModel[]

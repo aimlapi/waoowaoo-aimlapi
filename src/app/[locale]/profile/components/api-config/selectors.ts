@@ -31,7 +31,7 @@ export interface CapabilityFieldDefaults {
   options: CapabilityValue[]
 }
 
-export const DEFAULT_MODEL_FIELDS = [
+const DEFAULT_MODEL_FIELDS = [
   'assistantModel',
   'analysisModel',
   'characterModel',
@@ -152,7 +152,7 @@ export function parseWorkflowConcurrency(raw: unknown): WorkflowConcurrency {
   }
 }
 
-export function resolvePricingDisplay(
+function resolvePricingDisplay(
   map: PricingDisplayMap,
   type: CustomModel['type'],
   provider: string,
@@ -170,7 +170,7 @@ export function resolvePricingDisplay(
   return null
 }
 
-export function applyPricingDisplay(model: CustomModel, map: PricingDisplayMap): CustomModel {
+function applyPricingDisplay(model: CustomModel, map: PricingDisplayMap): CustomModel {
   const pricing = resolvePricingDisplay(map, model.type, model.provider, model.modelId)
   if (!pricing) {
     if (model.priceLabel && model.priceLabel !== '--') return model
@@ -196,7 +196,7 @@ export function applyPricingDisplay(model: CustomModel, map: PricingDisplayMap):
   }
 }
 
-export function normalizeSavedModels(savedModelsRaw: CustomModel[]): CustomModel[] {
+function normalizeSavedModels(savedModelsRaw: CustomModel[]): CustomModel[] {
   const savedModels: CustomModel[] = []
   const seen = new Set<string>()
   for (const model of savedModelsRaw) {

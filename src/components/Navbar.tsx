@@ -39,7 +39,7 @@ export interface NavbarSettingsMenuItem {
   label: string
 }
 
-export function shouldCloseNavbarSettingsMenu(
+function shouldCloseNavbarSettingsMenu(
   target: Node | null,
   trigger: NavbarSettingsBoundary | null | undefined,
   menu: NavbarSettingsBoundary | null | undefined,
@@ -68,18 +68,18 @@ function isNavbarBalancePayload(value: unknown): value is { success: boolean } &
   )
 }
 
-export function formatCreditAmount(value: number, unit: string): string {
+function formatCreditAmount(value: number, unit: string): string {
   const amount = Number.isFinite(value) ? value : 0
   const normalizedUnit = unit.trim()
   if (normalizedUnit.length === 0) return amount.toFixed(2)
   return `${amount.toFixed(2)} ${normalizedUnit}`
 }
 
-export function formatCompactCreditAmount(value: number): string {
+function formatCompactCreditAmount(value: number): string {
   return formatCreditAmount(value, '')
 }
 
-export function buildNavbarSettingsMenuItems(
+function buildNavbarSettingsMenuItems(
   features: PublicDeploymentFeatures | null,
   labels: NavbarSettingsLabels,
 ): NavbarSettingsMenuItem[] {

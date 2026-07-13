@@ -4,7 +4,7 @@ export interface ModelCapabilityGroupOption {
     providerName?: string
 }
 
-export function resolveModelCapabilityProviderLabel(
+function resolveModelCapabilityProviderLabel(
     option: Pick<ModelCapabilityGroupOption, 'provider' | 'providerName'>,
     fallbackLabel: string,
 ): string {

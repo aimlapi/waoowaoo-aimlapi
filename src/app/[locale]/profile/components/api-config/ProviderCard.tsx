@@ -61,5 +61,3 @@ export function ProviderCard({
     </ProviderCardShell>
   )
 }
-
-export default ProviderCard

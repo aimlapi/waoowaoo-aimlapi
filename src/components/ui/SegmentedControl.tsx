@@ -26,7 +26,7 @@ interface SegmentedControlProps<T extends string = string> {
     className?: string
 }
 
-export function resolveSegmentedControlIndicator(
+function resolveSegmentedControlIndicator(
     currentIndicator: SegmentedControlIndicator,
     nextIndicator: SegmentedControlIndicator,
 ): SegmentedControlIndicator {
@@ -40,7 +40,7 @@ export function resolveSegmentedControlIndicator(
     return nextIndicator
 }
 
-export function buildSegmentedControlOptionValuesSignature<T extends string = string>(
+function buildSegmentedControlOptionValuesSignature<T extends string = string>(
     options: SegmentedControlOption<T>[],
 ): string {
     return options.map((option) => option.value).join('|')

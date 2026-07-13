@@ -95,7 +95,7 @@ export interface ApiConfig {
     }
 }
 
-export const API_CONFIG_PRESET_COMING_SOON_MODEL_KEYS = new Set<string>([])
+const API_CONFIG_PRESET_COMING_SOON_MODEL_KEYS = new Set<string>([])
 
 export function getProviderKey(providerId?: string): string {
     if (!providerId) return ''
@@ -168,7 +168,7 @@ export interface ProviderTutorial {
 
 // 厂商开通教程配置
 // 注意: text 字段使用 i18n key, 翻译在 apiConfig.tutorials 下
-export const PROVIDER_TUTORIALS: ProviderTutorial[] = [
+const PROVIDER_TUTORIALS: ProviderTutorial[] = [
     {
         providerId: 'ark',
         steps: [
