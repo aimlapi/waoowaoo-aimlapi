@@ -2,7 +2,7 @@ import bcrypt from 'bcryptjs'
 import { ApiError } from '@/lib/api-errors'
 import { prisma } from '@/lib/prisma'
 
-export const ACCOUNT_SECURITY_PASSWORD_MIN_LENGTH = 6
+const ACCOUNT_SECURITY_PASSWORD_MIN_LENGTH = 6
 
 export const ACCOUNT_SECURITY_RESULT_CODES = {
   bodyParseFailed: 'ACCOUNT_SECURITY_BODY_PARSE_FAILED',
@@ -14,7 +14,7 @@ export const ACCOUNT_SECURITY_RESULT_CODES = {
   userNotFound: 'ACCOUNT_SECURITY_USER_NOT_FOUND',
 } as const
 
-export type AccountSecurityResultCode =
+type AccountSecurityResultCode =
   typeof ACCOUNT_SECURITY_RESULT_CODES[keyof typeof ACCOUNT_SECURITY_RESULT_CODES]
 
 export type AccountSecuritySnapshot = {
@@ -45,7 +45,7 @@ function throwNotFound(code: AccountSecurityResultCode): never {
   throw new ApiError('NOT_FOUND', { code, message: code })
 }
 
-export function validateInitialPassword(password: string): void {
+function validateInitialPassword(password: string): void {
   if (password.length < ACCOUNT_SECURITY_PASSWORD_MIN_LENGTH) {
     throwInvalidParams(ACCOUNT_SECURITY_RESULT_CODES.passwordTooShort)
   }
@@ -86,7 +86,7 @@ export async function getAccountSecurity(userId: string): Promise<AccountSecurit
   }
 }
 
-export async function setInitialPassword(input: {
+async function setInitialPassword(input: {
   userId: string
   password: string
 }): Promise<AccountSecuritySnapshot> {

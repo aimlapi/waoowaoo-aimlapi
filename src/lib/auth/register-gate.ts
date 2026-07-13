@@ -103,7 +103,7 @@ async function claimRegistrationInviteCode(tx: RegistrationTx, userId: string, r
   })
 }
 
-export function readRegistrationInviteInput(input: { inviteCode?: unknown }): string | null {
+function readRegistrationInviteInput(input: { inviteCode?: unknown }): string | null {
   const features = getDeploymentFeatures(getDeploymentConfig())
   const inviteCode = readInviteCode(input.inviteCode)
 

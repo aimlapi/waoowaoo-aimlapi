@@ -1,4 +1,3 @@
-import { logError as _ulogError } from '@/lib/logging/core'
 /**
  * API Key 加密/解密工具
  * 
@@ -12,12 +11,6 @@ const ALGORITHM = 'aes-256-gcm'
 const IV_LENGTH = 16
 const KEY_LENGTH = 32
 const SALT = 'waoowaoo-api-key-salt-v1' // 固定盐值
-
-type ApiKeyObject = Record<string, unknown>
-
-function isApiKeyObject(value: unknown): value is ApiKeyObject {
-    return !!value && typeof value === 'object' && !Array.isArray(value)
-}
 
 /**
  * 从环境变量派生加密密钥
@@ -108,87 +101,4 @@ export function decryptApiKey(ciphertext: string): string {
     ])
 
     return decrypted.toString('utf8')
-}
-
-/**
- * 批量加密 API Key 对象
- * 
- * @param apiKeys 对象，key 为服务名，value 为对象（包含 apiKey 等字段）
- * @returns 加密后的字符串（JSON 格式）
- * 
- * @example
- * const encrypted = encryptApiKeyObject({
- *   google: { apiKey: 'abc123' },
- *   fal: { apiKey: 'xyz789' }
- * })
- */
-export function encryptApiKeyObject(apiKeys: ApiKeyObject): string {
-    const encrypted: ApiKeyObject = {}
-
-    for (const [provider, config] of Object.entries(apiKeys)) {
-        if (isApiKeyObject(config)) {
-            const encryptedConfig: ApiKeyObject = { ...config }
-
-            // 加密所有包含 'key' 或 'secret' 的字段
-            for (const [key, value] of Object.entries(config)) {
-                if (typeof value === 'string' && value.trim() !== '') {
-                    const lowerKey = key.toLowerCase()
-                    if (lowerKey.includes('key') || lowerKey.includes('secret')) {
-                        encryptedConfig[key] = encryptApiKey(value)
-                    }
-                }
-            }
-            encrypted[provider] = encryptedConfig
-        }
-    }
-
-    return JSON.stringify(encrypted)
-}
-
-/**
- * 批量解密 API Key 对象
- * 
- * @param encryptedJson 加密后的 JSON 字符串
- * @returns 解密后的对象
- */
-export function decryptApiKeyObject(encryptedJson: string): ApiKeyObject {
-    if (!encryptedJson || encryptedJson.trim() === '') {
-        return {}
-    }
-
-    try {
-        const encrypted = JSON.parse(encryptedJson) as unknown
-        if (!isApiKeyObject(encrypted)) {
-            return {}
-        }
-        const decrypted: ApiKeyObject = {}
-
-        for (const [provider, config] of Object.entries(encrypted)) {
-            if (isApiKeyObject(config)) {
-                const decryptedConfig: ApiKeyObject = { ...config }
-
-                // 解密所有包含 'key' 或 'secret' 的字段
-                for (const [key, value] of Object.entries(config)) {
-                    if (typeof value === 'string' && value.trim() !== '') {
-                        const lowerKey = key.toLowerCase()
-                        if (lowerKey.includes('key') || lowerKey.includes('secret')) {
-                            try {
-                                decryptedConfig[key] = decryptApiKey(value)
-                            } catch (error) {
-                                _ulogError(`解密 ${provider}.${key} 失败:`, error)
-                                // 如果解密失败，保持原值（可能是明文）
-                                decryptedConfig[key] = value
-                            }
-                        }
-                    }
-                }
-                decrypted[provider] = decryptedConfig
-            }
-        }
-
-        return decrypted
-    } catch (error) {
-        _ulogError('解密 API Key 对象失败:', error)
-        return {}
-    }
 }

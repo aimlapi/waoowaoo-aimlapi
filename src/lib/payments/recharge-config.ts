@@ -2,8 +2,8 @@ import { getDeploymentConfig } from '@/lib/deployment/config'
 import { getDeploymentFeatures } from '@/lib/deployment/features'
 import { roundMoney } from '@/lib/billing/money'
 
-export const CREDIT_VALUE_CURRENCY = 'CNY' as const
-export const STRIPE_PAYMENT_CURRENCY = 'CNY' as const
+const CREDIT_VALUE_CURRENCY = 'CNY' as const
+const STRIPE_PAYMENT_CURRENCY = 'CNY' as const
 
 export interface RechargeConfig {
   enabled: boolean
@@ -61,7 +61,7 @@ export function getRechargeConfig(): RechargeConfig {
   }
 }
 
-export function normalizeRechargeCredits(input: number, config: RechargeConfig): number {
+function normalizeRechargeCredits(input: number, config: RechargeConfig): number {
   if (!config.enabled) {
     throw new Error('PAYMENT_RECHARGE_DISABLED')
   }

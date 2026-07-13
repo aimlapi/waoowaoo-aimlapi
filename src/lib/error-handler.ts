@@ -1,13 +1,13 @@
 import { getErrorSpec, resolveUnifiedErrorCode, type UnifiedErrorCode } from './errors/codes'
 import { normalizeAnyError } from './errors/normalize'
 
-export const ERROR_CODES = {
+const ERROR_CODES = {
   INSUFFICIENT_BALANCE: 'INSUFFICIENT_BALANCE',
   OPERATION_FAILED: 'INTERNAL_ERROR',
   NETWORK_ERROR: 'NETWORK_ERROR',
 } as const
 
-export type ErrorCode = typeof ERROR_CODES[keyof typeof ERROR_CODES]
+type ErrorCode = typeof ERROR_CODES[keyof typeof ERROR_CODES]
 
 type ApiErrorPayload = {
   success?: boolean
@@ -57,7 +57,7 @@ async function readApiErrorPayload(res: Response): Promise<ApiErrorPayload | nul
   }
 }
 
-export async function handleApiError(
+async function handleApiError(
   res: Response,
   fallbackCode: ErrorCode = ERROR_CODES.OPERATION_FAILED,
 ): Promise<never> {
@@ -90,8 +90,4 @@ export async function checkApiResponse(
 ): Promise<void> {
   if (res.ok) return
   await handleApiError(res, fallbackCode)
-}
-
-export function isInsufficientBalanceError(error: Error): boolean {
-  return error.message === ERROR_CODES.INSUFFICIENT_BALANCE
 }

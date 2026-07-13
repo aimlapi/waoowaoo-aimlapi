@@ -20,7 +20,7 @@ function toMessage(value: unknown): string {
   return ''
 }
 
-export function isPrismaErrorCode(value: unknown): value is string {
+function isPrismaErrorCode(value: unknown): value is string {
   return typeof value === 'string' && PRISMA_CODE_PATTERN.test(value.trim())
 }
 
@@ -45,10 +45,4 @@ export function isLikelyPrismaDisconnectError(error: unknown): boolean {
     || message.includes('connection timed out')
     || message.includes("can't reach database server")
   )
-}
-
-export function isRetryablePrismaError(error: unknown): boolean {
-  const code = getPrismaErrorCode(error)
-  if (code && isPrismaRetryableCode(code)) return true
-  return isLikelyPrismaDisconnectError(error)
 }

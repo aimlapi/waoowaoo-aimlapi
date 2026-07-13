@@ -4,7 +4,7 @@ import { getProfileTransactionKindTranslationKey, type ProfileTransactionKindTra
 
 export type ProfileTranslationParams = Record<string, string | number | Date>
 
-export type ProfileBillingDetailTranslationKey =
+type ProfileBillingDetailTranslationKey =
   | 'billingDetail.image'
   | 'billingDetail.imageWithRes'
   | 'billingDetail.video'
@@ -76,7 +76,7 @@ const WORKER_USAGE_ACTION_KEYS = [
   'global_location_candidate_prompt',
 ] as const
 
-export const PROFILE_ACTION_KEY_LIST: readonly string[] = [
+const PROFILE_ACTION_KEY_LIST: readonly string[] = [
   ...Object.values(TASK_TYPE),
   ...LEGACY_PROFILE_ACTION_KEYS,
   ...SYNC_PROFILE_ACTION_KEYS,

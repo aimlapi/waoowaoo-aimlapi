@@ -1,8 +1,3 @@
-import { logInfo as _ulogInfo } from '@/lib/logging/core'
-import type { UnifiedErrorCode } from '@/lib/errors/codes'
-import { getUserMessageByCode, type UserErrorTranslator } from '@/lib/errors/user-messages'
-import { normalizeAnyError } from '@/lib/errors/normalize'
-
 /**
  * 检查错误是否是由于页面卸载/刷新导致的 fetch 中止
  * 用于避免在页面刷新时显示无意义的错误提示
@@ -37,41 +32,6 @@ export function isAbortError(error: unknown): boolean {
     }
 
     return false
-}
-
-export function resolveClientError(
-    error: unknown,
-    translate: UserErrorTranslator,
-    fallbackCode: UnifiedErrorCode = 'INTERNAL_ERROR',
-): {
-    code: UnifiedErrorCode
-    message: string
-    rawMessage: string
-} {
-    const normalized = normalizeAnyError(error, {
-        context: 'api',
-        fallbackCode,
-    })
-
-    return {
-        code: normalized.code,
-        message: getUserMessageByCode(normalized.code, translate),
-        rawMessage: normalized.message,
-    }
-}
-
-/**
- * 安全的错误提示函数
- * 如果错误是由于页面刷新导致的，则不显示提示
- */
-export function safeAlert(message: string, error?: unknown): void {
-    // 如果是页面刷新导致的错误，静默处理
-    if (error && isAbortError(error)) {
-        _ulogInfo('[Info] 请求被中止（可能是页面刷新）:', message)
-        return
-    }
-
-    alert(message)
 }
 
 /**
