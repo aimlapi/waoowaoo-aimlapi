@@ -2,7 +2,7 @@
 
 import { useCallback } from 'react'
 import { useTranslations } from 'next-intl'
-import { EpisodeSelector } from '@/components/ui/CapsuleNav'
+import { EpisodeSelector } from '@/components/ui/EpisodeSelector'
 import { SettingsModal, WorldContextModal } from '@/components/ui/ConfigModals'
 import type { ProjectEditChapter, ProjectPanel } from '@/types/project'
 import type { CapabilitySelections, ModelCapabilities } from '@/lib/ai-registry/types'
