@@ -14,7 +14,7 @@ import {
   taskSubmitOperationOutputSchemaBase,
 } from '@/lib/operations/output-schemas'
 import { createTaskBatchKey } from '@/lib/task/batch'
-import { resolveEditFirstWorkflowState } from '@/lib/project-workflow/edit-first'
+import { resolveEditFirstWorkflowView } from '@/lib/project-workflow/edit-first'
 import { ApiError } from '@/lib/api-errors'
 
 const finalRenderInputSchema = z.object({
@@ -51,13 +51,14 @@ async function assertFinalRenderAllowed(input: {
   readonly userId: string
   readonly episodeId: string
 }): Promise<void> {
-  const workflow = await resolveEditFirstWorkflowState(input)
-  if (workflow.allowedOperationIds.includes('render_final_video')) return
+  const workflow = await resolveEditFirstWorkflowView(input)
+  if (workflow.operationPolicy.allowedOperationIds.includes('render_final_video')) return
   throw new ApiError('CONFLICT', {
     code: 'OPERATION_NOT_ALLOWED',
     operationId: 'render_final_video',
-    workflowStage: workflow.stage,
-    message: `EDIT_FIRST_FINAL_RENDER_NOT_ALLOWED:${workflow.stage}`,
+    workflowStep: workflow.step,
+    workflowStatus: workflow.status.kind,
+    message: `EDIT_FIRST_FINAL_RENDER_NOT_ALLOWED:${workflow.step}:${workflow.status.kind}`,
   })
 }
 
@@ -114,6 +115,7 @@ export function createFinalRenderOperations(): ProjectAgentOperationRegistryDraf
       prerequisites: { episodeId: 'required' },
       effects: {
         writes: true,
+        workspaceResourceImpact: 'none',
         billable: false,
         destructive: false,
         overwrite: true,
@@ -198,6 +200,7 @@ export function createFinalRenderOperations(): ProjectAgentOperationRegistryDraf
       prerequisites: { episodeId: 'required' },
       effects: {
         writes: true,
+        workspaceResourceImpact: 'none',
         billable: false,
         destructive: false,
         overwrite: true,

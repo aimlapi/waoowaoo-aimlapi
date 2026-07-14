@@ -30,7 +30,7 @@ import { buildScriptIntakeChoiceOfferCandidate, planScriptIntakeQuestions } from
 import type { EditFirstChoiceType } from '@/lib/project-agent/edit-first-choice-tools'
 import { EDIT_FIRST_CHOICE_TYPES, EDIT_FIRST_CHOICE_TOOL_IDS } from '@/lib/project-agent/edit-first-choice-tools'
 import { prepareProjectAgentChoiceExecutionHandoff } from '@/lib/project-agent/execution-handoff'
-import { resolveEditFirstWorkflowState } from '@/lib/project-workflow/edit-first'
+import { resolveEditFirstWorkflowView } from '@/lib/project-workflow/edit-first'
 import { refineTaskSubmitOperationOutputSchema, taskSubmitOperationOutputSchemaBase } from '@/lib/operations/output-schemas'
 import {
   EDIT_FIRST_CHAPTER_SCOPE_TOOL_INPUT_SCHEMA,
@@ -227,7 +227,8 @@ const requestEditFirstChoiceOutputSchema = z
     emitted: z.literal(true),
     choiceType: z.enum(EDIT_FIRST_CHOICE_TYPES),
     cardId: z.string().min(1),
-    workflowStage: z.string().min(1),
+    workflowStep: z.string().min(1),
+    workflowStatus: z.string().min(1),
   })
   .passthrough()
 
@@ -420,6 +421,7 @@ const planChaptersOutputSchema = z
 
 const EFFECTS_SYNC_AI_WRITE = {
   writes: true,
+  workspaceResourceImpact: 'none',
   billable: true,
   destructive: false,
   overwrite: true,
@@ -440,6 +442,7 @@ const EFFECTS_NONE = {
 
 const EFFECTS_DOMAIN_WRITE = {
   writes: true,
+  workspaceResourceImpact: 'edit_style_preview',
   billable: false,
   destructive: false,
   overwrite: true,
@@ -455,6 +458,7 @@ const EFFECTS_BULK_DOMAIN_WRITE = {
 
 const EFFECTS_BULK_WRITE = {
   writes: true,
+  workspaceResourceImpact: 'none',
   billable: true,
   destructive: false,
   overwrite: true,
@@ -592,7 +596,7 @@ function buildRequestEditChoiceOperation(choiceType: EditFirstChoiceType) {
         throw new Error('REQUEST_EDIT_CHOICE_TOOL_CALL_ID_REQUIRED')
       }
       const episodeId = resolveEpisodeId(input, ctx.context.episodeId)
-      const workflow = await resolveEditFirstWorkflowState({
+      const workflow = await resolveEditFirstWorkflowView({
         projectId: ctx.projectId,
         userId: ctx.userId,
         episodeId,
@@ -651,7 +655,8 @@ function buildRequestEditChoiceOperation(choiceType: EditFirstChoiceType) {
         emitted: true,
         choiceType,
         cardId: handoff.card.cardId,
-        workflowStage: workflow.stage,
+        workflowStep: workflow.step,
+        workflowStatus: workflow.status.kind,
       })
     },
   })
@@ -1141,7 +1146,7 @@ export function createEditScriptOperations(): ProjectAgentOperationRegistryDraft
       summary: 'Record the user approval of all ready required edit-first assets so shot execution planning can proceed.',
       intent: 'act',
       prerequisites: { episodeId: 'required' },
-      effects: EFFECTS_BULK_DOMAIN_WRITE,
+      effects: { ...EFFECTS_BULK_DOMAIN_WRITE, workspaceResourceImpact: 'edit_pipeline_assets' },
       confirmation: {
         kind: 'none',
         required: false,
