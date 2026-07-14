@@ -72,8 +72,6 @@ const WORKER_USAGE_ACTION_KEYS = [
   'panel_grid_image_generate',
   'character_candidate_prompts',
   'location_candidate_prompt',
-  'global_character_candidate_prompts',
-  'global_location_candidate_prompt',
 ] as const
 
 const PROFILE_ACTION_KEY_LIST: readonly string[] = [

@@ -37,7 +37,6 @@ interface CharacterSectionProps {
     onRegenerateGroup: (characterId: string, appearanceId: string, count?: number) => Promise<void>
     onUndo: (characterId: string, appearanceId: string) => void
     onImageClick: (imageUrl: string) => void
-    onCopyFromGlobal: (characterId: string) => void  // 🆕 从资产中心复制
     // 辅助函数
     getAppearances: (character: Character) => CharacterAppearance[]
     /** 分集筛选：仅显示指定 ID 的角色，null 表示显示全部 */
@@ -63,7 +62,6 @@ export default function CharacterSection({
     onRegenerateGroup,
     onUndo,
     onImageClick,
-    onCopyFromGlobal,
     getAppearances,
     filterIds = null,
 }: CharacterSectionProps) {
@@ -181,14 +179,6 @@ export default function CharacterSection({
                                     </span>
                                 </div>
                                 <div className="flex flex-col items-end gap-1.5">
-                                    {/* 从资产中心导入按钮 */}
-                                    <button
-                                        onClick={() => onCopyFromGlobal(character.id)}
-                                        className="text-xs text-[var(--glass-tone-info-fg)] hover:text-[var(--glass-tone-info-fg)] flex items-center gap-1 px-2 py-1 rounded-lg hover:bg-[var(--glass-tone-info-bg)] transition-colors"
-                                    >
-                                        <AppIcon name="arrowDownCircle" className="w-4 h-4" />
-                                        {t("character.copyFromGlobal")}
-                                    </button>
                                     <button
                                         onClick={() => onDeleteCharacter(character.id)}
                                         className="text-xs text-[var(--glass-tone-danger-fg)] hover:text-[var(--glass-tone-danger-fg)] flex items-center gap-1 px-2 py-1 rounded-lg hover:bg-[var(--glass-tone-danger-bg)] transition-colors"

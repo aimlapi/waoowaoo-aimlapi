@@ -54,51 +54,6 @@ export async function createFixtureNovelProject(projectId: string) {
   })
 }
 
-export async function createFixtureGlobalCharacter(userId: string, folderId: string | null = null) {
-  const id = suffix()
-  return await prisma.globalCharacter.create({
-    data: {
-      userId,
-      name: `character_${id}`,
-      ...(folderId ? { folderId } : {}),
-    },
-  })
-}
-
-export async function createFixtureGlobalCharacterAppearance(characterId: string, appearanceIndex = 0) {
-  return await prisma.globalCharacterAppearance.create({
-    data: {
-      characterId,
-      appearanceIndex,
-      changeReason: 'default',
-      imageUrls: JSON.stringify(['images/test-0.jpg']),
-      selectedIndex: 0,
-    },
-  })
-}
-
-export async function createFixtureGlobalLocation(userId: string, folderId: string | null = null) {
-  const id = suffix()
-  return await prisma.globalLocation.create({
-    data: {
-      userId,
-      name: `location_${id}`,
-      ...(folderId ? { folderId } : {}),
-    },
-  })
-}
-
-export async function createFixtureGlobalLocationImage(locationId: string, imageIndex = 0) {
-  return await prisma.globalLocationImage.create({
-    data: {
-      locationId,
-      imageIndex,
-      imageUrl: `images/location-${suffix()}.jpg`,
-      isSelected: imageIndex === 0,
-    },
-  })
-}
-
 export async function createFixtureEpisode(projectId: string, episodeNumber = 1) {
   return await prisma.projectEpisode.create({
     data: {

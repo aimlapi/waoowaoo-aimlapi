@@ -117,7 +117,6 @@ export function useGenerateProjectCharacterImage(projectId: string) {
             count?: number
         }) => {
             const requestBody = {
-                scope: 'project',
                 kind: 'character',
                 projectId,
                 appearanceId,
@@ -168,7 +167,6 @@ export function useUploadProjectCharacterImage(projectId: string) {
         }) => {
             const formData = new FormData()
             formData.append('file', file)
-            formData.append('scope', 'project')
             formData.append('kind', 'character')
             formData.append('projectId', projectId)
             formData.append('appearanceId', appearanceId)
@@ -206,7 +204,6 @@ export function useSelectProjectCharacterImage(projectId: string) {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({
-                    scope: 'project',
                     kind: 'character',
                     projectId,
                     appearanceId,
@@ -272,7 +269,6 @@ export function useUndoProjectCharacterImage(projectId: string) {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({
-                    scope: 'project',
                     kind: 'character',
                     projectId,
                     appearanceId
@@ -367,7 +363,6 @@ export function useUpdateProjectCharacterName(projectId: string) {
                 method: 'PATCH',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({
-                    scope: 'project',
                     kind: 'character',
                     projectId,
                     name,

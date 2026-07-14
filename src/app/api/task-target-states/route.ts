@@ -4,7 +4,6 @@ import { executeProjectAgentOperationFromApi } from '@/lib/adapters/api/execute-
 import {
   isErrorResponse,
   requireProjectAuthLight,
-  requireUserAuth,
 } from '@/lib/api-auth'
 
 type TaskTargetQuery = {
@@ -61,26 +60,17 @@ export const POST = apiHandler(async (request: NextRequest) => {
     return NextResponse.json({ states: [] })
   }
 
-  let userId: string
-  if (projectId === 'global-asset-hub') {
-    const authResult = await requireUserAuth()
-    if (isErrorResponse(authResult)) return authResult
-    userId = authResult.session.user.id
-  } else {
-    const authResult = await requireProjectAuthLight(projectId)
-    if (isErrorResponse(authResult)) return authResult
-    userId = authResult.session.user.id
-  }
+  const authResult = await requireProjectAuthLight(projectId)
+  if (isErrorResponse(authResult)) return authResult
 
   const result = await executeProjectAgentOperationFromApi({
     request,
     operationId: 'get_task_status',
     projectId,
-    userId,
+    userId: authResult.session.user.id,
     input: { targets },
     source: 'project-ui',
   })
 
   return NextResponse.json(result)
 })
-

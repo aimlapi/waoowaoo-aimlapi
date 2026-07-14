@@ -8,8 +8,6 @@ import { reportTaskProgress, withTaskLifecycle } from './shared'
 import { withUserConcurrencyGate } from './user-concurrency-gate'
 import { getWorkerConcurrency } from './runtime-config'
 import {
-  handleAssetHubImageTask,
-  handleAssetHubModifyTask,
   handleEditStylePreviewImageTask,
   handleCharacterImageTask,
   handleLocationImageTask,
@@ -33,8 +31,6 @@ const IMAGE_TASK_HANDLERS = {
   image_location: handleLocationImageTask,
   regenerate_group: handleRegenerateGroupTask,
   modify_asset_image: handleModifyAssetImageTask,
-  asset_hub_image: handleAssetHubImageTask,
-  asset_hub_modify: handleAssetHubModifyTask,
   image_panel: handlePanelImageTask,
 } satisfies Record<ImageTaskHandlerKey, ImageTaskHandler>
 

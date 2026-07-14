@@ -10,7 +10,6 @@ describe('asset kind registry', () => {
       supportsMultipleVariants: true,
       capabilities: expect.objectContaining({
         canGenerate: true,
-        canCopyFromGlobal: true,
       }),
     }))
     expect(getAssetKindRegistration('location')).toEqual(expect.objectContaining({
@@ -25,7 +24,6 @@ describe('asset kind registry', () => {
       capabilities: expect.objectContaining({
         canGenerate: true,
         canSelectRender: true,
-        canCopyFromGlobal: true,
       }),
     }))
   })

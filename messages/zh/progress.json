@@ -60,8 +60,6 @@
     "insertPanel": "插入分镜",
     "modifyAssetImage": "图片编辑",
     "regenerateGroup": "批量重生成",
-    "assetHubImage": "资产中心图片",
-    "assetHubModify": "资产中心编辑",
     "analyzeNovel": "内容分析",
     "storyToScriptRun": "剧本拆解",
     "scriptToStoryboardRun": "分镜生成",
@@ -80,13 +78,7 @@
     "aiCreateCharacter": "项目角色设计",
     "aiCreateLocation": "项目场景设计",
     "referenceToCharacter": "参考图转角色",
-    "episodeSplitLlm": "智能分集",
-    "assetHubAiDesignCharacter": "资产库角色设计",
-    "assetHubAiDesignLocation": "资产库场景设计",
-    "assetHubAiModifyCharacter": "资产库角色修改",
-    "assetHubAiModifyLocation": "资产库场景修改",
-    "assetHubAiModifyProp": "资产库道具修改",
-    "assetHubReferenceToCharacter": "资产库参考图转角色"
+    "episodeSplitLlm": "智能分集"
   },
   "stage": {
     "received": "任务已接收",
@@ -158,7 +150,9 @@
     "editScriptPrepare": "准备核心剪辑表生成",
     "editScriptGenerate": "生成核心剪辑表",
     "editScriptPrimary": "生成核心剪辑表",
-    "editScriptPersist": "保存核心剪辑表"
+    "editScriptPersist": "保存核心剪辑表",
+    "projectAssetDesignPrepare": "准备项目资产设计",
+    "projectAssetDesignDone": "项目资产设计已就绪"
   },
   "streamStep": {
     "analyzeCharacters": "角色分析",

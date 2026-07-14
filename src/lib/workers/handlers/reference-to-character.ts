@@ -99,11 +99,9 @@ export async function handleReferenceToCharacterTask(job: Job<TaskJobData>) {
     throw new Error('Missing referenceImageUrl or referenceImageUrls')
   }
 
-  const isAssetHub = job.data.type === TASK_TYPE.ASSET_HUB_REFERENCE_TO_CHARACTER
-    || job.data.type === TASK_TYPE.ASSET_HUB_REFERENCE_CHARACTER_DESCRIPTION_EXTRACT
   const isProject = job.data.type === TASK_TYPE.REFERENCE_TO_CHARACTER
     || job.data.type === TASK_TYPE.REFERENCE_CHARACTER_DESCRIPTION_EXTRACT
-  if (!isAssetHub && !isProject) {
+  if (!isProject) {
     throw new Error(`Unsupported task type: ${job.data.type}`)
   }
 
@@ -111,7 +109,6 @@ export async function handleReferenceToCharacterTask(job: Job<TaskJobData>) {
   const appearanceId = readString(payload.appearanceId)
   const characterId = readString(payload.characterId)
   const extractOnly = job.data.type === TASK_TYPE.REFERENCE_CHARACTER_DESCRIPTION_EXTRACT
-    || job.data.type === TASK_TYPE.ASSET_HUB_REFERENCE_CHARACTER_DESCRIPTION_EXTRACT
   if (readBoolean(payload.extractOnly) !== extractOnly) {
     throw new Error(`REFERENCE_TO_CHARACTER_TASK_SEMANTICS_MISMATCH:${job.data.type}`)
   }
@@ -154,7 +151,7 @@ export async function handleReferenceToCharacterTask(job: Job<TaskJobData>) {
       }),
       imageUrls: allReferenceImages,
       temperature: 0.3,
-      ...(isProject ? { projectId: job.data.projectId } : {}),
+      projectId: job.data.projectId,
       action: 'reference_to_character_extract',
       meta: {
         stepId: 'reference_to_character_extract',
@@ -182,7 +179,7 @@ export async function handleReferenceToCharacterTask(job: Job<TaskJobData>) {
   const prompt = addCharacterPromptSuffix(basePrompt)
 
   const useReferenceImages = !customDescription
-  const keyPrefix = isAssetHub ? 'ref-char' : `proj-ref-char-${job.data.projectId}`
+  const keyPrefix = `proj-ref-char-${job.data.projectId}`
   const count = normalizeImageGenerationCount('reference-to-character', payload.count)
 
   await reportTaskProgress(job, 35, {
@@ -207,23 +204,13 @@ export async function handleReferenceToCharacterTask(job: Job<TaskJobData>) {
 
   await assertTaskActive(job, 'reference_to_character_persist')
   if (isBackgroundJob && appearanceId) {
-    if (isAssetHub) {
-      await prisma.globalCharacterAppearance.update({
-        where: { id: appearanceId },
-        data: {
-          imageUrl: successfulCosKeys[0],
-          imageUrls: encodeImageUrls(successfulCosKeys),
-        },
-      })
-    } else {
-      await prisma.characterAppearance.update({
-        where: { id: appearanceId },
-        data: {
-          imageUrl: successfulCosKeys[0],
-          imageUrls: encodeImageUrls(successfulCosKeys),
-        },
-      })
-    }
+    await prisma.characterAppearance.update({
+      where: { id: appearanceId },
+      data: {
+        imageUrl: successfulCosKeys[0],
+        imageUrls: encodeImageUrls(successfulCosKeys),
+      },
+    })
     await reportTaskProgress(job, 96, {
       stage: 'reference_to_character_done',
       stageLabel: '参考图转换完成',

@@ -10,7 +10,7 @@ interface ProjectSnapshotInput {
   projectData: unknown
   projectCharacters: unknown[]
   projectLocations: unknown[]
-  globalAssetText: string
+  worldContextText: string
   novelText: string
   analysisModel: string | undefined
   characterModel: string | undefined

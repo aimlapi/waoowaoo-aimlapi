@@ -33,7 +33,6 @@ const APPLY = process.argv.includes('--apply')
 
 const MODELS: Array<{ name: string; model: string }> = [
   { name: 'CharacterAppearance', model: 'characterAppearance' },
-  { name: 'GlobalCharacterAppearance', model: 'globalCharacterAppearance' },
 ]
 
 const prismaDynamic = prisma as unknown as Record<string, DynamicModel>

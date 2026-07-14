@@ -7,27 +7,21 @@ import { submitTask } from '@/lib/task/submitter'
 import { TASK_TYPE } from '@/lib/task/types'
 import {
   getProjectModelConfig,
-  getUserModelConfig,
   buildImageBillingPayload,
-  buildImageBillingPayloadFromUserConfig,
 } from '@/lib/config-service'
 import { withTaskUiPayload } from '@/lib/task/ui-payload'
 import { normalizeImageGenerationCount } from '@/lib/image-generation/count'
-import { ensureGlobalLocationImageSlots, ensureProjectLocationImageSlots } from '@/lib/image-generation/location-slots'
+import { ensureProjectLocationImageSlots } from '@/lib/image-generation/location-slots'
 import { CHARACTER_CANDIDATE_PROMPT_COUNT } from '@/lib/asset-generation/character-candidate-prompts'
 import { LOCATION_CANDIDATE_PROMPT_COUNT } from '@/lib/asset-generation/location-candidate-prompts'
 import {
   hasCharacterAppearanceOutput,
-  hasGlobalCharacterAppearanceOutput,
-  hasGlobalLocationImageOutput,
-  hasGlobalLocationOutput,
   hasLocationImageOutput,
 } from '@/lib/task/has-output'
 import { sanitizeImageInputsForTaskPayload } from '@/lib/media/outbound-image'
 import {
   CHARACTER_ASSET_IMAGE_RATIO,
   LOCATION_IMAGE_RATIO,
-  PRIMARY_APPEARANCE_INDEX,
   PROP_IMAGE_RATIO,
   removeLocationPromptSuffix,
   removePropPromptSuffix,
@@ -37,9 +31,7 @@ import { resolveEditScriptStyleBibleSignatureForTask } from '@/lib/edit-script/s
 import type { AssetKind } from '@/lib/assets/contracts'
 import { createPlannedTask, requirePlannedTaskBillingInfo, type PlannedTask } from '@/lib/operations/planning'
 import {
-  createGlobalLocationBackedAsset,
   createProjectLocationBackedAsset,
-  deleteGlobalLocationBackedAsset,
   deleteProjectLocationBackedAsset,
   type LocationBackedAssetKind,
 } from '@/lib/assets/services/location-backed-assets'
@@ -53,7 +45,7 @@ import {
   requireOwnedAssetVariant,
   type AssetOwnershipClient,
   type AssetWriteAccess,
-} from '@/lib/assets/services/asset-scope-ownership'
+} from '@/lib/assets/services/project-asset-ownership'
 
 type AssetActionTarget = {
   kind: Extract<AssetKind, 'character' | 'location' | 'prop'>
@@ -87,16 +79,6 @@ type AssetSelectInput = AssetActionTarget & {
 type AssetRevertInput = AssetActionTarget & {
   body: Record<string, unknown>
   access: AssetWriteAccess
-}
-
-type AssetCopyInput = {
-  kind: AssetKind
-  targetId: string
-  globalAssetId: string
-  access: {
-    userId: string
-    projectId: string
-  }
 }
 
 type AssetUpdateInput = {
@@ -200,11 +182,6 @@ async function submitAssetPlannedTask(input: PlannedAssetTask, request: NextRequ
   })
 }
 
-export async function planAssetGenerateTask(input: AssetGenerateInput): Promise<PlannedAssetTask> {
-  await requireAssetBodyVariantOwnership(input)
-  return input.access.scope === 'global' ? planGlobalAssetGenerateTask(input) : planProjectAssetGenerateTask(input)
-}
-
 export async function submitAssetGenerateTask(input: AssetGenerateInput) {
   const planned = await planAssetGenerateTask(input)
   await ensureAssetGenerateCommitReady(input)
@@ -223,41 +200,6 @@ export async function ensureAssetGenerateCommitReady(
   if (imageIndex !== null) return
 
   const count = resolveGroupedLocationGenerateCount(input.body.count)
-  if (input.access.scope === 'global') {
-    const location = await client.globalLocation.findFirst({
-      where: { id: input.assetId, userId: input.access.userId },
-      select: {
-        name: true,
-        summary: true,
-        assetKind: true,
-        images: {
-          orderBy: { imageIndex: 'asc' },
-          take: 1,
-          select: { description: true },
-        },
-      },
-    })
-    if (!location) {
-      throw new ApiError('NOT_FOUND')
-    }
-    await ensureGlobalLocationImageSlots(
-      {
-        locationId: input.assetId,
-        count,
-        fallbackDescription:
-          location.assetKind === 'prop'
-            ? resolvePropVisualDescription({
-                name: location.name,
-                summary: location.summary,
-                description: location.images[0]?.description ?? null,
-              })
-            : location.summary || location.name,
-      },
-      client,
-    )
-    return
-  }
-
   const projectId = requireAssetProjectId(input.access)
   const location = await client.projectLocation.findFirst({
     where: {
@@ -295,119 +237,8 @@ export async function ensureAssetGenerateCommitReady(
   )
 }
 
-async function planGlobalAssetGenerateTask(input: AssetGenerateInput): Promise<PlannedAssetTask> {
-  assertNoLegacyArtStyle(input.body)
-  const locale = resolveRequiredTaskLocale(input.request, input.body)
-  const appearanceIndex = toNumber(input.body.appearanceIndex) ?? PRIMARY_APPEARANCE_INDEX
-  const normalizedKind = normalizeLocationBackedKind(input.kind)
-  const imageIndex = toNumber(input.body.imageIndex)
-  const count =
-    normalizedKind === 'character'
-      ? imageIndex === null
-        ? resolveGroupedCharacterGenerateCount(input.body.count)
-        : normalizeImageGenerationCount('character', input.body.count)
-      : imageIndex === null
-        ? resolveGroupedLocationGenerateCount(input.body.count)
-        : normalizeImageGenerationCount('location', input.body.count)
-  let characterAppearanceId: string | null = null
-  if (normalizedKind === 'character') {
-    const requestedAppearanceId = normalizeString(input.body.appearanceId)
-    const appearance = requestedAppearanceId
-      ? await prisma.globalCharacterAppearance.findFirst({
-          where: {
-            id: requestedAppearanceId,
-            character: {
-              id: input.assetId,
-              userId: input.access.userId,
-            },
-          },
-          select: { id: true },
-        })
-      : await prisma.globalCharacterAppearance.findFirst({
-          where: {
-            characterId: input.assetId,
-            appearanceIndex,
-            character: {
-              userId: input.access.userId,
-            },
-          },
-          select: { id: true },
-        })
-    if (!appearance) {
-      throw new ApiError('NOT_FOUND')
-    }
-    characterAppearanceId = appearance.id
-  }
-
-  const payloadBase: Record<string, unknown> =
-    normalizedKind === 'character'
-      ? {
-          ...input.body,
-          id: input.assetId,
-          type: input.kind,
-          appearanceId: characterAppearanceId,
-          appearanceIndex,
-          count,
-        }
-      : { ...input.body, id: input.assetId, type: input.kind, count }
-  const targetType = normalizedKind === 'character' ? 'GlobalCharacterAppearance' : 'GlobalLocation'
-  const targetId = normalizedKind === 'character' ? characterAppearanceId : input.assetId
-  if (!targetId) {
-    throw new ApiError('INVALID_PARAMS')
-  }
-  const hasOutputAtStart =
-    normalizedKind === 'character'
-      ? await hasGlobalCharacterAppearanceOutput({
-          targetId,
-          characterId: input.assetId,
-          appearanceIndex,
-        })
-      : await hasGlobalLocationOutput({
-          locationId: input.assetId,
-        })
-
-  const userModelConfig = await getUserModelConfig(input.access.userId)
-  const imageModel = input.kind === 'character' ? userModelConfig.characterModel : userModelConfig.locationModel
-
-  let billingPayload: Record<string, unknown>
-  try {
-    billingPayload = buildImageBillingPayloadFromUserConfig({
-      userModelConfig,
-      imageModel,
-      basePayload: payloadBase,
-      aspectRatio: resolveAssetGenerationAspectRatio(input.kind),
-    })
-  } catch (error) {
-    const message = error instanceof Error ? error.message : 'Image model capability not configured'
-    throw new ApiError('INVALID_PARAMS', {
-      code: 'IMAGE_MODEL_CAPABILITY_NOT_CONFIGURED',
-      message,
-    })
-  }
-
-  const projectId = 'global-asset-hub'
-  return {
-    userId: input.access.userId,
-    projectId,
-    task: createPlannedTask({
-      id: `${TASK_TYPE.ASSET_HUB_IMAGE}:${targetType}:${targetId}`,
-      taskType: TASK_TYPE.ASSET_HUB_IMAGE,
-      targetType,
-      targetId,
-      payload: withTaskUiPayload(billingPayload, { hasOutputAtStart }),
-      locale,
-      episodeId: input.episodeId ?? null,
-      dedupeKey: `${TASK_TYPE.ASSET_HUB_IMAGE}:${targetType}:${targetId}:${normalizedKind === 'character' ? appearanceIndex : 'na'}:${imageIndex === null ? count : `single:${imageIndex}`}`,
-      billingInfo: requirePlannedTaskBillingInfo({
-        taskType: TASK_TYPE.ASSET_HUB_IMAGE,
-        payload: billingPayload,
-        allowedApiTypes: ['image'],
-      }),
-    }),
-  }
-}
-
-async function planProjectAssetGenerateTask(input: AssetGenerateInput): Promise<PlannedAssetTask> {
+export async function planAssetGenerateTask(input: AssetGenerateInput): Promise<PlannedAssetTask> {
+  await requireAssetBodyVariantOwnership(input)
   assertNoLegacyArtStyle(input.body)
   const projectId = requireAssetProjectId(input.access)
   const locale = resolveRequiredTaskLocale(input.request, input.body)
@@ -499,91 +330,6 @@ export async function submitAssetModifyTask(input: AssetModifyInput) {
 
 export async function planAssetModifyTask(input: AssetModifyInput): Promise<PlannedAssetTask> {
   await requireAssetBodyVariantOwnership(input)
-  return input.access.scope === 'global' ? planGlobalAssetModifyTask(input) : planProjectAssetModifyTask(input)
-}
-
-async function planGlobalAssetModifyTask(input: AssetModifyInput): Promise<PlannedAssetTask> {
-  const locale = resolveRequiredTaskLocale(input.request, input.body)
-  const modifyPrompt = normalizeString(input.body.modifyPrompt)
-  if (!modifyPrompt) {
-    throw new ApiError('INVALID_PARAMS')
-  }
-  const normalizedKind = normalizeLocationBackedKind(input.kind)
-  const appearanceIndex = toNumber(input.body.appearanceIndex) ?? PRIMARY_APPEARANCE_INDEX
-  const imageIndex = toNumber(input.body.imageIndex) ?? 0
-  const extraImageAudit = sanitizeImageInputsForTaskPayload(Array.isArray(input.body.extraImageUrls) ? input.body.extraImageUrls : [])
-  if (extraImageAudit.issues.some((issue) => issue.reason === 'relative_path_rejected')) {
-    throw new ApiError('INVALID_PARAMS')
-  }
-  const targetType = normalizedKind === 'character' ? 'GlobalCharacterAppearance' : 'GlobalLocationImage'
-  const targetId = normalizedKind === 'character' ? `${input.assetId}:${appearanceIndex}:${imageIndex}` : `${input.assetId}:${imageIndex}`
-  const hasOutputAtStart =
-    normalizedKind === 'character'
-      ? await hasGlobalCharacterAppearanceOutput({
-          targetId,
-          characterId: input.assetId,
-          appearanceIndex,
-          imageIndex,
-        })
-      : await hasGlobalLocationImageOutput({
-          targetId,
-          locationId: input.assetId,
-          imageIndex,
-        })
-  const payload = {
-    ...input.body,
-    id: input.assetId,
-    type: input.kind,
-    extraImageUrls: extraImageAudit.normalized,
-    meta: {
-      ...toObject(input.body.meta),
-      outboundImageInputAudit: {
-        extraImageUrls: extraImageAudit.issues,
-      },
-    },
-  }
-  const userModelConfig = await getUserModelConfig(input.access.userId)
-  const imageModel = userModelConfig.editModel
-  let billingPayload: Record<string, unknown>
-  try {
-    billingPayload = buildImageBillingPayloadFromUserConfig({
-      userModelConfig,
-      imageModel,
-      basePayload: payload,
-      aspectRatio: resolveAssetModifyAspectRatio(input.kind),
-    })
-  } catch (error) {
-    const message = error instanceof Error ? error.message : 'Image model capability not configured'
-    throw new ApiError('INVALID_PARAMS', {
-      code: 'IMAGE_MODEL_CAPABILITY_NOT_CONFIGURED',
-      message,
-    })
-  }
-  const projectId = 'global-asset-hub'
-  return {
-    userId: input.access.userId,
-    projectId,
-    task: createPlannedTask({
-      id: `${TASK_TYPE.ASSET_HUB_MODIFY}:${targetId}`,
-      taskType: TASK_TYPE.ASSET_HUB_MODIFY,
-      targetType,
-      targetId,
-      payload: withTaskUiPayload(billingPayload, {
-        intent: 'modify',
-        hasOutputAtStart,
-      }),
-      locale,
-      dedupeKey: `${TASK_TYPE.ASSET_HUB_MODIFY}:${targetId}`,
-      billingInfo: requirePlannedTaskBillingInfo({
-        taskType: TASK_TYPE.ASSET_HUB_MODIFY,
-        payload: billingPayload,
-        allowedApiTypes: ['image'],
-      }),
-    }),
-  }
-}
-
-async function planProjectAssetModifyTask(input: AssetModifyInput): Promise<PlannedAssetTask> {
   const projectId = requireAssetProjectId(input.access)
   const locale = resolveRequiredTaskLocale(input.request, input.body)
   const modifyPrompt = normalizeString(input.body.modifyPrompt)
@@ -673,101 +419,6 @@ export async function selectAssetRender(
   client: Prisma.TransactionClient,
 ) {
   await requireAssetBodyVariantOwnership(input, client)
-  return input.access.scope === 'global'
-    ? selectGlobalAssetRender(input, client)
-    : selectProjectAssetRender(input, client)
-}
-
-async function selectGlobalAssetRender(
-  input: AssetSelectInput,
-  client: Prisma.TransactionClient | typeof prisma,
-) {
-  if (input.kind === 'character') {
-    const appearanceIndex = toNumber(input.body.appearanceIndex) ?? PRIMARY_APPEARANCE_INDEX
-    const imageIndex = toNumber(input.body.imageIndex)
-    const confirm = input.body.confirm === true
-    const appearance = await client.globalCharacterAppearance.findFirst({
-      where: {
-        characterId: input.assetId,
-        appearanceIndex,
-        character: { userId: input.access.userId },
-      },
-    })
-    if (!appearance) throw new ApiError('NOT_FOUND')
-    if (confirm && appearance.selectedIndex !== null) {
-      const imageUrls = decodeImageUrlsFromDb(appearance.imageUrls, 'globalCharacterAppearance.imageUrls')
-      const selectedUrl = imageUrls[appearance.selectedIndex]
-      if (!selectedUrl) throw new ApiError('NOT_FOUND')
-      let descriptions: string[] = []
-      if (appearance.descriptions) {
-        try {
-          descriptions = JSON.parse(appearance.descriptions) as string[]
-        } catch {
-          descriptions = []
-        }
-      }
-      const selectedDescription = descriptions[appearance.selectedIndex] || appearance.description || ''
-      await client.globalCharacterAppearance.update({
-        where: { id: appearance.id },
-        data: {
-          imageUrl: selectedUrl,
-          imageUrls: encodeImageUrls([selectedUrl]),
-          selectedIndex: 0,
-          description: selectedDescription,
-          descriptions: JSON.stringify([selectedDescription]),
-        },
-      })
-    } else {
-      await client.globalCharacterAppearance.update({
-        where: { id: appearance.id },
-        data: { selectedIndex: imageIndex },
-      })
-    }
-    return { success: true }
-  }
-
-  const imageIndex = toNumber(input.body.imageIndex)
-  const confirm = input.body.confirm === true
-  const location = await client.globalLocation.findFirst({
-    where: { id: input.assetId, userId: input.access.userId },
-    include: { images: { orderBy: { imageIndex: 'asc' } } },
-  })
-  if (!location) throw new ApiError('NOT_FOUND')
-  const images = location.images
-  const selectedImg = images.find((image) => image.isSelected)
-  const confirmIndex = imageIndex ?? selectedImg?.imageIndex
-  if (confirm && confirmIndex !== null && confirmIndex !== undefined) {
-    const targetImage = images.find((image) => image.imageIndex === confirmIndex)
-    if (!targetImage) throw new ApiError('NOT_FOUND')
-    await client.globalLocationImage.deleteMany({
-        where: { locationId: input.assetId, id: { not: targetImage.id } },
-    })
-    await client.globalLocationImage.update({
-        where: { id: targetImage.id },
-        data: { imageIndex: 0, isSelected: true },
-    })
-  } else {
-    await client.globalLocationImage.updateMany({
-      where: { locationId: input.assetId },
-      data: { isSelected: false },
-    })
-    if (imageIndex !== null) {
-      const targetImage = images.find((image) => image.imageIndex === imageIndex)
-      if (targetImage) {
-        await client.globalLocationImage.update({
-          where: { id: targetImage.id },
-          data: { isSelected: true },
-        })
-      }
-    }
-  }
-  return { success: true }
-}
-
-async function selectProjectAssetRender(
-  input: AssetSelectInput,
-  client: Prisma.TransactionClient | typeof prisma,
-) {
   if (input.kind === 'character') {
     const appearanceId = normalizeString(input.body.appearanceId) || normalizeString(input.body.variantId)
     const selectedIndex = toNumber(input.body.selectedIndex ?? input.body.imageIndex)
@@ -837,72 +488,6 @@ export async function revertAssetRender(
   client: Prisma.TransactionClient,
 ) {
   await requireAssetBodyVariantOwnership(input, client)
-  return input.access.scope === 'global'
-    ? revertGlobalAssetRender(input, client)
-    : revertProjectAssetRender(input, client)
-}
-
-async function revertGlobalAssetRender(
-  input: AssetRevertInput,
-  client: Prisma.TransactionClient | typeof prisma,
-) {
-  if (input.kind === 'character') {
-    const appearanceIndex = toNumber(input.body.appearanceIndex) ?? PRIMARY_APPEARANCE_INDEX
-    const appearance = await client.globalCharacterAppearance.findFirst({
-      where: {
-        characterId: input.assetId,
-        appearanceIndex,
-        character: { userId: input.access.userId },
-      },
-    })
-    if (!appearance) throw new ApiError('NOT_FOUND')
-    const previousImageUrls = decodeImageUrlsFromDb(appearance.previousImageUrls, 'globalCharacterAppearance.previousImageUrls')
-    if (!appearance.previousImageUrl && previousImageUrls.length === 0) throw new ApiError('INVALID_PARAMS')
-    const restoredImageUrls =
-      previousImageUrls.length > 0 ? previousImageUrls : appearance.previousImageUrl ? [appearance.previousImageUrl] : []
-    await client.globalCharacterAppearance.update({
-      where: { id: appearance.id },
-      data: {
-        imageUrl: appearance.previousImageUrl || restoredImageUrls[0] || null,
-        imageUrls: encodeImageUrls(restoredImageUrls),
-        previousImageUrl: null,
-        previousImageUrls: encodeImageUrls([]),
-        selectedIndex: null,
-        description: appearance.previousDescription ?? appearance.description,
-        descriptions: appearance.previousDescriptions ?? appearance.descriptions,
-        previousDescription: null,
-        previousDescriptions: null,
-      },
-    })
-    return { success: true }
-  }
-  const location = await client.globalLocation.findFirst({
-    where: { id: input.assetId, userId: input.access.userId },
-    include: { images: true },
-  })
-  if (!location) throw new ApiError('NOT_FOUND')
-  for (const image of location.images) {
-    if (image.previousImageUrl) {
-      await client.globalLocationImage.update({
-        where: { id: image.id },
-        data: {
-          imageUrl: image.previousImageUrl,
-          previousImageUrl: null,
-          spatialProfileStatus: 'stale',
-          spatialProfileError: null,
-          description: image.previousDescription ?? image.description,
-          previousDescription: null,
-        },
-      })
-    }
-  }
-  return { success: true }
-}
-
-async function revertProjectAssetRender(
-  input: AssetRevertInput,
-  client: Prisma.TransactionClient | typeof prisma,
-) {
   if (input.kind === 'character') {
     const appearanceId = normalizeString(input.body.appearanceId) || normalizeString(input.body.variantId)
     if (!appearanceId) throw new ApiError('INVALID_PARAMS')
@@ -953,188 +538,8 @@ async function revertProjectAssetRender(
   return { success: true }
 }
 
-export async function copyAssetFromGlobal(
-  input: AssetCopyInput,
-  client: Prisma.TransactionClient | typeof prisma = prisma,
-) {
-  await requireOwnedAssetTarget({
-    access: { scope: 'global', userId: input.access.userId },
-    kind: input.kind,
-    assetId: input.globalAssetId,
-  }, client)
-  await requireOwnedAssetTarget({
-    access: {
-      scope: 'project',
-      userId: input.access.userId,
-      projectId: input.access.projectId,
-    },
-    kind: input.kind,
-    assetId: input.targetId,
-  }, client)
-  if (input.kind === 'character') {
-    return copyCharacterFromGlobal(input, client)
-  }
-  if (input.kind === 'location' || input.kind === 'prop') {
-    return copyLocationFromGlobal(input, client)
-  }
-  throw new ApiError('INVALID_PARAMS')
-}
-
-async function copyCharacterFromGlobal(
-  input: AssetCopyInput,
-  client: Prisma.TransactionClient | typeof prisma,
-) {
-  const globalCharacter = await client.globalCharacter.findFirst({
-    where: { id: input.globalAssetId, userId: input.access.userId },
-    include: { appearances: true },
-  })
-  if (!globalCharacter) throw new ApiError('NOT_FOUND')
-  const projectCharacter = await client.projectCharacter.findUnique({
-    where: { id: input.targetId },
-    include: { appearances: true },
-  })
-  if (!projectCharacter) throw new ApiError('NOT_FOUND')
-  if (projectCharacter.appearances.length > 0) {
-    await client.characterAppearance.deleteMany({
-      where: { characterId: input.targetId },
-    })
-  }
-  for (let index = 0; index < globalCharacter.appearances.length; index += 1) {
-    const appearance = globalCharacter.appearances[index]
-    const originalImageUrls = decodeImageUrlsFromDb(appearance.imageUrls, 'globalCharacterAppearance.imageUrls')
-    const mainImageUrl = appearance.imageUrl || originalImageUrls.find((url) => !!url) || null
-    await client.characterAppearance.create({
-      data: {
-        characterId: input.targetId,
-        appearanceIndex: appearance.appearanceIndex,
-        changeReason: appearance.changeReason,
-        description: appearance.description,
-        descriptions: appearance.descriptions,
-        imageUrl: mainImageUrl,
-        imageUrls: encodeImageUrls(originalImageUrls),
-        previousImageUrls: encodeImageUrls([]),
-        selectedIndex: appearance.selectedIndex,
-      },
-    })
-  }
-  const character = await client.projectCharacter.update({
-    where: { id: input.targetId },
-    data: {
-      sourceGlobalCharacterId: input.globalAssetId,
-      profileConfirmed: true,
-    },
-    include: { appearances: true },
-  })
-  return { success: true, character }
-}
-
-async function copyLocationFromGlobal(
-  input: AssetCopyInput,
-  client: Prisma.TransactionClient | typeof prisma,
-) {
-  const globalLocation = await client.globalLocation.findFirst({
-    where: { id: input.globalAssetId, userId: input.access.userId },
-    include: { images: true },
-  })
-  if (!globalLocation) throw new ApiError('NOT_FOUND')
-  const projectLocation = await client.projectLocation.findUnique({
-    where: { id: input.targetId },
-    include: { images: true },
-  })
-  if (!projectLocation) throw new ApiError('NOT_FOUND')
-  if (projectLocation.images.length > 0) {
-    await client.locationImage.deleteMany({
-      where: { locationId: input.targetId },
-    })
-  }
-  const copiedImages: Array<{
-    id: string
-    imageIndex: number
-    imageUrl: string | null
-  }> = []
-  for (let index = 0; index < globalLocation.images.length; index += 1) {
-    const image = globalLocation.images[index]
-    const created = await client.locationImage.create({
-      data: {
-        locationId: input.targetId,
-        imageIndex: image.imageIndex,
-        description: image.description,
-        imageUrl: image.imageUrl,
-        spatialProfileJson:
-          input.kind === 'location' && image.spatialProfileJson !== null ? (image.spatialProfileJson as Prisma.InputJsonValue) : undefined,
-        spatialProfileStatus: input.kind === 'location' ? image.spatialProfileStatus : undefined,
-        spatialProfileError: input.kind === 'location' ? image.spatialProfileError : undefined,
-        spatialProfileAnalyzedAt: input.kind === 'location' ? image.spatialProfileAnalyzedAt : undefined,
-        spatialProfileModel: input.kind === 'location' ? image.spatialProfileModel : undefined,
-        isSelected: image.isSelected,
-      },
-    })
-    copiedImages.push(created)
-  }
-  const selectedFromGlobal = globalLocation.images.find((image) => image.isSelected)
-  const selectedImageId = selectedFromGlobal
-    ? copiedImages.find((image) => image.imageIndex === selectedFromGlobal.imageIndex)?.id
-    : copiedImages.find((image) => image.imageUrl)?.id || null
-  const location = await client.projectLocation.update({
-    where: { id: input.targetId },
-    data: {
-      sourceGlobalLocationId: input.globalAssetId,
-      summary: globalLocation.summary,
-      selectedImageId,
-    },
-    include: { images: true },
-  })
-  return { success: true, location }
-}
-
 export async function updateAsset(input: AssetUpdateInput, transaction: Prisma.TransactionClient) {
   await requireOwnedAssetTarget(input, transaction)
-  if (input.access.scope === 'global') {
-    return updateGlobalAsset(input, transaction)
-  }
-  return updateProjectAsset(input, transaction)
-}
-
-async function updateGlobalAsset(input: AssetUpdateInput, transaction: Prisma.TransactionClient) {
-  if (input.kind === 'character') {
-    const updateData: Record<string, unknown> = {}
-    if (input.body.name !== undefined) updateData.name = normalizeString(input.body.name)
-    if (input.body.aliases !== undefined) updateData.aliases = input.body.aliases
-    if (input.body.profileData !== undefined) updateData.profileData = input.body.profileData
-    if (input.body.profileConfirmed !== undefined) updateData.profileConfirmed = input.body.profileConfirmed
-    if (input.body.folderId !== undefined) updateData.folderId = normalizeString(input.body.folderId) || null
-    const character = await transaction.globalCharacter.update({
-      where: { id: input.assetId },
-      data: updateData,
-    })
-    return { success: true, character }
-  }
-  if (input.kind === 'location') {
-    const updateData: Record<string, unknown> = {}
-    if (input.body.name !== undefined) updateData.name = normalizeString(input.body.name)
-    if (input.body.summary !== undefined) updateData.summary = normalizeString(input.body.summary) || null
-    if (input.body.folderId !== undefined) updateData.folderId = normalizeString(input.body.folderId) || null
-    const location = await transaction.globalLocation.update({
-      where: { id: input.assetId },
-      data: updateData,
-    })
-    return { success: true, location }
-  }
-  if (input.kind === 'prop') {
-    const updateData: Record<string, unknown> = {}
-    if (input.body.name !== undefined) updateData.name = normalizeString(input.body.name)
-    if (input.body.summary !== undefined) updateData.summary = normalizeString(input.body.summary) || null
-    if (input.body.folderId !== undefined) updateData.folderId = normalizeString(input.body.folderId) || null
-    const prop = await transaction.globalLocation.update({
-      where: { id: input.assetId },
-      data: updateData,
-    })
-    return { success: true, prop }
-  }
-  throw new ApiError('INVALID_PARAMS')
-}
-
-async function updateProjectAsset(input: AssetUpdateInput, transaction: Prisma.TransactionClient) {
   if (input.kind === 'character') {
     const updateData: Record<string, unknown> = {}
     if (input.body.name !== undefined) updateData.name = normalizeString(input.body.name)
@@ -1171,58 +576,6 @@ async function updateProjectAsset(input: AssetUpdateInput, transaction: Prisma.T
 
 export async function updateAssetVariant(input: AssetVariantUpdateInput, transaction: Prisma.TransactionClient) {
   await requireOwnedAssetVariant(input, transaction)
-  if (input.access.scope === 'global') {
-    return updateGlobalAssetVariant(input, transaction)
-  }
-  return updateProjectAssetVariant(input, transaction)
-}
-
-async function updateGlobalAssetVariant(input: AssetVariantUpdateInput, transaction: Prisma.TransactionClient) {
-  assertNoLegacyArtStyle(input.body)
-  if (input.kind === 'character') {
-    const appearance = await transaction.globalCharacterAppearance.findUnique({
-      where: { id: input.variantId },
-    })
-    if (!appearance) throw new ApiError('NOT_FOUND')
-    const updateData: Record<string, unknown> = {}
-    if (input.body.description !== undefined) {
-      const trimmedDescription = normalizeString(input.body.description)
-      let descriptions: string[] = []
-      if (appearance.descriptions) {
-        try {
-          descriptions = JSON.parse(appearance.descriptions) as string[]
-        } catch {
-          descriptions = []
-        }
-      }
-      if (descriptions.length === 0) descriptions = [appearance.description || '']
-      const descriptionIndex = toNumber(input.body.descriptionIndex)
-      if (descriptionIndex !== null) descriptions[descriptionIndex] = trimmedDescription
-      else descriptions[0] = trimmedDescription
-      updateData.descriptions = JSON.stringify(descriptions)
-      updateData.description = descriptions[0]
-    }
-    if (input.body.changeReason !== undefined) updateData.changeReason = normalizeString(input.body.changeReason)
-    await transaction.globalCharacterAppearance.update({
-      where: { id: input.variantId },
-      data: updateData,
-    })
-    return { success: true }
-  }
-  if (input.kind === 'prop') {
-    const trimmedDescription = normalizeString(input.body.description)
-    if (!trimmedDescription) throw new ApiError('INVALID_PARAMS')
-    const cleanDescription = removePropPromptSuffix(trimmedDescription)
-    const image = await transaction.globalLocationImage.update({
-      where: { id: input.variantId },
-      data: { description: cleanDescription },
-    })
-    return { success: true, image }
-  }
-  throw new ApiError('INVALID_PARAMS')
-}
-
-async function updateProjectAssetVariant(input: AssetVariantUpdateInput, transaction: Prisma.TransactionClient) {
   if (input.kind === 'character') {
     const appearance = await transaction.characterAppearance.findUnique({
       where: { id: input.variantId },
@@ -1278,18 +631,6 @@ export async function createAsset(input: AssetCreateInput, transaction: Prisma.T
     throw new ApiError('INVALID_PARAMS')
   }
 
-  if (input.access.scope === 'global') {
-    const created = await createGlobalLocationBackedAsset({
-      userId: input.access.userId,
-      folderId: normalizeString(input.body.folderId) || null,
-      name,
-      summary,
-      initialDescription: description,
-      kind,
-    }, transaction)
-    return { success: true, assetId: created.id }
-  }
-
   const created = await createProjectLocationBackedAsset({
     projectId: await requireOwnedAssetProject(input.access, transaction),
     name,
@@ -1303,10 +644,6 @@ export async function createAsset(input: AssetCreateInput, transaction: Prisma.T
 export async function removeAsset(input: AssetRemoveInput, transaction: Prisma.TransactionClient) {
   requireLocationBackedKind(input.kind)
   await requireOwnedAssetTarget(input, transaction)
-  if (input.access.scope === 'global') {
-    await deleteGlobalLocationBackedAsset(input.assetId, transaction)
-    return { success: true }
-  }
   await deleteProjectLocationBackedAsset(input.assetId, transaction)
   return { success: true }
 }

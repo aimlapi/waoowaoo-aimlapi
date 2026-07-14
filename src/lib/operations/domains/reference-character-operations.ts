@@ -3,9 +3,7 @@ import { z } from 'zod'
 import { ApiError } from '@/lib/api-errors'
 import {
   buildImageBillingPayload,
-  buildImageBillingPayloadFromUserConfig,
   getProjectModelConfig,
-  getUserModelConfig,
 } from '@/lib/config-service'
 import { CHARACTER_IMAGE_BANANA_RATIO } from '@/lib/constants'
 import { sanitizeImageInputsForTaskPayload } from '@/lib/media/outbound-image'
@@ -41,8 +39,6 @@ export const referenceCharacterExtractionInputSchema = z.object({
 
 export type ReferenceCharacterGenerationInput = z.infer<typeof referenceCharacterGenerationInputSchema>
 export type ReferenceCharacterExtractionInput = z.infer<typeof referenceCharacterExtractionInputSchema>
-
-type ReferenceScope = 'project' | 'asset_hub'
 
 function normalizeReferenceImages(referenceImageUrls: readonly string[]): string[] {
   const audit = sanitizeImageInputsForTaskPayload([...referenceImageUrls])
@@ -98,42 +94,9 @@ async function assertProjectTargetOwnership(params: {
   }
 }
 
-async function assertAssetHubTargetOwnership(params: {
-  userId: string
-  characterId: string
-  appearanceId: string
-  isBackgroundJob: boolean
-}): Promise<void> {
-  if (params.isBackgroundJob && (!params.characterId || !params.appearanceId)) {
-    throw new ApiError('INVALID_PARAMS', { code: 'REFERENCE_CHARACTER_TARGET_REQUIRED' })
-  }
-  if (!params.characterId && !params.appearanceId) return
-  const appearance = params.appearanceId
-    ? await prisma.globalCharacterAppearance.findFirst({
-      where: {
-        id: params.appearanceId,
-        ...(params.characterId ? { characterId: params.characterId } : {}),
-        character: { userId: params.userId },
-      },
-      select: { id: true, characterId: true },
-    })
-    : null
-  const character = !params.appearanceId && params.characterId
-    ? await prisma.globalCharacter.findFirst({
-      where: { id: params.characterId, userId: params.userId },
-      select: { id: true },
-    })
-    : null
-  if ((params.appearanceId && !appearance) || (!params.appearanceId && params.characterId && !character)) {
-    throw new ApiError('NOT_FOUND', { code: 'REFERENCE_CHARACTER_TARGET_NOT_FOUND' })
-  }
-}
-
 export async function planReferenceCharacterGeneration(params: {
   ctx: ProjectAgentOperationContext
   input: ReferenceCharacterGenerationInput
-  scope: ReferenceScope
-  operationId: 'reference_to_character' | 'asset_hub_reference_to_character'
 }): Promise<OperationPlan> {
   const referenceImageUrls = normalizeReferenceImages(params.input.referenceImageUrls)
   const count = normalizeImageGenerationCount('reference-to-character', params.input.count)
@@ -141,21 +104,12 @@ export async function planReferenceCharacterGeneration(params: {
   const appearanceId = params.input.appearanceId?.trim() ?? ''
   const isBackgroundJob = params.input.isBackgroundJob === true
 
-  if (params.scope === 'project') {
-    await assertProjectTargetOwnership({
-      projectId: params.ctx.projectId,
-      characterId,
-      appearanceId,
-      isBackgroundJob,
-    })
-  } else {
-    await assertAssetHubTargetOwnership({
-      userId: params.ctx.userId,
-      characterId,
-      appearanceId,
-      isBackgroundJob,
-    })
-  }
+  await assertProjectTargetOwnership({
+    projectId: params.ctx.projectId,
+    characterId,
+    appearanceId,
+    isBackgroundJob,
+  })
 
   const basePayload: Record<string, unknown> = {
     referenceImageUrls,
@@ -168,36 +122,21 @@ export async function planReferenceCharacterGeneration(params: {
     ...(params.input.customDescription ? { customDescription: params.input.customDescription.trim() } : {}),
     displayMode: 'detail',
   }
-  let payload: Record<string, unknown>
-  if (params.scope === 'project') {
-    const config = await getProjectModelConfig(params.ctx.projectId, params.ctx.userId)
-    if (!config.characterModel) throw new ApiError('MISSING_CONFIG')
-    await resolveModelSelection(params.ctx.userId, config.characterModel, 'image')
-    payload = await buildImageBillingPayload({
-      projectId: params.ctx.projectId,
-      userId: params.ctx.userId,
-      imageModel: config.characterModel,
-      basePayload,
-      aspectRatio: CHARACTER_IMAGE_BANANA_RATIO,
-    })
-  } else {
-    const config = await getUserModelConfig(params.ctx.userId)
-    if (!config.characterModel) throw new ApiError('MISSING_CONFIG')
-    await resolveModelSelection(params.ctx.userId, config.characterModel, 'image')
-    payload = buildImageBillingPayloadFromUserConfig({
-      userModelConfig: config,
-      imageModel: config.characterModel,
-      basePayload,
-      aspectRatio: CHARACTER_IMAGE_BANANA_RATIO,
-    })
-  }
+  const config = await getProjectModelConfig(params.ctx.projectId, params.ctx.userId)
+  if (!config.characterModel) throw new ApiError('MISSING_CONFIG')
+  await resolveModelSelection(params.ctx.userId, config.characterModel, 'image')
+  const payload = await buildImageBillingPayload({
+    projectId: params.ctx.projectId,
+    userId: params.ctx.userId,
+    imageModel: config.characterModel,
+    basePayload,
+    aspectRatio: CHARACTER_IMAGE_BANANA_RATIO,
+  })
 
-  const taskType = params.scope === 'project'
-    ? TASK_TYPE.REFERENCE_TO_CHARACTER
-    : TASK_TYPE.ASSET_HUB_REFERENCE_TO_CHARACTER
+  const taskType = TASK_TYPE.REFERENCE_TO_CHARACTER
   const targetType = appearanceId
-    ? params.scope === 'project' ? 'CharacterAppearance' : 'GlobalCharacterAppearance'
-    : params.scope === 'project' ? 'Project' : 'GlobalCharacter'
+    ? 'CharacterAppearance'
+    : 'Project'
   const targetId = appearanceId || characterId || params.ctx.projectId
   const digest = buildReferenceDedupeDigest({
     targetId,
@@ -206,13 +145,13 @@ export async function planReferenceCharacterGeneration(params: {
     customDescription: params.input.customDescription,
   })
   const task = createPlannedTask({
-    id: `${params.operationId}:${digest}`,
+    id: `reference_to_character:${digest}`,
     taskType,
     targetType,
     targetId,
     payload,
     locale: resolveOperationLocale(params.ctx.context),
-    dedupeKey: `${params.operationId}:${digest}`,
+    dedupeKey: `reference_to_character:${digest}`,
     billingInfo: requirePlannedTaskBillingInfo({
       taskType,
       payload,
@@ -221,40 +160,35 @@ export async function planReferenceCharacterGeneration(params: {
   })
   return {
     kind: 'task_submission',
-    operationId: params.operationId,
+    operationId: 'reference_to_character',
     projectId: params.ctx.projectId,
     userId: params.ctx.userId,
     tasks: [task],
-    metadata: { scope: params.scope, targetType, targetId },
+    metadata: { targetType, targetId },
   }
 }
 
 export async function commitReferenceCharacterGeneration(params: {
   ctx: ProjectAgentOperationContext
   plan: OperationPlan
-  operationId: 'reference_to_character' | 'asset_hub_reference_to_character'
 }) {
   const task = params.plan.tasks[0]
   if (!task || params.plan.tasks.length !== 1) {
-    throw new Error(`REFERENCE_CHARACTER_PLAN_TASK_INVALID:${params.operationId}`)
+    throw new Error('REFERENCE_CHARACTER_PLAN_TASK_INVALID:reference_to_character')
   }
   return await submitPlannedOperationTask({
     ctx: params.ctx,
     task,
-    operationId: params.operationId,
+    operationId: 'reference_to_character',
   })
 }
 
 export async function submitReferenceCharacterExtraction(params: {
   ctx: ProjectAgentOperationContext
   input: ReferenceCharacterExtractionInput
-  scope: ReferenceScope
-  operationId: 'extract_reference_character_description' | 'asset_hub_extract_reference_character_description'
 }) {
   const referenceImageUrls = normalizeReferenceImages(params.input.referenceImageUrls)
-  const config = params.scope === 'project'
-    ? await getProjectModelConfig(params.ctx.projectId, params.ctx.userId)
-    : await getUserModelConfig(params.ctx.userId)
+  const config = await getProjectModelConfig(params.ctx.projectId, params.ctx.userId)
   if (!config.analysisModel) throw new ApiError('MISSING_CONFIG')
   const payload = {
     referenceImageUrls,
@@ -262,9 +196,7 @@ export async function submitReferenceCharacterExtraction(params: {
     analysisModel: config.analysisModel,
     displayMode: 'detail',
   }
-  const taskType = params.scope === 'project'
-    ? TASK_TYPE.REFERENCE_CHARACTER_DESCRIPTION_EXTRACT
-    : TASK_TYPE.ASSET_HUB_REFERENCE_CHARACTER_DESCRIPTION_EXTRACT
+  const taskType = TASK_TYPE.REFERENCE_CHARACTER_DESCRIPTION_EXTRACT
   const digest = createHash('sha256')
     .update(JSON.stringify(referenceImageUrls))
     .digest('hex')
@@ -275,11 +207,11 @@ export async function submitReferenceCharacterExtraction(params: {
     userId: params.ctx.userId,
     projectId: params.ctx.projectId,
     type: taskType,
-    targetType: params.scope === 'project' ? 'Project' : 'GlobalAssetHub',
+    targetType: 'Project',
     targetId: params.ctx.projectId,
-    operationId: params.operationId,
+    operationId: 'extract_reference_character_description',
     source: params.ctx.source,
     payload,
-    dedupeKey: `${params.operationId}:${digest}`,
+    dedupeKey: `extract_reference_character_description:${digest}`,
   })
 }

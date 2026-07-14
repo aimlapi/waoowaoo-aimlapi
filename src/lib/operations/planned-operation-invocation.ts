@@ -188,7 +188,7 @@ function assertSnapshotScope(params: {
   normalizedInput: unknown
   snapshot: NonNullable<Awaited<ReturnType<typeof loadOperationPlanSnapshot>>>
 }): void {
-  const expectedScopeKind = params.projectId === 'global-asset-hub' ? 'global_asset_hub' : 'project'
+  const expectedScopeKind = 'project'
   const requestedEpisodeId = params.episodeId ?? null
   if (
     params.snapshot.userId !== params.userId ||

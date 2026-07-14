@@ -5,22 +5,14 @@ import { useTranslations } from 'next-intl'
 import { shouldShowError } from '@/lib/error-utils'
 import {
   useAiCreateProjectCharacter,
-  useAiDesignCharacter,
-  useCreateAssetHubCharacter,
-  useGenerateAssetHubCharacterFromReference,
   useCreateProjectCharacter,
   useGenerateProjectCharacterFromReference,
-  useGenerateCharacterImage,
   useGenerateProjectCharacterImage,
   useCreateProjectCharacterAppearance,
-  useExtractAssetHubReferenceCharacterDescription,
   useExtractProjectReferenceCharacterDescription,
-  useUploadAssetHubTempMedia,
   useUploadProjectTempMedia,
 } from '@/lib/query/hooks'
 import { useImageGenerationCount } from '@/lib/image-generation/use-image-generation-count'
-
-type Mode = 'asset-hub' | 'project'
 
 type CreatedCharacterResponse = {
   character?: {
@@ -33,9 +25,7 @@ type CreatedCharacterResponse = {
 }
 
 interface UseCharacterCreationSubmitParams {
-  mode: Mode
-  folderId?: string | null
-  projectId?: string
+  projectId: string
   name: string
   description: string
   aiInstruction: string
@@ -56,8 +46,6 @@ const getErrorMessage = (error: unknown, fallback: string) => {
 }
 
 export function useCharacterCreationSubmit({
-  mode,
-  folderId,
   projectId,
   name,
   description,
@@ -77,19 +65,13 @@ export function useCharacterCreationSubmit({
   const [isAiDesigning, setIsAiDesigning] = useState(false)
   const [isExtracting, setIsExtracting] = useState(false)
 
-  const uploadAssetHubTemp = useUploadAssetHubTempMedia()
-  const uploadProjectTemp = useUploadProjectTempMedia()
-  const aiDesignAssetHubCharacter = useAiDesignCharacter()
-  const aiCreateProjectCharacter = useAiCreateProjectCharacter(projectId ?? '')
-  const extractAssetHubDescription = useExtractAssetHubReferenceCharacterDescription()
-  const extractProjectDescription = useExtractProjectReferenceCharacterDescription(projectId ?? '')
-  const createAssetHubCharacter = useCreateAssetHubCharacter()
-  const generateAssetHubCharacterFromReference = useGenerateAssetHubCharacterFromReference()
-  const createProjectCharacter = useCreateProjectCharacter(projectId ?? '')
-  const generateProjectCharacterFromReference = useGenerateProjectCharacterFromReference(projectId ?? '')
-  const generateAssetHubCharacterImage = useGenerateCharacterImage()
-  const generateProjectCharacterImage = useGenerateProjectCharacterImage(projectId ?? '')
-  const createProjectAppearance = useCreateProjectCharacterAppearance(projectId ?? '')
+  const uploadProjectTemp = useUploadProjectTempMedia(projectId)
+  const aiCreateProjectCharacter = useAiCreateProjectCharacter(projectId)
+  const extractProjectDescription = useExtractProjectReferenceCharacterDescription(projectId)
+  const createProjectCharacter = useCreateProjectCharacter(projectId)
+  const generateProjectCharacterFromReference = useGenerateProjectCharacterFromReference(projectId)
+  const generateProjectCharacterImage = useGenerateProjectCharacterImage(projectId)
+  const createProjectAppearance = useCreateProjectCharacterAppearance(projectId)
   const {
     count: characterGenerationCount,
     setCount: setCharacterGenerationCount,
@@ -100,15 +82,14 @@ export function useCharacterCreationSubmit({
   } = useImageGenerationCount('reference-to-character')
 
   const uploadReferenceImages = useCallback(async () => {
-    const uploadMutation = mode === 'asset-hub' ? uploadAssetHubTemp : uploadProjectTemp
     return Promise.all(
       referenceImagesBase64.map(async (base64) => {
-        const data = await uploadMutation.mutateAsync({ imageBase64: base64 })
+        const data = await uploadProjectTemp.mutateAsync({ imageBase64: base64 })
         if (!data.url) throw new Error(t('errors.uploadFailed'))
         return data.url
       }),
     )
-  }, [mode, referenceImagesBase64, t, uploadAssetHubTemp, uploadProjectTemp])
+  }, [referenceImagesBase64, t, uploadProjectTemp])
 
   const handleExtractDescription = useCallback(async () => {
     if (referenceImagesBase64.length === 0) return
@@ -116,9 +97,7 @@ export function useCharacterCreationSubmit({
     try {
       setIsExtracting(true)
       const referenceImageUrls = await uploadReferenceImages()
-      const result = mode === 'asset-hub'
-        ? await extractAssetHubDescription.mutateAsync(referenceImageUrls)
-        : await extractProjectDescription.mutateAsync(referenceImageUrls)
+      const result = await extractProjectDescription.mutateAsync(referenceImageUrls)
       if (result?.description) {
         setDescription(result.description)
       }
@@ -130,9 +109,7 @@ export function useCharacterCreationSubmit({
       setIsExtracting(false)
     }
   }, [
-    extractAssetHubDescription,
     extractProjectDescription,
-    mode,
     referenceImagesBase64.length,
     setDescription,
     t,
@@ -148,50 +125,27 @@ export function useCharacterCreationSubmit({
 
       let finalDescription = description.trim()
       if (referenceSubMode === 'extract') {
-        const result = mode === 'asset-hub'
-          ? await extractAssetHubDescription.mutateAsync(referenceImageUrls)
-          : await extractProjectDescription.mutateAsync(referenceImageUrls)
+        const result = await extractProjectDescription.mutateAsync(referenceImageUrls)
         finalDescription = result?.description || finalDescription
       }
 
-      if (mode === 'asset-hub') {
-        const created = await createAssetHubCharacter.mutateAsync({
-          name: name.trim(),
-          description: finalDescription || t('character.defaultDescription', { name: name.trim() }),
-          folderId: folderId ?? null,
-        })
-        const character = created.character
-        const appearance = character?.appearances?.find((item) => item.appearanceIndex === 0)
-        if (!character?.id || !appearance?.id) {
-          throw new Error('ASSET_HUB_CHARACTER_PRIMARY_APPEARANCE_MISSING')
-        }
-        await generateAssetHubCharacterFromReference.mutateAsync({
-          referenceImageUrls,
-          characterName: name.trim(),
-          characterId: character.id,
-          appearanceId: appearance.id,
-          customDescription: referenceSubMode === 'extract' ? finalDescription : undefined,
-          count: referenceCharacterGenerationCount,
-        })
-      } else {
-        const created = await createProjectCharacter.mutateAsync({
-          name: name.trim(),
-          description: finalDescription || t('character.defaultDescription', { name: name.trim() }),
-        })
-        const character = created.character
-        const appearance = character?.appearances?.find((item) => item.appearanceIndex === 0)
-        if (!character?.id || !appearance?.id) {
-          throw new Error('PROJECT_CHARACTER_PRIMARY_APPEARANCE_MISSING')
-        }
-        await generateProjectCharacterFromReference.mutateAsync({
-          referenceImageUrls,
-          characterName: name.trim(),
-          characterId: character.id,
-          appearanceId: appearance.id,
-          customDescription: referenceSubMode === 'extract' ? finalDescription : undefined,
-          count: referenceCharacterGenerationCount,
-        })
+      const created = await createProjectCharacter.mutateAsync({
+        name: name.trim(),
+        description: finalDescription || t('character.defaultDescription', { name: name.trim() }),
+      })
+      const character = created.character
+      const appearance = character?.appearances?.find((item) => item.appearanceIndex === 0)
+      if (!character?.id || !appearance?.id) {
+        throw new Error('PROJECT_CHARACTER_PRIMARY_APPEARANCE_MISSING')
       }
+      await generateProjectCharacterFromReference.mutateAsync({
+        referenceImageUrls,
+        characterName: name.trim(),
+        characterId: character.id,
+        appearanceId: appearance.id,
+        customDescription: referenceSubMode === 'extract' ? finalDescription : undefined,
+        count: referenceCharacterGenerationCount,
+      })
 
       onSuccess()
       onClose()
@@ -203,15 +157,10 @@ export function useCharacterCreationSubmit({
       setIsSubmitting(false)
     }
   }, [
-    createAssetHubCharacter,
     createProjectCharacter,
     description,
-    extractAssetHubDescription,
     extractProjectDescription,
-    folderId,
-    generateAssetHubCharacterFromReference,
     generateProjectCharacterFromReference,
-    mode,
     name,
     onClose,
     onSuccess,
@@ -227,9 +176,7 @@ export function useCharacterCreationSubmit({
 
     try {
       setIsAiDesigning(true)
-      const result = mode === 'asset-hub'
-        ? await aiDesignAssetHubCharacter.mutateAsync(aiInstruction)
-        : await aiCreateProjectCharacter.mutateAsync({ userInstruction: aiInstruction })
+      const result = await aiCreateProjectCharacter.mutateAsync({ userInstruction: aiInstruction })
 
       if (result?.prompt) {
         setDescription(result.prompt)
@@ -242,7 +189,7 @@ export function useCharacterCreationSubmit({
     } finally {
       setIsAiDesigning(false)
     }
-  }, [aiCreateProjectCharacter, aiDesignAssetHubCharacter, aiInstruction, mode, setAiInstruction, setDescription, t])
+  }, [aiCreateProjectCharacter, aiInstruction, setAiInstruction, setDescription, t])
 
   const handleSubmit = useCallback(async () => {
     if (isSubAppearance) {
@@ -269,18 +216,10 @@ export function useCharacterCreationSubmit({
     if (!name.trim() || !description.trim()) return
     try {
       setIsSubmitting(true)
-      if (mode === 'asset-hub') {
-        await createAssetHubCharacter.mutateAsync({
-          name: name.trim(),
-          description: description.trim(),
-          folderId: folderId ?? null,
-        })
-      } else {
-        await createProjectCharacter.mutateAsync({
-          name: name.trim(),
-          description: description.trim(),
-        })
-      }
+      await createProjectCharacter.mutateAsync({
+        name: name.trim(),
+        description: description.trim(),
+      })
       onSuccess()
       onClose()
     } catch (error: unknown) {
@@ -292,13 +231,10 @@ export function useCharacterCreationSubmit({
     }
   }, [
     changeReason,
-    createAssetHubCharacter,
     createProjectAppearance,
     createProjectCharacter,
     description,
-    folderId,
     isSubAppearance,
-    mode,
     name,
     onClose,
     onSuccess,
@@ -317,40 +253,20 @@ export function useCharacterCreationSubmit({
     try {
       setIsSubmitting(true)
 
-      if (mode === 'asset-hub') {
-        const result = await createAssetHubCharacter.mutateAsync({
-          name: name.trim(),
-          description: description.trim(),
-          folderId: folderId ?? null,
-        }) as CreatedCharacterResponse
-        const createdCharacterId = result.character?.id
-        const createdAppearanceId = result.character?.appearances?.[0]?.id
-        const createdAppearanceIndex = result.character?.appearances?.[0]?.appearanceIndex
-        if (!createdCharacterId || !createdAppearanceId || createdAppearanceIndex === undefined) {
-          throw new Error(t('errors.createFailed'))
-        }
-        await generateAssetHubCharacterImage.mutateAsync({
-          characterId: createdCharacterId,
-          appearanceId: createdAppearanceId,
-          appearanceIndex: createdAppearanceIndex,
-          count: characterGenerationCount,
-        })
-      } else {
-        const result = await createProjectCharacter.mutateAsync({
-          name: name.trim(),
-          description: description.trim(),
-        }) as CreatedCharacterResponse
-        const createdCharacterId = result.character?.id
-        const createdAppearanceId = result.character?.appearances?.[0]?.id
-        if (!createdCharacterId || !createdAppearanceId) {
-          throw new Error(t('errors.createFailed'))
-        }
-        await generateProjectCharacterImage.mutateAsync({
-          characterId: createdCharacterId,
-          appearanceId: createdAppearanceId,
-          count: characterGenerationCount,
-        })
+      const result = await createProjectCharacter.mutateAsync({
+        name: name.trim(),
+        description: description.trim(),
+      }) as CreatedCharacterResponse
+      const createdCharacterId = result.character?.id
+      const createdAppearanceId = result.character?.appearances?.[0]?.id
+      if (!createdCharacterId || !createdAppearanceId) {
+        throw new Error(t('errors.createFailed'))
       }
+      await generateProjectCharacterImage.mutateAsync({
+        characterId: createdCharacterId,
+        appearanceId: createdAppearanceId,
+        count: characterGenerationCount,
+      })
 
       onSuccess()
       onClose()
@@ -363,15 +279,11 @@ export function useCharacterCreationSubmit({
     }
   }, [
     characterGenerationCount,
-    createAssetHubCharacter,
     createProjectCharacter,
     description,
-    folderId,
-    generateAssetHubCharacterImage,
     generateProjectCharacterImage,
     handleSubmit,
     isSubAppearance,
-    mode,
     name,
     onClose,
     onSuccess,

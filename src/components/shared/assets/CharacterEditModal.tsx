@@ -7,10 +7,7 @@ import { shouldShowError } from '@/lib/error-utils'
 import TaskStatusInline from '@/components/task/TaskStatusInline'
 import { resolveTaskPresentationState } from '@/lib/task/presentation'
 import {
-    useAiModifyCharacterDescription,
     useAiModifyProjectAppearanceDescription,
-    useUpdateCharacterAppearanceDescription,
-    useUpdateCharacterName,
     useUpdateProjectAppearanceDescription,
     useUpdateProjectCharacterIntroduction,
     useUpdateProjectCharacterName,
@@ -18,14 +15,11 @@ import {
 import { AiModifyDescriptionField } from './AiModifyDescriptionField'
 
 export interface CharacterEditModalProps {
-    mode: 'asset-hub' | 'project'
     characterId: string
     characterName: string
     description: string
-    appearanceIndex?: number
-    changeReason?: string
-    projectId?: string
-    appearanceId?: string
+    projectId: string
+    appearanceId: string
     descriptionIndex?: number
     isTaskRunning?: boolean
     introduction?: string | null
@@ -38,12 +32,9 @@ export interface CharacterEditModalProps {
 }
 
 export function CharacterEditModal({
-    mode,
     characterId,
     characterName,
     description,
-    appearanceIndex,
-    changeReason,
     projectId,
     appearanceId,
     descriptionIndex,
@@ -57,10 +48,6 @@ export function CharacterEditModal({
     onRefresh,
 }: CharacterEditModalProps) {
     const t = useTranslations('assets')
-
-    const appearanceKey = mode === 'asset-hub'
-        ? String(appearanceIndex ?? 0)
-        : String(appearanceId ?? '')
 
     const [editingName, setEditingName] = useState(characterName)
     const [editingDescription, setEditingDescription] = useState(description)
@@ -93,13 +80,10 @@ export function CharacterEditModal({
         })
         : null
 
-    const updateAssetHubName = useUpdateCharacterName()
-    const updateProjectName = useUpdateProjectCharacterName(projectId ?? '')
-    const updateAssetHubAppearanceDesc = useUpdateCharacterAppearanceDescription()
-    const updateProjectAppearanceDesc = useUpdateProjectAppearanceDescription(projectId ?? '')
-    const updateProjectIntroduction = useUpdateProjectCharacterIntroduction(projectId ?? '')
-    const aiModifyAssetHub = useAiModifyCharacterDescription()
-    const aiModifyProject = useAiModifyProjectAppearanceDescription(projectId ?? '')
+    const updateProjectName = useUpdateProjectCharacterName(projectId)
+    const updateProjectAppearanceDesc = useUpdateProjectAppearanceDescription(projectId)
+    const updateProjectIntroduction = useUpdateProjectCharacterIntroduction(projectId)
+    const aiModifyProject = useAiModifyProjectAppearanceDescription(projectId)
 
     const getErrorMessage = (error: unknown, fallback: string) => {
         if (error instanceof Error && error.message) return error.message
@@ -110,27 +94,11 @@ export function CharacterEditModal({
         const nextName = editingName.trim()
         if (!nextName || nextName === characterName) return
 
-        if (mode === 'asset-hub') {
-            await updateAssetHubName.mutateAsync({ characterId, name: nextName })
-        } else {
-            await updateProjectName.mutateAsync({ characterId, name: nextName })
-        }
+        await updateProjectName.mutateAsync({ characterId, name: nextName })
         onNameUpdate?.(nextName)
     }
 
     const persistDescription = async () => {
-        if (mode === 'asset-hub') {
-            await updateAssetHubAppearanceDesc.mutateAsync({
-                characterId,
-                appearanceIndex: appearanceIndex ?? 0,
-                description: editingDescription,
-            })
-            return
-        }
-
-        if (!appearanceId) {
-            throw new Error('Missing appearanceId')
-        }
         await updateProjectAppearanceDesc.mutateAsync({
             characterId,
             appearanceId,
@@ -140,7 +108,6 @@ export function CharacterEditModal({
     }
 
     const persistIntroductionIfNeeded = async () => {
-        if (mode !== 'project' || !projectId) return
         if (editingIntroduction === (introduction || '')) return
 
         const nextIntro = editingIntroduction.trim()
@@ -157,23 +124,6 @@ export function CharacterEditModal({
         try {
             setIsAiModifying(true)
 
-            if (mode === 'asset-hub') {
-                const data = await aiModifyAssetHub.mutateAsync({
-                    characterId,
-                    appearanceIndex: appearanceIndex ?? 0,
-                    currentDescription: editingDescription,
-                    modifyInstruction: aiModifyInstruction,
-                })
-                if (data?.modifiedDescription) {
-                    setEditingDescription(data.modifiedDescription)
-                    onUpdate?.(data.modifiedDescription)
-                    setAiModifyInstruction('')
-                    return true
-                }
-                return false
-            }
-
-            if (!appearanceId) throw new Error('Missing appearanceId')
             const data = await aiModifyProject.mutateAsync({
                 characterId,
                 appearanceId,
@@ -229,7 +179,7 @@ export function CharacterEditModal({
 
     const handleSaveAndGenerate = async () => {
         const savedDescription = editingDescription
-        const savedAppearanceKey = appearanceKey
+        const savedAppearanceId = appearanceId
         onClose()
 
         ; (async () => {
@@ -240,7 +190,7 @@ export function CharacterEditModal({
 
                 onUpdate?.(savedDescription)
                 onRefresh?.()
-                onSave(characterId, savedAppearanceKey)
+                onSave(characterId, savedAppearanceId)
             } catch (error: unknown) {
                 if (shouldShowError(error)) {
                     alert(getErrorMessage(error, t('errors.saveFailed')))
@@ -280,10 +230,10 @@ export function CharacterEditModal({
                             {editingName !== characterName && (
                                 <button
                                     onClick={handleSaveName}
-                                    disabled={updateAssetHubName.isPending || updateProjectName.isPending || !editingName.trim()}
+                                    disabled={updateProjectName.isPending || !editingName.trim()}
                                     className="glass-btn-base glass-btn-tone-success px-3 py-2 rounded-lg disabled:opacity-50 disabled:cursor-not-allowed text-sm whitespace-nowrap"
                                 >
-                                    {(updateAssetHubName.isPending || updateProjectName.isPending)
+                                    {updateProjectName.isPending
                                         ? t('modal.processing')
                                         : t('modal.saveName')}
                                 </button>
@@ -291,8 +241,7 @@ export function CharacterEditModal({
                         </div>
                     </div>
 
-                    {mode === 'project' && (
-                        <div className="space-y-2">
+                    <div className="space-y-2">
                             <label className="glass-field-label block">
                                 {t('modal.introduction')}
                             </label>
@@ -306,17 +255,7 @@ export function CharacterEditModal({
                             <p className="glass-field-hint">
                                 {t('modal.introductionTip')}
                             </p>
-                        </div>
-                    )}
-
-                    {mode === 'asset-hub' && changeReason && (
-                        <div className="text-sm text-[var(--glass-text-secondary)]">
-                            {t('character.appearance')}:
-                            <span className="ml-1 inline-flex items-center rounded-full px-2 py-0.5 bg-[var(--glass-tone-neutral-bg)] text-[var(--glass-tone-neutral-fg)]">
-                                {changeReason}
-                            </span>
-                        </div>
-                    )}
+                    </div>
 
                     <AiModifyDescriptionField
                         label={t('modal.appearancePrompt')}

@@ -69,7 +69,6 @@ export async function planCharacterImageGenerationOperation(
     assetId: characterId,
     body,
     access: {
-      scope: 'project',
       userId: ctx.userId,
       projectId: ctx.projectId,
     },
@@ -143,7 +142,6 @@ export async function planLocationImageGenerationOperation(
     assetId: locationId,
     body,
     access: {
-      scope: 'project',
       userId: ctx.userId,
       projectId: ctx.projectId,
     },

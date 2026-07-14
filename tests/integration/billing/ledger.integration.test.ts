@@ -219,7 +219,7 @@ describe('billing/ledger integration', () => {
     await seedBalance(user.id, 5)
 
     const ok = await recordShadowUsage(user.id, {
-      projectId: 'asset-hub',
+      projectId: 'system',
       action: 'shadow_test',
       apiType: 'text',
       model: 'anthropic/claude-sonnet-4',

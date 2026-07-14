@@ -18,11 +18,7 @@ import { defineOperation } from '@/lib/operations/define-operation'
 import { parseWorkspaceSseCursor } from '@/lib/sse/protocol'
 import { listLatestProjectAgentSessionChangedEvent } from '@/lib/project-agent/session-event'
 import { listWorkspaceResourceReplayEvents } from '@/lib/workspace-resource/resource-change-events'
-import {
-  GLOBAL_ASSET_PROJECT_ID,
-  resolveWorkspaceResourceRefs,
-  WORKSPACE_RESOURCE_IMPACT,
-} from '@/lib/workspace-resource/resource-impact'
+import { resolveWorkspaceResourceRefs, WORKSPACE_RESOURCE_IMPACT } from '@/lib/workspace-resource/resource-impact'
 
 function asObject(value: unknown): Record<string, unknown> | null {
   if (!value || typeof value !== 'object' || Array.isArray(value)) return null
@@ -54,7 +50,7 @@ function buildRecoveryMutationCheckpoint(params: {
     operationId: null,
     episodeId: params.episodeId,
     targets: [{
-      targetType: params.projectId === 'global-asset-hub' ? 'GlobalAsset' : 'ProjectEpisode',
+      targetType: 'ProjectEpisode',
       targetId: params.episodeId ?? params.projectId,
     }],
   }
@@ -73,9 +69,7 @@ function buildRecoveryResourceCheckpoint(params: {
     userId: params.userId,
     ts: checkpointAt.toISOString(),
     affectedResources: resolveWorkspaceResourceRefs({
-      impact: params.projectId === GLOBAL_ASSET_PROJECT_ID
-        ? WORKSPACE_RESOURCE_IMPACT.GLOBAL_ASSETS
-        : WORKSPACE_RESOURCE_IMPACT.PROJECT_WORKSPACE,
+      impact: WORKSPACE_RESOURCE_IMPACT.PROJECT_WORKSPACE,
       projectId: params.projectId,
       episodeId: params.episodeId,
     }),

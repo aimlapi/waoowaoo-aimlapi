@@ -21,7 +21,7 @@ type ProjectLocationLike = ProjectRecord & {
 }
 
 type ProjectWorkflowSource = {
-  globalAssetText?: string | null
+  worldContextText?: string | null
   analysisModel?: string | null
   imageModel?: string | null
   characterModel?: string | null
@@ -57,7 +57,7 @@ function buildProjectWorkflowData(source: ProjectWorkflowSource): ProjectWorkflo
   const assets = splitProjectLocations(source.locations)
 
   return {
-    globalAssetText: source.globalAssetText ?? null,
+    worldContextText: source.worldContextText ?? null,
     analysisModel: source.analysisModel ?? null,
     imageModel: source.imageModel ?? null,
     characterModel: source.characterModel ?? null,

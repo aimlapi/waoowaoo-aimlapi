@@ -1,8 +1,6 @@
 import type { MediaRef } from '@/types/project'
 import type { LocationSpatialProfileStatus } from '@/lib/location-spatial-profile/types'
 
-export type AssetScope = 'global' | 'project'
-
 export type AssetKind = 'character' | 'location' | 'prop'
 
 export type AssetFamily = 'visual'
@@ -23,7 +21,6 @@ export type AssetCapabilityMap = {
   canRevertRender: boolean
   canModifyRender: boolean
   canUploadRender: boolean
-  canCopyFromGlobal: boolean
 }
 
 export type AssetTaskRef = {
@@ -64,11 +61,9 @@ export type AssetVariantSummary = {
 
 export type BaseAssetSummary = {
   id: string
-  scope: AssetScope
   kind: AssetKind
   family: AssetFamily
   name: string
-  folderId: string | null
   capabilities: AssetCapabilityMap
   taskRefs: AssetTaskRef[]
   taskState: AssetTaskState
@@ -107,9 +102,7 @@ export type AssetSummary =
   | PropAssetSummary
 
 export type AssetQueryInput = {
-  scope: AssetScope
-  projectId?: string | null
-  folderId?: string | null
+  projectId: string
   kind?: AssetKind | null
 }
 

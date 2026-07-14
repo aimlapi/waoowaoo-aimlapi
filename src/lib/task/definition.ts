@@ -20,8 +20,6 @@ export type ImageTaskHandlerKey =
   | 'image_location'
   | 'regenerate_group'
   | 'modify_asset_image'
-  | 'asset_hub_image'
-  | 'asset_hub_modify'
 
 export type VideoTaskHandlerKey = 'video_panel' | 'video_group' | 'final_video_render' | 'chapter_render'
 export type MusicTaskHandlerKey = 'music_generate' | 'music_score_generate' | 'soundscape_plan' | 'soundscape_generate'
@@ -31,8 +29,7 @@ export type TextTaskHandlerKey =
   | 'edit_style_preview_options_generate'
   | 'edit_script_generate'
   | 'edit_shot_execution_plan_generate'
-  | 'asset_hub_ai_design'
-  | 'asset_hub_ai_modify'
+  | 'project_asset_ai_design'
   | 'shot_ai'
   | 'reference_to_character'
 
@@ -102,8 +99,6 @@ export const TASK_DEFINITIONS = {
   [TASK_TYPE.VIDEO_GROUP]: definition('video', 'video_group', 'video', 3, 'videos', 'video_group', 'video_group', 'none'),
   [TASK_TYPE.MODIFY_ASSET_IMAGE]: definition('image', 'modify_asset_image', 'image', 3, 'project_assets', 'none', 'none', 'none'),
   [TASK_TYPE.REGENERATE_GROUP]: definition('image', 'regenerate_group', 'image', 3, 'storyboards', 'none', 'none', 'none'),
-  [TASK_TYPE.ASSET_HUB_IMAGE]: definition('image', 'asset_hub_image', 'image', 3, 'global_assets', 'none', 'none', 'none'),
-  [TASK_TYPE.ASSET_HUB_MODIFY]: definition('image', 'asset_hub_modify', 'image', 3, 'global_assets', 'none', 'none', 'none'),
   [TASK_TYPE.EDIT_SOURCE_SCRIPT_GENERATE]: definition('text', 'edit_bible_generate', 'text', 3, 'edit_pipeline', 'edit_bible', 'edit_bible', 'none'),
   [TASK_TYPE.EDIT_BIBLE_GENERATE]: definition('text', 'edit_bible_generate', 'text', 3, 'edit_pipeline', 'edit_bible', 'edit_bible', 'none'),
   [TASK_TYPE.EDIT_SCRIPT_GENERATE]: definition('text', 'edit_script_generate', 'text', 3, 'edit_pipeline', 'edit_script', 'edit_script', 'none'),
@@ -111,17 +106,10 @@ export const TASK_DEFINITIONS = {
   [TASK_TYPE.AI_MODIFY_APPEARANCE]: definition('text', 'shot_ai', 'text', 3, 'project_assets', 'none', 'none', 'none'),
   [TASK_TYPE.AI_MODIFY_LOCATION]: definition('text', 'shot_ai', 'text', 3, 'project_assets', 'none', 'none', 'none'),
   [TASK_TYPE.AI_MODIFY_PROP]: definition('text', 'shot_ai', 'text', 3, 'project_assets', 'none', 'none', 'none'),
-  [TASK_TYPE.AI_CREATE_CHARACTER]: definition('text', 'asset_hub_ai_design', 'text', 3, 'project_assets', 'none', 'none', 'none'),
-  [TASK_TYPE.AI_CREATE_LOCATION]: definition('text', 'asset_hub_ai_design', 'text', 3, 'project_assets', 'none', 'none', 'none'),
+  [TASK_TYPE.AI_CREATE_CHARACTER]: definition('text', 'project_asset_ai_design', 'text', 3, 'project_assets', 'none', 'none', 'none'),
+  [TASK_TYPE.AI_CREATE_LOCATION]: definition('text', 'project_asset_ai_design', 'text', 3, 'project_assets', 'none', 'none', 'none'),
   [TASK_TYPE.REFERENCE_TO_CHARACTER]: definition('text', 'reference_to_character', 'image', 3, 'project_assets', 'none', 'none', 'none'),
   [TASK_TYPE.REFERENCE_CHARACTER_DESCRIPTION_EXTRACT]: definition('text', 'reference_to_character', 'text', 3, 'none', 'none', 'none', 'none'),
-  [TASK_TYPE.ASSET_HUB_AI_DESIGN_CHARACTER]: definition('text', 'asset_hub_ai_design', 'text', 3, 'global_assets', 'none', 'none', 'none'),
-  [TASK_TYPE.ASSET_HUB_AI_DESIGN_LOCATION]: definition('text', 'asset_hub_ai_design', 'text', 3, 'global_assets', 'none', 'none', 'none'),
-  [TASK_TYPE.ASSET_HUB_AI_MODIFY_CHARACTER]: definition('text', 'asset_hub_ai_modify', 'text', 3, 'global_assets', 'none', 'none', 'none'),
-  [TASK_TYPE.ASSET_HUB_AI_MODIFY_LOCATION]: definition('text', 'asset_hub_ai_modify', 'text', 3, 'global_assets', 'none', 'none', 'none'),
-  [TASK_TYPE.ASSET_HUB_AI_MODIFY_PROP]: definition('text', 'asset_hub_ai_modify', 'text', 3, 'global_assets', 'none', 'none', 'none'),
-  [TASK_TYPE.ASSET_HUB_REFERENCE_TO_CHARACTER]: definition('text', 'reference_to_character', 'image', 3, 'global_assets', 'none', 'none', 'none'),
-  [TASK_TYPE.ASSET_HUB_REFERENCE_CHARACTER_DESCRIPTION_EXTRACT]: definition('text', 'reference_to_character', 'text', 3, 'none', 'none', 'none', 'none'),
 } satisfies Record<TaskType, TaskDefinition>
 
 export function getTaskDefinition(type: TaskType): TaskDefinition {

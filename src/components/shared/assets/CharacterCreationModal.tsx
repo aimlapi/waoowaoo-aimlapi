@@ -11,9 +11,7 @@ import ImageGenerationInlineCountButton from '@/components/image-generation/Imag
 import { getImageGenerationCountOptions } from '@/lib/image-generation/count'
 
 export interface CharacterCreationModalProps {
-  mode: 'asset-hub' | 'project'
-  folderId?: string | null
-  projectId?: string
+  projectId: string
   onClose: () => void
   onSuccess: () => void
 }
@@ -23,8 +21,6 @@ const XMarkIcon = ({ className }: { className?: string }) => (
 )
 
 export function CharacterCreationModal({
-  mode,
-  folderId,
   projectId,
   onClose,
   onSuccess,
@@ -43,16 +39,15 @@ export function CharacterCreationModal({
 
   const fileInputRef = useRef<HTMLInputElement>(null)
 
-  const projectAssets = useProjectAssets(mode === 'project' ? (projectId ?? null) : null)
+  const projectAssets = useProjectAssets(projectId)
   const availableCharacters = useMemo(() => {
-    if (mode !== 'project') return []
     const items = projectAssets.data?.characters || []
     return items.map((c) => ({
       id: c.id,
       name: c.name,
       appearances: c.appearances || [],
     }))
-  }, [mode, projectAssets.data?.characters])
+  }, [projectAssets.data?.characters])
 
   const {
     isSubmitting,
@@ -68,8 +63,6 @@ export function CharacterCreationModal({
     handleSubmit,
     handleSubmitAndGenerate,
   } = useCharacterCreationSubmit({
-    mode,
-    folderId,
     projectId,
     name,
     description,
@@ -182,7 +175,6 @@ export function CharacterCreationModal({
           </div>
 
           <CharacterCreationForm
-            mode={mode}
             createMode={createMode}
             setCreateMode={(value) => setCreateMode(value)}
             name={name}
@@ -250,7 +242,7 @@ export function CharacterCreationModal({
                 disabled={isSubmitting || !name.trim() || !description.trim()}
                 className="glass-btn-base glass-btn-secondary px-4 py-2 rounded-lg text-sm disabled:opacity-40 disabled:cursor-not-allowed"
               >
-                {isSubmitting ? t('common.adding') : (mode === 'asset-hub' ? t('common.addOnlyToAssetHub') : t('common.addOnly'))}
+                {isSubmitting ? t('common.adding') : t('common.addOnly')}
               </button>
               <ImageGenerationInlineCountButton
                 prefix={<span>{t('common.addAndGeneratePrefix')}</span>}

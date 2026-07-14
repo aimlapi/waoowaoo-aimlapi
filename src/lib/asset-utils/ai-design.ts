@@ -2,7 +2,7 @@ import { logError as _ulogError } from '@/lib/logging/core'
 import { z } from 'zod'
 /**
  * AI 设计共享工具函数
- * 统一处理 Asset Hub 和 Novel Promotion 的 AI 设计逻辑
+ * 统一处理项目角色与场景的 AI 设计逻辑
  */
 
 import { executeAiStructuredTextStep } from '@/lib/ai-exec/structured-step'
@@ -18,8 +18,7 @@ export interface AIDesignOptions {
     analysisModel: string
     userInstruction: string
     assetType: AssetType
-    /** 用于计费的上下文：'asset-hub' 或实际的 projectId */
-    projectId?: string
+    projectId: string
     /** 任务 worker 内执行时使用，避免和任务计费重复 */
     skipBilling?: boolean
 }
@@ -41,7 +40,7 @@ export async function aiDesign(options: AIDesignOptions): Promise<AIDesignResult
         analysisModel,
         userInstruction,
         assetType,
-        projectId = 'asset-hub',
+        projectId,
         skipBilling = false,
     } = options
 

@@ -75,7 +75,7 @@ interface WorkspaceHeaderShellProps {
   videoRatio: string | null | undefined
   onUpdateConfig: (key: string, value: unknown) => Promise<void>
   onUpdateConfigPatch: (patch: Record<string, unknown>) => Promise<void>
-  globalAssetText: string
+  worldContextText: string
   projectName: string
   episodes: EpisodeSummary[]
   currentEpisodeId?: string
@@ -158,7 +158,7 @@ export default function WorkspaceHeaderShell({
   videoRatio,
   onUpdateConfig,
   onUpdateConfigPatch,
-  globalAssetText,
+  worldContextText,
   projectName,
   episodes,
   currentEpisodeId,
@@ -282,8 +282,8 @@ export default function WorkspaceHeaderShell({
       <WorldContextModal
         isOpen={isWorldContextModalOpen}
         onClose={onCloseWorldContextModal}
-        text={globalAssetText}
-        onChange={(value) => { onUpdateConfig('globalAssetText', value) }}
+        text={worldContextText}
+        onChange={(value) => { onUpdateConfig('worldContextText', value) }}
       />
       {episodes.length > 0 && currentEpisodeId && (() => {
         const getNum = (name: string) => { const m = name.match(/\d+/); return m ? parseInt(m[0], 10) : Infinity }

@@ -276,7 +276,6 @@ export async function planProjectEditScriptAssetsOperation(
             meta: { locale: ctx.context.locale },
           },
           access: {
-            scope: 'project',
             userId: ctx.userId,
             projectId: ctx.projectId,
           },
@@ -408,7 +407,6 @@ export async function planProjectEditScriptAssetsOperation(
           meta: { locale: ctx.context.locale },
         },
         access: {
-          scope: 'project',
           userId: ctx.userId,
           projectId: ctx.projectId,
         },

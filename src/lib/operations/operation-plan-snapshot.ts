@@ -138,7 +138,7 @@ export async function persistOperationPlanSnapshot(params: {
   episodeId?: string | null
 }): Promise<PersistedOperationPlanSnapshot> {
   assertOperationPlanTaskResourceScopes(params.plan)
-  const scopeKind = params.plan.projectId === 'global-asset-hub' ? 'global_asset_hub' : 'project'
+  const scopeKind = 'project'
   const scopeId = params.plan.projectId
   const normalizedInput = toInputJson(params.normalizedInput)
   const planSnapshot = toInputJson(params.plan)

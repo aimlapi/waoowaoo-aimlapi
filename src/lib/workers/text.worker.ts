@@ -5,8 +5,6 @@ import { getTaskDefinitionForQueue, type TextTaskHandlerKey } from '@/lib/task/d
 import type { TaskJobData } from '@/lib/task/types'
 import { reportTaskProgress, withTaskLifecycle } from './shared'
 import { getWorkerConcurrency } from './runtime-config'
-import { handleAssetHubAIDesignTask } from './handlers/asset-hub-ai-design'
-import { handleAssetHubAIModifyTask } from './handlers/asset-hub-ai-modify'
 import { handleReferenceToCharacterTask } from './handlers/reference-to-character'
 import { handleShotAITask } from './handlers/shot-ai-tasks'
 import { handleEditScriptGenerateTask } from './handlers/edit-script-generate'
@@ -16,6 +14,7 @@ import {
   handleEditShotExecutionPlanGenerateTask,
 } from './handlers/edit-script-structured-generate'
 import { handleBgmScorePlanTask } from '@/lib/bgm-score/generate'
+import { handleProjectAssetAIDesignTask } from './handlers/project-asset-ai-design'
 
 type TextTaskHandler = (job: Job<TaskJobData>) => Promise<Record<string, unknown> | void>
 
@@ -25,8 +24,7 @@ const TEXT_TASK_HANDLERS = {
   edit_style_preview_options_generate: handleEditStylePreviewOptionsTask,
   edit_script_generate: handleEditScriptGenerateTask,
   edit_shot_execution_plan_generate: handleEditShotExecutionPlanGenerateTask,
-  asset_hub_ai_design: handleAssetHubAIDesignTask,
-  asset_hub_ai_modify: handleAssetHubAIModifyTask,
+  project_asset_ai_design: handleProjectAssetAIDesignTask,
   shot_ai: handleShotAITask,
   reference_to_character: handleReferenceToCharacterTask,
 } satisfies Record<TextTaskHandlerKey, TextTaskHandler>

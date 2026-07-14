@@ -97,7 +97,6 @@ export function useUpdateProjectLocationName(projectId: string) {
                 method: 'PATCH',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({
-                    scope: 'project',
                     kind: 'location',
                     projectId,
                     name,
@@ -277,7 +276,6 @@ export function useConfirmProjectLocationSelection(
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({
-                        scope: 'project',
                         kind,
                         projectId,
                         confirm: true,

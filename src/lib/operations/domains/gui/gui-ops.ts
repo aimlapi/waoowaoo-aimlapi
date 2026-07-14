@@ -747,7 +747,6 @@ export function createGuiOperations(): ProjectAgentOperationRegistryDraft {
         assetId: input.id,
         body: input as unknown as Record<string, unknown>,
         access: {
-          scope: 'project',
           userId: ctx.userId,
           projectId: ctx.projectId,
         },

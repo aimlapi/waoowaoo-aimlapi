@@ -20,12 +20,6 @@ import { createProjectCrudOperations } from './domains/project/project-crud-ops'
 import { createSystemProjectOperations } from './domains/project/system-project-ops'
 import { createTaskOperations } from './domains/task/task-ops'
 import { createSseOperations } from './domains/debug/sse-ops'
-import { createAssetHubLlmOperations } from './domains/asset-hub/asset-hub-llm-ops'
-import { createAssetHubFolderOperations } from './domains/asset-hub/asset-hub-folder-ops'
-import { createAssetHubCharacterLibraryOperations } from './domains/asset-hub/asset-hub-character-library-ops'
-import { createAssetHubCharacterAppearanceOperations } from './domains/asset-hub/asset-hub-character-appearance-ops'
-import { createAssetHubLocationLibraryOperations } from './domains/asset-hub/asset-hub-location-library-ops'
-import { createAssetHubPickerOperations } from './domains/asset-hub/asset-hub-picker-ops'
 import { createUserPreferenceOperations } from './domains/config/user-preference-ops'
 import { createUserModelsOperations } from './domains/config/user-models-ops'
 import { createUserBillingOperations } from './domains/billing/user-billing-ops'
@@ -87,42 +81,6 @@ export function createProjectAgentOperationRegistry(): ProjectAgentOperationRegi
     ...withOperationPack(createUserApiConfigOperations(), {
       groupPath: ['config', 'api'],
       channels: CHANNELS_TOOL_API,
-      prerequisites: PREREQ_EPISODE_OPTIONAL,
-      confirmation: CONFIRM_NONE,
-    }),
-    ...withOperationPack(createAssetHubLlmOperations(), {
-      groupPath: ['asset-hub', 'ai'],
-      channels: CHANNELS_API_ONLY,
-      prerequisites: PREREQ_EPISODE_OPTIONAL,
-      confirmation: CONFIRM_NONE,
-    }),
-    ...withOperationPack(createAssetHubFolderOperations(), {
-      groupPath: ['asset-hub', 'folder'],
-      channels: CHANNELS_API_ONLY,
-      prerequisites: PREREQ_EPISODE_OPTIONAL,
-      confirmation: CONFIRM_NONE,
-    }),
-    ...withOperationPack(createAssetHubCharacterLibraryOperations(), {
-      groupPath: ['asset-hub', 'character-library'],
-      channels: CHANNELS_API_ONLY,
-      prerequisites: PREREQ_EPISODE_OPTIONAL,
-      confirmation: CONFIRM_NONE,
-    }),
-    ...withOperationPack(createAssetHubCharacterAppearanceOperations(), {
-      groupPath: ['asset-hub', 'character-appearance'],
-      channels: CHANNELS_API_ONLY,
-      prerequisites: PREREQ_EPISODE_OPTIONAL,
-      confirmation: CONFIRM_NONE,
-    }),
-    ...withOperationPack(createAssetHubLocationLibraryOperations(), {
-      groupPath: ['asset-hub', 'location-library'],
-      channels: CHANNELS_API_ONLY,
-      prerequisites: PREREQ_EPISODE_OPTIONAL,
-      confirmation: CONFIRM_NONE,
-    }),
-    ...withOperationPack(createAssetHubPickerOperations(), {
-      groupPath: ['asset-hub', 'picker'],
-      channels: CHANNELS_API_ONLY,
       prerequisites: PREREQ_EPISODE_OPTIONAL,
       confirmation: CONFIRM_NONE,
     }),

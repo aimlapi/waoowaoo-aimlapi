@@ -9,8 +9,6 @@ import {
   PropCreationModal,
   PropEditModal,
 } from '@/components/shared/assets'
-import GlobalAssetPicker from '@/components/shared/assets/GlobalAssetPicker'
-import type { GlobalCopyTarget } from './hooks/useAssetsCopyFromHub'
 
 interface EditingAppearanceState {
   characterId: string
@@ -42,8 +40,6 @@ interface ProjectAssetLibraryModalsProps {
   handleGenerateImage: (type: 'character' | 'location' | 'prop', id: string, appearanceId?: string) => Promise<void>
   handleUpdateAppearanceDescription: (newDescription: string) => Promise<void>
   handleUpdateLocationDescription: (newDescription: string) => Promise<void>
-  handleCloseCopyPicker: () => void
-  handleConfirmCopyFromGlobal: (globalAssetId: string) => Promise<void>
   closeEditingAppearance: () => void
   closeEditingLocation: () => void
   closeEditingProp: () => void
@@ -57,8 +53,6 @@ interface ProjectAssetLibraryModalsProps {
   showAddCharacter: boolean
   showAddLocation: boolean
   showAddProp: boolean
-  copyFromGlobalTarget: GlobalCopyTarget | null
-  isGlobalCopyInFlight: boolean
 }
 
 export default function ProjectAssetLibraryModals({
@@ -68,8 +62,6 @@ export default function ProjectAssetLibraryModals({
   handleGenerateImage,
   handleUpdateAppearanceDescription,
   handleUpdateLocationDescription,
-  handleCloseCopyPicker,
-  handleConfirmCopyFromGlobal,
   closeEditingAppearance,
   closeEditingLocation,
   closeEditingProp,
@@ -83,8 +75,6 @@ export default function ProjectAssetLibraryModals({
   showAddCharacter,
   showAddLocation,
   showAddProp,
-  copyFromGlobalTarget,
-  isGlobalCopyInFlight,
 }: ProjectAssetLibraryModalsProps) {
   return (
     <>
@@ -92,7 +82,6 @@ export default function ProjectAssetLibraryModals({
 
       {editingAppearance && (
         <CharacterEditModal
-          mode="project"
           characterId={editingAppearance.characterId}
           characterName={editingAppearance.characterName}
           appearanceId={editingAppearance.appearanceId}
@@ -108,7 +97,6 @@ export default function ProjectAssetLibraryModals({
 
       {editingLocation && (
         <LocationEditModal
-          mode="project"
           locationId={editingLocation.locationId}
           locationName={editingLocation.locationName}
           description={editingLocation.description}
@@ -121,7 +109,6 @@ export default function ProjectAssetLibraryModals({
 
       {showAddCharacter && (
         <CharacterCreationModal
-          mode="project"
           projectId={projectId}
           onClose={closeAddCharacter}
           onSuccess={() => {
@@ -133,7 +120,6 @@ export default function ProjectAssetLibraryModals({
 
       {showAddLocation && (
         <LocationCreationModal
-          mode="project"
           projectId={projectId}
           onClose={closeAddLocation}
           onSuccess={() => {
@@ -145,7 +131,6 @@ export default function ProjectAssetLibraryModals({
 
       {showAddProp && (
         <PropCreationModal
-          mode="project"
           projectId={projectId}
           onClose={closeAddProp}
           onSuccess={() => {
@@ -157,7 +142,6 @@ export default function ProjectAssetLibraryModals({
 
       {editingProp && (
         <PropEditModal
-          mode="project"
           propId={editingProp.propId}
           propName={editingProp.propName}
           summary={editingProp.summary}
@@ -169,14 +153,6 @@ export default function ProjectAssetLibraryModals({
         />
       )}
 
-      {copyFromGlobalTarget && (
-        <GlobalAssetPicker
-          onClose={handleCloseCopyPicker}
-          onSelect={handleConfirmCopyFromGlobal}
-          type={copyFromGlobalTarget.type}
-          loading={isGlobalCopyInFlight}
-        />
-      )}
     </>
   )
 }

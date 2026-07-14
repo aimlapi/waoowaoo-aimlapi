@@ -47,7 +47,6 @@ function ProjectWorkspaceContent(props: ProjectWorkspaceProps) {
     episodeId: props.episodeId ?? null,
     scopeId: WORKSPACE_SCOPE_ALL_ID,
   }))
-  const isEpisodeWorkspace = props.viewMode === 'episode'
 
   const {
     project,
@@ -103,7 +102,7 @@ function ProjectWorkspaceContent(props: ProjectWorkspaceProps) {
   }
 
   return (
-    <div className={isEpisodeWorkspace ? 'h-full min-h-0 overflow-hidden' : undefined}>
+    <div className="h-full min-h-0 overflow-hidden">
       <WorkspaceHeaderShell
         isSettingsModalOpen={vm.ui.isSettingsModalOpen}
         isWorldContextModalOpen={vm.ui.isWorldContextModalOpen}
@@ -125,7 +124,7 @@ function ProjectWorkspaceContent(props: ProjectWorkspaceProps) {
         videoRatio={vm.project.videoRatio}
         onUpdateConfig={vm.actions.handleUpdateConfig}
         onUpdateConfigPatch={vm.actions.handleUpdateConfigPatch}
-        globalAssetText={vm.project.globalAssetText}
+        worldContextText={vm.project.worldContextText}
         projectName={project.name}
         episodes={episodes}
         currentEpisodeId={episodeId}
@@ -142,8 +141,8 @@ function ProjectWorkspaceContent(props: ProjectWorkspaceProps) {
         onWorkspaceScopeSelect={handleWorkspaceScopeSelect}
       />
 
-      <div className={isEpisodeWorkspace ? 'h-full min-h-0 overflow-hidden' : undefined}>
-        <div className={isEpisodeWorkspace ? 'h-full min-h-0 overflow-hidden' : undefined}>
+      <div className="h-full min-h-0 overflow-hidden">
+        <div className="h-full min-h-0 overflow-hidden">
           <WorkspaceAssistantPanel
             projectId={projectId}
             episodeId={episodeId}
@@ -154,7 +153,7 @@ function ProjectWorkspaceContent(props: ProjectWorkspaceProps) {
             onActiveOperationChange={setActiveAssistantFocusRequest}
             onStyleBibleConfirmed={() => setStyleBibleFocusRequestId((current) => current + 1)}
           />
-          <div className={isEpisodeWorkspace ? 'h-full min-w-0 overflow-hidden' : 'min-w-0'}>
+          <div className="h-full min-w-0 overflow-hidden">
             <WorkspaceRuntimeProvider value={vm.runtime.workspaceRuntime}>
               <ProjectWorkspaceCanvas
                 onAssistantSelectionChange={setAssistantSelection}

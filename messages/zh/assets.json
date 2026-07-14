@@ -46,8 +46,7 @@
     "assetCount": "{count} 个形象",
     "characterCount": "{count} 个角色",
     "updateFailed": "更新描述失败",
-    "addFailed": "添加角色失败",
-    "copyFromGlobal": "从资产中心导入"
+    "addFailed": "添加角色失败"
   },
   "location": {
     "add": "添加场景",

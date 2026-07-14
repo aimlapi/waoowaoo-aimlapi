@@ -33,7 +33,7 @@ export const GOLDEN_SCENARIO_CONTRACTS = [
     zeroPaidProviderCalls: true,
   },
   {
-    id: 'GJ-ASSET-HUB-CROSS-PROJECT-DENIAL',
+    id: 'GJ-PROJECT-ASSET-CROSS-PROJECT-DENIAL',
     kind: 'security',
     title: 'one project cannot overwrite an asset owned by another project',
     startStep: 'outside_workflow',

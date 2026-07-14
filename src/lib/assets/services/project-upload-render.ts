@@ -15,7 +15,7 @@ import type { Locale } from '@/i18n/routing'
 import {
   requireOwnedAssetTarget,
   requireOwnedAssetVariant,
-} from '@/lib/assets/services/asset-scope-ownership'
+} from '@/lib/assets/services/project-asset-ownership'
 
 type ProjectUploadRenderKind = Extract<AssetKind, 'character' | 'location'>
 
@@ -65,7 +65,6 @@ export type PreparedProjectAssetRender =
 
 function accessFor(input: ProjectAssetRenderTargetInput) {
   return {
-    scope: 'project' as const,
     userId: input.userId,
     projectId: input.projectId,
   }

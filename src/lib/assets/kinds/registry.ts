@@ -22,7 +22,6 @@ const assetKindRegistryMap: Record<AssetKind, AssetKindRegistration> = {
       canRevertRender: true,
       canModifyRender: true,
       canUploadRender: true,
-      canCopyFromGlobal: true,
     },
   },
   location: {
@@ -37,7 +36,6 @@ const assetKindRegistryMap: Record<AssetKind, AssetKindRegistration> = {
       canRevertRender: true,
       canModifyRender: true,
       canUploadRender: true,
-      canCopyFromGlobal: true,
     },
   },
   prop: {
@@ -52,7 +50,6 @@ const assetKindRegistryMap: Record<AssetKind, AssetKindRegistration> = {
       canRevertRender: true,
       canModifyRender: true,
       canUploadRender: true,
-      canCopyFromGlobal: true,
     },
   },
 }

@@ -149,7 +149,6 @@ export function resolveWorkspaceCanvasBillableActionRequest(params: {
       operationId = 'api_assets_generate'
       input = {
         assetId: params.action.assetId,
-        scope: 'project',
         kind: params.action.kind,
         projectId: params.projectId,
         episodeId: params.episodeId,

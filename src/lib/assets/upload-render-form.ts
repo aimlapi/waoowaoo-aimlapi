@@ -9,7 +9,6 @@ export type UploadRenderFileLike = {
 
 export type ProjectUploadRenderInput = {
   readonly assetId: string
-  readonly scope: 'project'
   readonly kind: Extract<AssetKind, 'character' | 'location'>
   readonly projectId: string
   readonly file: UploadRenderFileLike
@@ -44,19 +43,11 @@ function parseImageIndex(value: unknown): number | undefined {
 }
 
 export function parseProjectUploadRenderFormData(formData: FormData, assetId: string): ProjectUploadRenderInput {
-  const scope = normalizeString(formData.get('scope'))
   const kind = normalizeString(formData.get('kind'))
   const projectId = normalizeString(formData.get('projectId'))
   const appearanceId = normalizeString(formData.get('appearanceId'))
   const file = formData.get('file')
 
-  if (scope !== 'project') {
-    throw new ApiError('INVALID_PARAMS', {
-      code: 'INVALID_ASSET_SCOPE',
-      field: 'scope',
-      message: 'upload-render currently requires project scope',
-    })
-  }
   if (kind !== 'character' && kind !== 'location') {
     throw new ApiError('INVALID_PARAMS', {
       code: 'INVALID_ASSET_KIND',
@@ -90,7 +81,6 @@ export function parseProjectUploadRenderFormData(formData: FormData, assetId: st
 
   return {
     assetId,
-    scope,
     kind,
     projectId,
     file,

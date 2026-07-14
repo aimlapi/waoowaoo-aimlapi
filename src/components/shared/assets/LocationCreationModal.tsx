@@ -9,9 +9,6 @@ import TaskStatusInline from '@/components/task/TaskStatusInline'
 import { resolveTaskPresentationState } from '@/lib/task/presentation'
 import {
     useAiCreateProjectLocation,
-    useAiDesignLocation,
-    useCreateAssetHubLocation,
-    useGenerateLocationImage,
     useCreateProjectLocation,
     useGenerateProjectLocationImage,
 } from '@/lib/query/hooks'
@@ -20,11 +17,7 @@ import ImageGenerationInlineCountButton from '@/components/image-generation/Imag
 import { getImageGenerationCountOptions } from '@/lib/image-generation/count'
 
 export interface LocationCreationModalProps {
-    mode: 'asset-hub' | 'project'
-    // Asset Hub 模式使用
-    folderId?: string | null
-    // 项目模式使用
-    projectId?: string
+    projectId: string
     onClose: () => void
     onSuccess: () => void
 }
@@ -39,19 +32,14 @@ const SparklesIcon = ({ className }: { className?: string }) => (
 )
 
 export function LocationCreationModal({
-    mode,
-    folderId,
     projectId,
     onClose,
     onSuccess
 }: LocationCreationModalProps) {
     const t = useTranslations('assetModal')
-    const aiDesignAssetHubLocation = useAiDesignLocation()
-    const createAssetHubLocation = useCreateAssetHubLocation()
-    const generateAssetHubLocation = useGenerateLocationImage()
-    const aiCreateProjectLocation = useAiCreateProjectLocation(projectId || '')
-    const createProjectLocation = useCreateProjectLocation(projectId || '')
-    const generateProjectLocation = useGenerateProjectLocationImage(projectId || '')
+    const aiCreateProjectLocation = useAiCreateProjectLocation(projectId)
+    const createProjectLocation = useCreateProjectLocation(projectId)
+    const generateProjectLocation = useGenerateProjectLocationImage(projectId)
     const {
         count: locationGenerationCount,
         setCount: setLocationGenerationCount,
@@ -113,9 +101,7 @@ export function LocationCreationModal({
 
         try {
             setIsAiDesigning(true)
-            const data = mode === 'asset-hub'
-                ? await aiDesignAssetHubLocation.mutateAsync(aiInstruction)
-                : await aiCreateProjectLocation.mutateAsync({ userInstruction: aiInstruction })
+            const data = await aiCreateProjectLocation.mutateAsync({ userInstruction: aiInstruction })
             setDescription(data.prompt || '')
             setAiInstruction('')
         } catch (error: unknown) {
@@ -145,31 +131,11 @@ export function LocationCreationModal({
         try {
             setIsSubmitting(true)
 
-            const body: {
-                name: string
-                description: string
-                folderId?: string | null
-            } = {
+            const body = {
                 name: name.trim(),
                 description: description.trim(),
             }
-
-            if (mode === 'asset-hub') {
-                body.folderId = folderId
-            }
-
-            if (mode === 'asset-hub') {
-                await createAssetHubLocation.mutateAsync({
-                    name: body.name,
-                    summary: body.description,
-                    folderId: body.folderId ?? null,
-                })
-            } else {
-                await createProjectLocation.mutateAsync({
-                    name: body.name,
-                    description: body.description,
-                })
-            }
+            await createProjectLocation.mutateAsync(body)
 
             onSuccess()
             onClose()
@@ -190,36 +156,19 @@ export function LocationCreationModal({
         try {
             setIsSubmitting(true)
 
-            if (mode === 'asset-hub') {
-                const result = await createAssetHubLocation.mutateAsync({
-                    name: name.trim(),
-                    summary: description.trim(),
-                    folderId: folderId ?? null,
-                    count: locationGenerationCount,
-                }) as CreatedLocationResponse
-                const createdLocationId = result.location?.id
-                if (!createdLocationId) {
-                    throw new Error(t('errors.createFailed'))
-                }
-                await generateAssetHubLocation.mutateAsync({
-                    locationId: createdLocationId,
-                    count: locationGenerationCount,
-                })
-            } else {
-                const result = await createProjectLocation.mutateAsync({
-                    name: name.trim(),
-                    description: description.trim(),
-                    count: locationGenerationCount,
-                }) as CreatedLocationResponse
-                const createdLocationId = result.location?.id
-                if (!createdLocationId) {
-                    throw new Error(t('errors.createFailed'))
-                }
-                await generateProjectLocation.mutateAsync({
-                    locationId: createdLocationId,
-                    count: locationGenerationCount,
-                })
+            const result = await createProjectLocation.mutateAsync({
+                name: name.trim(),
+                description: description.trim(),
+                count: locationGenerationCount,
+            }) as CreatedLocationResponse
+            const createdLocationId = result.location?.id
+            if (!createdLocationId) {
+                throw new Error(t('errors.createFailed'))
             }
+            await generateProjectLocation.mutateAsync({
+                locationId: createdLocationId,
+                count: locationGenerationCount,
+            })
 
             onSuccess()
             onClose()
@@ -350,7 +299,7 @@ export function LocationCreationModal({
                         {isSubmitting ? (
                             <TaskStatusInline state={submittingState} className="text-white [&>span]:text-white [&_svg]:text-white" />
                         ) : (
-                            <span>{mode === 'asset-hub' ? t('common.addOnlyToAssetHubLocation') : t('common.addOnlyLocation')}</span>
+                            <span>{t('common.addOnlyLocation')}</span>
                         )}
                     </button>
                     <ImageGenerationInlineCountButton

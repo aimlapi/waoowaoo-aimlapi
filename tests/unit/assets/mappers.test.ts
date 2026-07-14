@@ -31,7 +31,6 @@ describe('asset mappers', () => {
 
     expect(asset).toEqual(expect.objectContaining({
       id: 'character-1',
-      scope: 'project',
       kind: 'character',
       introduction: '主角',
       profileData: JSON.stringify({ archetype: 'lead' }),
@@ -64,7 +63,6 @@ describe('asset mappers', () => {
     })
     expect(propAsset).toEqual(expect.objectContaining({
       id: 'prop-1',
-      scope: 'project',
       kind: 'prop',
       summary: '古旧短刃，雕纹手柄',
       selectedVariantId: 'prop-image-1',

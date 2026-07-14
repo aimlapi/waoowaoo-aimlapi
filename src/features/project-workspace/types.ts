@@ -19,7 +19,6 @@ export interface ProjectWorkspaceProps {
   projectId: string
   episodeId?: string
   episode?: Episode | null
-  viewMode?: 'global-assets' | 'episode'
   episodes?: Episode[]
   assistantAutoStartDraft?: {
     readonly message: string

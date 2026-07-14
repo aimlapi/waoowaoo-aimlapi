@@ -8,25 +8,22 @@ import TaskStatusInline from '@/components/task/TaskStatusInline'
 import { resolveTaskPresentationState } from '@/lib/task/presentation'
 import {
   useAiModifyProjectPropDescription,
-  useAiModifyPropDescription,
   useAssetActions,
 } from '@/lib/query/hooks'
 import { AiModifyDescriptionField } from './AiModifyDescriptionField'
 
 export interface PropEditModalProps {
-  mode: 'asset-hub' | 'project'
   propId: string
   propName: string
   summary: string
   description: string
   variantId?: string
-  projectId?: string
+  projectId: string
   onClose: () => void
   onRefresh?: () => void
 }
 
 export function PropEditModal({
-  mode,
   propId,
   propName,
   summary,
@@ -38,7 +35,6 @@ export function PropEditModal({
 }: PropEditModalProps) {
   const t = useTranslations('assets')
   const actions = useAssetActions({
-    scope: mode === 'asset-hub' ? 'global' : 'project',
     projectId,
     kind: 'prop',
   })
@@ -64,8 +60,7 @@ export function PropEditModal({
       hasOutput: false,
     })
     : null
-  const aiModifyAssetHub = useAiModifyPropDescription()
-  const aiModifyProject = useAiModifyProjectPropDescription(projectId ?? '')
+  const aiModifyProject = useAiModifyProjectPropDescription(projectId)
 
   const getErrorMessage = (error: unknown, fallback: string) => {
     if (error instanceof Error && error.message) return error.message
@@ -90,14 +85,7 @@ export function PropEditModal({
 
     try {
       setIsAiModifying(true)
-      const data = mode === 'asset-hub'
-        ? await aiModifyAssetHub.mutateAsync({
-          propId,
-          variantId,
-          currentDescription: editingDescription,
-          modifyInstruction: aiModifyInstruction,
-        })
-        : await aiModifyProject.mutateAsync({
+      const data = await aiModifyProject.mutateAsync({
           propId,
           variantId,
           currentDescription: editingDescription,

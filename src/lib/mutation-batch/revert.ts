@@ -263,7 +263,6 @@ export async function revertMutationEntry(entry: {
           ...(appearanceId ? { appearanceId } : {}),
         },
         access: {
-          scope: 'project',
           userId: entry.userId,
           projectId: entry.projectId,
         },

@@ -43,7 +43,7 @@ function queryKeysForResource(ref: WorkspaceResourceRef): QueryKey[] {
 
   if (ref.kind === WORKSPACE_RESOURCE_KIND.PROJECT_ASSETS) {
     const projectAssetKeys: QueryKey[] = [
-      queryKeys.assets.all('project', ref.projectId),
+      queryKeys.assets.all(ref.projectId),
       queryKeys.projectAssets.all(ref.projectId),
       queryKeys.projectData(ref.projectId),
     ]
@@ -53,15 +53,6 @@ function queryKeysForResource(ref: WorkspaceResourceRef): QueryKey[] {
       projectAssetKeys.push(queryKeys.project.context(ref.projectId, ref.episodeId))
     }
     return projectAssetKeys
-  }
-
-  if (ref.kind === WORKSPACE_RESOURCE_KIND.GLOBAL_ASSETS) {
-    const globalAssetKeys: QueryKey[] = [
-      queryKeys.assets.all('global'),
-      queryKeys.globalAssets.all(),
-      queryKeys.globalAssets.folders(),
-    ]
-    return globalAssetKeys
   }
 
   if (ref.kind === WORKSPACE_RESOURCE_KIND.PROJECT_DATA) {

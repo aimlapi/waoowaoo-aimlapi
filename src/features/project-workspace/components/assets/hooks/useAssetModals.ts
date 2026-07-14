@@ -62,9 +62,6 @@ export function useAssetModals({
     const [showAddCharacter, setShowAddCharacter] = useState(false)
     const [showAddLocation, setShowAddLocation] = useState(false)
     const [showAddProp, setShowAddProp] = useState(false)
-    // 全局资产设定弹窗
-    const [showAssetSettingModal, setShowAssetSettingModal] = useState(false)
-
     // 编辑特定描述索引的角色形象
     const handleEditCharacterDescription = (characterId: string, appearanceIndex: number, descriptionIndex: number) => {
         const character = characters.find(c => c.id === characterId)
@@ -139,8 +136,6 @@ export function useAssetModals({
     const closeAddCharacter = () => setShowAddCharacter(false)
     const closeAddLocation = () => setShowAddLocation(false)
     const closeAddProp = () => setShowAddProp(false)
-    const closeAssetSettingModal = () => setShowAssetSettingModal(false)
-
     return {
         // 🔥 暴露数据供组件使用
         characters,
@@ -154,7 +149,6 @@ export function useAssetModals({
         showAddCharacter,
         showAddLocation,
         showAddProp,
-        showAssetSettingModal,
         // Setters
         setEditingAppearance,
         setEditingLocation,
@@ -162,7 +156,6 @@ export function useAssetModals({
         setShowAddCharacter,
         setShowAddLocation,
         setShowAddProp,
-        setShowAssetSettingModal,
         // Handlers
         handleEditCharacterDescription,
         handleEditLocationDescription,
@@ -175,7 +168,6 @@ export function useAssetModals({
         closeEditingProp,
         closeAddCharacter,
         closeAddLocation,
-        closeAddProp,
-        closeAssetSettingModal
+        closeAddProp
     }
 }

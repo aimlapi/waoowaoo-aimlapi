@@ -108,7 +108,6 @@
       "allow-high-with-confirm": "Allow high with confirm"
     },
     "groupSegment": {
-      "asset-hub": "Asset Hub",
       "read": "Read",
       "folder": "Folder",
       "picker": "Picker",
@@ -192,7 +191,6 @@
     "batchTaskSubmitted": "Batch Task Submitted",
     "planValidated": "Plan validated",
     "planNeedsRevision": "Plan needs revision",
-    "globalScope": "Global",
     "scopeEpisode": "Episode {id}",
     "scopeClip": "Clip {id}",
     "scopePanel": "Panel {id}",

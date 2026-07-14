@@ -40,26 +40,6 @@ const FLOW_DEFINITIONS: ReadonlyArray<LLMTaskFlowDefinition> = [
       },
     ],
   },
-  {
-    id: 'asset_hub_ai_design_character',
-    stages: [
-      {
-        id: TASK_TYPE.ASSET_HUB_AI_DESIGN_CHARACTER,
-        taskType: TASK_TYPE.ASSET_HUB_AI_DESIGN_CHARACTER,
-        title: getTaskTypeLabel(TASK_TYPE.ASSET_HUB_AI_DESIGN_CHARACTER),
-      },
-    ],
-  },
-  {
-    id: 'asset_hub_ai_design_location',
-    stages: [
-      {
-        id: TASK_TYPE.ASSET_HUB_AI_DESIGN_LOCATION,
-        taskType: TASK_TYPE.ASSET_HUB_AI_DESIGN_LOCATION,
-        title: getTaskTypeLabel(TASK_TYPE.ASSET_HUB_AI_DESIGN_LOCATION),
-      },
-    ],
-  },
 ]
 
 const FLOW_META_BY_TASK_TYPE: Record<string, LLMTaskFlowMeta> = FLOW_DEFINITIONS.reduce(

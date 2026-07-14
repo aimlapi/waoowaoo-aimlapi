@@ -198,42 +198,6 @@ export async function readGoldenProjectsByOwnerAndName(input: {
   }
 }
 
-export async function readGoldenGlobalCharacter(input: {
-  readonly characterId: string
-  readonly userId: string
-}): Promise<{
-  readonly id: string
-  readonly userId: string
-  readonly name: string
-  readonly appearanceDescription: string | null
-} | null> {
-  const connection = await mysql.createConnection(await resolveOracleDatabaseUrl())
-  try {
-    const rows = await queryRows(
-      connection,
-      `SELECT c.id, c.userId, c.name, a.description AS appearanceDescription
-       FROM global_characters c
-       LEFT JOIN global_character_appearances a
-         ON a.characterId = c.id AND a.appearanceIndex = 0
-       WHERE c.id = ? AND c.userId = ?
-       LIMIT 1`,
-      [input.characterId, input.userId],
-    )
-    const row = rows[0]
-    if (!row || typeof row.id !== 'string' || typeof row.userId !== 'string' || typeof row.name !== 'string') {
-      return null
-    }
-    return {
-      id: row.id,
-      userId: row.userId,
-      name: row.name,
-      appearanceDescription: typeof row.appearanceDescription === 'string' ? row.appearanceDescription : null,
-    }
-  } finally {
-    await connection.end()
-  }
-}
-
 export async function readGoldenProjectCharacter(input: {
   readonly characterId: string
   readonly projectId: string
@@ -241,7 +205,6 @@ export async function readGoldenProjectCharacter(input: {
   readonly id: string
   readonly projectId: string
   readonly name: string
-  readonly sourceGlobalCharacterId: string | null
   readonly profileConfirmed: boolean
   readonly appearanceDescription: string | null
 } | null> {
@@ -249,7 +212,7 @@ export async function readGoldenProjectCharacter(input: {
   try {
     const rows = await queryRows(
       connection,
-      `SELECT c.id, c.projectId, c.name, c.sourceGlobalCharacterId, c.profileConfirmed,
+      `SELECT c.id, c.projectId, c.name, c.profileConfirmed,
               a.description AS appearanceDescription
        FROM project_characters c
        LEFT JOIN character_appearances a
@@ -266,7 +229,6 @@ export async function readGoldenProjectCharacter(input: {
       id: row.id,
       projectId: row.projectId,
       name: row.name,
-      sourceGlobalCharacterId: typeof row.sourceGlobalCharacterId === 'string' ? row.sourceGlobalCharacterId : null,
       profileConfirmed: row.profileConfirmed === true || row.profileConfirmed === 1 || row.profileConfirmed === '1',
       appearanceDescription: typeof row.appearanceDescription === 'string' ? row.appearanceDescription : null,
     }

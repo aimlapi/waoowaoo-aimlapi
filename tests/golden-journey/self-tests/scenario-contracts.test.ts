@@ -11,7 +11,7 @@ describe('Golden Journey scenario contracts', () => {
       'GJ-MAIN-STORY-TO-FINAL-DELIVERABLE',
       'GJ-AUTH-UNAUTHENTICATED-DENIAL',
       'GJ-PROJECT-CROSS-USER-ISOLATION',
-      'GJ-ASSET-HUB-CROSS-PROJECT-DENIAL',
+      'GJ-PROJECT-ASSET-CROSS-PROJECT-DENIAL',
     ])
   })
 

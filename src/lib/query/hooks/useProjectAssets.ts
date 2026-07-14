@@ -110,9 +110,8 @@ export function mapAssetGroupsToProjectAssetsData(groups: AssetGroupMap): Projec
 /**
  * 获取项目资产（角色 + 场景）
  */
-export function useProjectAssets(projectId: string | null) {
+export function useProjectAssets(projectId: string) {
     const assetsQuery = useAssets({
-        scope: 'project',
         projectId,
     })
     const groups = groupAssetsByKind(assetsQuery.data)
@@ -127,7 +126,7 @@ export function useProjectAssets(projectId: string | null) {
 /**
  * 获取项目角色
  */
-export function useProjectCharacters(projectId: string | null) {
+export function useProjectCharacters(projectId: string) {
     const assetsQuery = useProjectAssets(projectId)
     return {
         ...assetsQuery,
@@ -138,7 +137,7 @@ export function useProjectCharacters(projectId: string | null) {
 /**
  * 获取项目场景
  */
-export function useProjectLocations(projectId: string | null) {
+export function useProjectLocations(projectId: string) {
     const assetsQuery = useProjectAssets(projectId)
     return {
         ...assetsQuery,
@@ -146,7 +145,7 @@ export function useProjectLocations(projectId: string | null) {
     }
 }
 
-export function useProjectProps(projectId: string | null) {
+export function useProjectProps(projectId: string) {
     const assetsQuery = useProjectAssets(projectId)
     return {
         ...assetsQuery,
@@ -168,7 +167,7 @@ export function useRefreshProjectAssets(projectId: string | null) {
             _ulogInfo('[刷新资产] 同时刷新 projectAssets / projectData / tasks 缓存')
             return Promise.all([
                 queryClient.invalidateQueries({
-                    queryKey: queryKeys.assets.all('project', projectId),
+                    queryKey: queryKeys.assets.all(projectId),
                 }),
                 queryClient.invalidateQueries({ queryKey: queryKeys.projectAssets.all(projectId) }),
                 queryClient.invalidateQueries({ queryKey: queryKeys.projectData(projectId) }),

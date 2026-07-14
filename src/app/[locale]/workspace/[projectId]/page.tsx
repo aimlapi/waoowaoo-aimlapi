@@ -1,7 +1,7 @@
 'use client'
 import { apiFetch } from '@/lib/api-fetch'
 
-import { useEffect, useState, useCallback, useMemo, useRef } from 'react'
+import { useEffect, useCallback, useMemo, useRef } from 'react'
 import { useParams, useSearchParams } from 'next/navigation'
 import { useTranslations } from 'next-intl'
 import { useQueryClient } from '@tanstack/react-query'
@@ -57,9 +57,6 @@ export default function ProjectDetailPage() {
   const { data: project, isLoading: loading, error: projectError } = useProjectData(projectId)
   const error = projectError?.message || null
 
-  // 视图状态（仅 UI）
-  const [isGlobalAssetsView, setIsGlobalAssetsView] = useState(false)
-
   const updateUrlParams = useCallback((updates: {
     episode?: string | null
     assistantAutoStart?: string | null
@@ -110,7 +107,7 @@ export default function ProjectDetailPage() {
   // 🔥 使用 React Query 获取剧集数据
   const { data: currentEpisode, isLoading: episodeLoading, error: episodeError } = useEpisodeData(
     projectId,
-    !isGlobalAssetsView ? selectedEpisodeId : null
+    selectedEpisodeId,
   )
   const assistantAutoStartDraft = useMemo(() => (
     shouldAutoStartAssistant && selectedEpisodeId
@@ -144,12 +141,12 @@ export default function ProjectDetailPage() {
 
   // 初始化 URL：无效/缺失 episode 时，统一回写默认 episode
   useEffect(() => {
-    if (!project || isGlobalAssetsView || episodes.length === 0) return
+    if (!project || episodes.length === 0) return
     if (urlEpisodeId && episodes.some((episode) => episode.id === urlEpisodeId)) return
     if (selectedEpisodeId) {
       updateUrlParams({ episode: selectedEpisodeId })
     }
-  }, [episodes, isGlobalAssetsView, project, selectedEpisodeId, updateUrlParams, urlEpisodeId])
+  }, [episodes, project, selectedEpisodeId, updateUrlParams, urlEpisodeId])
 
   // 创建剧集
   const handleCreateEpisode = async (name: string, description?: string) => {
@@ -167,7 +164,6 @@ export default function ProjectDetailPage() {
     // 🔥 刷新项目数据获取新的剧集列表
     queryClient.invalidateQueries({ queryKey: queryKeys.projectData(projectId) })
     // 自动切换到新创建的剧集
-    setIsGlobalAssetsView(false)
     // 同步到URL
     updateUrlParams({ episode: data.episode.id })
   }
@@ -237,7 +233,6 @@ export default function ProjectDetailPage() {
 
   // 选择剧集
   const handleEpisodeSelect = (episodeId: string) => {
-    setIsGlobalAssetsView(false)
     // 同步到URL
     updateUrlParams({ episode: episodeId })
   }
@@ -246,7 +241,6 @@ export default function ProjectDetailPage() {
     projectLoading: loading,
     projectError: error,
     hasProject: Boolean(project),
-    isGlobalAssetsView,
     episodeCount: episodes.length,
     selectedEpisodeId,
     hasCurrentEpisode: Boolean(currentEpisode),
@@ -255,7 +249,7 @@ export default function ProjectDetailPage() {
     projectMissingMessage: t('projectNotFound'),
     episodeMissingMessage: t('episodeNotFound'),
   })
-  const isEpisodeWorkspaceReady = !isGlobalAssetsView && Boolean(selectedEpisodeId && currentEpisode)
+  const isEpisodeWorkspaceReady = Boolean(selectedEpisodeId && currentEpisode)
   if (pageState.kind === 'loading') {
     return (
       <div className="glass-page min-h-screen">
@@ -298,24 +292,13 @@ export default function ProjectDetailPage() {
       {/* 主内容区 - 占满全部宽度 */}
       <main className={isEpisodeWorkspaceReady ? 'min-h-0 flex-1 overflow-hidden' : 'flex-1 overflow-y-auto'}>
         <div className={isEpisodeWorkspaceReady ? 'h-full w-full overflow-hidden' : 'w-full px-4 py-8'}>
-          {isGlobalAssetsView ? (
-            // 全局资产视图（确保数据准备好）
-            <div>
-              <h1 className="text-2xl font-bold text-[var(--glass-text-primary)] mb-6">{t('globalAssets')}</h1>
-              <ProjectWorkspace
-                project={project}
-                projectId={projectId}
-                viewMode="global-assets"
-              />
-            </div>
-          ) : selectedEpisodeId && currentEpisode ? (
+          {selectedEpisodeId && currentEpisode ? (
             // 剧集工作区（确保所有数据都准备好）
             <ProjectWorkspace
               project={project}
               projectId={projectId}
               episodeId={selectedEpisodeId}
               episode={currentEpisode}
-              viewMode="episode"
               episodes={episodes}
               assistantAutoStartDraft={assistantAutoStartDraft}
               assistantAutoStartKey={assistantAutoStartKey}

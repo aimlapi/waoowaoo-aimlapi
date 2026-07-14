@@ -172,13 +172,10 @@ export function createExtraOperations(): ProjectAgentOperationRegistryDraft {
       plan: async (ctx, input) => await planReferenceCharacterGeneration({
         ctx,
         input,
-        scope: 'project',
-        operationId: 'reference_to_character',
       }),
       commit: async (ctx, _input, plan) => await commitReferenceCharacterGeneration({
         ctx,
         plan,
-        operationId: 'reference_to_character',
       }),
     }),
     extract_reference_character_description: defineOperation({
@@ -193,8 +190,6 @@ export function createExtraOperations(): ProjectAgentOperationRegistryDraft {
       execute: async (ctx, input) => await submitReferenceCharacterExtraction({
         ctx,
         input,
-        scope: 'project',
-        operationId: 'extract_reference_character_description',
       }),
     }),
   }

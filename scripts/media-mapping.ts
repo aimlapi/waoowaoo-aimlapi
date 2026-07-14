@@ -45,20 +45,4 @@ export const MEDIA_MODEL_MAPPINGS: MediaModelMapping[] = [
     tableName: 'supplementary_panels',
     fields: [{ legacyField: 'imageUrl', mediaIdField: 'imageMediaId' }],
   },
-  {
-    model: 'globalCharacterAppearance',
-    tableName: 'global_character_appearances',
-    fields: [
-      { legacyField: 'imageUrl', mediaIdField: 'imageMediaId' },
-      { legacyField: 'previousImageUrl', mediaIdField: 'previousImageMediaId' },
-    ],
-  },
-  {
-    model: 'globalLocationImage',
-    tableName: 'global_location_images',
-    fields: [
-      { legacyField: 'imageUrl', mediaIdField: 'imageMediaId' },
-      { legacyField: 'previousImageUrl', mediaIdField: 'previousImageMediaId' },
-    ],
-  },
 ]

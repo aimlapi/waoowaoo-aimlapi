@@ -50,7 +50,6 @@ export function createEditOperations(): ProjectAgentOperationRegistryDraft {
             imageIndex: input.imageIndex ?? undefined,
           },
           access: {
-            scope: 'project',
             userId: ctx.userId,
             projectId: ctx.projectId,
           },

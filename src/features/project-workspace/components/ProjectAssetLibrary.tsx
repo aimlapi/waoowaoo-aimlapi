@@ -3,7 +3,7 @@
 import { useTranslations } from 'next-intl'
 /**
  * 项目资产库 - 小说推文模式专用
- * 包含资产展示、复制、生成和编辑
+ * 包含资产展示、生成和编辑
  * 
  * 重构说明 v2:
  * - 角色和场景操作函数已提取到 hooks/useCharacterActions 和 hooks/useLocationActions
@@ -27,7 +27,6 @@ import { useCharacterActions } from './assets/hooks/useCharacterActions'
 import { useLocationActions } from './assets/hooks/useLocationActions'
 import { useAssetGenerationActivity } from './assets/hooks/useAssetGenerationActivity'
 import { useAssetModals } from './assets/hooks/useAssetModals'
-import { useAssetsCopyFromHub } from './assets/hooks/useAssetsCopyFromHub'
 import { useAssetImageMaintenance } from './assets/hooks/useAssetImageMaintenance'
 
 // Components
@@ -50,7 +49,6 @@ export default function ProjectAssetLibrary({
   focusCharacterRequestId = 0,
 }: ProjectAssetLibraryProps) {
   const { data: assets = [] } = useAssets({
-    scope: 'project',
     projectId,
   })
   const characters = useMemo(
@@ -66,7 +64,6 @@ export default function ProjectAssetLibrary({
     [assets],
   )
   const propAssetActions = useAssetActions({
-    scope: 'project',
     projectId,
     kind: 'prop',
   })
@@ -145,20 +142,6 @@ export default function ProjectAssetLibrary({
     registerSubmittingTaskKey,
     clearSubmittingTaskKey,
   } = useAssetGenerationActivity(projectId)
-
-  const {
-    copyFromGlobalTarget,
-    isGlobalCopyInFlight,
-    handleCopyFromGlobal,
-    handleCopyLocationFromGlobal,
-    handleCopyPropFromGlobal,
-    handleConfirmCopyFromGlobal,
-    handleCloseCopyPicker,
-  } = useAssetsCopyFromHub({
-    projectId,
-    onRefresh,
-    showToast,
-  })
 
   // 角色操作
   const {
@@ -283,7 +266,6 @@ export default function ProjectAssetLibrary({
             onRegenerateGroup={handleRegenerateCharacterGroup}
             onUndo={handleUndoCharacter}
             onImageClick={setPreviewImage}
-            onCopyFromGlobal={handleCopyFromGlobal}
             getAppearances={getAppearances}
             filterIds={null}
           />
@@ -305,7 +287,6 @@ export default function ProjectAssetLibrary({
             onRegenerateGroup={handleRegenerateLocationGroup}
             onUndo={handleUndoLocation}
             onImageClick={setPreviewImage}
-            onCopyFromGlobal={handleCopyLocationFromGlobal}
             filterIds={null}
           />
       )}
@@ -329,7 +310,6 @@ export default function ProjectAssetLibrary({
               void propAssetActions.revertRender({ id: propId }).catch(() => undefined)
             }}
             onImageClick={setPreviewImage}
-            onCopyFromGlobal={handleCopyPropFromGlobal}
             filterIds={null}
           />
       )}
@@ -341,8 +321,6 @@ export default function ProjectAssetLibrary({
         handleGenerateImage={handleGenerateImage}
         handleUpdateAppearanceDescription={handleUpdateAppearanceDescription}
         handleUpdateLocationDescription={handleUpdateLocationDescription}
-        handleCloseCopyPicker={handleCloseCopyPicker}
-        handleConfirmCopyFromGlobal={handleConfirmCopyFromGlobal}
         closeEditingAppearance={closeEditingAppearance}
         closeEditingLocation={closeEditingLocation}
         closeEditingProp={closeEditingProp}
@@ -356,8 +334,6 @@ export default function ProjectAssetLibrary({
         showAddCharacter={showAddCharacter}
         showAddLocation={showAddLocation}
         showAddProp={showAddProp}
-        copyFromGlobalTarget={copyFromGlobalTarget}
-        isGlobalCopyInFlight={isGlobalCopyInFlight}
       />
     </div>
   )

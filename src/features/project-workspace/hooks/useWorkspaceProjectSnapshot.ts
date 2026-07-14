@@ -30,7 +30,7 @@ export function useWorkspaceProjectSnapshot({
       projectCharacters: project.characters || [],
       projectLocations: project.locations || [],
       episodeStoryboards: episode?.storyboards || [],
-      globalAssetText: project.globalAssetText || '',
+      worldContextText: project.worldContextText || '',
       novelText: episode?.novelText || '',
       analysisModel: project.analysisModel ?? undefined,
       characterModel: project.characterModel ?? undefined,

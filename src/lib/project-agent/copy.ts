@@ -23,30 +23,6 @@ const SELECTABLE_TOOL_DESCRIPTION_COPY: Record<string, { zh: string; en: string 
     zh: '读取单个章节的轻量详情：核心剪辑计划状态、分镜状态、视频片段状态、资产需求和章节成片输出。当用户在讨论某一章的细节、或某一章需要修复时调用。',
     en: 'Read lightweight details for one chapter: core edit plan status, storyboard status, video group status, asset requirements, and chapter render output. Call it when the user discusses a specific chapter\'s details or a chapter needs to be repaired.',
   },
-  asset_hub_list_folders: {
-    zh: '列出当前用户的全局资产文件夹。',
-    en: 'List the current user\'s global asset folders.',
-  },
-  asset_hub_picker: {
-    zh: '列出可放进选择器的全局资产（角色和场景），并附带预览图链接。',
-    en: 'List global assets (characters and locations) that can go into a picker, with preview image links.',
-  },
-  asset_hub_list_characters: {
-    zh: '列出当前用户的全局角色，可用 folderId 只看某个文件夹。',
-    en: 'List the current user\'s global characters, optionally narrowed to one folder with folderId.',
-  },
-  asset_hub_get_character: {
-    zh: '按 id 读取单个全局角色的详情。',
-    en: 'Read one global character\'s details by id.',
-  },
-  asset_hub_list_locations: {
-    zh: '列出当前用户的全局场景，可用 folderId 只看某个文件夹。',
-    en: 'List the current user\'s global locations, optionally narrowed to one folder with folderId.',
-  },
-  asset_hub_get_location: {
-    zh: '按 id 读取单个全局场景的详情。',
-    en: 'Read one global location\'s details by id.',
-  },
   request_edit_bible_review_choice: {
     zh: '把生成好的制作规划展示给用户确认：全局 Bible、剧情节拍、事件台账、情绪曲线和章节切分。用户可以确认锁定，也可以提交修改意见。它只用于制作规划这一步的确认，不要拿它当“是否继续执行”的通用许可，也不要向用户描述它背后的卡片机制。',
     en: 'Show the finished production plan to the user for confirmation: global Bible, beat sheet, event ledger, emotional curve, and chapter split. The user can confirm and lock it, or submit revision notes. Use it only to confirm the production plan — do not use it as a generic "may I continue?" gate, and do not describe the underlying card mechanism to the user.',

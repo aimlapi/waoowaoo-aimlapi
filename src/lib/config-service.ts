@@ -391,7 +391,7 @@ export async function buildImageBillingPayload(input: {
 /**
  * 为图片类任务统一构建 billingPayload（用户级，sync）
  *
- * 适用于 asset-hub 等无 projectId 场景，使用已取出的 userModelConfig。
+ * 适用于没有项目上下文的系统任务，使用已取出的 userModelConfig。
  */
 export function buildImageBillingPayloadFromUserConfig(input: {
   userModelConfig: UserModelConfig

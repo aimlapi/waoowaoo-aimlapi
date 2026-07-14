@@ -54,46 +54,6 @@ async function attachMediaFieldsToAppearance<T extends Record<string, unknown>>(
   }
 }
 
-export async function attachMediaFieldsToGlobalCharacter<T extends Record<string, unknown>>(
-  character: T,
-  client?: MediaClient,
-) {
-  const appearances = await Promise.all(
-    ((character.appearances as Array<Record<string, unknown>>) || [])
-      .map((appearance) => attachMediaFieldsToAppearance(appearance, client)),
-  )
-
-  return {
-    ...character,
-    appearances,
-  }
-}
-
-export async function attachMediaFieldsToGlobalLocation<T extends Record<string, unknown>>(
-  location: T,
-  client?: MediaClient,
-) {
-  const images = await Promise.all(
-    ((location.images as Array<Record<string, unknown>>) || []).map(async (img) => {
-    const imageMedia = await resolveMediaRef(img.imageMediaId, img.imageUrl, client)
-    const previousImageMedia = await resolveMediaRef(img.previousImageMediaId, img.previousImageUrl, client)
-    return {
-      ...img,
-      media: imageMedia,
-      imageMedia,
-      previousImageMedia,
-      imageUrl: imageMedia?.url || img.imageUrl || null,
-      previousImageUrl: previousImageMedia?.url || img.previousImageUrl || null,
-    }
-    }),
-  )
-
-  return {
-    ...location,
-    images,
-  }
-}
-
 async function attachMediaFieldsToPanel<T extends Record<string, unknown>>(panel: T) {
   const imageMedia = await resolveMediaRef(panel.imageMediaId, panel.imageUrl)
   const videoMedia = await resolveMediaRef(panel.videoMediaId, panel.videoUrl)

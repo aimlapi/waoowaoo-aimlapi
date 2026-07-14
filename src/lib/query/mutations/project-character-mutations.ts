@@ -92,11 +92,11 @@ export function useAiCreateProjectCharacter(projectId: string) {
  * 上传临时媒体（项目）
  */
 
-export function useUploadProjectTempMedia() {
+export function useUploadProjectTempMedia(projectId: string) {
     return useMutation({
         mutationFn: async (payload: { imageBase64?: string; base64?: string; extension?: string; type?: string }) => {
             return await requestJsonWithError<{ success: boolean; url?: string; key?: string }>(
-                '/api/asset-hub/upload-temp',
+                `/api/projects/${projectId}/assets/upload-temp`,
                 {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },

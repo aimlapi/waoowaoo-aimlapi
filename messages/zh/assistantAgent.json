@@ -108,7 +108,6 @@
       "allow-high-with-confirm": "高风险需确认"
     },
     "groupSegment": {
-      "asset-hub": "资产中心",
       "read": "读取",
       "folder": "文件夹",
       "picker": "选择器",
@@ -192,7 +191,6 @@
     "batchTaskSubmitted": "批量任务已提交",
     "planValidated": "计划已通过校验",
     "planNeedsRevision": "计划需要修订",
-    "globalScope": "全局",
     "scopeEpisode": "剧集 {id}",
     "scopeClip": "片段 {id}",
     "scopePanel": "面板 {id}",

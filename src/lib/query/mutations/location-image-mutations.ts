@@ -119,7 +119,6 @@ export function buildProjectLocationGenerateImageBody(input: {
     count?: number
 }) {
     return {
-        scope: 'project' as const,
         kind: 'location' as const,
         projectId: input.projectId,
         imageIndex: input.imageIndex,
@@ -146,7 +145,6 @@ export function useUploadProjectLocationImage(projectId: string) {
         }) => {
             const formData = new FormData()
             formData.append('file', file)
-            formData.append('scope', 'project')
             formData.append('kind', 'location')
             formData.append('projectId', projectId)
             if (imageIndex !== undefined) formData.append('imageIndex', imageIndex.toString())
@@ -169,7 +167,6 @@ export function useRegenerateLocationGroup(projectId: string) {
     return useMutation({
         mutationFn: async ({ locationId, count }: { locationId: string; count?: number }) => {
             const requestBody = {
-                scope: 'project',
                 kind: 'location',
                 projectId,
                 count,
@@ -212,7 +209,6 @@ export function useRegenerateSingleLocationImage(projectId: string) {
     return useMutation({
         mutationFn: async ({ locationId, imageIndex }: { locationId: string; imageIndex: number }) => {
             const requestBody = {
-                scope: 'project',
                 kind: 'location',
                 projectId,
                 imageIndex,
@@ -264,7 +260,6 @@ export function useSelectProjectLocationImage(projectId: string) {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({
-                    scope: 'project',
                     kind: 'location',
                     projectId,
                     imageIndex,
@@ -329,7 +324,6 @@ export function useUndoProjectLocationImage(projectId: string) {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({
-                    scope: 'project',
                     kind: 'location',
                     projectId,
                 })

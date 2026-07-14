@@ -12,11 +12,7 @@ import {
 } from '@/lib/query/task-target-overlay'
 import { isTaskRuntimeRunningPhase, taskRuntimeTargetQueryKey } from '@/lib/task/runtime-targets'
 import { syncWorkspaceResourceChanges } from '@/lib/query/resource-change-sync'
-import {
-  GLOBAL_ASSET_PROJECT_ID,
-  resolveWorkspaceResourceRefs,
-  WORKSPACE_RESOURCE_IMPACT,
-} from '@/lib/workspace-resource/resource-impact'
+import { resolveWorkspaceResourceRefs, WORKSPACE_RESOURCE_IMPACT } from '@/lib/workspace-resource/resource-impact'
 import type {
   AssetKind,
   AssetQueryInput,
@@ -112,15 +108,7 @@ function withTaskStateAsset(asset: AssetSummary, byKey: Map<string, { phase: str
 }
 
 function buildQueryPath(input: AssetQueryInput): string {
-  const searchParams = new URLSearchParams({
-    scope: input.scope,
-  })
-  if (input.projectId) {
-    searchParams.set('projectId', input.projectId)
-  }
-  if (input.folderId) {
-    searchParams.set('folderId', input.folderId)
-  }
+  const searchParams = new URLSearchParams({ projectId: input.projectId })
   if (input.kind) {
     searchParams.set('kind', input.kind)
   }
@@ -138,11 +126,10 @@ export function useAssets(input: AssetQueryInput) {
       const data = await response.json() as ReadAssetsResponse
       return data.assets
     },
-    enabled: input.scope === 'global' || !!input.projectId,
     staleTime: 5_000,
   })
 
-  const taskProjectId = input.scope === 'global' ? 'global-asset-hub' : input.projectId ?? ''
+  const taskProjectId = input.projectId
   const taskRefs = useMemo(() => flattenTaskRefs(assetsQuery.data ?? []), [assetsQuery.data])
   const taskTargets = useMemo(() => taskRefs.map((ref) => ({
     targetType: ref.targetType,
@@ -166,8 +153,7 @@ export function useAssets(input: AssetQueryInput) {
 }
 
 type AssetActionScopeInput = {
-  scope: 'global' | 'project'
-  projectId?: string | null
+  projectId: string
   kind: AssetKind
 }
 
@@ -192,23 +178,6 @@ function resolveGenerateOverlayTarget(
     ?? normalizeOptionalString(payload.locationId)
   if (!assetId) {
     return null
-  }
-
-  if (input.scope === 'global') {
-    if (input.kind === 'character') {
-      const appearanceId = normalizeOptionalString(payload.appearanceId)
-      if (!appearanceId) return null
-      return {
-        projectId: 'global-asset-hub',
-        targetType: 'GlobalCharacterAppearance',
-        targetId: appearanceId,
-      }
-    }
-    return {
-      projectId: 'global-asset-hub',
-      targetType: 'GlobalLocation',
-      targetId: assetId,
-    }
   }
 
   const projectId = normalizeOptionalString(input.projectId)
@@ -236,29 +205,11 @@ function invalidateScopeQueries(queryClient: ReturnType<typeof useQueryClient>, 
   return syncWorkspaceResourceChanges({
     queryClient,
     changes: resolveWorkspaceResourceRefs({
-      impact: input.scope === 'global'
-        ? WORKSPACE_RESOURCE_IMPACT.GLOBAL_ASSETS
-        : WORKSPACE_RESOURCE_IMPACT.PROJECT_ASSETS,
-      projectId: input.scope === 'global' ? GLOBAL_ASSET_PROJECT_ID : input.projectId ?? '',
+      impact: WORKSPACE_RESOURCE_IMPACT.PROJECT_ASSETS,
+      projectId: input.projectId,
       episodeId: null,
     }),
   })
-}
-
-export function useRefreshAssets(input: { scope: 'global' | 'project'; projectId?: string | null }) {
-  const queryClient = useQueryClient()
-  return () => {
-    return syncWorkspaceResourceChanges({
-      queryClient,
-      changes: resolveWorkspaceResourceRefs({
-        impact: input.scope === 'global'
-          ? WORKSPACE_RESOURCE_IMPACT.GLOBAL_ASSETS
-          : WORKSPACE_RESOURCE_IMPACT.PROJECT_ASSETS,
-        projectId: input.scope === 'global' ? GLOBAL_ASSET_PROJECT_ID : input.projectId ?? '',
-        episodeId: null,
-      }),
-    })
-  }
 }
 
 export function useAssetActions(input: AssetActionScopeInput) {
@@ -270,7 +221,6 @@ export function useAssetActions(input: AssetActionScopeInput) {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
-        scope: input.scope,
         kind: input.kind,
         projectId: input.projectId,
         ...payload,
@@ -288,7 +238,6 @@ export function useAssetActions(input: AssetActionScopeInput) {
       method: 'DELETE',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
-        scope: input.scope,
         kind: input.kind,
         projectId: input.projectId,
       }),
@@ -305,7 +254,6 @@ export function useAssetActions(input: AssetActionScopeInput) {
       method: 'PATCH',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
-        scope: input.scope,
         kind: input.kind,
         projectId: input.projectId,
         ...payload,
@@ -321,7 +269,6 @@ export function useAssetActions(input: AssetActionScopeInput) {
   const generate = async (payload: Record<string, unknown>) => {
     const assetId = String(payload.id)
     const requestBody = {
-      scope: input.scope,
       kind: input.kind,
       projectId: input.projectId,
       ...payload,
@@ -359,7 +306,6 @@ export function useAssetActions(input: AssetActionScopeInput) {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
-        scope: input.scope,
         kind: input.kind,
         projectId: input.projectId,
         ...payload,
@@ -377,7 +323,6 @@ export function useAssetActions(input: AssetActionScopeInput) {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
-        scope: input.scope,
         kind: input.kind,
         projectId: input.projectId,
         ...payload,
@@ -390,32 +335,11 @@ export function useAssetActions(input: AssetActionScopeInput) {
     return response.json()
   }
 
-  const copyFromGlobal = async (payload: { targetId: string; globalAssetId: string }) => {
-    if (input.scope !== 'project' || !input.projectId) {
-      throw new Error('copyFromGlobal is only available for project asset scope')
-    }
-    const response = await apiFetch(`/api/assets/${payload.targetId}/copy`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        kind: input.kind,
-        projectId: input.projectId,
-        globalAssetId: payload.globalAssetId,
-      }),
-    })
-    if (!response.ok) {
-      throw new Error('Failed to copy asset from global library')
-    }
-    await invalidateScopeQueries(queryClient, input)
-    return response.json()
-  }
-
   const updateVariant = async (assetId: string, variantId: string, payload: Record<string, unknown>) => {
     const response = await apiFetch(`/api/assets/${assetId}/variants/${variantId}`, {
       method: 'PATCH',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
-        scope: input.scope,
         kind: input.kind,
         projectId: input.projectId,
         ...payload,
@@ -436,6 +360,5 @@ export function useAssetActions(input: AssetActionScopeInput) {
     generate,
     selectRender,
     revertRender,
-    copyFromGlobal,
   }
 }

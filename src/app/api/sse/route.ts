@@ -2,7 +2,7 @@ import { createScopedLogger } from '@/lib/logging/core'
 import { NextRequest, NextResponse } from 'next/server'
 import { apiHandler, ApiError, getRequestId } from '@/lib/api-errors'
 import { executeProjectAgentOperationFromApi } from '@/lib/adapters/api/execute-project-agent-operation'
-import { isErrorResponse, requireProjectAuthLight, requireUserAuth } from '@/lib/api-auth'
+import { isErrorResponse, requireProjectAuthLight } from '@/lib/api-auth'
 import { WORKSPACE_SSE_EVENT_TYPE, type SSEEvent } from '@/lib/task/types'
 import { getProjectChannel } from '@/lib/task/publisher'
 import {
@@ -33,9 +33,7 @@ export const GET = apiHandler(async (request: NextRequest) => {
     throw new ApiError('INVALID_PARAMS')
   }
 
-  const authResult = projectId === 'global-asset-hub'
-    ? await requireUserAuth()
-    : await requireProjectAuthLight(projectId)
+  const authResult = await requireProjectAuthLight(projectId)
   if (isErrorResponse(authResult)) return authResult
   const { session } = authResult
 
@@ -146,14 +144,6 @@ export const GET = apiHandler(async (request: NextRequest) => {
               if (payload.userId !== session.user.id) return
               if (payload.assistantId !== 'workspace-command') return
               if ((payload.episodeId ?? null) !== (episodeId ?? null)) return
-            }
-            if (projectId === 'global-asset-hub' && payload.userId !== session.user.id) {
-              logger.error({
-                action: 'sse.message.user_mismatch',
-                message: 'sse message userId mismatch',
-                details: { eventUserId: payload.userId, sessionUserId: session.user.id },
-              })
-              return
             }
             serverSession.receiveLiveEvent(payload)
           } catch (error) {

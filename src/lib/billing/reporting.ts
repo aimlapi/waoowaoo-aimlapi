@@ -24,7 +24,7 @@ interface PureRecordParams extends RecordParams {
   taskType?: string | null
 }
 
-const VIRTUAL_PROJECT_IDS = new Set(['asset-hub', 'global-asset-hub', 'system'])
+const VIRTUAL_PROJECT_IDS = new Set(['system'])
 
 function isProjectScoped(projectId: string): boolean {
   return Boolean(projectId && !VIRTUAL_PROJECT_IDS.has(projectId))
@@ -138,7 +138,7 @@ export async function recordUsageCostOnly(
       type: 'consume',
       amount: -params.cost,
       balanceAfter: params.balanceAfter,
-      description: `${params.action} - ${params.model}${hasProject ? '' : ' (Asset Hub)'}`,
+      description: `${params.action} - ${params.model}${hasProject ? '' : ' (System)'}`,
       relatedId: params.freezeId || null,
       freezeId: params.freezeId || null,
       projectId: hasProject ? params.projectId : null,

@@ -46,8 +46,7 @@
     "assetCount": "{count} Appearances",
     "characterCount": "{count} Characters",
     "updateFailed": "Update description failed",
-    "addFailed": "Add character failed",
-    "copyFromGlobal": "Import from Asset Hub"
+    "addFailed": "Add character failed"
   },
   "location": {
     "add": "Add Location",

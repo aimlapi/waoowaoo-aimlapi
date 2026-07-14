@@ -25,7 +25,6 @@ export async function commitAssetImageOperation(params: {
         assetId: metadata.assetId,
         body: task.payload,
         access: {
-          scope: 'project',
           userId: params.ctx.userId,
           projectId: params.ctx.projectId,
         },

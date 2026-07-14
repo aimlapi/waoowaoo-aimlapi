@@ -81,18 +81,17 @@ model LocationImage {
 }
 
 model ProjectCharacter {
-  id                      String                @id @default(uuid())
-  projectId               String
-  name                    String
-  aliases                 String?               @db.Text
-  createdAt               DateTime              @default(now())
-  updatedAt               DateTime              @default(now()) @updatedAt
-  profileData             String?               @db.Text
-  profileConfirmed        Boolean               @default(false)
-  introduction            String?               @db.Text // 角色介绍（身份、关系、称呼映射，如"我"对应此角色）
-  sourceGlobalCharacterId String? // 🆕 来源全局角色ID（复制时记录）
-  appearances             CharacterAppearance[]
-  project                 Project               @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  id               String                @id @default(uuid())
+  projectId        String
+  name             String
+  aliases          String?               @db.Text
+  createdAt        DateTime              @default(now())
+  updatedAt        DateTime              @default(now()) @updatedAt
+  profileData      String?               @db.Text
+  profileConfirmed Boolean               @default(false)
+  introduction     String?               @db.Text // 角色介绍（身份、关系、称呼映射，如"我"对应此角色）
+  appearances      CharacterAppearance[]
+  project          Project               @relation(fields: [projectId], references: [id], onDelete: Cascade)
 
   @@unique([projectId, name])
   @@index([projectId])
@@ -100,18 +99,17 @@ model ProjectCharacter {
 }
 
 model ProjectLocation {
-  id                     String          @id @default(uuid())
-  projectId              String
-  name                   String
-  summary                String?         @db.Text // 场景简要描述（用途/人物关联）
-  assetKind              String          @default("location")
-  createdAt              DateTime        @default(now())
-  updatedAt              DateTime        @default(now()) @updatedAt
-  sourceGlobalLocationId String? // 🆕 来源全局场景ID（复制时记录）
-  selectedImageId        String?
-  selectedImage          LocationImage?  @relation("SelectedLocationImage", fields: [selectedImageId], references: [id], onDelete: SetNull)
-  images                 LocationImage[] @relation("LocationImages")
-  project                Project         @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  id              String          @id @default(uuid())
+  projectId       String
+  name            String
+  summary         String?         @db.Text // 场景简要描述（用途/人物关联）
+  assetKind       String          @default("location")
+  createdAt       DateTime        @default(now())
+  updatedAt       DateTime        @default(now()) @updatedAt
+  selectedImageId String?
+  selectedImage   LocationImage?  @relation("SelectedLocationImage", fields: [selectedImageId], references: [id], onDelete: SetNull)
+  images          LocationImage[] @relation("LocationImages")
+  project         Project         @relation(fields: [projectId], references: [id], onDelete: Cascade)
 
   @@unique([projectId, assetKind, name])
   @@index([projectId])
@@ -820,7 +818,7 @@ model Project {
   musicModel              String?
   soundEffectModel        String?
   videoRatio              String                          @default("9:16")
-  globalAssetText         String?                         @db.LongText
+  worldContextText        String?                         @db.LongText
   characterModel          String?
   locationModel           String?
   storyboardModel         String?
@@ -948,10 +946,6 @@ model User {
   balance       UserBalance?
   preferences   UserPreference?
 
-  // 资产中心
-  globalAssetFolders             GlobalAssetFolder[]
-  globalCharacters               GlobalCharacter[]
-  globalLocations                GlobalLocation[]
   tasks                          Task[]
   taskEvents                     TaskEvent[]
   projectAssistantThreads        ProjectAssistantThread[]
@@ -1314,127 +1308,6 @@ model OutboxCommand {
   @@map("outbox_commands")
 }
 
-// ==================== 资产中心 ====================
-
-// 资产文件夹（一层，不支持嵌套）
-model GlobalAssetFolder {
-  id        String   @id @default(uuid())
-  userId    String
-  name      String
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
-
-  user       User              @relation(fields: [userId], references: [id], onDelete: Cascade)
-  characters GlobalCharacter[]
-  locations  GlobalLocation[]
-
-  @@index([userId])
-  @@map("global_asset_folders")
-}
-
-// 全局角色（结构与 ProjectCharacter 一致）
-model GlobalCharacter {
-  id               String   @id @default(uuid())
-  userId           String
-  folderId         String?
-  name             String
-  aliases          String?  @db.Text
-  profileData      String?  @db.Text
-  profileConfirmed Boolean  @default(false)
-  createdAt        DateTime @default(now())
-  updatedAt        DateTime @updatedAt
-
-  user        User                        @relation(fields: [userId], references: [id], onDelete: Cascade)
-  folder      GlobalAssetFolder?          @relation(fields: [folderId], references: [id], onDelete: SetNull)
-  appearances GlobalCharacterAppearance[]
-
-  @@index([userId])
-  @@index([folderId])
-  @@map("global_characters")
-}
-
-// 全局角色形象（结构与 CharacterAppearance 一致）
-model GlobalCharacterAppearance {
-  id                   String       @id @default(uuid())
-  characterId          String
-  appearanceIndex      Int
-  changeReason         String       @default("default")
-  description          String?      @db.Text
-  descriptions         String?      @db.Text
-  imageUrl             String?      @db.Text
-  imageMediaId         String?
-  imageMedia           MediaObject? @relation("GlobalCharacterAppearanceImageMedia", fields: [imageMediaId], references: [id], onDelete: SetNull)
-  imageUrls            String?      @db.Text
-  selectedIndex        Int?
-  previousImageUrl     String?      @db.Text
-  previousImageMediaId String?
-  previousImageMedia   MediaObject? @relation("GlobalCharacterAppearancePreviousImageMedia", fields: [previousImageMediaId], references: [id], onDelete: SetNull)
-  previousImageUrls    String?      @db.Text
-  previousDescription  String?      @db.Text // 上一次的描述词（用于撤回）
-  previousDescriptions String?      @db.Text // 上一次的描述词数组（用于撤回）
-  createdAt            DateTime     @default(now())
-  updatedAt            DateTime     @updatedAt
-
-  character GlobalCharacter @relation(fields: [characterId], references: [id], onDelete: Cascade)
-
-  @@unique([characterId, appearanceIndex])
-  @@index([characterId])
-  @@index([imageMediaId])
-  @@index([previousImageMediaId])
-  @@map("global_character_appearances")
-}
-
-// 全局场景（结构与 ProjectLocation 一致）
-model GlobalLocation {
-  id        String   @id @default(uuid())
-  userId    String
-  folderId  String?
-  name      String
-  summary   String?  @db.Text
-  assetKind String   @default("location")
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
-
-  user   User                  @relation(fields: [userId], references: [id], onDelete: Cascade)
-  folder GlobalAssetFolder?    @relation(fields: [folderId], references: [id], onDelete: SetNull)
-  images GlobalLocationImage[]
-
-  @@index([userId])
-  @@index([folderId])
-  @@map("global_locations")
-}
-
-// 全局场景图片（结构与 LocationImage 一致）
-model GlobalLocationImage {
-  id                       String       @id @default(uuid())
-  locationId               String
-  imageIndex               Int
-  description              String?      @db.Text
-  imageUrl                 String?      @db.Text
-  spatialProfileJson       Json?
-  spatialProfileStatus     String       @default("pending")
-  spatialProfileError      String?      @db.LongText
-  spatialProfileAnalyzedAt DateTime?
-  spatialProfileModel      String?
-  imageMediaId             String?
-  imageMedia               MediaObject? @relation("GlobalLocationImageMedia", fields: [imageMediaId], references: [id], onDelete: SetNull)
-  isSelected               Boolean      @default(false)
-  previousImageUrl         String?      @db.Text
-  previousImageMediaId     String?
-  previousImageMedia       MediaObject? @relation("GlobalLocationImagePreviousImageMedia", fields: [previousImageMediaId], references: [id], onDelete: SetNull)
-  previousDescription      String?      @db.Text // 上一次的描述词（用于撤回）
-  createdAt                DateTime     @default(now())
-  updatedAt                DateTime     @updatedAt
-
-  location GlobalLocation @relation(fields: [locationId], references: [id], onDelete: Cascade)
-
-  @@unique([locationId, imageIndex])
-  @@index([locationId])
-  @@index([imageMediaId])
-  @@index([previousImageMediaId])
-  @@map("global_location_images")
-}
-
 model MediaObject {
   id         String   @id @default(uuid())
   publicId   String   @unique
@@ -1448,21 +1321,17 @@ model MediaObject {
   createdAt  DateTime @default(now())
   updatedAt  DateTime @default(now()) @updatedAt
 
-  characterAppearanceImages             CharacterAppearance[]          @relation("CharacterAppearanceImageMedia")
-  locationImages                        LocationImage[]                @relation("LocationImageMedia")
-  projectEpisodeAudios                  ProjectEpisode[]               @relation("ProjectEpisodeAudioMedia")
-  projectEpisodeSourceDocumentRawFiles  ProjectEpisodeSourceDocument[] @relation("ProjectEpisodeSourceDocumentRawFileMedia")
-  projectPanelImages                    ProjectPanel[]                 @relation("ProjectPanelImageMedia")
-  projectPanelVideos                    ProjectPanel[]                 @relation("ProjectPanelVideoMedia")
-  projectEditChapterOutputVideos        ProjectEditChapter[]           @relation("ProjectEditChapterOutputMedia")
-  projectVideoGroupReferenceImages      ProjectVideoGroup[]            @relation("ProjectVideoGroupReferenceImageMedia")
-  projectVideoGroupVideos               ProjectVideoGroup[]            @relation("ProjectVideoGroupVideoMedia")
-  supplementaryPanelImages              SupplementaryPanel[]           @relation("SupplementaryPanelImageMedia")
-  projectEpisodeFinalOutputVideos       ProjectEpisodeFinalOutput[]    @relation("ProjectEpisodeFinalOutputMedia")
-  globalCharacterAppearanceImages       GlobalCharacterAppearance[]    @relation("GlobalCharacterAppearanceImageMedia")
-  globalCharacterAppearancePreviousImgs GlobalCharacterAppearance[]    @relation("GlobalCharacterAppearancePreviousImageMedia")
-  globalLocationImageImages             GlobalLocationImage[]          @relation("GlobalLocationImageMedia")
-  globalLocationImagePreviousImages     GlobalLocationImage[]          @relation("GlobalLocationImagePreviousImageMedia")
+  characterAppearanceImages            CharacterAppearance[]          @relation("CharacterAppearanceImageMedia")
+  locationImages                       LocationImage[]                @relation("LocationImageMedia")
+  projectEpisodeAudios                 ProjectEpisode[]               @relation("ProjectEpisodeAudioMedia")
+  projectEpisodeSourceDocumentRawFiles ProjectEpisodeSourceDocument[] @relation("ProjectEpisodeSourceDocumentRawFileMedia")
+  projectPanelImages                   ProjectPanel[]                 @relation("ProjectPanelImageMedia")
+  projectPanelVideos                   ProjectPanel[]                 @relation("ProjectPanelVideoMedia")
+  projectEditChapterOutputVideos       ProjectEditChapter[]           @relation("ProjectEditChapterOutputMedia")
+  projectVideoGroupReferenceImages     ProjectVideoGroup[]            @relation("ProjectVideoGroupReferenceImageMedia")
+  projectVideoGroupVideos              ProjectVideoGroup[]            @relation("ProjectVideoGroupVideoMedia")
+  supplementaryPanelImages             SupplementaryPanel[]           @relation("SupplementaryPanelImageMedia")
+  projectEpisodeFinalOutputVideos      ProjectEpisodeFinalOutput[]    @relation("ProjectEpisodeFinalOutputMedia")
 
   @@index([createdAt])
   @@map("media_objects")

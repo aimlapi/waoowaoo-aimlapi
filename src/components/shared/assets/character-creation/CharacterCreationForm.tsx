@@ -6,8 +6,6 @@ import CharacterCreationPreview from './CharacterCreationPreview'
 import { AppIcon } from '@/components/ui/icons'
 import { SegmentedControl } from '@/components/ui/SegmentedControl'
 
-type Mode = 'asset-hub' | 'project'
-
 interface AvailableCharacter {
   id: string
   name: string
@@ -15,7 +13,6 @@ interface AvailableCharacter {
 }
 
 interface CharacterCreationFormProps {
-  mode: Mode
   createMode: 'reference' | 'description'
   setCreateMode: (mode: 'reference' | 'description') => void
   name: string
@@ -54,7 +51,6 @@ const PhotoIcon = ({ className }: { className?: string }) => (
 )
 
 export default function CharacterCreationForm({
-  mode,
   createMode,
   setCreateMode,
   name,
@@ -98,7 +94,7 @@ export default function CharacterCreationForm({
         />
       </div>
 
-      {mode === 'project' && availableCharacters.length > 0 && (
+      {availableCharacters.length > 0 && (
         <div className="flex items-start gap-3 p-3 glass-surface-soft rounded-lg border border-[var(--glass-stroke-base)]">
           <input
             type="checkbox"

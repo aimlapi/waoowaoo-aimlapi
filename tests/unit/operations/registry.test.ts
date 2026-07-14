@@ -24,8 +24,6 @@ describe('project agent operation registry', () => {
           'edit_style_preview',
           'storyboards',
           'project_assets',
-          'scoped_assets',
-          'global_assets',
           'videos',
           'episode',
           'project_data',

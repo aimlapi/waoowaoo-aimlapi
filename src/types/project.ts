@@ -522,7 +522,7 @@ export interface ProjectEpisodeSummary {
 }
 
 export interface ProjectWorkflowData {
-  globalAssetText: string | null
+  worldContextText: string | null
   analysisModel: string | null
   imageModel: string | null
   characterModel: string | null

@@ -11,23 +11,18 @@ import ImageGenerationInlineCountButton from '@/components/image-generation/Imag
 import { getImageGenerationCountOptions } from '@/lib/image-generation/count'
 
 export interface PropCreationModalProps {
-  mode: 'asset-hub' | 'project'
-  folderId?: string | null
-  projectId?: string
+  projectId: string
   onClose: () => void
   onSuccess: () => void
 }
 
 export function PropCreationModal({
-  mode,
-  folderId,
   projectId,
   onClose,
   onSuccess,
 }: PropCreationModalProps) {
   const t = useTranslations('assetModal')
   const actions = useAssetActions({
-    scope: mode === 'asset-hub' ? 'global' : 'project',
     projectId,
     kind: 'prop',
   })
@@ -63,7 +58,6 @@ export function PropCreationModal({
         name: name.trim(),
         summary: summary.trim(),
         description: description.trim(),
-        folderId,
       }) as { assetId?: string }
       if (generateAfterCreate) {
         if (!result.assetId) {
@@ -153,7 +147,7 @@ export function PropCreationModal({
             {isSubmitting ? (
               <TaskStatusInline state={submittingState} className="text-white [&>span]:text-white [&_svg]:text-white" />
             ) : (
-              <span>{mode === 'asset-hub' ? t('common.addOnlyToAssetHubProp') : t('common.addOnlyProp')}</span>
+              <span>{t('common.addOnlyProp')}</span>
             )}
           </button>
           <ImageGenerationInlineCountButton

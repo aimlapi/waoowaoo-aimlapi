@@ -8,14 +8,11 @@ export const WORKSPACE_RESOURCE_KIND = {
   EDIT_SHOT_EXECUTION_PLAN: 'editShotExecutionPlan',
   STORYBOARDS: 'storyboards',
   PROJECT_ASSETS: 'projectAssets',
-  GLOBAL_ASSETS: 'globalAssets',
   VIDEOS: 'videos',
   EPISODE_DATA: 'episodeData',
   PROJECT_DATA: 'projectData',
   PROJECT_CONTEXT: 'projectContext',
 } as const satisfies Record<string, WorkspaceResourceName>
-
-export const GLOBAL_ASSET_PROJECT_ID = 'global-asset-hub'
 
 export const WORKSPACE_RESOURCE_IMPACT = {
   NONE: 'none',
@@ -24,8 +21,6 @@ export const WORKSPACE_RESOURCE_IMPACT = {
   EDIT_STYLE_PREVIEW: 'edit_style_preview',
   STORYBOARDS: 'storyboards',
   PROJECT_ASSETS: 'project_assets',
-  SCOPED_ASSETS: 'scoped_assets',
-  GLOBAL_ASSETS: 'global_assets',
   VIDEOS: 'videos',
   EPISODE: 'episode',
   PROJECT_DATA: 'project_data',
@@ -185,12 +180,6 @@ export function resolveWorkspaceResourceRefs(params: {
       return storyboardRefs(projectId, requireEpisodeId(impact, episodeId))
     case WORKSPACE_RESOURCE_IMPACT.PROJECT_ASSETS:
       return projectAssetRefs(projectId, episodeId)
-    case WORKSPACE_RESOURCE_IMPACT.SCOPED_ASSETS:
-      return projectId === GLOBAL_ASSET_PROJECT_ID
-        ? [resourceRef(WORKSPACE_RESOURCE_KIND.GLOBAL_ASSETS, projectId)]
-        : projectAssetRefs(projectId, episodeId)
-    case WORKSPACE_RESOURCE_IMPACT.GLOBAL_ASSETS:
-      return [resourceRef(WORKSPACE_RESOURCE_KIND.GLOBAL_ASSETS, projectId)]
     case WORKSPACE_RESOURCE_IMPACT.VIDEOS:
       return videoRefs(projectId, requireEpisodeId(impact, episodeId))
     case WORKSPACE_RESOURCE_IMPACT.EPISODE:

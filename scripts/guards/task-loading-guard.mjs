@@ -103,14 +103,6 @@ if (fs.existsSync(hooksIndexPath)) {
   const hooksIndex = fs.readFileSync(hooksIndexPath, 'utf8')
   const bannedReexports = [
     {
-      pattern: /export\s*\{[^}]*useGenerateCharacterImage[^}]*\}\s*from\s*['"]\.\/useGlobalAssets['"]/m,
-      message: 'hooks/index.ts must not export useGenerateCharacterImage from useGlobalAssets',
-    },
-    {
-      pattern: /export\s*\{[^}]*useGenerateLocationImage[^}]*\}\s*from\s*['"]\.\/useGlobalAssets['"]/m,
-      message: 'hooks/index.ts must not export useGenerateLocationImage from useGlobalAssets',
-    },
-    {
       pattern: /export\s*\{[^}]*useGenerateProjectCharacterImage[^}]*\}\s*from\s*['"]\.\/useProjectAssets['"]/m,
       message: 'hooks/index.ts must not export useGenerateProjectCharacterImage from useProjectAssets',
     },

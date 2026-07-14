@@ -1,4 +1,0 @@
-export * from './asset-hub-character-mutations'
-export * from './asset-hub-location-mutations'
-export * from './asset-hub-creation-mutations'
-export * from './asset-hub-update-mutations'

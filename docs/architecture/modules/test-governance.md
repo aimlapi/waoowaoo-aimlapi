@@ -32,7 +32,7 @@
 - Critical：`npm run test:critical`，聚合 provider、Task、billing 与 billing concurrency 的真实基础设施场景。
 - Journey：`npm run test:journey`，先运行 Harness 自测与隔离检查，再运行一条多章节主线和三个安全边界。
 - 主 Journey：`tests/golden-journey/journeys/mainline-complete.spec.ts`。
-- 安全边界：`auth-project-permission.spec.ts` 与 `asset-hub-ownership.spec.ts`。
+- 安全边界：`auth-project-permission.spec.ts` 与 `project-asset-ownership.spec.ts`。
 - Scenario identity：`tests/golden-journey/contracts/scenarios.ts`。
 - 只读持久 Oracle：`tests/golden-journey/oracle/**`。
 - 隔离环境、网络、外部协议替身和 Playwright 报告：`tests/golden-journey/runtime/**`、`providers/**`、`browser/**`。

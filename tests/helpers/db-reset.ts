@@ -21,14 +21,6 @@ export async function resetTaskState() {
   await prisma.task.deleteMany()
 }
 
-export async function resetAssetHubState() {
-  await prisma.globalCharacterAppearance.deleteMany()
-  await prisma.globalCharacter.deleteMany()
-  await prisma.globalLocationImage.deleteMany()
-  await prisma.globalLocation.deleteMany()
-  await prisma.globalAssetFolder.deleteMany()
-}
-
 export async function resetProjectWorkflowState() {
   await prisma.projectPanel.deleteMany()
   await prisma.supplementaryPanel.deleteMany()
@@ -43,7 +35,6 @@ export async function resetProjectWorkflowState() {
 
 export async function resetSystemState() {
   await resetTaskState()
-  await resetAssetHubState()
   await resetProjectWorkflowState()
   await prisma.usageCost.deleteMany()
   await prisma.project.deleteMany()

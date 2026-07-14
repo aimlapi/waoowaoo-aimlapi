@@ -25,7 +25,6 @@ export function useRegenerateCharacterGroup(projectId: string) {
             count?: number
         }) => {
             const requestBody = {
-                scope: 'project',
                 kind: 'character',
                 projectId,
                 appearanceId,
@@ -77,7 +76,6 @@ export function useRegenerateSingleCharacterImage(projectId: string) {
             imageIndex: number
         }) => {
             const requestBody = {
-                scope: 'project',
                 kind: 'character',
                 projectId,
                 appearanceId,
@@ -133,7 +131,6 @@ export function useUpdateProjectAppearanceDescription(projectId: string) {
                 method: 'PATCH',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({
-                    scope: 'project',
                     kind: 'character',
                     projectId,
                     description,

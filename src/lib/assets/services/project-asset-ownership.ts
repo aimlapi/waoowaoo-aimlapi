@@ -1,12 +1,11 @@
 import type { Prisma } from '@prisma/client'
 import { ApiError } from '@/lib/api-errors'
-import type { AssetKind, AssetScope } from '@/lib/assets/contracts'
+import type { AssetKind } from '@/lib/assets/contracts'
 import { prisma } from '@/lib/prisma'
 
 export type AssetWriteAccess = {
-  readonly scope: AssetScope
   readonly userId: string
-  readonly projectId?: string
+  readonly projectId: string
 }
 
 export type AssetOwnershipClient = Pick<
@@ -16,21 +15,17 @@ export type AssetOwnershipClient = Pick<
   | 'projectLocation'
   | 'characterAppearance'
   | 'locationImage'
-  | 'globalCharacter'
-  | 'globalLocation'
-  | 'globalCharacterAppearance'
-  | 'globalLocationImage'
 >
 
 function targetNotFound(details: Record<string, unknown>): never {
   throw new ApiError('NOT_FOUND', {
-    code: 'ASSET_SCOPE_TARGET_NOT_FOUND',
+    code: 'PROJECT_ASSET_TARGET_NOT_FOUND',
     ...details,
   })
 }
 
 export function requireAssetProjectId(access: AssetWriteAccess): string {
-  const projectId = access.projectId?.trim()
+  const projectId = access.projectId.trim()
   if (!projectId) {
     throw new ApiError('INVALID_PARAMS', {
       code: 'ASSET_PROJECT_ID_REQUIRED',
@@ -49,7 +44,7 @@ export async function requireOwnedAssetProject(
     where: { id: projectId, userId: access.userId },
     select: { id: true },
   })
-  if (!project) targetNotFound({ scope: 'project', projectId })
+  if (!project) targetNotFound({ projectId })
   return projectId
 }
 
@@ -61,26 +56,6 @@ export async function requireOwnedAssetTarget(
   },
   client: AssetOwnershipClient = prisma,
 ): Promise<void> {
-  if (input.access.scope === 'global') {
-    const asset = input.kind === 'character'
-      ? await client.globalCharacter.findFirst({
-          where: { id: input.assetId, userId: input.access.userId },
-          select: { id: true },
-        })
-      : await client.globalLocation.findFirst({
-          where: {
-            id: input.assetId,
-            userId: input.access.userId,
-            assetKind: input.kind,
-          },
-          select: { id: true },
-        })
-    if (!asset) {
-      targetNotFound({ scope: 'global', kind: input.kind, assetId: input.assetId })
-    }
-    return
-  }
-
   const projectId = requireAssetProjectId(input.access)
   const asset = input.kind === 'character'
     ? await client.projectCharacter.findFirst({
@@ -101,7 +76,7 @@ export async function requireOwnedAssetTarget(
         select: { id: true },
       })
   if (!asset) {
-    targetNotFound({ scope: 'project', projectId, kind: input.kind, assetId: input.assetId })
+    targetNotFound({ projectId, kind: input.kind, assetId: input.assetId })
   }
 }
 
@@ -115,33 +90,6 @@ export async function requireOwnedAssetVariant(
   client: AssetOwnershipClient = prisma,
 ): Promise<void> {
   await requireOwnedAssetTarget(input, client)
-
-  if (input.access.scope === 'global') {
-    const variant = input.kind === 'character'
-      ? await client.globalCharacterAppearance.findFirst({
-          where: {
-            id: input.variantId,
-            characterId: input.assetId,
-            character: { userId: input.access.userId },
-          },
-          select: { id: true },
-        })
-      : await client.globalLocationImage.findFirst({
-          where: {
-            id: input.variantId,
-            locationId: input.assetId,
-            location: {
-              userId: input.access.userId,
-              assetKind: input.kind,
-            },
-          },
-          select: { id: true },
-        })
-    if (!variant) {
-      targetNotFound({ scope: 'global', kind: input.kind, assetId: input.assetId, variantId: input.variantId })
-    }
-    return
-  }
 
   const projectId = requireAssetProjectId(input.access)
   const variant = input.kind === 'character'
@@ -169,7 +117,7 @@ export async function requireOwnedAssetVariant(
         select: { id: true },
       })
   if (!variant) {
-    targetNotFound({ scope: 'project', projectId, kind: input.kind, assetId: input.assetId, variantId: input.variantId })
+    targetNotFound({ projectId, kind: input.kind, assetId: input.assetId, variantId: input.variantId })
   }
 }
 

@@ -78,8 +78,6 @@ export const TASK_TYPE = {
   VIDEO_GROUP: 'video_group',
   MODIFY_ASSET_IMAGE: 'modify_asset_image',
   REGENERATE_GROUP: 'regenerate_group',
-  ASSET_HUB_IMAGE: 'asset_hub_image',
-  ASSET_HUB_MODIFY: 'asset_hub_modify',
   EDIT_SOURCE_SCRIPT_GENERATE: 'edit_source_script_generate',
   EDIT_BIBLE_GENERATE: 'edit_bible_generate',
   EDIT_SCRIPT_GENERATE: 'edit_script_generate',
@@ -91,13 +89,6 @@ export const TASK_TYPE = {
   AI_CREATE_LOCATION: 'ai_create_location',
   REFERENCE_TO_CHARACTER: 'reference_to_character',
   REFERENCE_CHARACTER_DESCRIPTION_EXTRACT: 'reference_character_description_extract',
-  ASSET_HUB_AI_DESIGN_CHARACTER: 'asset_hub_ai_design_character',
-  ASSET_HUB_AI_DESIGN_LOCATION: 'asset_hub_ai_design_location',
-  ASSET_HUB_AI_MODIFY_CHARACTER: 'asset_hub_ai_modify_character',
-  ASSET_HUB_AI_MODIFY_LOCATION: 'asset_hub_ai_modify_location',
-  ASSET_HUB_AI_MODIFY_PROP: 'asset_hub_ai_modify_prop',
-  ASSET_HUB_REFERENCE_TO_CHARACTER: 'asset_hub_reference_to_character',
-  ASSET_HUB_REFERENCE_CHARACTER_DESCRIPTION_EXTRACT: 'asset_hub_reference_character_description_extract',
 } as const
 
 export type TaskType = (typeof TASK_TYPE)[keyof typeof TASK_TYPE]
@@ -202,7 +193,6 @@ export type WorkspaceResourceName =
   | 'editShotExecutionPlan'
   | 'storyboards'
   | 'projectAssets'
-  | 'globalAssets'
   | 'videos'
   | 'episodeData'
   | 'projectData'

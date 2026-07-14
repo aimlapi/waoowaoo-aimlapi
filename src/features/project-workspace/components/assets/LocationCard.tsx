@@ -32,7 +32,6 @@ interface LocationCardProps {
   onUndo?: () => void  // 撤回到上一版本
   onImageClick: (imageUrl: string) => void
   onSelectImage?: (locationId: string, imageIndex: number | null) => void
-  onCopyFromGlobal?: () => void
   activeTaskKeys?: Set<string>
   projectId: string
   onConfirmSelection?: (locationId: string) => Promise<void> | void
@@ -48,7 +47,6 @@ export default function LocationCard({
   onUndo,
   onImageClick,
   onSelectImage,
-  onCopyFromGlobal,
   activeTaskKeys = new Set(),
   projectId,
   onConfirmSelection
@@ -322,15 +320,6 @@ export default function LocationCard({
 
   const compactHeaderActions = (
     <>
-      {onCopyFromGlobal && (
-          <button
-            onClick={onCopyFromGlobal}
-          className="flex-shrink-0 w-5 h-5 rounded hover:bg-[var(--glass-tone-info-bg)] flex items-center justify-center transition-colors"
-          title={t('character.copyFromGlobal')}
-        >
-          <AppIcon name="arrowDownCircle" className="w-3.5 h-3.5 text-[var(--glass-tone-info-fg)]" />
-        </button>
-      )}
         <button
           onClick={onEdit}
         className="flex-shrink-0 w-5 h-5 rounded hover:bg-[var(--glass-bg-muted)] flex items-center justify-center transition-colors"

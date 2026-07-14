@@ -88,11 +88,11 @@ describe('withOperationPack', () => {
 
   it('throws with an actionable message when groupPath drifts across sibling groups', () => {
     const draft: ProjectAgentOperationRegistryDraft = {
-      bad: createNoopOperation({ id: 'bad', groupPath: ['asset-hub', 'prop-library'] }),
+      bad: createNoopOperation({ id: 'bad', groupPath: ['library', 'prop'] }),
     }
 
     const defaults: OperationPackDefaults = {
-      groupPath: ['asset-hub', 'character'],
+      groupPath: ['library', 'character'],
       channels: { tool: true, api: false },
       prerequisites: { episodeId: 'optional' },
       confirmation: { kind: 'none', required: false },

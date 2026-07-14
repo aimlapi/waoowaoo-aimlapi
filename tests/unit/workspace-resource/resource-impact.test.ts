@@ -55,7 +55,7 @@ describe('resource-impact', () => {
     ])
   })
 
-  it('supports project and global scope without inventing an episode identity', () => {
+  it('projects project assets without inventing an episode identity', () => {
     expect(
       resolveWorkspaceResourceRefs({
         impact: WORKSPACE_RESOURCE_IMPACT.PROJECT_ASSETS,
@@ -69,18 +69,6 @@ describe('resource-impact', () => {
         episodeId: null,
       },
       { kind: WORKSPACE_RESOURCE_KIND.PROJECT_DATA, projectId: 'project-1' },
-    ])
-    expect(
-      resolveWorkspaceResourceRefs({
-        impact: WORKSPACE_RESOURCE_IMPACT.GLOBAL_ASSETS,
-        projectId: 'global-asset-hub',
-        episodeId: null,
-      }),
-    ).toEqual([
-      {
-        kind: WORKSPACE_RESOURCE_KIND.GLOBAL_ASSETS,
-        projectId: 'global-asset-hub',
-      },
     ])
     expect(
       resolveWorkspaceResourceRefs({

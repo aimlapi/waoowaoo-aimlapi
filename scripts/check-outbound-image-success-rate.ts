@@ -107,7 +107,6 @@ async function fetchWindowSummary(params: {
 }) {
   const monitoredTypes = [
     TASK_TYPE.MODIFY_ASSET_IMAGE,
-    TASK_TYPE.ASSET_HUB_MODIFY,
     TASK_TYPE.VIDEO_PANEL,
   ]
 

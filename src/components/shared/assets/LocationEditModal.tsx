@@ -7,23 +7,17 @@ import { shouldShowError } from '@/lib/error-utils'
 import TaskStatusInline from '@/components/task/TaskStatusInline'
 import { resolveTaskPresentationState } from '@/lib/task/presentation'
 import {
-    useAiModifyLocationDescription,
     useAiModifyProjectLocationDescription,
-    useUpdateLocationName,
-    useUpdateLocationSummary,
     useUpdateProjectLocationDescription,
     useUpdateProjectLocationName,
 } from '@/lib/query/hooks'
 import { AiModifyDescriptionField } from './AiModifyDescriptionField'
 
 export interface LocationEditModalProps {
-    mode: 'asset-hub' | 'project'
     locationId: string
     locationName: string
     description: string
-    summary?: string
-    imageIndex?: number
-    projectId?: string
+    projectId: string
     descriptionIndex?: number
     isTaskRunning?: boolean
     onClose: () => void
@@ -34,12 +28,9 @@ export interface LocationEditModalProps {
 }
 
 export function LocationEditModal({
-    mode,
     locationId,
     locationName,
     description,
-    summary,
-    imageIndex,
     projectId,
     descriptionIndex,
     isTaskRunning = false,
@@ -51,12 +42,10 @@ export function LocationEditModal({
 }: LocationEditModalProps) {
     const t = useTranslations('assets')
 
-    const resolvedImageIndex = mode === 'asset-hub'
-        ? (imageIndex ?? 0)
-        : (descriptionIndex ?? 0)
+    const resolvedImageIndex = descriptionIndex ?? 0
 
     const [editingName, setEditingName] = useState(locationName)
-    const [editingDescription, setEditingDescription] = useState(description || summary || '')
+    const [editingDescription, setEditingDescription] = useState(description)
     const [aiModifyInstruction, setAiModifyInstruction] = useState('')
     const [isAiModifying, setIsAiModifying] = useState(false)
     const [isSaving, setIsSaving] = useState(false)
@@ -85,12 +74,9 @@ export function LocationEditModal({
         })
         : null
 
-    const updateAssetHubName = useUpdateLocationName()
-    const updateProjectName = useUpdateProjectLocationName(projectId ?? '')
-    const updateAssetHubSummary = useUpdateLocationSummary()
-    const updateProjectDescription = useUpdateProjectLocationDescription(projectId ?? '')
-    const aiModifyAssetHub = useAiModifyLocationDescription()
-    const aiModifyProject = useAiModifyProjectLocationDescription(projectId ?? '')
+    const updateProjectName = useUpdateProjectLocationName(projectId)
+    const updateProjectDescription = useUpdateProjectLocationDescription(projectId)
+    const aiModifyProject = useAiModifyProjectLocationDescription(projectId)
 
     const getErrorMessage = (error: unknown, fallback: string) => {
         if (error instanceof Error && error.message) return error.message
@@ -101,23 +87,11 @@ export function LocationEditModal({
         const nextName = editingName.trim()
         if (!nextName || nextName === locationName) return
 
-        if (mode === 'asset-hub') {
-            await updateAssetHubName.mutateAsync({ locationId, name: nextName })
-        } else {
-            await updateProjectName.mutateAsync({ locationId, name: nextName })
-        }
+        await updateProjectName.mutateAsync({ locationId, name: nextName })
         onNameUpdate?.(nextName)
     }
 
     const persistDescription = async () => {
-        if (mode === 'asset-hub') {
-            await updateAssetHubSummary.mutateAsync({
-                locationId,
-                summary: editingDescription,
-            })
-            return
-        }
-
         await updateProjectDescription.mutateAsync({
             locationId,
             imageIndex: resolvedImageIndex,
@@ -130,22 +104,6 @@ export function LocationEditModal({
 
         try {
             setIsAiModifying(true)
-
-            if (mode === 'asset-hub') {
-                const data = await aiModifyAssetHub.mutateAsync({
-                    locationId,
-                    imageIndex: resolvedImageIndex,
-                    currentDescription: editingDescription,
-                    modifyInstruction: aiModifyInstruction,
-                })
-                if (data?.modifiedDescription) {
-                    setEditingDescription(data.modifiedDescription)
-                    onUpdate?.(data.modifiedDescription)
-                    setAiModifyInstruction('')
-                    return true
-                }
-                return false
-            }
 
             const data = await aiModifyProject.mutateAsync({
                 locationId,
@@ -250,10 +208,10 @@ export function LocationEditModal({
                             {editingName !== locationName && (
                                 <button
                                     onClick={handleSaveName}
-                                    disabled={updateAssetHubName.isPending || updateProjectName.isPending || !editingName.trim()}
+                                    disabled={updateProjectName.isPending || !editingName.trim()}
                                     className="glass-btn-base glass-btn-tone-success px-3 py-2 rounded-lg disabled:opacity-50 disabled:cursor-not-allowed text-sm whitespace-nowrap"
                                 >
-                                    {(updateAssetHubName.isPending || updateProjectName.isPending)
+                                    {updateProjectName.isPending
                                         ? t('modal.processing')
                                         : t('modal.saveName')}
                                 </button>

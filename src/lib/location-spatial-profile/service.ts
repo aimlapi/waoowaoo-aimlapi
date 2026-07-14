@@ -28,13 +28,6 @@ interface AnalyzeProjectLocationImageInput {
   readonly locale: Locale
 }
 
-interface AnalyzeGlobalLocationImageInput {
-  readonly imageId: string
-  readonly userId: string
-  readonly model: string
-  readonly locale: Locale
-}
-
 export function locationSpatialProfileToJson(profile: LocationSpatialProfile): Prisma.InputJsonValue {
   return profile as unknown as Prisma.InputJsonObject
 }
@@ -142,66 +135,6 @@ export async function analyzeAndPersistProjectLocationImageSpatialProfile(
     return profile
   } catch (error) {
     await client.locationImage.update({
-      where: { id: input.imageId },
-      data: {
-        spatialProfileStatus: 'failed',
-        spatialProfileError: errorMessage(error),
-      },
-    })
-    throw error
-  }
-}
-
-export async function analyzeAndPersistGlobalLocationImageSpatialProfile(
-  input: AnalyzeGlobalLocationImageInput,
-  client: Prisma.TransactionClient | typeof prisma = prisma,
-): Promise<LocationSpatialProfile> {
-  const image = await client.globalLocationImage.findUnique({
-    where: { id: input.imageId },
-    include: {
-      location: {
-        select: {
-          id: true,
-          name: true,
-          userId: true,
-        },
-      },
-    },
-  })
-  if (!image || image.location.userId !== input.userId) {
-    throw new Error(`GLOBAL_LOCATION_SPATIAL_PROFILE_IMAGE_NOT_FOUND:${input.imageId}`)
-  }
-
-  await client.globalLocationImage.update({
-    where: { id: input.imageId },
-    data: {
-      spatialProfileStatus: 'analyzing',
-      spatialProfileError: null,
-    },
-  })
-
-  try {
-    const profile = await analyzeLocationSpatialProfile({
-      userId: input.userId,
-      model: input.model,
-      locale: input.locale,
-      locationName: image.location.name,
-      locationDescription: image.description,
-      imageUrl: image.imageUrl,
-    })
-    await client.globalLocationImage.update({
-      where: { id: input.imageId },
-      data: {
-        spatialProfileJson: locationSpatialProfileToJson(profile),
-        spatialProfileStatus: 'ready',
-        spatialProfileError: null,
-        spatialProfileAnalyzedAt: new Date(),
-        spatialProfileModel: input.model,
-      },
-    })
-    return profile
-  } catch (error) {
-    await client.globalLocationImage.update({
       where: { id: input.imageId },
       data: {
         spatialProfileStatus: 'failed',

@@ -405,15 +405,6 @@ export default function Navbar({
                   <AppIcon name="monitor" className="w-4 h-4" />
                   {t('workspace')}
                 </Link>
-                <Link
-                  href={{ pathname: '/workspace/asset-hub' }}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className={navControlClass}
-                >
-                  <AppIcon name="folderHeart" className="w-4 h-4" />
-                  {t('assetHub')}
-                </Link>
                 <div ref={settingsTriggerRef} className="relative">
                   <button
                     type="button"

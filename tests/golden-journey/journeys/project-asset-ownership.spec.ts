@@ -4,10 +4,7 @@ import {
   signInGoldenUser,
   signOutGoldenUser,
 } from '../browser/pages/auth'
-import {
-  createGoldenGlobalCharacterThroughUi,
-  createGoldenProjectCharacterThroughUi,
-} from '../browser/pages/assets'
+import { createGoldenProjectCharacterThroughUi } from '../browser/pages/assets'
 import {
   createGoldenProjectThroughUi,
   deleteGoldenProjectThroughUi,
@@ -25,7 +22,7 @@ const attacker = {
   password: 'golden-asset-attacker-password',
 }
 
-test('[GJ-ASSET-HUB-CROSS-PROJECT-DENIAL] an authenticated project cannot overwrite an asset owned by another project', async ({
+test('[GJ-PROJECT-ASSET-CROSS-PROJECT-DENIAL] an authenticated project cannot overwrite an asset owned by another project', async ({
   page,
   browserObservations,
 }, testInfo) => {
@@ -37,7 +34,7 @@ test('[GJ-ASSET-HUB-CROSS-PROJECT-DENIAL] an authenticated project cannot overwr
   const victimCharacterId = await createGoldenProjectCharacterThroughUi(page, {
     projectId: victimProjectId,
     name: `受保护角色-${runtimeSuffix}`,
-    description: '越权复制不能覆盖这段描述。',
+    description: '越权更新不能覆盖这段描述。',
   })
   const beforeAttack = await readGoldenProjectCharacter({
     characterId: victimCharacterId,
@@ -47,20 +44,16 @@ test('[GJ-ASSET-HUB-CROSS-PROJECT-DENIAL] an authenticated project cannot overwr
 
   await signOutGoldenUser(page)
   await registerGoldenUser(page, attacker)
-  const attackerGlobalId = await createGoldenGlobalCharacterThroughUi(page, {
-    name: `攻击者全局角色-${runtimeSuffix}`,
-    description: '这段描述绝不能进入受保护项目。',
-  })
   const attackerProjectId = await createGoldenProjectThroughUi(page, {
     name: `攻击者项目-${runtimeSuffix}`,
     description: '请求通过这个合法项目取得鉴权。',
   })
 
-  const denied = await page.request.post(`/api/assets/${victimCharacterId}/copy`, {
+  const denied = await page.request.patch(`/api/assets/${victimCharacterId}`, {
     data: {
       kind: 'character',
       projectId: attackerProjectId,
-      globalAssetId: attackerGlobalId,
+      name: `被篡改角色-${runtimeSuffix}`,
     },
   })
   expect(denied.status()).toBe(404)
@@ -70,7 +63,7 @@ test('[GJ-ASSET-HUB-CROSS-PROJECT-DENIAL] an authenticated project cannot overwr
     projectId: victimProjectId,
   })
   expect(afterAttack).toEqual(beforeAttack)
-  await attachGoldenProductEvidence(testInfo, 'golden-asset-hub-cross-project-denial', {
+  await attachGoldenProductEvidence(testInfo, 'golden-project-asset-cross-project-denial', {
     deniedStatus: denied.status(),
     beforeAttack,
     afterAttack,

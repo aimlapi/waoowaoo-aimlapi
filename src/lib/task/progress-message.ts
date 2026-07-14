@@ -16,8 +16,6 @@ const TASK_TYPE_LABELS: Record<string, string> = {
   [TASK_TYPE.VIDEO_GROUP]: 'progress.taskType.videoGroup',
   [TASK_TYPE.MODIFY_ASSET_IMAGE]: 'progress.taskType.modifyAssetImage',
   [TASK_TYPE.REGENERATE_GROUP]: 'progress.taskType.regenerateGroup',
-  [TASK_TYPE.ASSET_HUB_IMAGE]: 'progress.taskType.assetHubImage',
-  [TASK_TYPE.ASSET_HUB_MODIFY]: 'progress.taskType.assetHubModify',
   [TASK_TYPE.EDIT_SOURCE_SCRIPT_GENERATE]: 'progress.taskType.editSourceScriptGenerate',
   [TASK_TYPE.EDIT_BIBLE_GENERATE]: 'progress.taskType.editBibleGenerate',
   [TASK_TYPE.EDIT_SCRIPT_GENERATE]: 'progress.taskType.editScriptGenerate',
@@ -29,13 +27,6 @@ const TASK_TYPE_LABELS: Record<string, string> = {
   [TASK_TYPE.AI_CREATE_LOCATION]: 'progress.taskType.aiCreateLocation',
   [TASK_TYPE.REFERENCE_TO_CHARACTER]: 'progress.taskType.referenceToCharacter',
   [TASK_TYPE.REFERENCE_CHARACTER_DESCRIPTION_EXTRACT]: 'progress.taskType.referenceToCharacter',
-  [TASK_TYPE.ASSET_HUB_AI_DESIGN_CHARACTER]: 'progress.taskType.assetHubAiDesignCharacter',
-  [TASK_TYPE.ASSET_HUB_AI_DESIGN_LOCATION]: 'progress.taskType.assetHubAiDesignLocation',
-  [TASK_TYPE.ASSET_HUB_AI_MODIFY_CHARACTER]: 'progress.taskType.assetHubAiModifyCharacter',
-  [TASK_TYPE.ASSET_HUB_AI_MODIFY_LOCATION]: 'progress.taskType.assetHubAiModifyLocation',
-  [TASK_TYPE.ASSET_HUB_AI_MODIFY_PROP]: 'progress.taskType.assetHubAiModifyProp',
-  [TASK_TYPE.ASSET_HUB_REFERENCE_TO_CHARACTER]: 'progress.taskType.assetHubReferenceToCharacter',
-  [TASK_TYPE.ASSET_HUB_REFERENCE_CHARACTER_DESCRIPTION_EXTRACT]: 'progress.taskType.assetHubReferenceToCharacter',
 }
 
 const STAGE_LABELS: Record<string, string> = {

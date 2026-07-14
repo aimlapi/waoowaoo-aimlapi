@@ -47,7 +47,7 @@ export function useLocationActions({
     // 🔥 直接订阅缓存 - 消除 props drilling
     const { data: assets } = useProjectAssets(projectId)
     const locations = assetType === 'prop' ? assets?.props ?? [] : assets?.locations ?? []
-    const propActions = useAssetActions({ scope: 'project', projectId, kind: 'prop' })
+    const propActions = useAssetActions({ projectId, kind: 'prop' })
     const assetKey = assetType === 'prop' ? 'prop' : 'location'
 
     // 🔥 使用刷新函数 - mutations 完成后刷新缓存

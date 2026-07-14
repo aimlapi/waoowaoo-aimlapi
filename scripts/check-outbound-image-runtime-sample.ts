@@ -133,7 +133,6 @@ async function main() {
   const since = new Date(Date.now() - options.minutes * 60_000)
   const monitoredTypes = [
     TASK_TYPE.MODIFY_ASSET_IMAGE,
-    TASK_TYPE.ASSET_HUB_MODIFY,
     TASK_TYPE.VIDEO_PANEL,
   ]
 

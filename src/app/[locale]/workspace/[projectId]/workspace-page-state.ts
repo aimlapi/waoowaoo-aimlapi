@@ -2,7 +2,6 @@ export interface WorkspacePageStateInput {
   projectLoading: boolean
   projectError: string | null
   hasProject: boolean
-  isGlobalAssetsView: boolean
   episodeCount: number
   selectedEpisodeId: string | null
   hasCurrentEpisode: boolean
@@ -21,7 +20,6 @@ export function resolveWorkspacePageState(input: WorkspacePageStateInput): Works
   if (input.projectLoading) return { kind: 'loading' }
   if (input.projectError) return { kind: 'error', message: input.projectError }
   if (!input.hasProject) return { kind: 'error', message: input.projectMissingMessage }
-  if (input.isGlobalAssetsView) return { kind: 'ready' }
   if (input.episodeCount === 0) return { kind: 'ready' }
   if (!input.selectedEpisodeId) return { kind: 'error', message: input.episodeMissingMessage }
   if (input.episodeLoading) return { kind: 'loading' }

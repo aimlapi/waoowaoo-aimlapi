@@ -143,7 +143,7 @@
   },
   "defaultModel": {
     "title": "Default Model",
-    "hint": "New projects and Asset Hub will use this default configuration. You can also customize models per project in project settings.",
+    "hint": "New projects will use this default configuration. You can also customize models per project in project settings.",
     "notSelected": "Not selected",
     "analysis": "Analysis Model",
     "image": "Image Generation",
