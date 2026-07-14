@@ -985,6 +985,7 @@ async function mapPersistedEditScript(script: PersistedEditScript): Promise<Edit
   }))
 
   const shots = parseShotsJson(script.shotsJson)
+  const kernelCompilerJson = script.kernelCompilerJson ?? null
   return {
     id: script.id,
     projectId: script.projectId,
@@ -992,9 +993,9 @@ async function mapPersistedEditScript(script: PersistedEditScript): Promise<Edit
     userPrompt: script.userPrompt,
     styleBible: parseOptionalStyleBibleJson(script.styleBibleJson),
     screenplayText: script.screenplayText,
-    kernelCompiler: script.kernelCompilerJson === null
+    kernelCompiler: kernelCompilerJson === null
       ? null
-      : parseKernelCompilerScript(script.kernelCompilerJson),
+      : parseKernelCompilerScript(kernelCompilerJson),
     title: script.title,
     logline: script.logline,
     durationSec: script.durationSec,

@@ -1,4 +1,6 @@
 import { z } from 'zod'
+import { ensureAiCatalogsRegistered } from '@/lib/ai-exec/catalog-bootstrap'
+import { resolveBuiltinCapabilitiesByModelKey } from '@/lib/ai-registry/capabilities-catalog'
 import { AI_PROMPT_IDS, buildAiPrompt, type AiPromptLocale } from '@/lib/ai-prompts'
 import { editScriptShotSchema, type EditScriptStyleBible } from '@/lib/edit-script/types'
 import { normalizeVideoBlockPlanResponse } from '@/lib/video-groups/planner'
@@ -110,8 +112,6 @@ export interface FinalRenderMusicPromptInput {
 }
 
 const editScriptShotsSchema = z.array(editScriptShotSchema)
-const LYRIA_PRO_DURATIONS = [30, 60, 90, 120, 180] as const
-
 function normalizeString(value: string | null | undefined): string {
   return typeof value === 'string' ? value.trim() : ''
 }
@@ -242,13 +242,23 @@ export function resolveFinalRenderDimensions(videoRatio: string | null | undefin
 }
 
 export function selectFinalRenderMusicDurationSeconds(modelKey: string, targetDurationSeconds: number): number {
-  if (!Number.isFinite(targetDurationSeconds) || targetDurationSeconds <= 0 || targetDurationSeconds > 180) {
+  if (!Number.isFinite(targetDurationSeconds) || targetDurationSeconds <= 0) {
     throw new Error(`FINAL_RENDER_MUSIC_DURATION_UNSUPPORTED:${targetDurationSeconds}`)
   }
-  if (modelKey.includes('fal-ai/lyria3/pro')) return targetDurationSeconds
-  const target = Math.max(1, Math.ceil(targetDurationSeconds))
-  if (modelKey.includes('lyria-3-clip-preview')) return 30
-  for (const duration of LYRIA_PRO_DURATIONS) {
+  ensureAiCatalogsRegistered()
+  const capabilities = resolveBuiltinCapabilitiesByModelKey('music', modelKey)?.music
+  if (!capabilities) throw new Error(`FINAL_RENDER_MUSIC_CAPABILITIES_REQUIRED:${modelKey}`)
+  const continuousRange = capabilities.durationSecondsRange
+  if (continuousRange) {
+    if (targetDurationSeconds < continuousRange.min || targetDurationSeconds > continuousRange.max) {
+      throw new Error(`FINAL_RENDER_MUSIC_DURATION_UNSUPPORTED:${targetDurationSeconds}`)
+    }
+    return targetDurationSeconds
+  }
+  const durations = [...(capabilities.durationSecondsOptions ?? [])].sort((left, right) => left - right)
+  if (durations.length === 1) return durations[0] as number
+  const target = Math.ceil(targetDurationSeconds)
+  for (const duration of durations) {
     if (target <= duration) return duration
   }
   throw new Error(`FINAL_RENDER_MUSIC_DURATION_UNSUPPORTED:${targetDurationSeconds}`)

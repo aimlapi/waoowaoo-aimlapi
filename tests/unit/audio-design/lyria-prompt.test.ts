@@ -14,8 +14,8 @@ describe('Lyria provider-safe prompt', () => {
     expect(prompt).not.toContain(cue.narrativeDiagnosis.surfaceEmotion)
     expect(prompt).not.toContain(cue.narrativeDiagnosis.musicShouldDo)
     expect(prompt).not.toMatch(/blood|violence|torture|tooth/i)
-    expect(negativePrompt).toContain('heroic or fanfare-like brass writing')
-    expect(negativePrompt).toContain('cathartic climax or redemptive release')
+    expect(negativePrompt).toContain('foreground brass fanfare intervals and parallel triadic voicing')
+    expect(negativePrompt).toContain('global energy apex followed by consonant tonal stabilization')
   })
 
   it('rejects provider prompts containing violent narrative language', () => {

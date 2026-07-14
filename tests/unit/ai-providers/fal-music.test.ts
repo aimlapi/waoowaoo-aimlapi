@@ -27,7 +27,11 @@ describe('fal music generation', () => {
 
   it('submits Lyria 3 Pro music prompts and returns the completed audio URL', async () => {
     fetchMock
-      .mockResolvedValueOnce(new Response(JSON.stringify({ request_id: 'req-music-1' }), { status: 200 }))
+      .mockResolvedValueOnce(new Response(JSON.stringify({
+        request_id: 'req-music-1',
+        status_url: 'https://queue.fal.run/fal-ai/lyria3/pro/requests/req-music-1/status?logs=0',
+        response_url: 'https://queue.fal.run/fal-ai/lyria3/pro/requests/req-music-1',
+      }), { status: 200 }))
       .mockResolvedValueOnce(new Response(JSON.stringify({
         status: 'COMPLETED',
         response_url: 'https://queue.fal.run/fal-ai/lyria3/pro/requests/req-music-1',
@@ -99,7 +103,11 @@ describe('fal music generation', () => {
 
   it('fails explicitly when Lyria returns a completed response without audio', async () => {
     fetchMock
-      .mockResolvedValueOnce(new Response(JSON.stringify({ request_id: 'req-music-2' }), { status: 200 }))
+      .mockResolvedValueOnce(new Response(JSON.stringify({
+        request_id: 'req-music-2',
+        status_url: 'https://queue.fal.run/fal-ai/lyria3/pro/requests/req-music-2/status?logs=0',
+        response_url: 'https://queue.fal.run/fal-ai/lyria3/pro/requests/req-music-2',
+      }), { status: 200 }))
       .mockResolvedValueOnce(new Response(JSON.stringify({ status: 'COMPLETED' }), { status: 200 }))
       .mockResolvedValueOnce(new Response(JSON.stringify({ lyrics: 'missing audio' }), { status: 200 }))
 
