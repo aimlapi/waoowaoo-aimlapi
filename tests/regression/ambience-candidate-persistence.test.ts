@@ -29,6 +29,10 @@ const timeline = {
     role: 'bed',
     playbackType: 'continuous_evolving',
     semanticRole: 'room air',
+    baseGainDb: -14,
+    salience: 0.25,
+    spectralRole: 'low_mid',
+    foregroundPolicy: 'background_only',
     range: { startFrame: 0, endFrameExclusive: 240 },
     description: 'quiet room air',
     generationPrompt: 'Isolated quiet room air, continuous and stable, no footsteps.',
@@ -62,7 +66,11 @@ describe('ambience candidate persistence regression', () => {
     ) => {
       const outputPath = args[args.length - 1]
       if (!outputPath) throw new Error('TEST_PCM_OUTPUT_PATH_MISSING')
-      void writeFile(outputPath, Buffer.alloc(48_000 * 4)).then(
+      const samples = Float32Array.from(
+        { length: 48_000 },
+        (_, index) => 0.02 * Math.sin(2 * Math.PI * 220 * index / 48_000),
+      )
+      void writeFile(outputPath, Buffer.from(samples.buffer)).then(
         () => callback(null, '', ''),
         (error: Error) => callback(error, '', ''),
       )
