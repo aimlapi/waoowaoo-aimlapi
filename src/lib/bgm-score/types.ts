@@ -5,6 +5,11 @@ import {
   type TimelineAudioDesign,
 } from '@/lib/audio-design/types'
 import { videoVisualAnalysisSchema, type VideoVisualAnalysis } from '@/lib/audio-design/video-visual-types'
+import { nativeAudioAnalysisSchema, type NativeAudioAnalysis } from '@/lib/audio-design/native-audio-types'
+import {
+  kernelTimelineAlignmentSchema,
+  type KernelTimelineAlignment,
+} from '@/lib/audio-design/kernel-alignment-types'
 
 export const BGM_SCORE_STATUS = {
   PENDING: 'pending',
@@ -127,6 +132,14 @@ export const ambienceAssetSchema = z.object({
   crossfadeFrames: z.number().int().min(0),
   phaseOffsetFrames: z.number().int().min(0),
   boundaryScore: z.number().min(0),
+  quality: z.object({
+    rmsAmplitude: z.number().min(0),
+    peakAmplitude: z.number().min(0),
+    transientRate: z.number().min(0),
+    salienceScore: z.number().min(0).max(1),
+    qualityScore: z.number().min(0).max(100),
+    passed: z.boolean(),
+  }),
 })
 
 export type AmbienceAsset = z.infer<typeof ambienceAssetSchema>
@@ -161,11 +174,13 @@ export type ScoreCandidateQuality = z.infer<typeof scoreCandidateQualitySchema>
 export type ScoreCandidateAsset = z.infer<typeof scoreCandidateAssetSchema>
 
 export interface BgmScoreProjectData {
-  readonly schemaVersion: 5
+  readonly schemaVersion: 6
   readonly status: BgmScoreStatus
   readonly taskId: string
-  readonly analysisMode: 'video_only' | 'script_assisted'
-  readonly editScriptId: string | null
+  readonly inputMode: 'kernel_video_native'
+  readonly editScriptId: string
+  readonly kernelCompilerHash: string
+  readonly inputSignature: string
   readonly timelineSignature: string
   readonly durationSeconds: number
   readonly musicModel: string
@@ -175,12 +190,14 @@ export interface BgmScoreProjectData {
   readonly ambienceAssets?: readonly AmbienceAsset[]
   readonly scoreCandidates?: readonly ScoreCandidateAsset[]
   readonly visualAnalysis?: VideoVisualAnalysis
+  readonly nativeAudioAnalysis?: NativeAudioAnalysis
+  readonly kernelAlignment?: KernelTimelineAlignment
   readonly stage?: string
   readonly errorMessage?: string | null
 }
 
 export const bgmScoreProjectDataSchema = z.object({
-  schemaVersion: z.literal(5),
+  schemaVersion: z.literal(6),
   status: z.enum([
     BGM_SCORE_STATUS.PENDING,
     BGM_SCORE_STATUS.GENERATING,
@@ -188,8 +205,10 @@ export const bgmScoreProjectDataSchema = z.object({
     BGM_SCORE_STATUS.FAILED,
   ]),
   taskId: z.string().trim().min(1),
-  analysisMode: z.enum(['video_only', 'script_assisted']),
-  editScriptId: z.string().trim().min(1).nullable(),
+  inputMode: z.literal('kernel_video_native'),
+  editScriptId: z.string().trim().min(1),
+  kernelCompilerHash: z.string().regex(/^[a-f0-9]{24}$/),
+  inputSignature: z.string().regex(/^[a-f0-9]{24}$/),
   timelineSignature: z.string().trim().min(1),
   durationSeconds: z.number().positive(),
   musicModel: z.string().trim().min(1),
@@ -205,6 +224,18 @@ export const bgmScoreProjectDataSchema = z.object({
   ambienceAssets: z.array(ambienceAssetSchema).optional(),
   scoreCandidates: z.array(scoreCandidateAssetSchema).max(2).optional(),
   visualAnalysis: videoVisualAnalysisSchema.optional(),
+  nativeAudioAnalysis: nativeAudioAnalysisSchema.optional(),
+  kernelAlignment: kernelTimelineAlignmentSchema.optional(),
   stage: z.string().trim().min(1).optional(),
   errorMessage: z.string().optional().nullable(),
+}).superRefine((project, ctx) => {
+  if (project.status !== BGM_SCORE_STATUS.COMPLETED || !project.timelineAudio) return
+  const scoreRequired = project.timelineAudio.scoreCues.length > 0
+  if (scoreRequired !== Boolean(project.mix)) {
+    ctx.addIssue({
+      code: z.ZodIssueCode.custom,
+      path: ['mix'],
+      message: 'BGM_SCORE_COMPLETED_MIX_PRESENCE_MISMATCH',
+    })
+  }
 })

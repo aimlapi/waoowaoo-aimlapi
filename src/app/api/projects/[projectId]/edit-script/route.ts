@@ -5,6 +5,7 @@ import { resolveRequiredTaskLocale } from '@/lib/task/resolve-locale'
 import {
   readProjectEditScript,
   updateProjectEditScriptAssetRequirementDescription,
+  updateProjectEditScriptKernelCompiler,
   updateProjectEditScriptVideoBlockPrompt,
 } from '@/lib/edit-script/service'
 import { arrangeProjectEditScriptVideoBlocks } from '@/lib/edit-script/video-block-arrangement'
@@ -14,6 +15,7 @@ import {
   getEditScriptRequestSchema,
   mergeEditScriptVideoBlocksRequestSchema,
   updateEditScriptAssetRequirementDescriptionRequestSchema,
+  updateEditScriptKernelCompilerRequestSchema,
   updateEditScriptVideoBlockPromptRequestSchema,
 } from '@/lib/edit-script/types'
 
@@ -51,6 +53,7 @@ export const PATCH = apiHandler(async (
   const body = await request.json().catch(() => ({})) as unknown
   const parsed = updateEditScriptVideoBlockPromptRequestSchema
     .or(updateEditScriptAssetRequirementDescriptionRequestSchema)
+    .or(updateEditScriptKernelCompilerRequestSchema)
     .or(arrangeEditScriptVideoBlocksRequestSchema)
     .or(mergeEditScriptVideoBlocksRequestSchema)
     .safeParse(body)
@@ -94,6 +97,16 @@ export const PATCH = apiHandler(async (
       description: parsed.data.description,
     })
 
+    return NextResponse.json({ editScript })
+  }
+
+  if ('operation' in parsed.data && parsed.data.operation === 'setKernelCompiler') {
+    const editScript = await updateProjectEditScriptKernelCompiler({
+      projectId,
+      episodeId: parsed.data.episodeId,
+      editScriptId: parsed.data.editScriptId,
+      kernelCompiler: parsed.data.kernelCompiler,
+    })
     return NextResponse.json({ editScript })
   }
 

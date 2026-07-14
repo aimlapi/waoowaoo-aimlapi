@@ -1,14 +1,13 @@
 import { execFile } from 'node:child_process'
-import { mkdtemp, readFile, rm, writeFile } from 'node:fs/promises'
+import { mkdtemp, readFile, rm } from 'node:fs/promises'
 import { tmpdir } from 'node:os'
 import path from 'node:path'
 import { promisify } from 'node:util'
 import { z } from 'zod'
 import { executeAiVisionStep } from '@/lib/ai-exec/engine'
 import { safeParseJsonObject } from '@/lib/json-repair'
-import { resolveStorageKeyFromMediaValue } from '@/lib/media/service'
-import { getObjectBuffer, toFetchableUrl } from '@/lib/storage'
 import type { FinalRenderClipPlan } from '@/lib/video-compose/final-render-plan'
+import { writeFinalRenderMediaSource } from '@/lib/video-compose/media-source'
 import { framesToSeconds, type TimelineClock, type TimelineClipAudio } from './types'
 import {
   videoVisualAnalysisSchema,
@@ -48,20 +47,6 @@ function sampleFramesForClip(input: {
   return frames
 }
 
-async function writeVideoSource(source: FinalRenderClipPlan['source'], outputPath: string): Promise<void> {
-  const storageKey = await resolveStorageKeyFromMediaValue(source)
-  if (storageKey) {
-    await writeFile(outputPath, await getObjectBuffer(storageKey))
-    return
-  }
-  if (typeof source !== 'string' || !source.trim()) {
-    throw new Error('AUDIO_VISUAL_ANALYSIS_VIDEO_SOURCE_INVALID')
-  }
-  const response = await fetch(toFetchableUrl(source))
-  if (!response.ok) throw new Error(`AUDIO_VISUAL_ANALYSIS_VIDEO_DOWNLOAD_FAILED:${response.status}`)
-  await writeFile(outputPath, Buffer.from(await response.arrayBuffer()))
-}
-
 async function extractVisualSamples(input: {
   readonly clips: readonly FinalRenderClipPlan[]
   readonly timelineClips: readonly TimelineClipAudio[]
@@ -74,7 +59,7 @@ async function extractVisualSamples(input: {
     const timelineClip = input.timelineClips.find((item) => item.order === clip.order)
     if (!timelineClip) throw new Error(`AUDIO_VISUAL_ANALYSIS_TIMELINE_CLIP_MISSING:${clip.order}`)
     const sourcePath = path.join(input.workspaceDir, `visual-source-${clip.order}.mp4`)
-    await writeVideoSource(clip.source, sourcePath)
+    await writeFinalRenderMediaSource(clip.source, sourcePath)
     const frames = sampleFramesForClip({ clip: timelineClip, stepFrames: input.stepFrames })
     for (const frame of frames) {
       const localFrame = frame - timelineClip.range.startFrame

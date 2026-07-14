@@ -39,6 +39,11 @@ describe('final render audio mix', () => {
         loop: true,
         crossfadeFrames: 12,
         phaseOffsetFrames: 0,
+        role: 'bed',
+        baseGainDb: -12,
+        salience: 0.2,
+        spectralRole: 'broadband',
+        foregroundPolicy: 'background_only',
         perspectives: [{
           perspectiveId: 'inside',
           zoneId: 'stadium-inside',
@@ -90,6 +95,19 @@ describe('final render audio mix', () => {
         postBehavior: 'hold',
         reason: 'smooth space for native action',
         sourceEventId: 'action-1',
+      }, {
+        laneId: 'ambience-presence',
+        targetBus: 'ambience',
+        targetSourceId: null,
+        parameter: 'gain_db',
+        keyframes: [
+          { frame: 0, value: 0, interpolation: 'smooth' },
+          { frame: 120, value: -60, interpolation: 'smooth' },
+          { frame: 239, value: -60, interpolation: 'smooth' },
+        ],
+        postBehavior: 'hold',
+        reason: 'sound presence disables generated ambience after the midpoint',
+        sourceEventId: null,
       }],
     })
 
@@ -108,6 +126,7 @@ describe('final render audio mix', () => {
     expect(filterGraph).toContain('afade=t=in')
     expect(filterGraph).toContain('curve=qsin')
     expect(filterGraph).toContain('lowpass=f=')
+    expect(filterGraph).toContain('volume=0.251189')
     expect(filterGraph).toContain('stereotools=')
     expect(filterGraph).toContain('atrim=start_sample=216000:end_sample=480000')
     expect(filterGraph).toContain('adelay=216000S:all=1')
@@ -158,6 +177,11 @@ describe('final render audio mix', () => {
         loop: true,
         crossfadeFrames: 12,
         phaseOffsetFrames: 0,
+        role: 'bed',
+        baseGainDb: -12,
+        salience: 0.2,
+        spectralRole: 'broadband',
+        foregroundPolicy: 'background_only',
         perspectives: [{
           perspectiveId: 'inside',
           zoneId: 'inside',
@@ -210,5 +234,38 @@ describe('final render audio mix', () => {
         sourceEventId: 'exit',
       }],
     })).rejects.toThrow('FINAL_VIDEO_RENDER_AMBIENCE_TRANSITION_AUTOMATION_DUPLICATED:duplicate-exit-gain')
+  })
+
+  it('renders native audio without a BGM input when the presence plan rejects score', async () => {
+    const runCommandMock = vi.fn<FinalRenderAudioCommandRunner>(async (command, args) => {
+      if (command === 'ffmpeg' && args.includes('-f') && args.includes('null')) {
+        return { stdout: '', stderr: loudnormJson() }
+      }
+      return { stdout: '', stderr: '' }
+    })
+
+    const result = await muxFinalRenderAudio({
+      runCommand: runCommandMock,
+      stitchedPath: '/tmp/stitched.mp4',
+      mainAudioPath: '/tmp/main-audio.wav',
+      hasSourceAudio: true,
+      ambienceTracks: [],
+      ambienceQualityPcmPath: '/tmp/ambience-quality.f32le',
+      ambienceQualityBoundaryFrames: [],
+      outputPath: '/tmp/final-native-only.mp4',
+      clock: TEST_CLOCK,
+      volume: 0.4,
+      automationLanes: [],
+    })
+
+    expect(result.bgm).toBeUndefined()
+    const finalCall = runCommandMock.mock.calls.find(([command, args]) => (
+      command === 'ffmpeg' && args.includes('/tmp/final-native-only.mp4')
+    ))
+    expect(finalCall?.[1]).not.toContain('/tmp/bgm.mp3')
+    const args = finalCall?.[1] ?? []
+    const filterGraph = args[args.indexOf('-filter_complex') + 1]
+    expect(filterGraph).toContain('[native_bus]')
+    expect(filterGraph).not.toContain('[score_bus]')
   })
 })

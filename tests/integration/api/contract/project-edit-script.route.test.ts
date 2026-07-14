@@ -1,5 +1,6 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 import { buildMockRequest } from '../../../helpers/request'
+import { createKernelCompilerFixture } from '../../../fixtures/audio/kernel-compiler'
 
 const authState = vi.hoisted(() => ({
   authenticated: true,
@@ -150,6 +151,20 @@ const serviceMock = vi.hoisted(() => ({
       },
     ],
     requirements: [],
+  })),
+  updateProjectEditScriptKernelCompiler: vi.fn(async (input: { kernelCompiler: unknown }) => ({
+    id: 'edit-1',
+    projectId: 'project-1',
+    episodeId: 'episode-1',
+    title: 'Orbital Silence',
+    durationSec: 60,
+    shotCount: 8,
+    assetReviewStatus: 'approved',
+    styleBible: null,
+    shots: [],
+    videoBlocks: [],
+    requirements: [],
+    kernelCompiler: input.kernelCompiler,
   })),
   updateProjectEditScriptAssetRequirementDescription: vi.fn(async () => ({
     id: 'edit-1',
@@ -562,6 +577,32 @@ describe('project edit script route', () => {
       editScriptId: 'edit-1',
       blockIndex: 0,
       prompt: 'updated combined prompt',
+    })
+  })
+
+  it('PATCH /api/projects/[projectId]/edit-script -> validates and persists the Kernel Compiler document', async () => {
+    const kernelCompiler = createKernelCompilerFixture()
+    const request = buildMockRequest({
+      path: '/api/projects/project-1/edit-script',
+      method: 'PATCH',
+      body: {
+        operation: 'setKernelCompiler',
+        episodeId: 'episode-1',
+        editScriptId: 'edit-1',
+        kernelCompiler,
+      },
+    })
+
+    const response = await editScriptPatch(request, { params: Promise.resolve({ projectId: 'project-1' }) })
+    const payload = await response.json()
+
+    expect(response.status).toBe(200)
+    expect(payload.editScript.kernelCompiler.stage).toBe('kernel_compiler')
+    expect(serviceMock.updateProjectEditScriptKernelCompiler).toHaveBeenCalledWith({
+      projectId: 'project-1',
+      episodeId: 'episode-1',
+      editScriptId: 'edit-1',
+      kernelCompiler,
     })
   })
 

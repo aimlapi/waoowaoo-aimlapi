@@ -1,8 +1,10 @@
 import type { Job } from 'bullmq'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { TASK_TYPE, type TaskJobData } from '@/lib/task/types'
+import { createKernelCompilerFixture } from '../../fixtures/audio/kernel-compiler'
 import {
   buildFinalRenderEditorProjectData,
+  buildFinalRenderNativeOnlyTimeline,
   buildFinalRenderTestTimeline,
 } from './final-video-render-worker-fixture'
 
@@ -117,6 +119,7 @@ describe('final video render worker', () => {
         sound: 'native dialogue and synchronized action sounds',
       }],
       videoBlocksJson: [{ kind: 'single', shotNumbers: [1], reason: 'single shot', prompt: 'video prompt' }],
+      kernelCompilerJson: createKernelCompilerFixture(),
     })
     prismaMock.projectPanel.findMany.mockResolvedValue([{
       id: 'panel-1',
@@ -200,6 +203,32 @@ describe('final video render worker', () => {
     expect(projectData.audioMix).toMatchObject({ automationLaneCount: 1, targets: { bgmIntegratedLufs: -18 } })
   })
 
+  it('renders native audio without downloading BGM when SoundPresence rejects score', async () => {
+    prismaMock.projectPanel.findMany.mockResolvedValue([{
+      id: 'panel-1', panelIndex: 0, panelNumber: 1, duration: 3, description: 'panel 1', videoUrl: null,
+      videoMedia: { storageKey: 'video/source.mp4', url: '/m/source-video' },
+      photographyRules: JSON.stringify({ source: 'edit_script', editScriptId: 'edit-script-1' }),
+      storyboard: {
+        id: 'storyboard-1', createdAt: new Date('2026-01-01T00:00:00.000Z'),
+        storyboardTextJson: JSON.stringify({ editScriptId: 'edit-script-1' }),
+        clip: { createdAt: new Date('2026-01-01T00:00:00.000Z') },
+      },
+    }])
+    prismaMock.videoEditorProject.findUnique.mockResolvedValue({
+      projectData: buildFinalRenderEditorProjectData(buildFinalRenderNativeOnlyTimeline()),
+    })
+    const { handleFinalVideoRenderTask } = await import('@/lib/workers/final-video-render')
+
+    await expect(handleFinalVideoRenderTask(buildJob({ episodeId: 'episode-1' })))
+      .resolves.toMatchObject({ outputUrl: '/m/final-video' })
+    expect(storageMock.getObjectBuffer).not.toHaveBeenCalledWith('music/bgm-score.m4a')
+    const finalCall = execFileMock.mock.calls.find((call) => (
+      call[0] === 'ffmpeg' && (call[1] as readonly string[]).some((arg) => arg.endsWith('final.mp4'))
+    ))
+    const finalArgs = (finalCall?.[1] ?? []) as readonly string[]
+    expect(finalArgs.join(' ')).not.toContain('bgm.')
+  })
+
   it('rejects a completed score whose frame timeline no longer matches the video edit', async () => {
     prismaMock.projectPanel.findMany.mockResolvedValue([{
       id: 'panel-1',
@@ -225,6 +254,21 @@ describe('final video render worker', () => {
     await expect(handleFinalVideoRenderTask(buildJob({ episodeId: 'episode-1' })))
       .rejects.toThrow('FINAL_VIDEO_RENDER_AUDIO_TIMELINE_STALE')
 
+    expect(execFileMock).not.toHaveBeenCalled()
+  })
+
+  it('rejects a completed audio project after the Kernel Compiler document changes', async () => {
+    const staleProject = JSON.parse(
+      buildFinalRenderEditorProjectData(buildFinalRenderTestTimeline()),
+    ) as { bgmScore: { kernelCompilerHash: string } }
+    staleProject.bgmScore.kernelCompilerHash = 'ffffffffffffffffffffffff'
+    prismaMock.videoEditorProject.findUnique.mockResolvedValue({
+      projectData: JSON.stringify(staleProject),
+    })
+    const { handleFinalVideoRenderTask } = await import('@/lib/workers/final-video-render')
+
+    await expect(handleFinalVideoRenderTask(buildJob({ episodeId: 'episode-1' })))
+      .rejects.toThrow('FINAL_VIDEO_RENDER_AUDIO_KERNEL_STALE')
     expect(execFileMock).not.toHaveBeenCalled()
   })
 })

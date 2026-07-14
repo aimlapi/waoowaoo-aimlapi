@@ -5,6 +5,15 @@ export interface AmbienceLoopBoundaryMeasurement {
   readonly boundaryScore: number
 }
 
+export interface AmbienceCandidateQualityMeasurement {
+  readonly rmsAmplitude: number
+  readonly peakAmplitude: number
+  readonly transientRate: number
+  readonly salienceScore: number
+  readonly qualityScore: number
+  readonly passed: boolean
+}
+
 function rms(samples: Float32Array, start: number, end: number): number {
   let sum = 0
   for (let index = start; index < end; index += 1) {
@@ -18,6 +27,82 @@ function mean(samples: Float32Array, start: number, end: number): number {
   let sum = 0
   for (let index = start; index < end; index += 1) sum += samples[index] ?? 0
   return sum / Math.max(1, end - start)
+}
+
+function clamp(value: number, minimum: number, maximum: number): number {
+  return Math.min(maximum, Math.max(minimum, value))
+}
+
+function amplitudeToDbfs(value: number): number {
+  return value > 0 ? 20 * Math.log10(value) : -120
+}
+
+export function measureAmbienceCandidateQuality(input: {
+  readonly samples: Float32Array
+  readonly sampleRate: number
+  readonly targetSalience: number
+  readonly maximumTransientRate: number
+  readonly boundaryScore: number
+}): AmbienceCandidateQualityMeasurement {
+  if (input.samples.length < input.sampleRate || input.sampleRate <= 0) {
+    throw new Error('AUDIO_AMBIENCE_CANDIDATE_TOO_SHORT')
+  }
+  if (input.targetSalience < 0 || input.targetSalience > 1 || input.maximumTransientRate <= 0) {
+    throw new Error('AUDIO_AMBIENCE_QUALITY_TARGET_INVALID')
+  }
+  let squareSum = 0
+  let peakAmplitude = 0
+  let transientCount = 0
+  const transientThreshold = 0.18
+  let previous = input.samples[0] ?? 0
+  for (let index = 0; index < input.samples.length; index += 1) {
+    const sample = input.samples[index] ?? 0
+    squareSum += sample * sample
+    peakAmplitude = Math.max(peakAmplitude, Math.abs(sample))
+    if (Math.abs(sample - previous) >= transientThreshold) transientCount += 1
+    previous = sample
+  }
+  const rmsAmplitude = Math.sqrt(squareSum / input.samples.length)
+  const durationSeconds = input.samples.length / input.sampleRate
+  const transientRate = transientCount / durationSeconds
+  const rmsSalience = clamp((amplitudeToDbfs(rmsAmplitude) + 60) / 50, 0, 1)
+  const peakSalience = clamp((amplitudeToDbfs(peakAmplitude) + 40) / 38, 0, 1)
+  const transientSalience = clamp(transientRate / 12, 0, 1)
+  const salienceScore = clamp(rmsSalience * 0.5 + peakSalience * 0.2 + transientSalience * 0.3, 0, 1)
+  const salienceError = Math.abs(salienceScore - input.targetSalience)
+  const boundaryPenalty = clamp(input.boundaryScore * 4, 0, 1)
+  const transientPenalty = clamp(transientRate / input.maximumTransientRate - 1, 0, 1)
+  const qualityScore = clamp(100 * (1 - salienceError * 0.55 - boundaryPenalty * 0.3 - transientPenalty * 0.15), 0, 100)
+  const passed = peakAmplitude <= 1.01
+    && rmsAmplitude >= 0.00001
+    && transientRate <= input.maximumTransientRate
+    && salienceError <= 0.45
+    && qualityScore >= 55
+  return {
+    rmsAmplitude,
+    peakAmplitude,
+    transientRate,
+    salienceScore,
+    qualityScore,
+    passed,
+  }
+}
+
+export function selectBestAmbienceCandidate<T extends {
+  readonly boundaryScore: number
+  readonly quality: AmbienceCandidateQualityMeasurement
+}>(candidates: readonly T[]): number {
+  if (candidates.length !== 2) throw new Error('AUDIO_AMBIENCE_TWO_CANDIDATES_REQUIRED')
+  const eligible = candidates
+    .map((candidate, index) => ({ candidate, index }))
+    .filter(({ candidate }) => candidate.quality.passed)
+    .sort((left, right) => (
+      right.candidate.quality.qualityScore - left.candidate.quality.qualityScore
+      || left.candidate.boundaryScore - right.candidate.boundaryScore
+    ))
+  const selected = eligible[0]
+  if (!selected) throw new Error('AUDIO_AMBIENCE_CANDIDATE_QUALITY_FAILED')
+  return selected.index
 }
 
 export function measureAmbienceLoopBoundary(input: {

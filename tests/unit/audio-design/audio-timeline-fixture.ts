@@ -9,7 +9,7 @@ export const TEST_CLOCK: TimelineClock = {
 
 export function createTestContinuityPlan(): AudioContinuityPlan {
   return {
-    schemaVersion: 3,
+    schemaVersion: 4,
     soundWorlds: [{
       worldId: 'stadium-world',
       continuityKey: 'stadium-same-night-same-storm',
@@ -51,6 +51,14 @@ export function createTestContinuityPlan(): AudioContinuityPlan {
         reverb: 'reduce enclosed reflections smoothly',
       },
     }],
+    soundPresence: [{
+      segmentId: 'full-mix',
+      range: { startFrame: 0, endFrameExclusive: 240 },
+      mode: 'ambience_and_score',
+      fadeInFrames: 12,
+      fadeOutFrames: 12,
+      reason: 'the physical environment and restrained score are both required',
+    }],
     ambienceSources: [{
       sourceId: 'rain-bed',
       sourceContinuityId: 'storm-rain',
@@ -58,6 +66,10 @@ export function createTestContinuityPlan(): AudioContinuityPlan {
       role: 'bed',
       playbackType: 'seamless_loop',
       semanticRole: 'continuous storm rain bed',
+      baseGainDb: -12,
+      salience: 0.2,
+      spectralRole: 'broadband',
+      foregroundPolicy: 'background_only',
       range: { startFrame: 0, endFrameExclusive: 240 },
       description: 'one continuous rain source across interior and exterior',
       generationPrompt: 'Seamless loopable steady rain ambience, neutral perspective, no foreground actions, no music.',

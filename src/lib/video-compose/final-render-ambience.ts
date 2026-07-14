@@ -4,6 +4,7 @@ import {
   framesToSeconds,
   type AcousticPerspective,
   type AcousticTransition,
+  type AmbienceSource,
   type AutomationLane,
   type FrameRange,
   type TimelineClock,
@@ -17,6 +18,11 @@ export type FinalRenderAmbienceTrack = {
   readonly loop: boolean
   readonly crossfadeFrames: number
   readonly phaseOffsetFrames: number
+  readonly role: AmbienceSource['role']
+  readonly baseGainDb: number
+  readonly salience: number
+  readonly spectralRole: AmbienceSource['spectralRole']
+  readonly foregroundPolicy: AmbienceSource['foregroundPolicy']
   readonly perspectives: readonly AcousticPerspective[]
   readonly transitions: readonly AcousticTransition[]
 }
@@ -143,7 +149,7 @@ function buildBranchFilter(input: {
     `[${input.inputIndex}:a]atrim=start_sample=${phaseSample}:end_sample=${phaseSample + durationSamples},asetpts=PTS-STARTPTS`,
     ',aresample=48000,aformat=sample_fmts=fltp:channel_layouts=stereo',
     `,loudnorm=I=${format(AMBIENCE_AUDIO_TARGET.integratedLufs)}:TP=${format(AMBIENCE_AUDIO_TARGET.truePeakDb)}:LRA=${format(AMBIENCE_AUDIO_TARGET.loudnessRange)}`,
-    `,${acousticFilters(perspective).join(',')},${volume}`,
+    `,volume=${format(10 ** (track.baseGainDb / 20))},${acousticFilters(perspective).join(',')},${volume}`,
     fades.length > 0 ? `,${fades.join(',')}` : '',
     `,adelay=${startSample}S:all=1[amb_${input.outputIndex}]`,
   ].join('')
@@ -182,7 +188,8 @@ export function buildFinalRenderAmbienceGraph(input: {
       outputIndex: index,
       clock: input.clock,
       lanes: input.automationLanes.filter((lane) => (
-        lane.targetBus === 'ambience' && lane.targetSourceId === branch.track.sourceId
+        lane.targetBus === 'ambience'
+        && (lane.targetSourceId === null || lane.targetSourceId === undefined || lane.targetSourceId === branch.track.sourceId)
       )),
     })),
     outputLabels: branches.map((_, index) => `[amb_${index}]`),

@@ -40,4 +40,33 @@ describe('audio continuity relationship contract', () => {
       'AUDIO_TRANSITION_DUPLICATE_GAIN_AUTOMATION:duplicate-exit-gain',
     )
   })
+
+  it('rejects SoundWorld gaps instead of leaving frames without an acoustic authority', () => {
+    const plan = createTestContinuityPlan()
+    const firstWorld = plan.soundWorlds[0]
+    if (!firstWorld) throw new Error('TEST_SOUND_WORLD_REQUIRED')
+    const result = audioContinuityPlanSchema.safeParse({
+      ...plan,
+      soundWorlds: [{
+        ...firstWorld,
+        range: { startFrame: 0, endFrameExclusive: 100 },
+        perspectives: [{
+          ...firstWorld.perspectives[0],
+          range: { startFrame: 0, endFrameExclusive: 100 },
+        }],
+      }, {
+        ...firstWorld,
+        worldId: 'stadium-world-after-gap',
+        range: { startFrame: 120, endFrameExclusive: 240 },
+        perspectives: [{
+          ...firstWorld.perspectives[1],
+          range: { startFrame: 120, endFrameExclusive: 240 },
+        }],
+      }],
+    })
+
+    expect(result.success).toBe(false)
+    if (result.success) throw new Error('TEST_SOUND_WORLD_GAP_REJECTION_REQUIRED')
+    expect(result.error.issues.map((issue) => issue.message)).toContain('AUDIO_SOUND_WORLDS_NOT_CONTIGUOUS')
+  })
 })

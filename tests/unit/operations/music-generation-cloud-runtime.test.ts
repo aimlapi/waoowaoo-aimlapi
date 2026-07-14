@@ -10,13 +10,19 @@ const submitOperationTaskMock = vi.hoisted(() => vi.fn(async () => ({
 })))
 
 const resolveSystemModelKeyMock = vi.hoisted(() => vi.fn(async () => 'fal::fal-ai/lyria3/pro'))
+const prismaMock = vi.hoisted(() => ({
+  projectEpisode: { findFirst: vi.fn() },
+}))
 
 vi.mock('@/lib/operations/submit-operation-task', () => ({ submitOperationTask: submitOperationTaskMock }))
 vi.mock('@/lib/model-access/system-model-resolver', () => ({
   resolveSystemModelKey: resolveSystemModelKeyMock,
 }))
+vi.mock('@/lib/prisma', () => ({ prisma: prismaMock }))
 
 import { createMusicGenerationOperations } from '@/lib/operations/domains/media/music-generation-ops'
+import { createKernelCompilerHash } from '@/lib/audio-design/kernel-compiler'
+import { createKernelCompilerFixture } from '../../fixtures/audio/kernel-compiler'
 
 const ENV_KEYS = [
   'DEPLOYMENT_EDITION',
@@ -60,6 +66,13 @@ describe('cloud music generation runtime options', () => {
     process.env.PROVIDER_CREDENTIAL_MODE = 'platform-key'
     process.env.BILLING_MODE = 'ENFORCE'
     process.env.PLATFORM_MUSIC_OUTPUT_FORMAT = 'mp3'
+    prismaMock.projectEpisode.findFirst.mockResolvedValue({
+      id: 'episode-1',
+      editScript: {
+        durationSec: 30,
+        kernelCompilerJson: createKernelCompilerFixture(),
+      },
+    })
   })
 
   afterEach(() => restoreEnv())
@@ -99,5 +112,34 @@ describe('cloud music generation runtime options', () => {
       }),
     })
     expect(submitOperationTaskMock.mock.calls).toEqual([])
+  })
+
+  it('validates and fingerprints the Kernel Compiler document before submitting the sound pipeline', async () => {
+    const kernelCompiler = createKernelCompilerFixture()
+    await createMusicGenerationOperations().generate_episode_bgm_score.execute(buildContext(), {
+      confirmed: true,
+      episodeId: 'episode-1',
+    })
+
+    expect(submitOperationTaskMock).toHaveBeenCalledWith(expect.objectContaining({
+      payload: expect.objectContaining({
+        episodeId: 'episode-1',
+        durationSeconds: 30,
+        kernelCompilerHash: createKernelCompilerHash(kernelCompiler),
+      }),
+    }))
+  })
+
+  it('does not submit a billable task when the Kernel Compiler document is invalid', async () => {
+    prismaMock.projectEpisode.findFirst.mockResolvedValueOnce({
+      id: 'episode-1',
+      editScript: { durationSec: 30, kernelCompilerJson: null },
+    })
+
+    await expect(createMusicGenerationOperations().generate_episode_bgm_score.execute(buildContext(), {
+      confirmed: true,
+      episodeId: 'episode-1',
+    })).rejects.toThrow('AUDIO_KERNEL_COMPILER_INVALID')
+    expect(submitOperationTaskMock).not.toHaveBeenCalled()
   })
 })

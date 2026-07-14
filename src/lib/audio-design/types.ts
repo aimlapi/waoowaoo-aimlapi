@@ -1,7 +1,7 @@
 import { z } from 'zod'
 import { findAmbiencePromptPolicyViolation } from './ambience-prompt-policy'
 
-export const AUDIO_TIMELINE_SCHEMA_VERSION = 3 as const
+export const AUDIO_TIMELINE_SCHEMA_VERSION = 4 as const
 export const AUDIO_SAMPLE_RATE = 48_000 as const
 
 export const frameRangeSchema = z.object({
@@ -129,6 +129,8 @@ export const AMBIENCE_PLAYBACK_TYPE_VALUES = [
   'continuous_evolving',
 ] as const
 export const AMBIENCE_ROLE_VALUES = ['bed', 'detail', 'ambient_event'] as const
+export const AMBIENCE_SPECTRAL_ROLE_VALUES = ['sub', 'low', 'low_mid', 'mid', 'high_mid', 'high', 'broadband'] as const
+export const AMBIENCE_FOREGROUND_POLICY_VALUES = ['background_only', 'contextual_detail', 'event_focus'] as const
 export const ambiencePlaybackTypeSchema = z.enum(AMBIENCE_PLAYBACK_TYPE_VALUES)
 
 export const ambienceLoopPolicySchema = z.object({
@@ -155,6 +157,10 @@ export const ambienceSourceSchema = z.object({
   role: z.enum(AMBIENCE_ROLE_VALUES),
   playbackType: ambiencePlaybackTypeSchema,
   semanticRole: z.string().trim().min(1),
+  baseGainDb: z.number().finite().min(-24).max(3),
+  salience: z.number().min(0).max(1),
+  spectralRole: z.enum(AMBIENCE_SPECTRAL_ROLE_VALUES),
+  foregroundPolicy: z.enum(AMBIENCE_FOREGROUND_POLICY_VALUES),
   range: frameRangeSchema,
   description: z.string().trim().min(1),
   generationPrompt: z.string().trim().min(1),
@@ -188,6 +194,46 @@ export const ambienceSourceSchema = z.object({
       code: z.ZodIssueCode.custom,
       path: ['playbackType'],
       message: 'AUDIO_AMBIENCE_EVENT_PLAYBACK_TYPE_REQUIRED',
+    })
+  }
+  if (source.role === 'bed' && (source.baseGainDb > -8 || source.salience > 0.35 || source.foregroundPolicy !== 'background_only')) {
+    ctx.addIssue({
+      code: z.ZodIssueCode.custom,
+      path: ['baseGainDb'],
+      message: 'AUDIO_AMBIENCE_BED_HIERARCHY_INVALID',
+    })
+  }
+  if (source.role === 'detail' && source.foregroundPolicy === 'event_focus') {
+    ctx.addIssue({
+      code: z.ZodIssueCode.custom,
+      path: ['foregroundPolicy'],
+      message: 'AUDIO_AMBIENCE_DETAIL_FOREGROUND_POLICY_INVALID',
+    })
+  }
+})
+
+export const SOUND_PRESENCE_MODE_VALUES = [
+  'native_only',
+  'ambience_only',
+  'score_only',
+  'ambience_and_score',
+  'intentional_silence',
+] as const
+
+export const soundPresenceSegmentSchema = z.object({
+  segmentId: z.string().trim().min(1),
+  range: frameRangeSchema,
+  mode: z.enum(SOUND_PRESENCE_MODE_VALUES),
+  fadeInFrames: z.number().int().min(0).max(120),
+  fadeOutFrames: z.number().int().min(0).max(120),
+  reason: z.string().trim().min(1),
+}).superRefine((segment, ctx) => {
+  const durationFrames = segment.range.endFrameExclusive - segment.range.startFrame
+  if (segment.fadeInFrames + segment.fadeOutFrames >= durationFrames) {
+    ctx.addIssue({
+      code: z.ZodIssueCode.custom,
+      path: ['fadeOutFrames'],
+      message: 'AUDIO_SOUND_PRESENCE_FADES_TOO_LONG',
     })
   }
 })
@@ -531,13 +577,51 @@ interface AudioContinuityCore {
   readonly soundWorlds: readonly z.infer<typeof soundWorldSchema>[]
   readonly acousticTransitions: readonly z.infer<typeof acousticTransitionSchema>[]
   readonly ambienceSources: readonly z.infer<typeof ambienceSourceSchema>[]
+  readonly soundPresence: readonly z.infer<typeof soundPresenceSegmentSchema>[]
+  readonly scoreCues: readonly z.infer<typeof scoreCueSchema>[]
   readonly automationLanes: readonly z.infer<typeof automationLaneSchema>[]
+}
+
+function presenceUsesAmbience(mode: z.infer<typeof soundPresenceSegmentSchema>['mode']): boolean {
+  return mode === 'ambience_only' || mode === 'ambience_and_score'
+}
+
+function presenceUsesScore(mode: z.infer<typeof soundPresenceSegmentSchema>['mode']): boolean {
+  return mode === 'score_only' || mode === 'ambience_and_score'
 }
 
 function validateAudioContinuityRelationships(
   plan: AudioContinuityCore,
   ctx: z.RefinementCtx,
 ): void {
+  if (plan.soundWorlds.length === 0 || plan.soundWorlds[0]?.range.startFrame !== 0) {
+    ctx.addIssue({ code: z.ZodIssueCode.custom, path: ['soundWorlds'], message: 'AUDIO_SOUND_WORLD_COVERAGE_REQUIRED' })
+  }
+  for (let index = 1; index < plan.soundWorlds.length; index += 1) {
+    if (plan.soundWorlds[index - 1]?.range.endFrameExclusive !== plan.soundWorlds[index]?.range.startFrame) {
+      ctx.addIssue({ code: z.ZodIssueCode.custom, path: ['soundWorlds', index], message: 'AUDIO_SOUND_WORLDS_NOT_CONTIGUOUS' })
+    }
+  }
+  if (plan.soundPresence.length === 0 || plan.soundPresence[0]?.range.startFrame !== 0) {
+    ctx.addIssue({ code: z.ZodIssueCode.custom, path: ['soundPresence'], message: 'AUDIO_SOUND_PRESENCE_COVERAGE_REQUIRED' })
+  }
+  for (let index = 1; index < plan.soundPresence.length; index += 1) {
+    if (plan.soundPresence[index - 1]?.range.endFrameExclusive !== plan.soundPresence[index]?.range.startFrame) {
+      ctx.addIssue({ code: z.ZodIssueCode.custom, path: ['soundPresence', index], message: 'AUDIO_SOUND_PRESENCE_NOT_CONTIGUOUS' })
+    }
+  }
+  const timelineEnd = Math.max(0, ...plan.soundWorlds.map((world) => world.range.endFrameExclusive))
+  if (plan.soundPresence[plan.soundPresence.length - 1]?.range.endFrameExclusive !== timelineEnd) {
+    ctx.addIssue({ code: z.ZodIssueCode.custom, path: ['soundPresence'], message: 'AUDIO_SOUND_PRESENCE_COVERAGE_REQUIRED' })
+  }
+  const scoreRequired = plan.soundPresence.some((segment) => presenceUsesScore(segment.mode))
+  if (plan.scoreCues.length !== (scoreRequired ? 1 : 0)) {
+    ctx.addIssue({ code: z.ZodIssueCode.custom, path: ['scoreCues'], message: 'AUDIO_SCORE_PRESENCE_MISMATCH' })
+  }
+  const scoreCue = plan.scoreCues[0]
+  if (scoreCue && (scoreCue.range.startFrame !== 0 || scoreCue.range.endFrameExclusive !== timelineEnd)) {
+    ctx.addIssue({ code: z.ZodIssueCode.custom, path: ['scoreCues', 0, 'range'], message: 'AUDIO_SCORE_CUE_FULL_TIMELINE_REQUIRED' })
+  }
   const worldById = new Map(plan.soundWorlds.map((world) => [world.worldId, world]))
   const sourceByContinuityId = new Map<string, Array<z.infer<typeof ambienceSourceSchema>>>()
   for (const source of plan.ambienceSources) {
@@ -572,12 +656,24 @@ function validateAudioContinuityRelationships(
     }
   }
   for (const world of plan.soundWorlds) {
+    const worldNeedsAmbience = plan.soundPresence.some((segment) => (
+      presenceUsesAmbience(segment.mode)
+      && segment.range.startFrame < world.range.endFrameExclusive
+      && world.range.startFrame < segment.range.endFrameExclusive
+    ))
     const hasBed = plan.ambienceSources.some((source) => source.worldId === world.worldId && source.role === 'bed')
-    if (!hasBed) {
+    if (worldNeedsAmbience && !hasBed) {
       ctx.addIssue({
         code: z.ZodIssueCode.custom,
         path: ['soundWorlds'],
         message: `AUDIO_SOUND_WORLD_BED_REQUIRED:${world.worldId}`,
+      })
+    }
+    if (!worldNeedsAmbience && plan.ambienceSources.some((source) => source.worldId === world.worldId)) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        path: ['ambienceSources'],
+        message: `AUDIO_AMBIENCE_SOURCE_WITHOUT_PRESENCE:${world.worldId}`,
       })
     }
   }
@@ -631,13 +727,14 @@ export const audioTimelineV2Schema = z.object({
   clock: timelineClockSchema,
   nativeAudioPolicy: nativeAudioPolicySchema,
   clips: z.array(timelineClipAudioSchema).min(1),
-  soundWorlds: z.array(soundWorldSchema),
+  soundWorlds: z.array(soundWorldSchema).min(1),
   acousticTransitions: z.array(acousticTransitionSchema),
   nativeActionEvents: z.array(nativeActionEventSchema),
+  soundPresence: z.array(soundPresenceSegmentSchema).min(1),
   ambienceSources: z.array(ambienceSourceSchema),
-  scoreCues: z.array(scoreCueSchema).length(1),
+  scoreCues: z.array(scoreCueSchema).max(1),
   automationLanes: z.array(automationLaneSchema),
-  stemPlan: z.array(audioStemPlanSchema).length(3),
+  stemPlan: z.array(audioStemPlanSchema).min(1).max(3),
 }).superRefine((timeline, ctx) => {
   const checkRange = (path: Array<string | number>, range: FrameRange): void => {
     if (range.endFrameExclusive > timeline.clock.totalFrames) {
@@ -653,6 +750,7 @@ export const audioTimelineV2Schema = z.object({
   timeline.soundWorlds.forEach((world, index) => checkRange(['soundWorlds', index, 'range'], world.range))
   timeline.acousticTransitions.forEach((transition, index) => checkRange(['acousticTransitions', index, 'range'], transition.range))
   timeline.nativeActionEvents.forEach((event, index) => checkRange(['nativeActionEvents', index, 'range'], event.range))
+  timeline.soundPresence.forEach((segment, index) => checkRange(['soundPresence', index, 'range'], segment.range))
   timeline.ambienceSources.forEach((source, index) => checkRange(['ambienceSources', index, 'range'], source.range))
   timeline.scoreCues.forEach((cue, index) => checkRange(['scoreCues', index, 'range'], cue.range))
   timeline.automationLanes.forEach((lane, laneIndex) => {
@@ -666,15 +764,36 @@ export const audioTimelineV2Schema = z.object({
       }
     })
   })
+  const actualStemRoles = timeline.stemPlan.map((stem) => stem.role)
+  const expectedStemRoles: AudioStemRole[] = [
+    'native_video',
+    ...(timeline.ambienceSources.length > 0 ? ['ambience' as const] : []),
+    ...(timeline.scoreCues.length > 0 ? ['bgm' as const] : []),
+  ]
+  if (
+    new Set(actualStemRoles).size !== actualStemRoles.length
+    || actualStemRoles.length !== expectedStemRoles.length
+    || expectedStemRoles.some((role) => !actualStemRoles.includes(role))
+  ) {
+    ctx.addIssue({
+      code: z.ZodIssueCode.custom,
+      path: ['stemPlan'],
+      message: 'AUDIO_STEM_PLAN_PRESENCE_MISMATCH',
+    })
+  }
   validateAudioContinuityRelationships(timeline, ctx)
+  if (timeline.soundPresence[timeline.soundPresence.length - 1]?.range.endFrameExclusive !== timeline.clock.totalFrames) {
+    ctx.addIssue({ code: z.ZodIssueCode.custom, path: ['soundPresence'], message: 'AUDIO_SOUND_PRESENCE_CLOCK_COVERAGE_REQUIRED' })
+  }
 })
 
 export const audioContinuityPlanSchema = z.object({
   schemaVersion: z.literal(AUDIO_TIMELINE_SCHEMA_VERSION),
-  soundWorlds: z.array(soundWorldSchema),
+  soundWorlds: z.array(soundWorldSchema).min(1),
   acousticTransitions: z.array(acousticTransitionSchema),
+  soundPresence: z.array(soundPresenceSegmentSchema).min(1),
   ambienceSources: z.array(ambienceSourceSchema),
-  scoreCues: z.array(scoreCueSchema).length(1),
+  scoreCues: z.array(scoreCueSchema).max(1),
   automationLanes: z.array(automationLaneSchema),
 }).superRefine((plan, ctx) => {
   validateAudioContinuityRelationships(plan, ctx)
@@ -691,6 +810,7 @@ export type NativeActionEvent = z.infer<typeof nativeActionEventSchema>
 export type AmbiencePlaybackType = z.infer<typeof ambiencePlaybackTypeSchema>
 export type AmbienceLoopPolicy = z.infer<typeof ambienceLoopPolicySchema>
 export type AmbienceSource = z.infer<typeof ambienceSourceSchema>
+export type SoundPresenceSegment = z.infer<typeof soundPresenceSegmentSchema>
 export type ScoreScoringStance = z.infer<typeof scoreScoringStanceSchema>
 export type ScoreNarrativeDiagnosis = z.infer<typeof scoreNarrativeDiagnosisSchema>
 export type MusicTheorySpecV2 = z.infer<typeof musicTheorySpecV2Schema>

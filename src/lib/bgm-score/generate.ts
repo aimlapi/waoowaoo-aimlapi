@@ -1,9 +1,26 @@
+import { createHash } from 'node:crypto'
 import { mkdtemp, rm } from 'node:fs/promises'
 import { tmpdir } from 'node:os'
 import path from 'node:path'
 import type { Job } from 'bullmq'
 import { analyzeAudioContinuity } from '@/lib/audio-design/continuity-analysis'
 import { analyzeLockedVideoFrames } from '@/lib/audio-design/video-visual-analysis'
+import {
+  alignKernelCompilerToTimeline,
+  flattenNativeActionEvents,
+  type KernelTimelineAlignment,
+} from '@/lib/audio-design/kernel-alignment'
+import {
+  compactKernelCompilerForAudio,
+  createKernelCompilerHash,
+  parseKernelCompilerScript,
+  type KernelCompilerScript,
+} from '@/lib/audio-design/kernel-compiler'
+import {
+  analyzeRequiredNativeAudio,
+  compactNativeAudioForPrompt,
+  type NativeAudioAnalysis,
+} from '@/lib/audio-design/native-audio-analysis'
 import type { VideoVisualAnalysis } from '@/lib/audio-design/video-visual-types'
 import { resolveVisualContinuityFacts } from '@/lib/audio-design/visual-continuity'
 import {
@@ -59,7 +76,11 @@ function readOutputFormat(value: unknown): 'mp3' | 'wav' {
   throw new Error('BGM_SCORE_OUTPUT_FORMAT_INVALID')
 }
 
-async function buildEditScript(episodeId: string): Promise<FinalRenderEditScriptInput | null> {
+type AudioEditScriptInput = FinalRenderEditScriptInput & {
+  readonly kernelCompiler: KernelCompilerScript
+}
+
+async function buildRequiredEditScript(episodeId: string): Promise<AudioEditScriptInput> {
   const script = await prisma.projectEditScript.findUnique({
     where: { episodeId },
     select: {
@@ -71,11 +92,13 @@ async function buildEditScript(episodeId: string): Promise<FinalRenderEditScript
       styleBibleJson: true,
       shotsJson: true,
       videoBlocksJson: true,
+      kernelCompilerJson: true,
     },
   })
-  if (!script) return null
+  if (!script) throw new Error('BGM_SCORE_KERNEL_EDIT_SCRIPT_REQUIRED')
   const shots = parseFinalRenderEditScriptShots(script.shotsJson)
-  if (shots.length === 0) return null
+  if (shots.length === 0) throw new Error('BGM_SCORE_VIDEO_PLAN_REQUIRED')
+  const kernelCompiler = parseKernelCompilerScript(script.kernelCompilerJson)
   return {
     id: script.id,
     userPrompt: script.userPrompt,
@@ -85,6 +108,7 @@ async function buildEditScript(episodeId: string): Promise<FinalRenderEditScript
     styleBible: parseNullableEditScriptStyleBible(script.styleBibleJson),
     shots,
     videoBlocks: parseFinalRenderEditScriptVideoBlocks({ value: script.videoBlocksJson, shots }),
+    kernelCompiler,
   }
 }
 
@@ -119,11 +143,25 @@ async function writeBgmScoreProjectData(input: {
   })
 }
 
-function readReusableProjectData(value: string | null | undefined, signature: string): BgmScoreProjectData | null {
+function readReusableProjectData(
+  value: string | null | undefined,
+  timelineSignature: string,
+  kernelCompilerHash: string,
+): BgmScoreProjectData | null {
   const record = parseEditorProjectData(value)
   const parsed = bgmScoreProjectDataSchema.safeParse(record.bgmScore)
-  if (!parsed.success || parsed.data.timelineSignature !== signature) return null
+  if (!parsed.success
+    || parsed.data.timelineSignature !== timelineSignature
+    || parsed.data.kernelCompilerHash !== kernelCompilerHash) return null
   return parsed.data
+}
+
+function createAudioInputSignature(input: {
+  readonly timelineSignature: string
+  readonly kernelCompilerHash: string
+  readonly nativeAudioHash: string
+}): string {
+  return createHash('sha256').update(JSON.stringify(input)).digest('hex').slice(0, 24)
 }
 
 export async function handleBgmScoreGenerateTask(job: Job<TaskJobData>) {
@@ -133,8 +171,9 @@ export async function handleBgmScoreGenerateTask(job: Job<TaskJobData>) {
   if (!episodeId) throw new Error('BGM_SCORE_EPISODE_REQUIRED')
   if (!musicModel) throw new Error('BGM_SCORE_MUSIC_MODEL_REQUIRED')
 
-  let editScriptId: string | null = null
-  let analysisMode: BgmScoreProjectData['analysisMode'] = 'video_only'
+  let editScriptId = ''
+  let kernelCompilerHash = ''
+  let inputSignature = ''
   let timelineSignature = ''
   let durationSeconds = 0
   let timelineAudio: AudioTimelineV2 | undefined
@@ -142,6 +181,8 @@ export async function handleBgmScoreGenerateTask(job: Job<TaskJobData>) {
   let ambienceAssets: readonly AmbienceAsset[] = []
   let scoreCandidates: readonly ScoreCandidateAsset[] = []
   let visualAnalysis: VideoVisualAnalysis | undefined
+  let nativeAudioAnalysis: NativeAudioAnalysis | undefined
+  let kernelAlignment: KernelTimelineAlignment | undefined
   const workspaceDir = await mkdtemp(path.join(tmpdir(), 'waoowaoo-audio-design-'))
 
   try {
@@ -155,7 +196,7 @@ export async function handleBgmScoreGenerateTask(job: Job<TaskJobData>) {
         where: { id: episodeId, projectId: job.data.projectId },
         select: { id: true },
       }),
-      buildEditScript(episodeId),
+      buildRequiredEditScript(episodeId),
       prisma.projectPanel.findMany({
         where: { storyboard: { episodeId } },
         include: {
@@ -193,12 +234,50 @@ export async function handleBgmScoreGenerateTask(job: Job<TaskJobData>) {
     })
     timelineSignature = createTimelineSignature({ clips, clock })
     durationSeconds = framesToSeconds(clock.totalFrames, clock)
-    editScriptId = editScript?.id ?? null
-    analysisMode = editScript ? 'script_assisted' : 'video_only'
+    editScriptId = editScript.id
+    kernelCompilerHash = createKernelCompilerHash(editScript.kernelCompiler)
     const timelineClips = buildTimelineClips(clips, clock)
 
-    const reusable = readReusableProjectData(editorProject?.projectData ?? null, timelineSignature)
+    const reusableCandidate = readReusableProjectData(
+      editorProject?.projectData ?? null,
+      timelineSignature,
+      kernelCompilerHash,
+    )
+    await reportTaskProgress(job, 11, { stage: 'audio_native_track_analysis' })
+    nativeAudioAnalysis = reusableCandidate?.nativeAudioAnalysis ?? await analyzeRequiredNativeAudio({
+      clips,
+      timelineClips,
+      clock,
+      workspaceDir,
+    })
+    inputSignature = createAudioInputSignature({
+      timelineSignature,
+      kernelCompilerHash,
+      nativeAudioHash: nativeAudioAnalysis.audioContentHash,
+    })
+    const reusable = reusableCandidate?.inputSignature === inputSignature ? reusableCandidate : null
     scoreCandidates = reusable?.scoreCandidates ?? []
+    if (!reusable?.nativeAudioAnalysis) {
+      await writeBgmScoreProjectData({
+        episodeId,
+        bgmScore: {
+          schemaVersion: 6,
+          status: BGM_SCORE_STATUS.GENERATING,
+          taskId: job.data.taskId,
+          inputMode: 'kernel_video_native',
+          editScriptId,
+          kernelCompilerHash,
+          inputSignature,
+          timelineSignature,
+          durationSeconds,
+          musicModel,
+          nativeAudioAnalysis,
+          ambienceAssets,
+          scoreCandidates,
+          stage: 'audio_native_track_analyzed',
+        },
+      })
+    }
     if (reusable?.visualAnalysis) {
       visualAnalysis = reusable.visualAnalysis
     } else {
@@ -214,22 +293,64 @@ export async function handleBgmScoreGenerateTask(job: Job<TaskJobData>) {
       await writeBgmScoreProjectData({
         episodeId,
         bgmScore: {
-          schemaVersion: 5,
+          schemaVersion: 6,
           status: BGM_SCORE_STATUS.GENERATING,
           taskId: job.data.taskId,
-          analysisMode,
+          inputMode: 'kernel_video_native',
           editScriptId,
+          kernelCompilerHash,
+          inputSignature,
           timelineSignature,
           durationSeconds,
           musicModel,
           visualAnalysis,
+          nativeAudioAnalysis,
           ambienceAssets,
           scoreCandidates,
           stage: 'audio_video_visual_analyzed',
         },
       })
     }
-    if (reusable?.timelineAudio && reusable.plan) {
+    if (reusable?.kernelAlignment) {
+      kernelAlignment = reusable.kernelAlignment
+    } else {
+      await reportTaskProgress(job, 16, { stage: 'audio_kernel_timeline_alignment' })
+      kernelAlignment = await alignKernelCompilerToTimeline({
+        userId: job.data.userId,
+        model: analysisModel,
+        projectId: job.data.projectId,
+        script: editScript.kernelCompiler,
+        visualAnalysis,
+        nativeAudioAnalysis,
+        clock,
+      })
+      const missingCritical = flattenNativeActionEvents(kernelAlignment).find((event) => (
+        event.mixImportance === 'critical' && event.audibleState === 'missing'
+      ))
+      if (missingCritical) throw new Error(`BGM_SCORE_NATIVE_CRITICAL_ACTION_MISSING:${missingCritical.eventId}`)
+      await writeBgmScoreProjectData({
+        episodeId,
+        bgmScore: {
+          schemaVersion: 6,
+          status: BGM_SCORE_STATUS.GENERATING,
+          taskId: job.data.taskId,
+          inputMode: 'kernel_video_native',
+          editScriptId,
+          kernelCompilerHash,
+          inputSignature,
+          timelineSignature,
+          durationSeconds,
+          musicModel,
+          visualAnalysis,
+          nativeAudioAnalysis,
+          kernelAlignment,
+          ambienceAssets,
+          scoreCandidates,
+          stage: 'audio_kernel_timeline_aligned',
+        },
+      })
+    }
+    if (reusable?.timelineAudio) {
       timelineAudio = reusable.timelineAudio
       plan = reusable.plan
       ambienceAssets = reusable.ambienceAssets ?? []
@@ -241,15 +362,11 @@ export async function handleBgmScoreGenerateTask(job: Job<TaskJobData>) {
         clock,
         clips: timelineClips,
         narrativeContext: {
-          analysisMode,
+          inputMode: 'kernel_video_native',
           visualAnalysis,
-          scriptContext: editScript ? {
-            title: editScript.title,
-            logline: editScript.logline,
-            styleBible: editScript.styleBible,
-            shots: editScript.shots,
-            videoBlocks: editScript.videoBlocks,
-          } : null,
+          scriptContext: compactKernelCompilerForAudio(editScript.kernelCompiler),
+          kernelAlignment,
+          nativeAudioAnalysis: compactNativeAudioForPrompt(nativeAudioAnalysis),
           videoRatio: project.videoRatio,
         },
         sceneContinuityFacts: resolveVisualContinuityFacts(visualAnalysis),
@@ -261,26 +378,30 @@ export async function handleBgmScoreGenerateTask(job: Job<TaskJobData>) {
         clock,
         timelineSignature,
         continuityPlan,
+        nativeActionEvents: flattenNativeActionEvents(kernelAlignment),
       })
       const scoreCue = timelineAudio.scoreCues[0]
-      if (!scoreCue) throw new Error('BGM_SCORE_CONTINUOUS_CUE_REQUIRED')
-      plan = buildDisplayBgmPlan({ cue: scoreCue, clock, locale: job.data.locale })
+      plan = scoreCue ? buildDisplayBgmPlan({ cue: scoreCue, clock, locale: job.data.locale }) : undefined
     }
 
     await writeBgmScoreProjectData({
       episodeId,
       bgmScore: {
-        schemaVersion: 5,
+        schemaVersion: 6,
         status: BGM_SCORE_STATUS.GENERATING,
         taskId: job.data.taskId,
-        analysisMode,
+        inputMode: 'kernel_video_native',
         editScriptId,
+        kernelCompilerHash,
+        inputSignature,
         timelineSignature,
         durationSeconds,
         musicModel,
         timelineAudio,
         plan,
         visualAnalysis,
+        nativeAudioAnalysis,
+        kernelAlignment,
         ambienceAssets,
         scoreCandidates,
         stage: 'audio_continuity_planned',
@@ -297,17 +418,21 @@ export async function handleBgmScoreGenerateTask(job: Job<TaskJobData>) {
         await writeBgmScoreProjectData({
           episodeId,
           bgmScore: {
-            schemaVersion: 5,
+            schemaVersion: 6,
             status: BGM_SCORE_STATUS.GENERATING,
             taskId: job.data.taskId,
-            analysisMode,
+            inputMode: 'kernel_video_native',
             editScriptId,
+            kernelCompilerHash,
+            inputSignature,
             timelineSignature,
             durationSeconds,
             musicModel,
             timelineAudio,
             plan,
             visualAnalysis,
+            nativeAudioAnalysis,
+            kernelAlignment,
             ambienceAssets: assets,
             scoreCandidates,
             stage: 'audio_ambience_generate',
@@ -318,14 +443,12 @@ export async function handleBgmScoreGenerateTask(job: Job<TaskJobData>) {
 
     await reportTaskProgress(job, 65, { stage: 'audio_score_generate' })
     const outputFormat = readOutputFormat(payload.outputFormat)
-    const musicRequest = buildFinalBgmMusicRequest(plan)
     const scoreCue = timelineAudio.scoreCues[0]
-    if (!scoreCue) throw new Error('BGM_SCORE_CONTINUOUS_CUE_REQUIRED')
-    const generatedScore = await generateScoreCandidates({
+    const generatedScore = scoreCue && plan ? await generateScoreCandidates({
       userId: job.data.userId,
       musicModel,
-      prompt: musicRequest.prompt,
-      negativePrompt: musicRequest.negativePrompt,
+      prompt: buildFinalBgmMusicRequest(plan).prompt,
+      negativePrompt: buildFinalBgmMusicRequest(plan).negativePrompt,
       providerDurationSeconds: selectFinalRenderMusicDurationSeconds(musicModel, durationSeconds),
       timelineDurationSeconds: durationSeconds,
       bpm: scoreCue.musicTheorySpec.bpm,
@@ -338,43 +461,51 @@ export async function handleBgmScoreGenerateTask(job: Job<TaskJobData>) {
         await writeBgmScoreProjectData({
           episodeId,
           bgmScore: {
-            schemaVersion: 5,
+            schemaVersion: 6,
             status: BGM_SCORE_STATUS.GENERATING,
             taskId: job.data.taskId,
-            analysisMode,
+            inputMode: 'kernel_video_native',
             editScriptId,
+            kernelCompilerHash,
+            inputSignature,
             timelineSignature,
             durationSeconds,
             musicModel,
             timelineAudio,
             plan,
             visualAnalysis,
+            nativeAudioAnalysis,
+            kernelAlignment,
             ambienceAssets,
             scoreCandidates,
             stage: 'audio_score_candidate_quality',
           },
         })
       },
-    })
-    scoreCandidates = generatedScore.candidates
-    const mix = generatedScore.selected
+    }) : null
+    scoreCandidates = generatedScore?.candidates ?? []
+    const mix = generatedScore?.selected
 
     await reportTaskProgress(job, 90, { stage: 'audio_assets_persist' })
     await writeBgmScoreProjectData({
       episodeId,
       bgmScore: {
-        schemaVersion: 5,
+        schemaVersion: 6,
         status: BGM_SCORE_STATUS.COMPLETED,
         taskId: job.data.taskId,
-        analysisMode,
+        inputMode: 'kernel_video_native',
         editScriptId,
+        kernelCompilerHash,
+        inputSignature,
         timelineSignature,
         durationSeconds,
         musicModel,
         timelineAudio,
         plan,
         visualAnalysis,
-        mix,
+        nativeAudioAnalysis,
+        kernelAlignment,
+        ...(mix ? { mix } : {}),
         ambienceAssets,
         scoreCandidates,
         stage: 'audio_assets_ready',
@@ -383,32 +514,42 @@ export async function handleBgmScoreGenerateTask(job: Job<TaskJobData>) {
 
     return {
       episodeId,
-      mediaId: mix.mediaId,
-      audioUrl: mix.url,
-      storageKey: mix.storageKey,
+      mediaId: mix?.mediaId ?? null,
+      audioUrl: mix?.url ?? null,
+      storageKey: mix?.storageKey ?? null,
       musicModel,
       ambienceSourceCount: timelineAudio.ambienceSources.length,
       ambienceCandidateCount: ambienceAssets.length,
       scoreCandidateCount: scoreCandidates.length,
-      durationMs: mix.durationMs,
+      durationMs: mix?.durationMs ?? 0,
     }
   } catch (error) {
     const message = error instanceof Error ? error.message : String(error)
-    if (timelineSignature && durationSeconds > 0) {
+    if (
+      editScriptId
+      && kernelCompilerHash
+      && inputSignature
+      && timelineSignature
+      && durationSeconds > 0
+    ) {
       await writeBgmScoreProjectData({
         episodeId,
         bgmScore: {
-          schemaVersion: 5,
+          schemaVersion: 6,
           status: BGM_SCORE_STATUS.FAILED,
           taskId: job.data.taskId,
-          analysisMode,
+          inputMode: 'kernel_video_native',
           editScriptId,
+          kernelCompilerHash,
+          inputSignature,
           timelineSignature,
           durationSeconds,
           musicModel,
           ...(timelineAudio ? { timelineAudio } : {}),
           ...(plan ? { plan } : {}),
           ...(visualAnalysis ? { visualAnalysis } : {}),
+          ...(nativeAudioAnalysis ? { nativeAudioAnalysis } : {}),
+          ...(kernelAlignment ? { kernelAlignment } : {}),
           ambienceAssets,
           scoreCandidates,
           stage: 'failed',

@@ -15,6 +15,9 @@ const generateScoreCandidatesMock = vi.hoisted(() => vi.fn())
 const executeMediaGenerationMock = vi.hoisted(() => vi.fn())
 const reportTaskProgressMock = vi.hoisted(() => vi.fn())
 const analyzeLockedVideoFramesMock = vi.hoisted(() => vi.fn())
+const analyzeRequiredNativeAudioMock = vi.hoisted(() => vi.fn())
+const alignKernelCompilerToTimelineMock = vi.hoisted(() => vi.fn())
+const flattenNativeActionEventsMock = vi.hoisted(() => vi.fn())
 const mediaServiceMock = vi.hoisted(() => ({ ensureMediaObjectFromStorageKey: vi.fn() }))
 const storageMock = vi.hoisted(() => ({
   generateUniqueKey: vi.fn((prefix: string, ext: string) => `${prefix}/asset.${ext}`),
@@ -34,6 +37,18 @@ vi.mock('@/lib/workers/shared', () => ({ reportTaskProgress: reportTaskProgressM
 vi.mock('@/lib/audio-design/video-visual-analysis', () => ({
   analyzeLockedVideoFrames: analyzeLockedVideoFramesMock,
 }))
+vi.mock('@/lib/audio-design/native-audio-analysis', async (importOriginal) => {
+  const original = await importOriginal<typeof import('@/lib/audio-design/native-audio-analysis')>()
+  return { ...original, analyzeRequiredNativeAudio: analyzeRequiredNativeAudioMock }
+})
+vi.mock('@/lib/audio-design/kernel-alignment', async (importOriginal) => {
+  const original = await importOriginal<typeof import('@/lib/audio-design/kernel-alignment')>()
+  return {
+    ...original,
+    alignKernelCompilerToTimeline: alignKernelCompilerToTimelineMock,
+    flattenNativeActionEvents: flattenNativeActionEventsMock,
+  }
+})
 vi.mock('@/lib/media/service', () => ({
   ensureMediaObjectFromStorageKey: mediaServiceMock.ensureMediaObjectFromStorageKey,
 }))
@@ -65,9 +80,34 @@ function job(): Job<TaskJobData> {
 
 function continuityPlanText(): string {
   return JSON.stringify({
-    schemaVersion: 3,
-    soundWorlds: [],
+    schemaVersion: 4,
+    soundWorlds: [{
+      worldId: 'world-1',
+      continuityKey: 'same-interior',
+      range: { startFrame: 0, endFrameExclusive: 72 },
+      location: 'interior room',
+      timeContext: 'continuous',
+      weatherContext: null,
+      persistentSourceIds: [],
+      perspectives: [{
+        perspectiveId: 'perspective-1',
+        zoneId: 'zone-1',
+        range: { startFrame: 0, endFrameExclusive: 72 },
+        enclosure: 'enclosed',
+        distance: 'medium',
+        occlusion: 0.2,
+        description: 'one continuous interior perspective',
+      }],
+    }],
     acousticTransitions: [],
+    soundPresence: [{
+      segmentId: 'score-only',
+      range: { startFrame: 0, endFrameExclusive: 72 },
+      mode: 'score_only',
+      fadeInFrames: 6,
+      fadeOutFrames: 6,
+      reason: 'the scene needs restrained score but no generated ambience',
+    }],
     ambienceSources: [],
     scoreCues: [{
       cueId: 'score-master',
@@ -117,6 +157,71 @@ function continuityPlanText(): string {
   })
 }
 
+function nativeOnlyContinuityPlanText(): string {
+  const plan = JSON.parse(continuityPlanText()) as {
+    soundPresence: Array<{ mode: string; reason: string }>
+    scoreCues: unknown[]
+  }
+  const presence = plan.soundPresence[0]
+  if (!presence) throw new Error('TEST_SOUND_PRESENCE_REQUIRED')
+  presence.mode = 'native_only'
+  presence.reason = 'native dialogue and synchronized action sound carry the complete sequence'
+  plan.scoreCues = []
+  return JSON.stringify(plan)
+}
+
+function kernelCompilerJson() {
+  return {
+    stage: 'kernel_compiler',
+    interaction_density_prior: {
+      interactionDensity: 0.5,
+      sourceStage00Value: 0.5,
+      definition: 'creative_target_for_finished_wall_clock_active_speech_coverage_ratio',
+      targetSpokenCoverageRatio: 0.5,
+      targetNonSpeechCoverageRatio: 0.5,
+      aggregateSpeakerSecondsExcludedFromThisMetric: true,
+      runtimeEnforced: false,
+      overrideApplied: false,
+      overrideReason: '',
+      downstreamPolicy: 'creative prior only',
+    },
+    dialogue_timing_policy: { runtime_enforced: false, pre_render_estimation_forbidden: true },
+    dialogue_continuity_audit: {
+      status: 'pass', lineCount: 0, failedKernelCount: 0, repeatedLineCount: 0,
+      lowFunctionLineCount: 0, continuityBreakCount: 0, paddingDetected: false,
+      dialogueTimingEnforced: false,
+    },
+    micro_beat_kernels: [{
+      kernel_id: 'K-0001', sequence_id: 'sequence-1', scene_id: 'scene-1',
+      location_id: 'location-1', location_name: 'interior room', beat_index: 1,
+      dramatic_function: 'sustain pressure', action: 'a visible action unfolds', dialogue: [],
+      dialogue_continuity_audit: {
+        source_stage_06_status: 'pass', kernel_status: 'pass', repeated_line_count: 0,
+        low_function_line_count: 0, continuity_break_count: 0, repair_note: 'no repair needed',
+      },
+      beat_interaction_type: 'nonverbal_action',
+      dialogue_density_prior: {
+        interaction_density: 0.5, source_stage: 'stage_00', runtime_enforced: false,
+        policy: 'creative_prior_only',
+      },
+      beat_frequency_compliance: { kernel_runtime_sec: 3, status: 'pass' },
+      generation_facing_visual: {
+        projectVisualLookLock: {
+          visualStyle: 'controlled realism', chromaticity: 0.4, luminanceContrast: 0.6,
+          spatialSubjectivity: 0.5, cameraDynamics: 0.4, toneCurve: 'soft shoulder',
+          colorBehavior: 'restrained', opticalFamily: 'spherical', texture: 'fine',
+          grain: 'subtle', halation: 'minimal',
+        },
+        visualAdapterPayload: { locationId: 'location-1', multiSensoryTextControl: 'interior room' },
+      },
+      generation_facing_audio: {
+        dynamicMixerBlueprint: 'preserve native dialogue and synchronized action',
+        dialogueTimingEnforced: false,
+      },
+    }],
+  }
+}
+
 function mockReadyProject(): void {
   prismaMock.project.findUnique.mockResolvedValue({ analysisModel: 'openai::gpt-4.1', videoRatio: '16:9' })
   prismaMock.projectEpisode.findFirst.mockResolvedValue({ id: 'episode-1' })
@@ -142,6 +247,7 @@ function mockReadyProject(): void {
       sound: 'native dialogue and synchronized actions only',
     }],
     videoBlocksJson: [],
+    kernelCompilerJson: kernelCompilerJson(),
   })
   prismaMock.projectPanel.findMany.mockResolvedValue([{
     id: 'panel-1',
@@ -162,7 +268,7 @@ function mockReadyProject(): void {
   prismaMock.projectVideoGroup.findMany.mockResolvedValue([])
 }
 
-describe('BGM score worker V5', () => {
+describe('BGM score worker V6', () => {
   beforeEach(() => {
     vi.clearAllMocks()
     mockReadyProject()
@@ -187,10 +293,38 @@ describe('BGM score worker V5', () => {
         description: 'restrained interior scene',
       }],
     })
+    analyzeRequiredNativeAudioMock.mockResolvedValue({
+      schemaVersion: 1,
+      sampleRate: 48_000,
+      audioContentHash: 'aaaaaaaaaaaaaaaaaaaaaaaa',
+      clips: [{
+        order: 1,
+        range: { startFrame: 0, endFrameExclusive: 72 },
+        pcmHash: 'bbbbbbbbbbbbbbbbbbbbbbbb',
+        activityThresholdDbfs: -40,
+        frameFeatures: Array.from({ length: 72 }, (_, frame) => ({
+          frame, rmsDbfs: -30, peakDbfs: -12, crestDb: 18,
+          zeroCrossingRate: 0.1, active: true, transient: false,
+        })),
+        activityRanges: [{ range: { startFrame: 0, endFrameExclusive: 72 }, meanRmsDbfs: -30, peakDbfs: -12 }],
+        transientFrames: [],
+      }],
+    })
+    const alignment = {
+      schemaVersion: 1,
+      alignedKernels: [{
+        kernelId: 'K-0001', range: { startFrame: 0, endFrameExclusive: 72 }, confidence: 0.95,
+        dialogueRanges: [], nativeActionEvents: [],
+      }],
+      unresolvedKernelIds: [],
+    }
+    alignKernelCompilerToTimelineMock.mockResolvedValue(alignment)
+    flattenNativeActionEventsMock.mockReturnValue([])
     generateScoreCandidatesMock.mockImplementation(async (input: {
       onProgress: (candidates: readonly unknown[]) => Promise<void>
     }) => {
       const quality = {
+        actualDurationSeconds: 3, sourceDurationSeconds: 3, durationConformanceRatio: 1,
         peakAmplitude: 0.5, rmsAmplitude: 0.1, clippingRatio: 0, silenceRatio: 0,
         transientRate: 0.5, repetitionScore: 0.2, structureError: 0.1, qualityScore: 90, passed: true,
       }
@@ -245,7 +379,7 @@ describe('BGM score worker V5', () => {
         }
       }
     }
-    expect(projectData.bgmScore?.schemaVersion).toBe(5)
+    expect(projectData.bgmScore?.schemaVersion).toBe(6)
     expect(projectData.bgmScore?.timelineAudio?.clock).toEqual({
       fpsNumerator: 24,
       fpsDenominator: 1,
@@ -253,36 +387,17 @@ describe('BGM score worker V5', () => {
       totalFrames: 72,
     })
     expect(projectData.bgmScore?.timelineAudio?.stemPlan?.map((stem) => stem.role))
-      .toEqual(['native_video', 'ambience', 'bgm'])
+      .toEqual(['native_video', 'bgm'])
   })
 
-  it('runs in video-only mode when no screenplay exists', async () => {
+  it('fails before model calls when the Kernel Compiler screenplay is missing', async () => {
     prismaMock.projectEditScript.findUnique.mockResolvedValue(null)
     const { handleBgmScoreGenerateTask } = await import('@/lib/bgm-score/generate')
 
-    await expect(handleBgmScoreGenerateTask(job())).resolves.toMatchObject({ mediaId: 'media-mix' })
-
-    expect(analyzeLockedVideoFramesMock).toHaveBeenCalledWith(expect.objectContaining({
-      clips: expect.arrayContaining([expect.objectContaining({ panelId: 'panel-1' })]),
-      clock: expect.objectContaining({ fpsNumerator: 24, totalFrames: 72 }),
-    }))
-    const continuityPrompt = String(executeAiTextStepMock.mock.calls[0]?.[0]?.messages?.[0]?.content)
-    expect(continuityPrompt).toContain('"analysisMode": "video_only"')
-    expect(continuityPrompt).toContain('"scriptContext": null')
-    const completed = prismaMock.videoEditorProject.upsert.mock.calls.find((call) => {
-      const data = JSON.parse(String(call[0]?.update?.projectData ?? '{}')) as {
-        bgmScore?: { status?: string }
-      }
-      return data.bgmScore?.status === 'completed'
-    })
-    const data = JSON.parse(String(completed?.[0]?.update?.projectData ?? '{}')) as {
-      bgmScore?: { analysisMode?: string; editScriptId?: string | null; visualAnalysis?: unknown }
-    }
-    expect(data.bgmScore).toMatchObject({
-      analysisMode: 'video_only',
-      editScriptId: null,
-      visualAnalysis: expect.objectContaining({ sampleStepFrames: 24 }),
-    })
+    await expect(handleBgmScoreGenerateTask(job())).rejects.toThrow('BGM_SCORE_KERNEL_EDIT_SCRIPT_REQUIRED')
+    expect(analyzeRequiredNativeAudioMock).not.toHaveBeenCalled()
+    expect(analyzeLockedVideoFramesMock).not.toHaveBeenCalled()
+    expect(executeAiTextStepMock).not.toHaveBeenCalled()
   })
 
   it('fails before model calls when no schedulable timeline exists', async () => {
@@ -310,5 +425,25 @@ describe('BGM score worker V5', () => {
       bgmScore?: { stage?: string; errorMessage?: string }
     }
     expect(data.bgmScore).toMatchObject({ stage: 'failed', errorMessage: 'provider rejected final BGM' })
+  })
+
+  it('resumes a completed native-only timeline without rerunning planning or Lyria', async () => {
+    executeAiTextStepMock.mockResolvedValueOnce({ text: nativeOnlyContinuityPlanText() })
+    const { handleBgmScoreGenerateTask } = await import('@/lib/bgm-score/generate')
+
+    await expect(handleBgmScoreGenerateTask(job())).resolves.toMatchObject({ mediaId: null })
+    const completed = prismaMock.videoEditorProject.upsert.mock.calls.find((call) => {
+      const data = JSON.parse(String(call[0]?.update?.projectData ?? '{}')) as {
+        bgmScore?: { status?: string }
+      }
+      return data.bgmScore?.status === 'completed'
+    })
+    const completedProjectData = String(completed?.[0]?.update?.projectData ?? '')
+    expect(completedProjectData).not.toBe('')
+    prismaMock.videoEditorProject.findUnique.mockResolvedValue({ projectData: completedProjectData })
+
+    await expect(handleBgmScoreGenerateTask(job())).resolves.toMatchObject({ mediaId: null })
+    expect(executeAiTextStepMock).toHaveBeenCalledTimes(1)
+    expect(generateScoreCandidatesMock).not.toHaveBeenCalled()
   })
 })

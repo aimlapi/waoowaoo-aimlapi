@@ -45,7 +45,7 @@ export type AudioLoudnessMeasurement = {
 export type FinalRenderAudioMixResult = {
   readonly hasSourceAudio: boolean
   readonly mainAudio?: AudioLoudnessMeasurement
-  readonly bgm: AudioLoudnessMeasurement
+  readonly bgm?: AudioLoudnessMeasurement
   readonly ambienceTrackCount: number
   readonly ambienceContinuity: readonly AmbienceContinuityMeasurement[]
 }
@@ -220,7 +220,7 @@ export async function muxFinalRenderAudio(input: {
   readonly stitchedPath: string
   readonly mainAudioPath: string
   readonly hasSourceAudio: boolean
-  readonly musicPath: string
+  readonly musicPath?: string
   readonly ambienceTracks: readonly FinalRenderAmbienceTrack[]
   readonly ambienceQualityPcmPath: string
   readonly ambienceQualityBoundaryFrames: readonly number[]
@@ -230,11 +230,15 @@ export async function muxFinalRenderAudio(input: {
   readonly automationLanes: readonly AutomationLane[]
 }): Promise<FinalRenderAudioMixResult> {
   const durationSeconds = framesToSeconds(input.clock.totalFrames, input.clock)
-  const musicDuration = await probeAudioDuration(input.runCommand, input.musicPath)
-  if (musicDuration + 0.01 < durationSeconds) {
+  const musicDuration = input.musicPath
+    ? await probeAudioDuration(input.runCommand, input.musicPath)
+    : null
+  if (musicDuration !== null && musicDuration + 0.01 < durationSeconds) {
     throw new Error(`FINAL_VIDEO_RENDER_BGM_TOO_SHORT:${musicDuration}:${durationSeconds}`)
   }
-  const bgmMeasurement = await analyzeAudioLoudness(input.runCommand, input.musicPath, BGM_AUDIO_TARGET)
+  const bgmMeasurement = input.musicPath
+    ? await analyzeAudioLoudness(input.runCommand, input.musicPath, BGM_AUDIO_TARGET)
+    : undefined
   const mainMeasurement = input.hasSourceAudio
     ? await analyzeAudioLoudness(input.runCommand, input.mainAudioPath, MAIN_AUDIO_TARGET)
     : undefined
@@ -248,33 +252,40 @@ export async function muxFinalRenderAudio(input: {
     input.hasSourceAudio && mainMeasurement
       ? `[1:a]loudnorm=${loudnormApplyFilter(MAIN_AUDIO_TARGET, mainMeasurement)}[native_bus]`
       : '[1:a]volume=0[native_bus]',
-    `[2:a]atrim=0:${format(durationSeconds)},asetpts=PTS-STARTPTS,loudnorm=${loudnormApplyFilter(BGM_AUDIO_TARGET, bgmMeasurement)},${scoreVolume}[score_bus]`,
   ]
-  const mixInputs = ['[native_bus]', '[score_bus]']
+  const mixInputs = ['[native_bus]']
+  if (input.musicPath && bgmMeasurement) {
+    filters.push(`[2:a]atrim=0:${format(durationSeconds)},asetpts=PTS-STARTPTS,loudnorm=${loudnormApplyFilter(BGM_AUDIO_TARGET, bgmMeasurement)},${scoreVolume}[score_bus]`)
+    mixInputs.push('[score_bus]')
+  }
+  const ambienceInputIndex = input.musicPath ? 3 : 2
   const ambienceGraph = buildFinalRenderAmbienceGraph({
     tracks: input.ambienceTracks,
     clock: input.clock,
     automationLanes: input.automationLanes,
-    firstInputIndex: 3,
+    firstInputIndex: ambienceInputIndex,
   })
-  const ambienceContinuity = await validateAmbienceBusContinuity({
-    runCommand: input.runCommand,
-    graph: buildFinalRenderAmbienceGraph({
-      tracks: input.ambienceTracks,
+  const ambienceContinuity = input.ambienceTracks.length > 0
+    ? await validateAmbienceBusContinuity({
+      runCommand: input.runCommand,
+      graph: buildFinalRenderAmbienceGraph({
+        tracks: input.ambienceTracks,
+        clock: input.clock,
+        automationLanes: input.automationLanes,
+        firstInputIndex: 0,
+      }),
+      pcmPath: input.ambienceQualityPcmPath,
+      boundaryFrames: input.ambienceQualityBoundaryFrames,
       clock: input.clock,
-      automationLanes: input.automationLanes,
-      firstInputIndex: 0,
-    }),
-    pcmPath: input.ambienceQualityPcmPath,
-    boundaryFrames: input.ambienceQualityBoundaryFrames,
-    clock: input.clock,
-  })
+    })
+    : []
   filters.push(...ambienceGraph.filters)
   mixInputs.push(...ambienceGraph.outputLabels)
   filters.push(`${mixInputs.join('')}amix=inputs=${mixInputs.length}:duration=first:normalize=0:dropout_transition=0,alimiter=limit=0.95[aout]`)
 
   await input.runCommand('ffmpeg', [
-    '-y', '-i', input.stitchedPath, '-i', input.mainAudioPath, '-i', input.musicPath,
+    '-y', '-i', input.stitchedPath, '-i', input.mainAudioPath,
+    ...(input.musicPath ? ['-i', input.musicPath] : []),
     ...ambienceGraph.inputArgs,
     '-filter_complex', filters.join(';'),
     '-map', '0:v:0', '-map', '[aout]', '-c:v', 'copy', '-c:a', 'aac', '-b:a', '256k',
@@ -283,7 +294,7 @@ export async function muxFinalRenderAudio(input: {
   return {
     hasSourceAudio: input.hasSourceAudio,
     ...(mainMeasurement ? { mainAudio: mainMeasurement } : {}),
-    bgm: bgmMeasurement,
+    ...(bgmMeasurement ? { bgm: bgmMeasurement } : {}),
     ambienceTrackCount: input.ambienceTracks.length,
     ambienceContinuity,
   }

@@ -51,12 +51,12 @@ const basePlan = {
 }
 
 describe('bgm score plan schema', () => {
-  it('rejects legacy project data that is not schema version 5', () => {
+  it('rejects legacy project data that is not schema version 6', () => {
     const result = bgmScoreProjectDataSchema.safeParse({
       schemaVersion: 3,
       status: 'completed',
       taskId: 'task-1',
-      analysisMode: 'script_assisted',
+      inputMode: 'kernel_video_native',
       editScriptId: 'script-1',
       timelineSignature: 'signature',
       durationSeconds: 30,
@@ -65,36 +65,36 @@ describe('bgm score plan schema', () => {
     expect(result.success).toBe(false)
   })
 
-  it('accepts persisted video-only analysis without a screenplay id', () => {
+  it('accepts persisted native-audio analysis with a required Kernel Compiler identity', () => {
     const result = bgmScoreProjectDataSchema.safeParse({
-      schemaVersion: 5,
+      schemaVersion: 6,
       status: 'generating',
       taskId: 'task-1',
-      analysisMode: 'video_only',
-      editScriptId: null,
+      inputMode: 'kernel_video_native',
+      editScriptId: 'script-1',
+      kernelCompilerHash: '111111111111111111111111',
+      inputSignature: '222222222222222222222222',
       timelineSignature: 'signature',
       durationSeconds: 30,
       musicModel: 'fal::fal-ai/lyria3/pro',
-      visualAnalysis: {
-        schemaVersion: 2,
-        sampleStepFrames: 24,
-        observations: [{
-          frame: 0,
-          location: 'interior room',
-          locationEvidence: 'observed',
-          locationConfidence: 0.9,
-          continuityWithPrevious: 'uncertain',
-          transitionEvidence: [],
-          enclosure: 'enclosed',
-          weather: null,
-          persistentEnvironment: ['room tone'],
-          outOfFramePersistentEnvironment: [],
-          activityLevel: 0.2,
-          suggestedScoreEnergy: 0.1,
-          description: 'quiet interior',
+      nativeAudioAnalysis: {
+        schemaVersion: 1,
+        sampleRate: 48_000,
+        audioContentHash: '333333333333333333333333',
+        clips: [{
+          order: 1,
+          range: { startFrame: 0, endFrameExclusive: 24 },
+          pcmHash: '444444444444444444444444',
+          activityThresholdDbfs: -40,
+          frameFeatures: [{
+            frame: 0, rmsDbfs: -30, peakDbfs: -12, crestDb: 18,
+            zeroCrossingRate: 0.1, active: true, transient: false,
+          }],
+          activityRanges: [{ range: { startFrame: 0, endFrameExclusive: 24 }, meanRmsDbfs: -30, peakDbfs: -12 }],
+          transientFrames: [],
         }],
       },
-      stage: 'audio_video_visual_analyzed',
+      stage: 'audio_native_track_analyzed',
     })
     expect(result.success).toBe(true)
   })

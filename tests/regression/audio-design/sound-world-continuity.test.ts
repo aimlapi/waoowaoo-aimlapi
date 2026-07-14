@@ -31,6 +31,7 @@ describe('SoundWorld continuity regression', () => {
       clock,
       timelineSignature: createTimelineSignature({ clips, clock }),
       continuityPlan: createTestContinuityPlan(),
+      nativeActionEvents: [],
     })
 
     expect(timeline.clips.map((clip) => clip.range)).toEqual([

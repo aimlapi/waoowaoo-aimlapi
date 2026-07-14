@@ -56,9 +56,10 @@ describe('frame-authoritative audio timeline', () => {
       clock,
       timelineSignature: signature,
       continuityPlan: createTestContinuityPlan(),
+      nativeActionEvents: [],
     })
 
-    expect(timeline.schemaVersion).toBe(3)
+    expect(timeline.schemaVersion).toBe(4)
     expect(timeline.clips.map((item) => item.range)).toEqual([
       { startFrame: 0, endFrameExclusive: 120 },
       { startFrame: 120, endFrameExclusive: 240 },
@@ -66,5 +67,35 @@ describe('frame-authoritative audio timeline', () => {
     expect(timeline.ambienceSources[0]?.range).toEqual({ startFrame: 0, endFrameExclusive: 240 })
     expect(timeline.scoreCues[0]?.range).toEqual({ startFrame: 0, endFrameExclusive: 240 })
     expect(timeline.stemPlan.map((stem) => stem.role)).toEqual(['native_video', 'ambience', 'bgm'])
+  })
+
+  it('does not create ambience or BGM stems when presence selects native audio only', () => {
+    const clips = [clip(1, 10)]
+    const clock = createTimelineClock({ clips, fpsNumerator: 24, fpsDenominator: 1 })
+    const base = createTestContinuityPlan()
+    const timeline = buildAudioTimelineV2({
+      clips,
+      clock,
+      timelineSignature: createTimelineSignature({ clips, clock }),
+      nativeActionEvents: [],
+      continuityPlan: {
+        ...base,
+        acousticTransitions: [],
+        soundPresence: [{
+          segmentId: 'native-only',
+          range: { startFrame: 0, endFrameExclusive: 240 },
+          mode: 'native_only',
+          fadeInFrames: 12,
+          fadeOutFrames: 12,
+          reason: 'native dialogue and action carry the complete sequence',
+        }],
+        ambienceSources: [],
+        scoreCues: [],
+      },
+    })
+
+    expect(timeline.stemPlan.map((stem) => stem.role)).toEqual(['native_video'])
+    expect(timeline.ambienceSources).toEqual([])
+    expect(timeline.scoreCues).toEqual([])
   })
 })

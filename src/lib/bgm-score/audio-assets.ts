@@ -5,8 +5,9 @@ import { promisify } from 'node:util'
 import { generateAudioStem } from '@/lib/audio-design/stem-generation'
 import {
   assertAmbienceLoopBoundaryQuality,
+  measureAmbienceCandidateQuality,
   measureAmbienceLoopBoundary,
-  selectBestAmbienceLoopCandidate,
+  selectBestAmbienceCandidate,
 } from '@/lib/audio-design/ambience-loop'
 import { framesToSeconds, type AmbienceSource, type AudioTimelineV2 } from '@/lib/audio-design/types'
 import { ensureMediaObjectFromStorageKey } from '@/lib/media/service'
@@ -154,6 +155,13 @@ export async function generateAmbienceAssets(input: {
         ...(analysisWindowSeconds ? { analysisWindowSeconds: Math.min(1, analysisWindowSeconds) } : {}),
       })
       measurements.set(candidateIndex, measurement)
+      const quality = measureAmbienceCandidateQuality({
+        samples,
+        sampleRate: input.timeline.clock.sampleRate,
+        targetSalience: source.salience,
+        maximumTransientRate: source.role === 'bed' ? 4 : source.role === 'detail' ? 10 : 24,
+        boundaryScore: measurement.boundaryScore,
+      })
       const uploaded = await uploadGeneratedAudio({ audio, durationSeconds, prefix: 'audio/ambience' })
       const candidate: AmbienceAsset = {
         ...uploaded,
@@ -165,6 +173,7 @@ export async function generateAmbienceAssets(input: {
         crossfadeFrames: source.loopPolicy?.crossfadeFrames ?? 0,
         phaseOffsetFrames: source.loopPolicy?.phaseOffsetFrames ?? 0,
         boundaryScore: measurement.boundaryScore,
+        quality,
       }
       candidates.push(candidate)
       for (let index = assets.length - 1; index >= 0; index -= 1) {
@@ -175,7 +184,7 @@ export async function generateAmbienceAssets(input: {
       await input.onProgress(assets)
     }
     const orderedCandidates = [...candidates].sort((a, b) => a.candidateIndex - b.candidateIndex)
-    const selectedIndex = selectBestAmbienceLoopCandidate(orderedCandidates)
+    const selectedIndex = selectBestAmbienceCandidate(orderedCandidates)
     const selectedCandidate = orderedCandidates[selectedIndex]
     if (!selectedCandidate) throw new Error('AUDIO_AMBIENCE_LOOP_SELECTED_CANDIDATE_MISSING')
     if (source.playbackType === 'seamless_loop') {

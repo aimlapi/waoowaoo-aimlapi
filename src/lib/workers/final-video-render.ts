@@ -9,14 +9,14 @@ import { prisma } from '@/lib/prisma'
 import {
   parseEditorProjectData,
   readCompletedAmbienceAssets,
-  readCompletedBgmScoreMix,
-  readCompletedBgmScoreTimelineAudio,
+  readCompletedBgmScoreProjectData,
 } from '@/lib/bgm-score/project-data'
 import { createTimelineClock, createTimelineSignature } from '@/lib/audio-design/timeline'
 import { framesToSeconds } from '@/lib/audio-design/types'
+import { createKernelCompilerHash, parseKernelCompilerScript } from '@/lib/audio-design/kernel-compiler'
 import { parseNullableEditScriptStyleBible } from '@/lib/edit-script/style-bible-prompt'
-import { ensureMediaObjectFromStorageKey, resolveStorageKeyFromMediaValue } from '@/lib/media/service'
-import { generateUniqueKey, getObjectBuffer, toFetchableUrl, uploadObject } from '@/lib/storage'
+import { ensureMediaObjectFromStorageKey } from '@/lib/media/service'
+import { generateUniqueKey, getObjectBuffer, uploadObject } from '@/lib/storage'
 import type { TaskJobData } from '@/lib/task/types'
 import { reportTaskProgress } from './shared'
 import {
@@ -26,13 +26,13 @@ import {
   parseFinalRenderEditScriptShots,
   parseFinalRenderEditScriptVideoBlocks,
   resolveFinalRenderDimensions,
-  type FinalRenderClipPlan,
   type FinalRenderEditScriptInput,
 } from '@/lib/video-compose/final-render-plan'
 import {
   assertFinalRenderClipsHaveSources,
   normalizeFinalRenderErrorLocale,
 } from '@/lib/video-compose/final-render-errors'
+import { writeFinalRenderMediaSource } from '@/lib/video-compose/media-source'
 import {
   BGM_AUDIO_TARGET,
   MAIN_AUDIO_TARGET,
@@ -104,25 +104,11 @@ function escapeConcatPath(filePath: string): string {
   return filePath.replace(/'/g, "'\\''")
 }
 
-async function writeVideoSourceToFile(source: FinalRenderClipPlan['source'], outputPath: string): Promise<void> {
-  const storageKey = await resolveStorageKeyFromMediaValue(source)
-  if (storageKey) {
-    await writeFile(outputPath, await getObjectBuffer(storageKey))
-    return
-  }
-
-  if (typeof source !== 'string' || !source.trim()) {
-    throw new Error('FINAL_VIDEO_RENDER_SOURCE_INVALID')
-  }
-
-  const response = await fetch(toFetchableUrl(source))
-  if (!response.ok) {
-    throw new Error(`FINAL_VIDEO_RENDER_VIDEO_DOWNLOAD_FAILED:${response.status}`)
-  }
-  await writeFile(outputPath, Buffer.from(await response.arrayBuffer()))
+type FinalRenderAudioEditScript = FinalRenderEditScriptInput & {
+  readonly kernelCompilerHash: string
 }
 
-async function buildEditScript(episodeId: string): Promise<FinalRenderEditScriptInput | null> {
+async function buildEditScript(episodeId: string): Promise<FinalRenderAudioEditScript | null> {
   const script = await prisma.projectEditScript.findUnique({
     where: { episodeId },
     select: {
@@ -134,6 +120,7 @@ async function buildEditScript(episodeId: string): Promise<FinalRenderEditScript
       styleBibleJson: true,
       shotsJson: true,
       videoBlocksJson: true,
+      kernelCompilerJson: true,
     },
   })
   if (!script) return null
@@ -152,6 +139,7 @@ async function buildEditScript(episodeId: string): Promise<FinalRenderEditScript
     styleBible: parseNullableEditScriptStyleBible(script.styleBibleJson),
     shots,
     videoBlocks,
+    kernelCompilerHash: createKernelCompilerHash(parseKernelCompilerScript(script.kernelCompilerJson)),
   }
 }
 
@@ -284,9 +272,13 @@ export async function handleFinalVideoRenderTask(job: Job<TaskJobData>) {
     ])
     if (!project) throw new Error('FINAL_VIDEO_RENDER_PROJECT_NOT_FOUND')
     if (!episode) throw new Error('FINAL_VIDEO_RENDER_EPISODE_NOT_FOUND')
-    const bgmMix = readCompletedBgmScoreMix(editorProject?.projectData ?? null)
-    if (!bgmMix) throw new Error('FINAL_VIDEO_RENDER_BGM_REQUIRED')
-    const timelineAudio = readCompletedBgmScoreTimelineAudio(editorProject?.projectData ?? null)
+    const completedAudioProject = readCompletedBgmScoreProjectData(editorProject?.projectData ?? null)
+    if (!completedAudioProject) throw new Error('FINAL_VIDEO_RENDER_AUDIO_PROJECT_REQUIRED')
+    const bgmMix = completedAudioProject.mix
+    const timelineAudio = completedAudioProject.timelineAudio
+    if (completedAudioProject.kernelCompilerHash !== editScript?.kernelCompilerHash) {
+      throw new Error('FINAL_VIDEO_RENDER_AUDIO_KERNEL_STALE')
+    }
     const ambienceAssets = readCompletedAmbienceAssets(editorProject?.projectData ?? null)
     const existingProjectData = parseEditorProjectData(editorProject?.projectData ?? null)
 
@@ -321,7 +313,7 @@ export async function handleFinalVideoRenderTask(job: Job<TaskJobData>) {
         timelineClip.range.endFrameExclusive - timelineClip.range.startFrame,
         timelineAudio.clock,
       )
-      await writeVideoSourceToFile(clip.source, sourcePath)
+      await writeFinalRenderMediaSource(clip.source, sourcePath)
       await normalizeClip({
         sourcePath,
         outputPath: normalizedPath,
@@ -358,10 +350,15 @@ export async function handleFinalVideoRenderTask(job: Job<TaskJobData>) {
       clipAudioPaths,
       outputPath: mainAudioPath,
     })
+    if (!hasSourceAudio) throw new Error('FINAL_VIDEO_RENDER_NATIVE_AUDIO_REQUIRED')
 
     await reportTaskProgress(job, 55, { stage: 'final_render_music' })
-    const musicPath = path.join(workspaceDir, `bgm.${extensionFromMimeType(bgmMix.mimeType)}`)
-    await writeFile(musicPath, await getObjectBuffer(bgmMix.storageKey))
+    const musicPath = bgmMix
+      ? path.join(workspaceDir, `bgm.${extensionFromMimeType(bgmMix.mimeType)}`)
+      : undefined
+    if (musicPath && bgmMix) {
+      await writeFile(musicPath, await getObjectBuffer(bgmMix.storageKey))
+    }
     const ambienceTracks = await Promise.all(ambienceAssets.map(async (asset, index) => {
       const source = timelineAudio.ambienceSources.find((item) => item.sourceId === asset.sourceId)
       if (!source) throw new Error(`FINAL_VIDEO_RENDER_AMBIENCE_SOURCE_MISSING:${asset.sourceId}`)
@@ -377,6 +374,11 @@ export async function handleFinalVideoRenderTask(job: Job<TaskJobData>) {
         loop: asset.loop,
         crossfadeFrames: asset.crossfadeFrames,
         phaseOffsetFrames: asset.phaseOffsetFrames,
+        role: source.role,
+        baseGainDb: source.baseGainDb,
+        salience: source.salience,
+        spectralRole: source.spectralRole,
+        foregroundPolicy: source.foregroundPolicy,
         perspectives: world.perspectives,
         transitions: timelineAudio.acousticTransitions,
       }
@@ -447,7 +449,7 @@ export async function handleFinalVideoRenderTask(job: Job<TaskJobData>) {
         },
         measured: {
           main: audioMix.mainAudio ?? null,
-          bgm: audioMix.bgm,
+          bgm: audioMix.bgm ?? null,
         },
       },
       timeline: timelineAudio.clips.map((clip) => ({

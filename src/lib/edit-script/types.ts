@@ -1,5 +1,9 @@
 import { z } from 'zod'
 import type { LocationSpatialProfileStatus } from '@/lib/location-spatial-profile/types'
+import {
+  kernelCompilerScriptSchema,
+  type KernelCompilerScript,
+} from '@/lib/audio-design/kernel-compiler'
 import { EDIT_FIRST_DURATION_TIERS } from './duration-tier'
 
 export const EDIT_ASSET_KINDS = ['character', 'location', 'prop'] as const
@@ -194,6 +198,7 @@ export interface EditScriptPayload {
   readonly userPrompt?: string
   readonly styleBible: EditScriptStyleBible | null
   readonly screenplayText?: string | null
+  readonly kernelCompiler?: KernelCompilerScript | null
   readonly title: string
   readonly logline?: string | null
   readonly durationSec: number
@@ -517,6 +522,13 @@ export const updateEditScriptVideoBlockPromptRequestSchema = z.object({
   editScriptId: z.string().trim().min(1),
   blockIndex: z.number().int().min(0).max(59),
   prompt: z.string().trim().min(1),
+})
+
+export const updateEditScriptKernelCompilerRequestSchema = z.object({
+  operation: z.literal('setKernelCompiler'),
+  episodeId: z.string().trim().min(1),
+  editScriptId: z.string().trim().min(1),
+  kernelCompiler: kernelCompilerScriptSchema,
 })
 
 export const mergeEditScriptVideoBlocksRequestSchema = z.object({

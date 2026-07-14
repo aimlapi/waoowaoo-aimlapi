@@ -1,7 +1,9 @@
 import { createTimelineClock, createTimelineSignature } from '@/lib/audio-design/timeline'
-import type { AudioTimelineV2 } from '@/lib/audio-design/types'
+import { audioTimelineV2Schema, type AudioTimelineV2 } from '@/lib/audio-design/types'
 import type { BgmScorePlan } from '@/lib/bgm-score/types'
 import type { FinalRenderClipPlan } from '@/lib/video-compose/final-render-plan'
+import { createKernelCompilerHash } from '@/lib/audio-design/kernel-compiler'
+import { createKernelCompilerFixture } from '../../fixtures/audio/kernel-compiler'
 
 const CLIP: FinalRenderClipPlan = {
   order: 1,
@@ -19,7 +21,7 @@ const CLIP: FinalRenderClipPlan = {
 export function buildFinalRenderTestTimeline(signatureOverride?: string): AudioTimelineV2 {
   const clock = createTimelineClock({ clips: [CLIP], fpsNumerator: 24, fpsDenominator: 1 })
   return {
-    schemaVersion: 3,
+    schemaVersion: 4,
     timelineSignature: signatureOverride ?? createTimelineSignature({ clips: [CLIP], clock }),
     clock,
     nativeAudioPolicy: {
@@ -39,9 +41,34 @@ export function buildFinalRenderTestTimeline(signatureOverride?: string): AudioT
       visualSummary: 'panel 1',
       soundDirection: 'native dialogue and synchronized action sounds',
     }],
-    soundWorlds: [],
+    soundWorlds: [{
+      worldId: 'world-1',
+      continuityKey: 'single-space',
+      range: { startFrame: 0, endFrameExclusive: 72 },
+      location: 'interior',
+      timeContext: 'continuous',
+      weatherContext: null,
+      persistentSourceIds: [],
+      perspectives: [{
+        perspectiveId: 'perspective-1',
+        zoneId: 'zone-1',
+        range: { startFrame: 0, endFrameExclusive: 72 },
+        enclosure: 'enclosed',
+        distance: 'medium',
+        occlusion: 0.2,
+        description: 'single continuous interior perspective',
+      }],
+    }],
     acousticTransitions: [],
     nativeActionEvents: [],
+    soundPresence: [{
+      segmentId: 'score-only',
+      range: { startFrame: 0, endFrameExclusive: 72 },
+      mode: 'score_only',
+      fadeInFrames: 6,
+      fadeOutFrames: 6,
+      reason: 'score is required while ambience is intentionally omitted',
+    }],
     ambienceSources: [],
     scoreCues: [{
       cueId: 'score-master',
@@ -105,13 +132,28 @@ export function buildFinalRenderTestTimeline(signatureOverride?: string): AudioT
       role: 'native_video', status: 'generated', provider: null, modelId: null, modelKey: null,
       generationKind: 'native_reference', description: 'native',
     }, {
-      role: 'ambience', status: 'planned', provider: 'elevenlabs', modelId: 'eleven_text_to_sound_v2',
-      modelKey: 'elevenlabs::eleven_text_to_sound_v2', generationKind: 'ambience', description: 'ambience',
-    }, {
       role: 'bgm', status: 'planned', provider: 'fal', modelId: 'fal-ai/lyria3/pro',
       modelKey: 'fal::fal-ai/lyria3/pro', generationKind: 'music', description: 'score',
     }],
   }
+}
+
+export function buildFinalRenderNativeOnlyTimeline(): AudioTimelineV2 {
+  const timeline = buildFinalRenderTestTimeline()
+  return audioTimelineV2Schema.parse({
+    ...timeline,
+    soundPresence: [{
+      segmentId: 'native-only',
+      range: { startFrame: 0, endFrameExclusive: 72 },
+      mode: 'native_only',
+      fadeInFrames: 6,
+      fadeOutFrames: 6,
+      reason: 'native dialogue and synchronized action sound carry the sequence',
+    }],
+    scoreCues: [],
+    automationLanes: [],
+    stemPlan: [timeline.stemPlan[0]],
+  })
 }
 
 const BGM_PLAN: BgmScorePlan = {
@@ -133,23 +175,26 @@ const BGM_PLAN: BgmScorePlan = {
 }
 
 export function buildFinalRenderEditorProjectData(timeline: AudioTimelineV2): string {
+  const scoreRequired = timeline.scoreCues.length > 0
   return JSON.stringify({
     schemaVersion: 1,
     bgmScore: {
-      schemaVersion: 5,
+      schemaVersion: 6,
       status: 'completed',
       taskId: 'task-bgm',
-      analysisMode: 'script_assisted',
+      inputMode: 'kernel_video_native',
       editScriptId: 'edit-script-1',
+      kernelCompilerHash: createKernelCompilerHash(createKernelCompilerFixture()),
+      inputSignature: '222222222222222222222222',
       timelineSignature: timeline.timelineSignature,
       durationSeconds: 3,
       musicModel: 'fal::fal-ai/lyria3/pro',
       timelineAudio: timeline,
-      plan: BGM_PLAN,
-      mix: {
+      ...(scoreRequired ? { plan: BGM_PLAN } : {}),
+      ...(scoreRequired ? { mix: {
         mediaId: 'media-bgm', url: '/m/bgm', storageKey: 'music/bgm-score.m4a',
         mimeType: 'audio/mp4', durationMs: 3000,
-      },
+      } } : {}),
       ambienceAssets: [],
       stage: 'completed',
     },

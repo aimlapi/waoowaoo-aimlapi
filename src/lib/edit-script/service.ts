@@ -45,6 +45,10 @@ import type {
 } from './types'
 import type { LocationSpatialProfileStatus } from '@/lib/location-spatial-profile/types'
 import {
+  parseKernelCompilerScript,
+  type KernelCompilerScript,
+} from '@/lib/audio-design/kernel-compiler'
+import {
   editCinematographyShotPlanSchema,
   editStylePreviewKeySchema,
   editStylePreviewOptionsSchema,
@@ -234,6 +238,7 @@ interface PersistedEditScript {
   readonly userPrompt: string
   readonly styleBibleJson: Prisma.JsonValue | null
   readonly screenplayText: string | null
+  readonly kernelCompilerJson: Prisma.JsonValue | null
   readonly title: string
   readonly logline: string | null
   readonly durationSec: number
@@ -987,6 +992,9 @@ async function mapPersistedEditScript(script: PersistedEditScript): Promise<Edit
     userPrompt: script.userPrompt,
     styleBible: parseOptionalStyleBibleJson(script.styleBibleJson),
     screenplayText: script.screenplayText,
+    kernelCompiler: script.kernelCompilerJson === null
+      ? null
+      : parseKernelCompilerScript(script.kernelCompilerJson),
     title: script.title,
     logline: script.logline,
     durationSec: script.durationSec,
@@ -1214,6 +1222,7 @@ async function markEditScriptGenerating(input: {
       status: 'generating',
       shotsJson: [] as unknown as Prisma.InputJsonValue,
       videoBlocksJson: [] as unknown as Prisma.InputJsonValue,
+      kernelCompilerJson: Prisma.DbNull,
     },
     update: {
       userPrompt: input.userPrompt,
@@ -1226,6 +1235,7 @@ async function markEditScriptGenerating(input: {
       status: 'generating',
       shotsJson: [] as unknown as Prisma.InputJsonValue,
       videoBlocksJson: [] as unknown as Prisma.InputJsonValue,
+      kernelCompilerJson: Prisma.DbNull,
     },
   })
 }
@@ -1535,6 +1545,32 @@ export async function updateProjectEditScriptVideoBlockPrompt(
     },
   })
 
+  return await mapPersistedEditScript(updated)
+}
+
+export async function updateProjectEditScriptKernelCompiler(input: {
+  readonly projectId: string
+  readonly episodeId: string
+  readonly editScriptId: string
+  readonly kernelCompiler: KernelCompilerScript
+}): Promise<EditScriptPayload> {
+  const script = await getPersistedEditScript(input.projectId, input.episodeId, input.editScriptId)
+  if (!script) throw new ApiError('NOT_FOUND')
+  const kernelCompiler = parseKernelCompilerScript(input.kernelCompiler)
+  const updated = await prisma.projectEditScript.update({
+    where: { id: script.id },
+    data: {
+      kernelCompilerJson: kernelCompiler as unknown as Prisma.InputJsonValue,
+    },
+    include: {
+      requirements: {
+        orderBy: [
+          { kind: 'asc' },
+          { name: 'asc' },
+        ],
+      },
+    },
+  })
   return await mapPersistedEditScript(updated)
 }
 

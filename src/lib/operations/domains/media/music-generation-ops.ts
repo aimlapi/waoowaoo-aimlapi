@@ -16,6 +16,10 @@ import {
   refineTaskSubmitOperationOutputSchema,
   taskSubmitOperationOutputSchemaBase,
 } from '@/lib/operations/output-schemas'
+import {
+  createKernelCompilerHash,
+  parseKernelCompilerScript,
+} from '@/lib/audio-design/kernel-compiler'
 
 const vocalModeSchema = z.enum(['instrumental', 'vocal'])
 const outputFormatSchema = z.enum(['mp3', 'wav'])
@@ -150,13 +154,19 @@ async function resolveBgmScoreMusicModel(input: BgmScoreGenerationInput, project
   return requireModelKey(configured)
 }
 
-async function resolveBgmScoreEpisodeDurationSeconds(episodeId: string, projectId: string): Promise<number> {
+async function resolveBgmScorePrerequisites(
+  episodeId: string,
+  projectId: string,
+): Promise<{ readonly durationSeconds: number; readonly kernelCompilerHash: string }> {
   const episode = await prisma.projectEpisode.findFirst({
     where: { id: episodeId, projectId },
     select: {
       id: true,
       editScript: {
-        select: { durationSec: true },
+        select: {
+          durationSec: true,
+          kernelCompilerJson: true,
+        },
       },
     },
   })
@@ -165,7 +175,11 @@ async function resolveBgmScoreEpisodeDurationSeconds(episodeId: string, projectI
   if (typeof duration !== 'number' || !Number.isFinite(duration) || duration <= 0) {
     throw new Error('PROJECT_AGENT_BGM_SCORE_EDIT_SCRIPT_REQUIRED')
   }
-  return Math.max(1, Math.ceil(duration))
+  const kernelCompiler = parseKernelCompilerScript(episode.editScript?.kernelCompilerJson)
+  return {
+    durationSeconds: Math.max(1, Math.ceil(duration)),
+    kernelCompilerHash: createKernelCompilerHash(kernelCompiler),
+  }
 }
 
 export function createMusicGenerationOperations(): ProjectAgentOperationRegistryDraft {
@@ -254,7 +268,7 @@ export function createMusicGenerationOperations(): ProjectAgentOperationRegistry
     }),
     generate_episode_bgm_score: defineOperation({
       id: 'generate_episode_bgm_score',
-      summary: 'Generate a continuous multi-stem BGM score for an episode after video planning is complete.',
+      summary: 'Plan and generate frame-locked ambience and optional BGM after the Kernel Compiler script and native-audio video are complete.',
       intent: 'act',
       prerequisites: { episodeId: 'required' },
       effects: {
@@ -268,19 +282,20 @@ export function createMusicGenerationOperations(): ProjectAgentOperationRegistry
       },
       confirmation: {
         required: true,
-        summary: '将根据已完成的视频编排生成连续 BGM 多音轨工程并混成最终 BGM（可能消耗额度/产生计费）。确认继续后请重新调用并传入 confirmed=true。',
+        summary: '将根据完整剧本、锁定视频画面和原生音轨规划并生成氛围音与可选配乐（可能消耗额度/产生计费）。确认继续后请重新调用并传入 confirmed=true。',
       },
       inputSchema: bgmScoreGenerationInputSchema,
       outputSchema: taskSubmitOutput,
       execute: async (ctx, input) => {
         const musicModel = await resolveBgmScoreMusicModel(input, ctx.projectId, ctx.userId)
-        const durationSeconds = await resolveBgmScoreEpisodeDurationSeconds(input.episodeId, ctx.projectId)
+        const prerequisites = await resolveBgmScorePrerequisites(input.episodeId, ctx.projectId)
         const outputFormat = isCloudDeployment()
           ? resolveCloudMusicOption('outputFormat', input.outputFormat)
           : input.outputFormat
         const payload: Record<string, unknown> = {
           episodeId: input.episodeId,
-          durationSeconds,
+          durationSeconds: prerequisites.durationSeconds,
+          kernelCompilerHash: prerequisites.kernelCompilerHash,
           musicModel,
           ...(typeof outputFormat === 'string' ? { outputFormat } : {}),
         }
