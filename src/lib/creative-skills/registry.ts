@@ -78,7 +78,7 @@ export const CREATIVE_SKILL_REGISTRY: Readonly<Record<CreativeSkillId, CreativeS
   }),
   'style-development': defineSkill({
     id: 'style-development',
-    version: '1.0.0',
+    version: '1.1.0',
     title: { zh: '视觉风格开发', en: 'Visual Style Development' },
     summary: {
       zh: '跨图片与视频共享的视觉风格、资产图专用画面规则、风格候选与预览设计方法。',
