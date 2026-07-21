@@ -25,13 +25,9 @@ import {
 } from '@/lib/task/has-output'
 import { sanitizeImageInputsForTaskPayload } from '@/lib/media/outbound-image'
 import {
-  CHARACTER_ASSET_IMAGE_RATIO,
-  LOCATION_IMAGE_RATIO,
-  PRIMARY_APPEARANCE_INDEX,
-  PROP_IMAGE_RATIO,
-  removeLocationPromptSuffix,
-  removePropPromptSuffix,
-} from '@/lib/constants'
+  getAssetImageFormatPolicy,
+} from '@/lib/asset-generation/asset-image-format'
+import { PRIMARY_APPEARANCE_INDEX } from '@/lib/constants'
 import { decodeImageUrlsFromDb, encodeImageUrls } from '@/lib/contracts/image-urls-contract'
 import { resolveEditScriptStyleBibleSignatureForTask } from '@/lib/edit-script/style-bible-prompt'
 import type { AssetKind } from '@/lib/assets/contracts'
@@ -163,16 +159,11 @@ function normalizeLocationBackedKind(kind: AssetKind): 'character' | 'location' 
 }
 
 function resolveAssetGenerationAspectRatio(kind: AssetKind): string {
-  if (kind === 'character') return CHARACTER_ASSET_IMAGE_RATIO
-  if (kind === 'prop') return PROP_IMAGE_RATIO
-  return LOCATION_IMAGE_RATIO
+  return getAssetImageFormatPolicy(kind).aspectRatio
 }
 
 function resolveAssetModifyAspectRatio(kind: AssetKind): string {
-  if (kind === 'character') return CHARACTER_ASSET_IMAGE_RATIO
-  if (kind === 'prop') return PROP_IMAGE_RATIO
-  if (kind === 'location') return LOCATION_IMAGE_RATIO
-  return CHARACTER_ASSET_IMAGE_RATIO
+  return getAssetImageFormatPolicy(kind).aspectRatio
 }
 
 function requireLocationBackedKind(kind: AssetKind): LocationBackedAssetKind {
@@ -1202,7 +1193,7 @@ async function updateGlobalAssetVariant(input: AssetVariantUpdateInput, transact
   if (input.kind === 'prop') {
     const trimmedDescription = normalizeString(input.body.description)
     if (!trimmedDescription) throw new ApiError('INVALID_PARAMS')
-    const cleanDescription = removePropPromptSuffix(trimmedDescription)
+    const cleanDescription = trimmedDescription
     const image = await transaction.globalLocationImage.update({
       where: { id: input.variantId },
       data: { description: cleanDescription },
@@ -1241,7 +1232,7 @@ async function updateProjectAssetVariant(input: AssetVariantUpdateInput, transac
   if (input.kind === 'prop') {
     const trimmedDescription = normalizeString(input.body.description)
     if (!trimmedDescription) throw new ApiError('INVALID_PARAMS')
-    const cleanDescription = removePropPromptSuffix(trimmedDescription)
+    const cleanDescription = trimmedDescription
     const image = await transaction.locationImage.update({
       where: { id: input.variantId },
       data: { description: cleanDescription },
@@ -1250,7 +1241,7 @@ async function updateProjectAssetVariant(input: AssetVariantUpdateInput, transac
   }
   const trimmedDescription = normalizeString(input.body.description)
   if (!trimmedDescription) throw new ApiError('INVALID_PARAMS')
-  const cleanDescription = removeLocationPromptSuffix(trimmedDescription)
+  const cleanDescription = trimmedDescription
   const image = await transaction.locationImage.update({
     where: { id: input.variantId },
     data: { description: cleanDescription },

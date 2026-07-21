@@ -11,16 +11,16 @@ Translate story facts, user requirements, and existing visual context into one v
 - `visualStyle` is the shared image/video look. It combines artistic medium, image treatment, overall finish, and color palette into one concrete, executable description.
 - `assetImageStyle` is used only for asset images such as character, location, prop, and style-preview images:
   - `lighting` defines stylized asset-image lighting;
-  - `texture` defines asset-image material and detail treatment;
-  - `composition` defines reusable asset-image composition.
-- Video generation consumes only `visualStyle`; it never inherits `assetImageStyle` lighting, material-detail treatment, or asset-board composition.
+  - `texture` defines asset-image material and detail treatment.
+- Fixed asset-image formats do not belong to the Style Bible. The asset-image execution policy is their sole authority by asset kind; they do not own, override, or constrain video composition.
+- Video generation consumes only `visualStyle`; it never inherits `assetImageStyle` lighting or material-detail treatment. Video composition remains independently owned by directing and video design.
 - The Style Bible is the sole authority for visual style. Asset design consumes it and must not redefine project style from one reference image or one asset.
 
 ## Visual-style boundaries
 
 - Visual style governs artistic medium, image treatment, overall texture, and color direction. It does not decide narrative viewpoint, performance, information rhythm, lens, camera motion, video editing, or sound.
-- `visualStyle` excludes lighting, composition, lens, camera movement, and sound; those belong to asset-image policy, directing, video, or sound design.
-- Separate the overall visual style shared by images and video from lighting, material-detail, and composition rules used only for asset images. Asset-only rules must never leak into cross-media style.
+- `visualStyle` excludes lighting, composition, lens, camera movement, and sound; those belong to asset-image execution policy, directing, video, or sound design.
+- Separate the overall visual style shared by images and video from lighting and material-detail rules used only for asset images. Asset-only rules must never leak into cross-media style.
 - A style summary helps people understand the direction. Generation-facing style language must be specific and executable rather than vague labels such as “cinematic,” “premium,” or “dreamlike.”
 - Translate references to directors, films, studios, movements, or eras into executable medium, material, palette, silhouette, detail density, and image-treatment characteristics instead of depending on protected names themselves.
 - An explicit user-selected style and a confirmed project Style Bible outrank the source style of reference images. A reference may provide identity, structure, and material facts, but it cannot override explicit art direction.
@@ -39,16 +39,16 @@ This catalog expands discovery and combination space only. It is not a closed en
 
 This catalog describes only visual attributes that can be verified directly in a single frame; it does not expand into temporal or sound dimensions.
 
-The adapted field formula is: `visualStyle = primary medium/production surface + form and design language + color relationships + global image treatment`; `assetImageStyle = stylized asset-image lighting + material/detail expression + reusable asset composition`. Era, region, worldbuilding, genre, and mood are compatibility constraints and interpretation cues only.
+The adapted field formula is: `visualStyle = primary medium/production surface + form and design language + color relationships + global image treatment`; `assetImageStyle = stylized asset-image lighting + material/detail expression`. Era, region, worldbuilding, genre, and mood are compatibility constraints and interpretation cues only.
 
 ### Use algorithm
 
 1. Lock explicit user requirements and every supplied plot, character, location, prop, era, and world-rule fact before consulting the vocabulary. Catalog terms never rewrite those facts.
 2. Filter for compatible medium/design-language, palette/image-treatment, and asset-image-policy seeds. Never force a term merely to cover the catalog.
-3. Give each candidate one primary medium and one compatible design language, or one explicit medium–design-language pairing, then one compatible palette/image-treatment group and one asset-image lighting/texture/composition policy. Do not produce an unranked pile of tags.
+3. Give each candidate one primary medium and one compatible design language, or one explicit medium–design-language pairing, then one compatible palette/image-treatment group and one asset-image lighting/texture policy. Do not produce an unranked pile of tags.
 4. The three candidates must differ materially on at least two visual dimensions, including the primary medium or design language on at least one axis; changing only color, brightness, or a mood adjective is insufficient.
 5. Translate every selected label into executable medium, silhouette, material, detail-density, color-relation, and image-treatment language. A final Style Bible must not depend on bare labels, work titles, studio names, or protected names.
-6. Put lighting and asset composition only in `assetImageStyle.lighting` and `assetImageStyle.composition`.
+6. Put stylized asset-image lighting in `assetImageStyle.lighting` and material/detail expression in `assetImageStyle.texture`. Candidates must not choose or generate an asset-image format.
 7. Use historical/regional, genre, worldbuilding, and mood terms only for compatibility filtering. Adopt one only when the input already supports it and it maps unambiguously to single-frame medium, form, color, material, or global image-treatment traits; otherwise it does not enter the Style Bible. Never invent an era, region, architecture, technology, creature, or plot element from a label.
 8. Collapse synonymous or near-synonymous families before generating candidates. Do not repeat one family inside a candidate, and do not manufacture three candidates by swapping labels within one family. Common families include 新现实主义／意大利新现实主义; 诗意现实主义／法国诗意现实主义／伊朗诗意现实主义; 魔幻现实主义／拉丁美洲魔幻现实主义; 表现主义／德国表现主义; 印象主义／法国印象派; 日本侘寂／侘寂; 公路电影美学／公路; 拼贴／拼贴动画; 水墨电影／水墨动画; 油画／油画动画; 像素／像素动画; 阈限空间／阈限空间恐怖; 空核／空核恐怖; and VHS／录像带电影／模拟恐怖.
 
@@ -67,8 +67,6 @@ The adapted field formula is: `visualStyle = primary medium/production surface +
 Any lighting seed that implies a source or time must be compatible with supplied facts. Window light, candlelight, neon, moonlight, golden hour, or blue hour cannot invent a window, candle, sign, night, or sunset. `assetImageStyle.lighting` defines stylized treatment only; asset design still owns physical sources and time facts.
 
 **Material and detail treatment:**赛璐璐平涂与干净边缘、黏土指纹、木偶关节与接缝、纸纤维与剪切边缘、皮影半透明纤维、砂粒、油画厚涂、水彩渗化、水墨晕染、粉笔粉尘、玻璃绘制层次、像素硬边、矢量平面、版画压痕、木刻刀痕、低多边形折面、体素块面、玩具塑料或木材、毛毡绒毛、折纸折痕、布偶织物与缝线。Material treatment must derive naturally from the primary medium; it cannot conflict with that medium or rewrite the real material facts of a character, location, or prop. Film grain and dirty scratches are global image treatments, not the asset's physical surface.
-
-**Asset composition:**对称、中心、几何、留白、拥挤。These constrain reusable asset imagery only; every option must keep the subject complete, unobscured, and easy to identify. “Crowded” changes layout density only and cannot invent people, objects, or environmental clutter. Asset design still owns a location's physical light sources, time, and spatial structure.
 
 ### Semantic seeds used only when they map unambiguously to single-frame visual traits
 
@@ -89,7 +87,7 @@ Any lighting seed that implies a source or time must be compatible with supplied
 ## Style previews
 
 - A style preview exists to compare visual directions. It is not a new story version or a new source of asset facts.
-- Preview imagery uses the candidate's own `visualStyle` and `assetImageStyle`; never mix lighting, texture, or composition from another candidate.
+- Preview imagery uses the candidate's own `visualStyle` and `assetImageStyle`; never mix lighting or texture from another candidate.
 - A preview may depict key story moments to demonstrate style fit, but it must not change character identity, location facts, prop state, or story content.
 - Incidental preview composition, pose, lighting detail, and generation defects do not automatically become Style Bible or asset facts.
 
@@ -97,13 +95,13 @@ Any lighting seed that implies a source or time must be compatible with supplied
 
 - This Skill defines cross-media visual policy and asset-image policy. Asset design owns stable character appearance, location structure, and prop form.
 - `assetImageStyle.lighting` defines the stylized lighting shared by asset images. A location's real physical sources, positions, time, and illumination conditions are location facts supplied by asset design.
-- A final asset-image prompt composes stable asset facts with the confirmed Style Bible. It must not write stylized lighting, filters, or asset composition back into stable character or location identity descriptions.
+- A final asset-image prompt composes stable asset facts with the confirmed Style Bible. It must not write stylized lighting or filters back into stable character or location identity descriptions. The execution policy appends the fixed asset-image format; the Style Bible provides no second format instruction.
 - When reference-image style conflicts with the Style Bible, retain reference-supported identity, silhouette, structure, and material facts while following the Style Bible for the final image treatment.
 
 ## Review
 
 - Does `visualStyle` contain only medium, image treatment, overall finish, and palette shared by images and video?
-- Does `assetImageStyle` contain only asset-image lighting, texture, and composition?
+- Does `assetImageStyle` contain only asset-image lighting and texture, with no asset-image format field?
 - Have abstract or named style references been translated into executable visual traits?
 - Do candidates differ materially while remaining faithful to the same story facts?
 - Does a preview compare style without creating new plot or asset facts?
@@ -111,4 +109,4 @@ Any lighting seed that implies a source or time must be compatible with supplied
 
 ## Boundary
 
-This Skill provides methods for Style Bibles, style candidates, and style previews. The asset-design Skill owns specific character, location, prop, and reference-asset design; directing, shots, video, sound, and music belong to their respective Skills. Output schemas, candidate count, preview-grid layout, image aspect ratio, provider parameters, real-person safety policy, and final generation suffixes are defined by the caller and execution layer.
+This Skill provides methods for Style Bibles, style candidates, and style previews. The asset-design Skill owns specific character, location, prop, and reference-asset design; directing, shots, video composition, sound, and music belong to their respective Skills. Output schemas, candidate count, preview-grid layout, fixed asset-image formats, image aspect ratio, provider parameters, real-person safety policy, and final generation suffixes are defined by the caller and execution layer.

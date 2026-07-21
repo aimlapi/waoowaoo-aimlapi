@@ -41,7 +41,7 @@ describe('image-generation/runtime-options', () => {
   })
 
   it('requires an explicit image aspect ratio at worker runtime', () => {
-    expect(requireImageRuntimeAspectRatio({ aspectRatio: '3:2' }, 'asset_image')).toBe('3:2')
+    expect(requireImageRuntimeAspectRatio({ aspectRatio: '4:3' }, 'asset_image')).toBe('4:3')
     expect(() => requireImageRuntimeAspectRatio({ resolution: '1K' }, 'asset_image'))
       .toThrow('IMAGE_RUNTIME_ASPECT_RATIO_REQUIRED:asset_image')
   })

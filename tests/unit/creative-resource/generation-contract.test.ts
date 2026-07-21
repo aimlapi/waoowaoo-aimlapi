@@ -7,14 +7,14 @@ function imagePayload() {
     resource: {
       resourceId: 'resource:image-1',
       mediaType: 'image',
-      schemaId: 'project.character_image',
+      schemaId: 'generic.image',
       prompt: 'A character reference image.',
       modelKey: 'fal::gpt-image-2',
       inputHash: 'input-hash',
       inputs: [],
       imageInputPositions: [],
       generationOptions: {
-        aspectRatio: '9:16',
+        aspectRatio: '4:3',
         resolution: '1K',
         quality: 'high',
       },
@@ -24,7 +24,7 @@ function imagePayload() {
     imageModel: 'fal::gpt-image-2',
     count: 1,
     generationOptions: {
-      aspectRatio: '9:16',
+      aspectRatio: '4:3',
       resolution: '1K',
       quality: 'high',
     },

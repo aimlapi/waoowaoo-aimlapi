@@ -177,7 +177,6 @@ export interface WorkspaceCanvasStyleBibleDetails {
   readonly assetImageStyle?: {
     readonly lighting: string
     readonly texture: string
-    readonly composition: string
   } | null
 }
 

@@ -78,11 +78,11 @@ export const CREATIVE_SKILL_REGISTRY: Readonly<Record<CreativeSkillId, CreativeS
   }),
   'style-development': defineSkill({
     id: 'style-development',
-    version: '1.1.0',
+    version: '1.2.0',
     title: { zh: '视觉风格开发', en: 'Visual Style Development' },
     summary: {
-      zh: '跨图片与视频共享的视觉风格、资产图专用画面规则、风格候选与预览设计方法。',
-      en: 'Methods for cross-media visual style, asset-image-specific presentation rules, style candidates, and previews.',
+      zh: '跨图片与视频共享的视觉风格、资产图专用灯光与材质、风格候选与预览设计方法。',
+      en: 'Methods for cross-media visual style, asset-image-specific lighting and texture, style candidates, and previews.',
     },
     tags: ['style', 'art-direction', 'palette', 'medium', 'preview'],
     keywords: {
@@ -92,11 +92,11 @@ export const CREATIVE_SKILL_REGISTRY: Readonly<Record<CreativeSkillId, CreativeS
   }),
   'asset-development': defineSkill({
     id: 'asset-development',
-    version: '1.0.0',
+    version: '1.1.0',
     title: { zh: '资产设计与生成提示词', en: 'Asset Development and Generation Prompts' },
     summary: {
-      zh: '角色、场景、道具、参考图、候选资产与已有资产修改的设计方法。',
-      en: 'Methods for characters, locations, props, reference images, asset candidates, and existing-asset modifications.',
+      zh: '角色、场景、道具、参考图、固定资产图格式、候选资产与已有资产修改的设计方法。',
+      en: 'Methods for characters, locations, props, reference images, fixed asset-image formats, candidates, and existing-asset modifications.',
     },
     tags: ['asset', 'image', 'character', 'location', 'prop', 'reference', 'candidate'],
     keywords: {
@@ -134,7 +134,7 @@ export const CREATIVE_SKILL_REGISTRY: Readonly<Record<CreativeSkillId, CreativeS
   }),
   'quality-review': defineSkill({
     id: 'quality-review',
-    version: '1.1.0',
+    version: '1.2.0',
     title: { zh: '创作质量审查', en: 'Creative Quality Review' },
     summary: {
       zh: '基于证据审查创作质量；`outputKind=video_prompt_set` 时必须与 `director-core`、`video-direction` 一起读取并在输出前自检。',

@@ -55,7 +55,6 @@ function buildStyleBibleDetails(value: unknown): WorkspaceCanvasStyleBibleDetail
       ? {
           lighting: stringValue(assetImageStyle.lighting) ?? '',
           texture: stringValue(assetImageStyle.texture) ?? '',
-          composition: stringValue(assetImageStyle.composition) ?? '',
         }
       : null,
   }

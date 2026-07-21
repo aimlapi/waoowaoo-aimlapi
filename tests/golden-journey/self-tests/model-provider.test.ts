@@ -152,7 +152,7 @@ describe('Golden local model provider', () => {
         model: 'golden-model',
         messages: [{
           role: 'user',
-          content: '{"stylePreviews":[{"visualStyle":"string","assetImageStyle":{"lighting":"string","texture":"string","composition":"string"},"gridImagePrompt":"string"}]}',
+          content: '{"stylePreviews":[{"visualStyle":"string","assetImageStyle":{"lighting":"string","texture":"string"},"gridImagePrompt":"string"}]}',
         }],
       },
     })
@@ -654,6 +654,7 @@ describe('Golden local model provider', () => {
           kind: 'new',
           count: 3,
           prompt: 'A cinematic midnight shrine in mist, wide composition.',
+          schemaId: 'generic.image',
         },
       }),
     })

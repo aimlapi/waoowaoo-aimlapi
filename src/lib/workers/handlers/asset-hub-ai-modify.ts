@@ -2,7 +2,6 @@ import type { Job } from 'bullmq'
 import { z } from 'zod'
 import { executeAiStructuredTextStep } from '@/lib/ai-exec/structured-step'
 import { getUserModelConfig } from '@/lib/config-service'
-import { removeCharacterPromptSuffix, removeLocationPromptSuffix, removePropPromptSuffix } from '@/lib/constants'
 import { withInternalLLMStreamCallbacks } from '@/lib/llm-observe/internal-stream-context'
 import { reportTaskProgress } from '@/lib/workers/shared'
 import { assertTaskActive } from '@/lib/workers/utils'
@@ -57,7 +56,7 @@ export async function handleAssetHubAIModifyTask(job: Job<TaskJobData>) {
       promptId: PROMPT_IDS.CHARACTER_MODIFY,
       locale: job.data.locale,
       variables: {
-        character_input: removeCharacterPromptSuffix(currentDescriptionRaw),
+        character_input: currentDescriptionRaw,
         user_input: modifyInstruction,
       },
     })
@@ -67,7 +66,7 @@ export async function handleAssetHubAIModifyTask(job: Job<TaskJobData>) {
         locale: job.data.locale,
         variables: {
           prop_name: readRequiredString(payload.propName || '道具', 'propName'),
-          original_description: removePropPromptSuffix(currentDescriptionRaw),
+          original_description: currentDescriptionRaw,
           modify_instruction: modifyInstruction,
           image_context: '',
         },
@@ -77,7 +76,7 @@ export async function handleAssetHubAIModifyTask(job: Job<TaskJobData>) {
       locale: job.data.locale,
       variables: {
         location_name: readRequiredString(payload.locationName || '场景', 'locationName'),
-        location_input: removeLocationPromptSuffix(currentDescriptionRaw),
+        location_input: currentDescriptionRaw,
         user_input: modifyInstruction,
       },
     })

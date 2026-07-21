@@ -17,7 +17,10 @@ import { createCreativeWorkerTools } from '@/lib/creative-worker/tools'
 import { listCreativeWorkerSkillCatalog } from '@/lib/creative-worker/skill-access'
 import { createProjectAgentOperationRegistry } from '@/lib/operations/registry'
 import { resolveProjectAgentToolset } from '@/lib/project-agent/toolset'
-import { CREATIVE_RESOURCE_SCHEMA_IDS_BY_MEDIA } from '@/lib/creative-resource/schema-registry'
+import {
+  CREATIVE_RESOURCE_SCHEMA,
+  CREATIVE_RESOURCE_SCHEMA_IDS_BY_MEDIA,
+} from '@/lib/creative-resource/schema-registry'
 
 function readRecord(value: unknown): Record<string, unknown> {
   if (!value || typeof value !== 'object' || Array.isArray(value)) return {}
@@ -133,7 +136,9 @@ describe('project agent toolset conformance', () => {
         readRecord(readRecord(branch.properties).kind).const === 'retry'
       ))
       expect(readRecord(readRecord(newBranch).properties).schemaId).toMatchObject({
-        enum: [...CREATIVE_RESOURCE_SCHEMA_IDS_BY_MEDIA[mediaType], null],
+        enum: mediaType === 'image'
+          ? [...CREATIVE_RESOURCE_SCHEMA_IDS_BY_MEDIA.image]
+          : [...CREATIVE_RESOURCE_SCHEMA_IDS_BY_MEDIA[mediaType], null],
       })
       expect(Object.keys(readRecord(readRecord(retryBranch).properties))).toEqual(['kind', 'resourceIds'])
       expect(Object.keys(readRecord(readRecord(newBranch).properties))).not.toEqual(expect.arrayContaining([
@@ -153,6 +158,14 @@ describe('project agent toolset conformance', () => {
     }).success).toBe(true)
     expect(registry.create_image.inputSchema.safeParse({
       request: { kind: 'new', count: 2, prompt: 'A paper lantern in fog.' },
+    }).success).toBe(false)
+    expect(registry.create_image.inputSchema.safeParse({
+      request: {
+        kind: 'new',
+        count: 2,
+        prompt: 'A paper lantern in fog.',
+        schemaId: CREATIVE_RESOURCE_SCHEMA.GENERIC_IMAGE,
+      },
     }).success).toBe(true)
     expect(registry.create_audio.inputSchema.safeParse({
       request: { kind: 'new', count: 1, prompt: 'Sparse ritual drums.', durationSeconds: 15 },

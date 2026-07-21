@@ -1,5 +1,4 @@
 import type { Job } from 'bullmq'
-import { removePropPromptSuffix } from '@/lib/constants'
 import { reportTaskProgress } from '@/lib/workers/shared'
 import { assertTaskActive } from '@/lib/workers/utils'
 import type { TaskJobData } from '@/lib/task/types'
@@ -21,7 +20,7 @@ export async function handleModifyPropTask(job: Job<TaskJobData>, payload: AnyOb
     locale: job.data.locale,
     variables: {
       prop_name: propName,
-      original_description: removePropPromptSuffix(currentDescription),
+      original_description: currentDescription,
       modify_instruction: modifyInstruction,
       image_context: '',
     },
@@ -46,7 +45,7 @@ export async function handleModifyPropTask(job: Job<TaskJobData>, payload: AnyOb
   await assertTaskActive(job, 'ai_modify_prop_parse')
 
   const prompt = readRequiredString(response.data.prompt, 'prompt')
-  const modifiedDescription = removePropPromptSuffix(prompt)
+  const modifiedDescription = prompt
 
   await reportTaskProgress(job, 96, {
     stage: 'ai_modify_prop_done',

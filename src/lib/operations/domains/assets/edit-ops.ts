@@ -1,5 +1,4 @@
 import { z } from 'zod'
-import { removeLocationPromptSuffix } from '@/lib/constants'
 import { selectAssetRender } from '@/lib/assets/services/asset-actions'
 import { decodeImageUrlsFromDb, encodeImageUrls } from '@/lib/contracts/image-urls-contract'
 import type { ProjectAgentOperationRegistryDraft } from '@/lib/operations/types'
@@ -139,7 +138,7 @@ export function createEditOperations(): ProjectAgentOperationRegistryDraft {
       }),
       outputSchema: z.object({ success: z.boolean() }),
       executeInTransaction: async (ctx, input, transaction) => {
-        const cleanDescription = removeLocationPromptSuffix(input.newDescription.trim())
+        const cleanDescription = input.newDescription.trim()
         const imageIndex = input.imageIndex ?? 0
 
         const location = await transaction.projectLocation.findFirst({

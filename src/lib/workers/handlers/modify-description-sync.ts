@@ -1,6 +1,5 @@
 import { z } from 'zod'
 import { executeAiStructuredTextStep, executeAiStructuredVisionStep } from '@/lib/ai-exec/structured-step'
-import { removeCharacterPromptSuffix, removeLocationPromptSuffix, removePropPromptSuffix } from '@/lib/constants'
 import { buildAiPrompt as buildPrompt, AI_PROMPT_IDS as PROMPT_IDS, type AiPromptLocale as PromptLocale } from '@/lib/ai-prompts'
 import {
   buildCharacterDescriptionFields,
@@ -61,7 +60,7 @@ export async function generateModifiedAssetDescription(params: {
       promptId: PROMPT_IDS.CHARACTER_UPDATE_DESCRIPTION,
       locale: params.locale,
       variables: {
-        original_description: removeCharacterPromptSuffix(params.currentDescription),
+        original_description: params.currentDescription.trim(),
         modify_instruction: params.modifyInstruction,
         image_context: buildImageContext('character', hasReferenceImages),
       },
@@ -72,7 +71,7 @@ export async function generateModifiedAssetDescription(params: {
         locale: params.locale,
         variables: {
           prop_name: trimText(params.propName) || '道具',
-          original_description: removePropPromptSuffix(params.currentDescription),
+          original_description: params.currentDescription.trim(),
           modify_instruction: params.modifyInstruction,
           image_context: buildImageContext('prop', hasReferenceImages),
         },
@@ -82,7 +81,7 @@ export async function generateModifiedAssetDescription(params: {
       locale: params.locale,
       variables: {
         location_name: trimText(params.locationName) || '场景',
-        original_description: removeLocationPromptSuffix(params.currentDescription),
+        original_description: params.currentDescription.trim(),
         modify_instruction: params.modifyInstruction,
         image_context: buildImageContext('location', hasReferenceImages),
       },

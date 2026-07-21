@@ -26,7 +26,7 @@
 - 章节输入与 ledger：`src/lib/edit-chapter/input-assembler.ts`。
 - 核心计划契约与解析：`src/lib/edit-chapter/schemas.ts`、`src/lib/edit-script/types.ts`、`src/lib/edit-script/normalize.ts`。
 - 核心计划与镜头执行计划 Prompt：`src/lib/ai-prompts/templates/edit-script/structure/**`、`shot-execution-plan/**`。
-- Style Bible：`src/lib/edit-script/style-bible-prompt.ts`；视频使用 `visualStyle`，资产图使用 `assetImageStyle.{lighting,texture,composition}`。
+- Style Bible：`src/lib/edit-script/style-bible-prompt.ts`；视频使用 `visualStyle`，资产图使用 `assetImageStyle.{lighting,texture}`。角色、场景与道具资产图的固定版式由资产图片生成执行策略另行唯一裁决，不影响视频构图。
 - 核心计划、镜头执行计划与 owner-fenced 持久化：`src/lib/edit-script/service.ts`、`src/lib/workers/handlers/edit-script-structured-generate.ts`。
 - Video Segment identity、scope、计划、Prompt 与 Task：`src/lib/video-segments/{identity,scope,planning-policy,planning,prompt,types}.ts`、`src/lib/operations/domains/video-segments/index.ts`、`src/lib/workers/video.worker.ts`。
 - BGM 规划/生成：`src/lib/bgm-design/**`、`src/lib/bgm-score/**`。

@@ -5,7 +5,7 @@ import { ApiError } from '@/lib/api-errors'
 import { resolveMediaRefFromLegacyValue } from '@/lib/media/service'
 import { createDefaultEditChapter } from '@/lib/edit-chapter'
 import { encodeImageUrls, decodeImageUrlsFromDb } from '@/lib/contracts/image-urls-contract'
-import { PRIMARY_APPEARANCE_INDEX, removeLocationPromptSuffix } from '@/lib/constants'
+import { PRIMARY_APPEARANCE_INDEX } from '@/lib/constants'
 import { normalizeImageGenerationCount } from '@/lib/image-generation/count'
 import { revertAssetRender } from '@/lib/assets/services/asset-actions'
 import type { ProjectAgentOperationRegistryDraft } from '@/lib/operations/types'
@@ -495,7 +495,7 @@ export function createGuiOperations(): ProjectAgentOperationRegistryDraft {
           throw new ApiError('INVALID_PARAMS')
         }
 
-        const cleanDescription = removeLocationPromptSuffix(description.trim())
+        const cleanDescription = description.trim()
         const assetKind = 'location'
         await assertProjectLocationNameAvailable({
           projectId: ctx.projectId,
@@ -567,7 +567,7 @@ export function createGuiOperations(): ProjectAgentOperationRegistryDraft {
         }
 
         if (input.imageIndex !== undefined && input.description) {
-          const cleanDescription = removeLocationPromptSuffix(input.description.trim())
+          const cleanDescription = input.description.trim()
           const image = await transaction.locationImage.update({
             where: {
               locationId_imageIndex: { locationId: input.locationId, imageIndex: input.imageIndex },

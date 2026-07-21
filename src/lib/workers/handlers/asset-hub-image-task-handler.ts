@@ -1,7 +1,7 @@
 import { type Job } from 'bullmq'
 import { z } from 'zod'
 import { prisma } from '@/lib/prisma'
-import { addCharacterPromptSuffix, addLocationPromptSuffix, addPropPromptSuffix } from '@/lib/constants'
+import { applyAssetImageFormatPolicy } from '@/lib/asset-generation/asset-image-format'
 import { type TaskJobData } from '@/lib/task/types'
 import { encodeImageUrls } from '@/lib/contracts/image-urls-contract'
 import { normalizeImageGenerationCount } from '@/lib/image-generation/count'
@@ -13,7 +13,6 @@ import {
   parseCharacterCandidatePrompts,
 } from '@/lib/asset-generation/character-candidate-prompts'
 import {
-  appendLocationCompleteSceneRule,
   buildLocationCandidateStrategies,
   parseLocationCandidatePrompt,
   type LocationCandidateStrategy,
@@ -172,7 +171,11 @@ export async function handleAssetHubImageTask(job: Job<TaskJobData>) {
 
     for (let i = 0; i < count; i++) {
       const raw = candidatePrompts[i]
-      const prompt = addCharacterPromptSuffix(raw)
+      const prompt = applyAssetImageFormatPolicy({
+        prompt: raw,
+        kind: 'character',
+        locale: job.data.locale,
+      })
       const imageKey = await generateCleanImageToStorage({
         job,
         userId,
@@ -250,17 +253,15 @@ export async function handleAssetHubImageTask(job: Job<TaskJobData>) {
           strategy,
         })
         return buildLocationImagePromptCore({
-          description: appendLocationCompleteSceneRule({
-            prompt: candidatePrompt,
-            locale,
-          }),
+          description: candidatePrompt,
           locale,
         })
       })()
-      const promptWithSuffix = payload.type === 'prop'
-        ? addPropPromptSuffix(promptCore)
-        : addLocationPromptSuffix(promptCore)
-      const prompt = promptWithSuffix
+      const prompt = applyAssetImageFormatPolicy({
+        prompt: promptCore,
+        kind: payload.type,
+        locale: job.data.locale,
+      })
       const imageKey = await generateCleanImageToStorage({
         job,
         userId,

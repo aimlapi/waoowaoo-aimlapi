@@ -24,6 +24,7 @@ import {
   generateModifiedAssetDescription,
   readIndexedDescription,
 } from './modify-description-sync'
+import { applyAssetImageFormatPolicy } from '@/lib/asset-generation/asset-image-format'
 
 const logger = createScopedLogger({ module: 'worker.asset-hub-modify' })
 
@@ -125,7 +126,11 @@ export async function handleAssetHubModifyTask(job: Job<TaskJobData>) {
       index: targetImageIndex,
     })
 
-    const prompt = `请根据以下指令修改图片，保持人物核心特征一致：\n${modifyInstruction}`
+    const prompt = applyAssetImageFormatPolicy({
+      prompt: `请根据以下指令修改图片，保持人物核心特征一致：\n${modifyInstruction}`,
+      kind: 'character',
+      locale: job.data.locale,
+    })
     const source = await resolveImageSourceFromGeneration(job, {
       userId,
       modelId: editModel,
@@ -220,9 +225,14 @@ export async function handleAssetHubModifyTask(job: Job<TaskJobData>) {
     const referenceImages = Array.from(new Set([requiredReference, ...normalizedExtras]))
 
     const isProp = payload.type === 'prop'
-    const prompt = isProp
+    const promptCore = isProp
       ? `请根据以下指令修改道具图片，保持道具主体、结构和关键材质一致：\n${modifyInstruction}`
       : `请根据以下指令修改场景图片，保持整体风格一致：\n${modifyInstruction}`
+    const prompt = applyAssetImageFormatPolicy({
+      prompt: promptCore,
+      kind: isProp ? 'prop' : 'location',
+      locale: job.data.locale,
+    })
     const source = await resolveImageSourceFromGeneration(job, {
       userId,
       modelId: editModel,

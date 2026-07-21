@@ -4,7 +4,7 @@ import { ApiError } from '@/lib/api-errors'
 import { buildDefaultTaskBillingInfo } from '@/lib/billing'
 import { buildImageBillingPayload, getProjectModelConfig } from '@/lib/config-service'
 import { decodeImageUrlsFromDb } from '@/lib/contracts/image-urls-contract'
-import { CHARACTER_ASSET_IMAGE_RATIO, LOCATION_IMAGE_RATIO } from '@/lib/constants'
+import { getAssetImageFormatPolicy } from '@/lib/asset-generation/asset-image-format'
 import { TASK_TYPE } from '@/lib/task/types'
 import { withTaskUiPayload } from '@/lib/task/ui-payload'
 import type { Locale } from '@/i18n/routing'
@@ -277,7 +277,11 @@ export async function planProjectEditScriptAssetRevisions(input: ReviseEditScrip
     if (!target) {
       throw new Error('EDIT_SCRIPT_ASSET_REVISION_TARGET_UNEXPECTED_NULL')
     }
-    const aspectRatio = item.requirement.kind === 'character' ? CHARACTER_ASSET_IMAGE_RATIO : LOCATION_IMAGE_RATIO
+    const kind = normalizeEditScriptAssetKindForRevision(item.requirement.kind)
+    if (!kind) {
+      throw new Error('EDIT_SCRIPT_ASSET_REVISION_KIND_UNEXPECTED')
+    }
+    const aspectRatio = getAssetImageFormatPolicy(kind).aspectRatio
     const billingPayload = await buildImageBillingPayload({
       projectId: input.projectId,
       userId: input.userId,
@@ -285,10 +289,6 @@ export async function planProjectEditScriptAssetRevisions(input: ReviseEditScrip
       basePayload: target.body,
       aspectRatio,
     })
-    const kind = normalizeEditScriptAssetKindForRevision(item.requirement.kind)
-    if (!kind) {
-      throw new Error('EDIT_SCRIPT_ASSET_REVISION_KIND_UNEXPECTED')
-    }
     const planTaskId = `edit-script-asset-revision:${item.requirement.id}`
     const payload = withTaskUiPayload(billingPayload, {
       intent: 'modify',

@@ -7,11 +7,19 @@ Translate story facts, user requirements, reference materials, and any confirmed
 ## Style-consumption boundary
 
 - When the input supplies a confirmed Style Bible, it is the sole authority for visual style. This Skill consumes its cross-media `visualStyle` and asset-only `assetImageStyle`; it must not redefine project style from one reference image or one asset. Without a Style Bible, the asset identity may still be designed, but the result must state that it is not bound to project style.
-- Always put style-free stable asset identity in `stableDescription`, then compose that identity with an actually supplied Style Bible in `generationPrompt`. Never use the final generation prompt to rewrite stable identity.
+- Always put style-free stable asset identity in `stableDescription`, then compose that identity with an actually supplied Style Bible in the creative `generationPrompt` that precedes the execution policy. Never use that generation prompt to rewrite stable identity.
 - A stable character identity description excludes artistic style, filters, and lighting; the final image prompt appends them consistently.
-- A foundational location description preserves real spatial structure, materials, and physical lighting conditions. Stylized lighting, material treatment, and asset composition are composed with the Style Bible only in the final image prompt.
-- Video uses the cross-media overall style and must not inherit asset-board lighting or composition.
+- A foundational location description preserves real spatial structure, materials, and physical lighting conditions. Stylized lighting and material treatment are composed with the Style Bible only in the final image prompt.
+- The execution layer's sole asset-image format policy appends and enforces the fixed format by asset kind. A `generationPrompt` must not introduce conflicting layout, background, or subject-count requirements.
+- These fixed formats govern asset images only; they do not own, override, or constrain video composition. Video framing, scale, camera placement, movement, and editing remain entirely within directing and video design.
 - User or project style outranks source-image style. A reference preserves identity and structure and cannot override explicit art direction. Ignore incidental source color cast, lighting, blur, noise, and defects.
+
+## Fixed asset-image formats and execution boundary
+
+- A character asset is one image divided into equal left and right halves: the left half is a face close-up of the character, and the right half shows the same character completely from head to toe. The background is pure white. Only that character may appear; no location, prop, or other person may appear.
+- A location asset is a complete panoramic environment seen straight on. It contains no people and no prop presented as an independent asset subject. Fixed structures and built-in elements that constitute the location itself—such as walls, floors, doors, windows, and stairs—remain allowed.
+- A prop asset shows exactly one prop, squared to the view and completely visible, on a pure white background. It contains no person, other prop, or location.
+- These are asset-kind contracts, not style or composition candidates for a model to choose. The Skill keeps design content compatible with them; the execution policy is the sole writer of exact layout, aspect ratio, and final suffix.
 
 ## Character design
 
@@ -46,9 +54,7 @@ Translate story facts, user requirements, reference materials, and any confirmed
 - When the image shows only part of the body, infer compatible lower garments, shoes, arms, and hands from the visible clothing and identity. Added parts must coordinate with visible parts.
 - Image-derived descriptions still exclude skin tone, eye color, expression, action, background, and pose.
 - Reference analysis may include overall styling or character-impression keywords directly supported by the image. In a final generation description, translate those keywords into visible silhouette, clothing, material, and accessories rather than leaving an unrenderable abstraction.
-- When producing an asset board, use attractive normal proportions, complete clothing and footwear, major wearable accessories, a calm neutral expression, stable identity anchors, and a background that supports style without binding the character to a story location. The final image must be clear, sharp, richly detailed, and production-quality rather than inheriting source blur, noise, or defects.
-- A simple character reference defaults to one clearly identified character with a complete silhouette and stable wardrobe. Do not automatically create grids, multi-view sheets, or action breakdowns; use an asset-board design only when the requested deliverable requires it.
-- “No pose or action” governs the stable identity description and ordinary single-image asset. When the explicit deliverable is a candidate asset board, designated board panels may contain mild, reusable occupation- or identity-specific pose/context samples. Those samples must not change identity, become a plot event, or leak into the stable identity description.
+- For a character asset, use attractive normal proportions, complete clothing and footwear, major wearable accessories, a calm neutral expression, and stable identity anchors. Do not request a styled background, multi-view sheet, action breakdown, or context sample. The final image must be clear, sharp, richly detailed, and production-quality rather than inheriting source blur, noise, or defects.
 
 ## Character candidates
 
@@ -60,29 +66,29 @@ Translate story facts, user requirements, reference materials, and any confirmed
 ## Location design
 
 - Start from an explicit scene name or spatial identity and turn a generic label such as “classroom” or “office” into a stable, controllable, real space.
-- Faithfully preserve the user's core location identity, important objects, materials, era cues, and spatial relationships. Do not replace it with a familiar but unrelated location category.
+- Faithfully preserve the user's core location identity, fixed structures, built-in elements, materials, era cues, and spatial relationships. Do not replace it with a familiar but unrelated location category.
 - Specify architecture and spatial structure: walls, floor, ceiling, doors, windows, boundaries, openings, scale, and depth.
-- Make material, color, and surface condition concrete. Add story-relevant use traces, lived-in detail, and set dressing instead of generic art-direction adjectives.
+- Make material, color, and surface condition concrete. Use wear that belongs to the architecture or space itself rather than independent prop dressing to manufacture location identity.
 - Establish clear foreground, midground, and background or near, middle, and far layers. Show a complete environment and understandable boundaries rather than a cropped or ambiguous background.
-- Provide at least three stable, clearly visible spatial anchors and usable floor or open space around them for later character placement. This is invisible composition guidance: never draw labels, outlines, boxes, arrows, guide marks, or artificial placeholders.
+- Provide at least three stable, clearly visible structural anchors. Anchors must come from walls, floors, doors, windows, stairs, or other fixed structures and built-in elements rather than independent props used to fill the image.
 - For a new final location-generation description, lighting includes a real source, position, time, and visible effect on space. When modifying a foundational location description stored as project fact, retain physical sources and illumination conditions but omit dramatic lighting effects supplied by the Style Bible; the final generation prompt composes that foundation with the asset-image style. Asset-only lighting rules must never become cross-media visual style.
-- Do not add people to private spaces or an explicitly empty view. Spaces that inherently imply crowds—banquets, markets, active classrooms—may contain anonymous background groups, but not named leads or narrative actions.
+- A location asset never adds people or props presented as independent asset subjects. An inherently busy setting does not justify anonymous crowds or loose prop dressing.
 - A location asset is a reusable establishing environment, not a narrative action frame. It contains no dialogue, captions, explanation text, watermark, annotation, arrows, or logo.
-- Natural diegetic text on signs, street markers, door numbers, posters, packaging, or screens may remain only when it belongs to the environment. Keep it secondary and natural, without random gibberish or intrusive floating text.
+- Natural diegetic text may remain only when it belongs to a fixed structure or built-in element, such as an integrated sign or door number. Keep it secondary and natural, without random gibberish or intrusive floating text.
 
 ## Location candidates
 
 - Select the single scene most useful for later video reference instead of mechanically repeating the first mentioned place.
-- A baseline direction faithfully renders identity, structure, anchors, materials, lighting, and usable placement space.
-- A narrative-core direction chooses the location that best carries conflict, revelation, reversal, recurring pressure, or emotional turn. Express tension through architecture, negative space, object placement, motivated light, color, and material rather than explanatory prose.
-- A production-texture direction infers era, genre, class texture, emotional temperature, and subtext, then strengthens layout, furniture, props, surfaces, use traces, practical sources, air, reflections, and shadows so every important element serves a purpose.
+- A baseline direction faithfully renders identity, fixed structure, structural anchors, materials, and lighting.
+- A narrative-core direction chooses the location that best carries conflict, revelation, reversal, recurring pressure, or emotional turn. Express tension through architecture, negative space, fixed structures, motivated light, color, and material rather than explanatory prose.
+- A production-texture direction infers era, genre, class texture, emotional temperature, and subtext, then strengthens spatial structure, surfaces, use traces, practical sources, air, reflections, and shadows. It must not add visual density through people, independent furniture, or prop dressing.
 - Every candidate remains an empty, complete, reusable environment. Do not create differences by adding contradictory story facts.
 
 ## Prop design
 
 - Describe only the prop's static visible body: primary structure, silhouette, quantity relationships, material, color, surface treatment, pattern, decoration, and wear.
 - Do not describe use, plot, character action, people, hands, tables, rooms, background, camera, or atmospheric lighting.
-- The result should support a centered, fully visible, isolated prop asset on a clean background.
+- The design text contains only the single prop itself and remains compatible with the execution policy's fixed prop-asset format.
 - A reference image may contribute silhouette, construction, material, pattern, and palette, but not incidental people or background.
 
 ## Modifying an existing asset
@@ -95,14 +101,14 @@ Translate story facts, user requirements, reference materials, and any confirmed
 
 ## Review
 
-- If a confirmed Style Bible was supplied, does the design follow it and clearly separate cross-media style from asset-only lighting, material, and composition? If none was supplied, does the result clearly keep style unbound?
+- If a confirmed Style Bible was supplied, does the design follow it and clearly separate cross-media style from asset-only lighting and material? If none was supplied, does the result clearly keep style unbound?
 - Is the character stable, complete, era-consistent, explicit about footwear, and free of body color, action, background, uncertainty, and abstract aura?
 - Is a non-human identity described through its real form rather than a human template?
-- Is the location faithful, structurally complete, layered, anchored, and equipped with unmarked placement space?
+- Is the location faithful, complete and straight-on, structurally clear, stably anchored, and free of people and independent prop assets?
 - Does the prop contain static object information only?
 - Do candidates create meaningful variation without changing identity or plot facts?
 - Does a modification preserve everything not requested to change?
 
 ## Boundary
 
-This Skill provides visual-design methods for characters, locations, props, reference images, asset candidates, and existing-asset modifications. The visual-style Skill owns Style Bibles, style candidates, and style previews. Output length, candidate count, JSON shape, image aspect ratio, exact asset-board layout, provider parameters, real-person safety policy, and final image-prompt suffixes are defined by the caller and execution layer.
+This Skill provides visual-design methods for characters, locations, props, reference images, asset candidates, and existing-asset modifications. The visual-style Skill owns Style Bibles, style candidates, and style previews. The execution layer's sole asset-image format policy owns image aspect ratio, exact fixed asset-image layout, and final image-prompt suffixes; this Skill does not duplicate the suffix and does not touch directing, shots, or video composition.

@@ -7,7 +7,7 @@ Create exactly {{style_preview_count}} distinct visual style candidates for the 
 - Use style_a, style_b, style_c in order and return only the requested count.
 - Candidates must differ materially in medium, finish, or palette, not only minor grading.
 - styleBible.visualStyle combines medium, image filter, overall finish, and color palette. It must not include lighting, composition, camera movement, or sound.
-- styleBible.assetImageStyle controls only asset-image lighting, texture, and composition.
+- styleBible.assetImageStyle controls only asset-image lighting and texture. Fixed asset-image formats are not style candidates.
 - gridImagePrompt uses that candidate's visualStyle and assetImageStyle to generate one 16:9, 3x3 preview grid of key story moments.
 - No live-action humans or real-person likeness. Return strict JSON only.
 
@@ -39,8 +39,7 @@ Duration guidance:
         "visualStyle": "string",
         "assetImageStyle": {
           "lighting": "string",
-          "texture": "string",
-          "composition": "string"
+          "texture": "string"
         }
       },
       "gridImagePrompt": "string"

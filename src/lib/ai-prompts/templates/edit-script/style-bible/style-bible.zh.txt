@@ -6,11 +6,11 @@
 
 - styleSummary：方便用户理解的风格摘要，不直接作为生成约束。
 - visualStyle：图片和视频共享的总体画面风格，把美术媒介、画面滤镜、总体质感和色彩基调整合成一段可直接用于生成的描述。不要写灯光、构图、焦段或运镜。
-- assetImageStyle：只供角色图、场景图和风格预览图使用。
+- assetImageStyle：只供角色图、场景图、道具图和风格预览图使用。
   - lighting：资产图片的光线表达。
   - texture：资产材质和细节质感。
-  - composition：可复用资产图片的构图规则。
-- 视频生成只消费 visualStyle，绝不消费 assetImageStyle 的灯光或构图。
+- 资产图固定版式不是 Style Bible 字段，由资产图片执行 policy 按资产类型负责。
+- 视频生成只消费 visualStyle，绝不消费 assetImageStyle 的灯光或材质；移除资产图版式选择不改变视频构图的归属。
 - 不得使用真人、公众人物或真人 likeness；把导演、影片、工作室、流派或年代名称转写为可执行的视觉特征。
 - 只输出严格 JSON。
 
@@ -37,8 +37,7 @@
     "visualStyle": "美术媒介、画面滤镜、总体质感和色彩基调的统一描述",
     "assetImageStyle": {
       "lighting": "只用于资产图片的光线",
-      "texture": "只用于资产图片的材质与细节",
-      "composition": "只用于资产图片的构图"
+      "texture": "只用于资产图片的材质与细节"
     }
   }
 }

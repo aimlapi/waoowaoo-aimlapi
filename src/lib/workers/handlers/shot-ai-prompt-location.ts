@@ -1,5 +1,4 @@
 import type { Job } from 'bullmq'
-import { removeLocationPromptSuffix } from '@/lib/constants'
 import { reportTaskProgress } from '@/lib/workers/shared'
 import { assertTaskActive } from '@/lib/workers/utils'
 import type { TaskJobData } from '@/lib/task/types'
@@ -50,7 +49,7 @@ export async function handleModifyLocationTask(job: Job<TaskJobData>, payload: A
   await assertTaskActive(job, 'ai_modify_location_parse')
 
   const prompt = readRequiredString(response.data.prompt, 'prompt')
-  const modifiedDescription = removeLocationPromptSuffix(prompt)
+  const modifiedDescription = prompt
 
   await assertTaskActive(job, 'ai_modify_location_persist')
   const updatedLocation = await persistLocationDescription({

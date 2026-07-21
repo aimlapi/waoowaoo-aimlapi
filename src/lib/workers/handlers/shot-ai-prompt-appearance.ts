@@ -1,5 +1,4 @@
 import type { Job } from 'bullmq'
-import { removeCharacterPromptSuffix } from '@/lib/constants'
 import { reportTaskProgress } from '@/lib/workers/shared'
 import { assertTaskActive } from '@/lib/workers/utils'
 import type { TaskJobData } from '@/lib/task/types'
@@ -19,7 +18,7 @@ export async function handleModifyAppearanceTask(job: Job<TaskJobData>, payload:
     promptId: PROMPT_IDS.CHARACTER_MODIFY,
     locale: job.data.locale,
     variables: {
-      character_input: removeCharacterPromptSuffix(currentDescription),
+      character_input: currentDescription,
       user_input: modifyInstruction,
     },
   })

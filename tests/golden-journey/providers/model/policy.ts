@@ -154,6 +154,7 @@ function buildToolArguments(request: GoldenChatCompletionRequest, toolName: stri
         kind: 'new',
         count: 3,
         prompt: 'A cinematic midnight shrine in mist, wide composition.',
+        schemaId: 'generic.image',
       },
     }
   }
@@ -536,7 +537,6 @@ function generateStylePreviewPromptContract(prompt: string): string | null {
     assetImageStyle: {
       lighting: '暮色环境光与祭坛微光形成方向明确的反差',
       texture: '保留石材、尘土与风蚀表面的可见纹理',
-      composition: '用重复地标和封闭纵深强调无法逃离的空间',
     },
   })
   return JSON.stringify({
@@ -829,22 +829,31 @@ export function decideGoldenModelResponse(input: {
         text: 'The three image submissions are accepted. I will continue when their background results arrive.',
       }
     }
-    const prompts = [
-      'A single stylized folk-horror guardian character on a plain dark background.',
-      'An empty stylized mountain shrine at night with red lanterns and dense mist.',
-      'A single ancient bronze ritual bell isolated on a plain dark background.',
+    const assets = [
+      {
+        prompt: 'A stylized folk-horror guardian with a weathered robe and carved wooden mask.',
+        schemaId: 'project.character_image',
+      },
+      {
+        prompt: 'A stylized mountain shrine at night with red lanterns and dense mist.',
+        schemaId: 'project.location_image',
+      },
+      {
+        prompt: 'An ancient bronze ritual bell with an engraved oxidized surface.',
+        schemaId: 'project.prop_image',
+      },
     ]
     return {
       kind: 'tool_calls',
-      calls: prompts.map((prompt, index) => ({
+      calls: assets.map((asset, index) => ({
         toolCallId: `golden_call_${input.requestOrdinal}_create_image_${String(index + 1)}`,
         toolName: 'create_image',
         argumentsJson: JSON.stringify({
           request: {
             kind: 'new',
             count: 1,
-            prompt,
-            schemaId: null,
+            prompt: asset.prompt,
+            schemaId: asset.schemaId,
           },
         }),
       })),

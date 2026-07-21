@@ -10,7 +10,7 @@ import { normalizeImageGenerationCount } from '@/lib/image-generation/count'
 import { ensureProjectLocationImageSlots } from '@/lib/image-generation/location-slots'
 import { hasCharacterAppearanceOutput, hasLocationImageOutput } from '@/lib/task/has-output'
 import { resolveEditScriptStyleBibleSignatureForTask } from '@/lib/edit-script/style-bible-prompt'
-import { CHARACTER_ASSET_IMAGE_RATIO, LOCATION_IMAGE_RATIO } from '@/lib/constants'
+import { getAssetImageFormatPolicy } from '@/lib/asset-generation/asset-image-format'
 import type { ProjectAgentOperationRegistryDraft } from '@/lib/operations/types'
 import { defineOperation } from '@/lib/operations/define-operation'
 import { taskSubmitOperationOutputSchema } from '@/lib/operations/output-schemas'
@@ -110,7 +110,7 @@ async function planRegenerateGroupOperation(
       userId: ctx.userId,
       imageModel,
       basePayload: operationPayload,
-      aspectRatio: type === 'character' ? CHARACTER_ASSET_IMAGE_RATIO : LOCATION_IMAGE_RATIO,
+      aspectRatio: getAssetImageFormatPolicy(type).aspectRatio,
     })
   } catch (error) {
     const message = error instanceof Error ? error.message : 'Image model capability not configured'
@@ -209,7 +209,7 @@ async function planRegenerateSingleImageOperation(
       userId: ctx.userId,
       imageModel,
       basePayload: { ...input, imageIndex: parsedImageIndex },
-      aspectRatio: input.type === 'character' ? CHARACTER_ASSET_IMAGE_RATIO : LOCATION_IMAGE_RATIO,
+      aspectRatio: getAssetImageFormatPolicy(input.type).aspectRatio,
     })
   } catch (error) {
     const message = error instanceof Error ? error.message : 'Image model capability not configured'

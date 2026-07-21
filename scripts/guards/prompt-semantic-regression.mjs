@@ -48,7 +48,15 @@ const criticalLocalizedTemplateTokens = new Map([
       'When the user has already specified a sufficiently concrete style',
       'Preview images are optional billable media, never an adoption prerequisite.',
       '`adopt_style_bible`',
-      'pass its `generationPrompt` directly to the real image Operation',
+      'pass its `generationPrompt` directly to `create_image`',
+      'Map `semanticKind` to `schemaId` exactly',
+      '`character` -> `project.character_image`',
+      '`location` -> `project.location_image`',
+      '`prop` -> `project.prop_image`',
+      '`other` -> `generic.image`',
+      'never omit `schemaId`',
+      '`create_image` always requires an explicit `schemaId`',
+      'does not own or constrain video composition',
       'Delegate `edit_bible_bundle`',
       '`save_edit_source`',
       '`adopt_edit_bible_bundle`',
@@ -111,7 +119,15 @@ const criticalLocalizedTemplateTokens = new Map([
       '用户已经明确给出足够具体的风格时',
       '预览图是可选的收费媒体，不是采用前置。',
       '`adopt_style_bible`',
-      '把 `generationPrompt` 直接交给真实图片 Operation',
+      '把 `generationPrompt` 直接交给 `create_image`',
+      '必须把 `semanticKind` 精确映射为 `schemaId`',
+      '`character` -> `project.character_image`',
+      '`location` -> `project.location_image`',
+      '`prop` -> `project.prop_image`',
+      '`other` -> `generic.image`',
+      '不得省略 `schemaId`',
+      '`create_image` 始终必须显式提交 `schemaId`',
+      '不拥有或约束视频构图',
       '委派 `edit_bible_bundle`',
       '`save_edit_source`',
       '`adopt_edit_bible_bundle`',
@@ -149,6 +165,22 @@ const criticalLocalizedTemplateTokens = new Map([
 ])
 
 const forbiddenLocalizedTemplateTokens = new Map([
+  ['character/reference/to-sheet', {
+    en: ['Character Asset Board Prompt', 'background serving style only'],
+    zh: ['角色资产板提示词', '背景只服务风格'],
+  }],
+  ['edit-script/style-bible', {
+    en: ['"composition":'],
+    zh: ['"composition":'],
+  }],
+  ['edit-script/style-preview-options', {
+    en: ['"composition":'],
+    zh: ['"composition":'],
+  }],
+  ['prop/update-description', {
+    en: ['isolated prop asset sheet on a white background'],
+    zh: ['适合白底居中的道具资产图'],
+  }],
   ['project-agent/system', {
     en: [
       'selectedPanelId',
@@ -207,12 +239,12 @@ const criticalCreativeSkillTokens = new Map([
     zh: ['# 导演与制作时间线核心', '## Skill 读取组合', '当任务的 `outputKind=video_prompt_set` 时，在创作前必须同时读取 `director-core`、`video-direction` 和 `quality-review`', '不是三个串行 Subagent，也不产生三份结果', '不把一个未完成动作切到两次独立生成中。', '把可连续的内容装到最大允许时长', '只补景别、主要运镜和稳定性', '## 场面调度与站位', '稳定实物锚点', '起点、路径和落点', '只换侧面、背面或轻微机位角度不能替代景别变化'],
   }],
   ['style-development', {
-    en: ['# Visual Style Development', '`visualStyle` is the shared image/video look', '`assetImageStyle` is used only for asset images', 'Video generation consumes only `visualStyle`', 'Candidates must differ materially', 'must not change character identity', 'The Style Bible is the sole authority for visual style', 'not a closed enum', 'Catalog terms never rewrite those facts', 'at least two visual dimensions', 'Translate every selected label into executable'],
-    zh: ['# 视觉风格开发', '`visualStyle` 是图片和视频共享的总体画面风格', '`assetImageStyle` 只供角色图', '视频生成只消费 `visualStyle`', '候选应在美术媒介、总体质感、色彩与设计语言上形成实质差异', '不得借预览改变人物身份', 'Style Bible 是视觉风格的唯一权威', '不是封闭枚举', '素材词不得改写这些事实', '至少在两个视觉维度上有实质差异', '把选中的词转译成具体可执行的媒介'],
+    en: ['# Visual Style Development', '`visualStyle` is the shared image/video look', '`assetImageStyle` is used only for asset images', 'Fixed asset-image formats do not belong to the Style Bible', 'Video composition remains independently owned by directing and video design', 'Candidates must not choose or generate an asset-image format', 'Candidates must differ materially', 'must not change character identity', 'The Style Bible is the sole authority for visual style', 'not a closed enum', 'Catalog terms never rewrite those facts', 'at least two visual dimensions', 'Translate every selected label into executable'],
+    zh: ['# 视觉风格开发', '`visualStyle` 是图片和视频共享的总体画面风格', '`assetImageStyle` 只供角色图', '资产图固定版式不属于 Style Bible', '视频构图仍由导演与视频模块独立决定', '候选不得选择或生成资产图版式', '候选应在美术媒介、总体质感、色彩与设计语言上形成实质差异', '不得借预览改变人物身份', 'Style Bible 是视觉风格的唯一权威', '不是封闭枚举', '素材词不得改写这些事实', '至少在两个视觉维度上有实质差异', '把选中的词转译成具体可执行的媒介'],
   }],
   ['asset-development', {
-    en: ['# Asset Development and Generation Prompts', 'Assets may be designed independently when no Style Bible exists', '`stableDescription`', '`generationPrompt`', 'Shoes are mandatory', '### Non-human characters', 'Do not use uncertainty', 'at least three stable, clearly visible spatial anchors', 'clear, sharp, richly detailed, and production-quality', 'occupation- or identity-specific pose/context samples', 'foundational location description stored as project fact', "Describe only the prop's static visible body", 'Preserve every unmodified identity'],
-    zh: ['# 资产设计与生成提示词', '资产可以在没有 Style Bible 时独立设计', '`stableDescription`', '`generationPrompt`', '鞋子是完整人物设计的必要部分', '### 非人类角色', '不用“或”“可能”“也许”“大概”等不确定词', '至少三个稳定、清晰可见的空间锚点', '清晰锐利、细节丰富并达到专业生产质量', '与职业或身份相符、可复用于分镜的轻微姿态或语境样本', '作为项目事实保存的基础地点描述', '只描述道具本体的静态视觉信息', '保留所有未被修改的原有身份'],
+    en: ['# Asset Development and Generation Prompts', 'Assets may be designed independently when no Style Bible exists', '`stableDescription`', '`generationPrompt`', '## Fixed asset-image formats and execution boundary', 'equal left and right halves', 'complete panoramic environment seen straight on', 'shows exactly one prop', 'do not own, override, or constrain video composition', 'Shoes are mandatory', '### Non-human characters', 'Do not use uncertainty', 'at least three stable, clearly visible structural anchors', 'clear, sharp, richly detailed, and production-quality', 'foundational location description stored as project fact', "Describe only the prop's static visible body", 'Preserve every unmodified identity'],
+    zh: ['# 资产设计与生成提示词', '资产可以在没有 Style Bible 时独立设计', '`stableDescription`', '`generationPrompt`', '## 固定资产图格式与执行边界', '左右各半', '从正前方完整展示空间的全景环境图', '只展示一个摆正且完整可见的道具', '不拥有、覆盖或约束视频构图', '鞋子是完整人物设计的必要部分', '### 非人类角色', '不用“或”“可能”“也许”“大概”等不确定词', '至少三个稳定、清晰可见的结构锚点', '清晰锐利、细节丰富并达到专业生产质量', '作为项目事实保存的基础地点描述', '只描述道具本体的静态视觉信息', '保留所有未被修改的原有身份'],
   }],
   ['video-direction', {
     en: ['# Video Direction and Generation Design', '## Skill reading composition', 'For `outputKind=video_prompt_set`, actually read `director-core`, `video-direction`, and `quality-review`', 'same generic Worker run', 'finalized Style Bible with exact provenance', 'explicitly ordered reference manifest', 'one final video prompt', '“cut to the location in image N”', 'one to three core actions', 'ignore caller prose that prescribes', 'do not split material that naturally fits one 15-second generation', 'never divide one unfinished action across two generations', '`{spoken line}`', '`<sound description>`', '**No dissolves or fades**', 'No dissolves, cross-dissolves, fade-ins, or fade-outs between shots', '**Dark/black bridge**', 'this is not a fade to black or fade in from black', '**Montage transition**', '**Metaphorical transition**', '**Creative transition**', 'Do not use one at every scene boundary', '## Blocking and first/last frames', 'stable physical anchor', 'starting point, movement path, and landing position', 'outgoing final shot and incoming first shot must use visibly different scales', 'A side/back view or slight camera-angle change cannot replace a scale change', '## Excellent complete prompt examples', '### Example one: one scene without a creative transition', '### Example two: a motivated dark and metaphorical transition', '### Example three: blocking and seam design across two independent segments', '**Sound relationship choice:**', 'The sound-relationship judgment is required, but a special cue is not', "Write each Shot's synchronized sound directly as `<sound description>`", 'Native audio is enabled by default', '## Dialogue, sound, and native audio'],
@@ -225,6 +257,17 @@ const criticalCreativeSkillTokens = new Map([
   ['quality-review', {
     en: ['# Creative Quality Review', '## Skill reading composition', 'For `outputKind=video_prompt_set`, read `director-core`, `video-direction`, and `quality-review`', 'create no separate review field or second prompt', 'Use actually visible evidence', 'minimum correction scope', 'stable physical anchor', 'Compare every outgoing final shot with the next incoming first shot', 'rather than only a side/back view or slight camera-angle change'],
     zh: ['# 创作质量审查', '## Skill 读取组合', '当任务的 `outputKind=video_prompt_set` 时，在创作前必须同时读取 `director-core`、`video-direction` 和 `quality-review`', '不产生独立审查字段或第二份 Prompt', '根据真实可见输入', '最小范围修正', '稳定实物锚点', '逐对比较前段末镜头与后段首镜头', '而不是只改变侧面、背面或轻微机位角度'],
+  }],
+])
+
+const forbiddenCreativeSkillTokens = new Map([
+  ['style-development', {
+    en: ['`assetImageStyle.composition`', '**Asset composition:**', 'reusable asset composition'],
+    zh: ['`assetImageStyle.composition`', '**资产构图：**', '可复用资产构图'],
+  }],
+  ['asset-development', {
+    en: ['occupation- or identity-specific pose/context samples', 'may contain anonymous background groups', 'asset-only lighting, material, and composition'],
+    zh: ['与职业或身份相符、可复用于分镜的轻微姿态或语境样本', '可以加入模糊、无身份的人群', '资产图片专用灯光、材质和构图'],
   }],
 ])
 
@@ -365,6 +408,21 @@ for (const [skillId, localizedTokens] of criticalCreativeSkillTokens) {
     for (const token of tokens) {
       if (!skill.includes(token)) {
         violations.push(`missing Creative Skill semantic token ${token} in ${relativeSkillPath}`)
+      }
+    }
+  }
+}
+
+for (const [skillId, localizedTokens] of forbiddenCreativeSkillTokens) {
+  const skillDir = path.join(root, 'src', 'lib', 'creative-skills', 'skills', skillId)
+  for (const [locale, tokens] of Object.entries(localizedTokens)) {
+    const skillPath = path.join(skillDir, `SKILL.${locale}.md`)
+    const relativeSkillPath = `src/lib/creative-skills/skills/${skillId}/SKILL.${locale}.md`
+    if (!fs.existsSync(skillPath)) continue
+    const skill = fs.readFileSync(skillPath, 'utf8')
+    for (const token of tokens) {
+      if (skill.includes(token)) {
+        violations.push(`forbidden Creative Skill semantic token ${token} in ${relativeSkillPath}`)
       }
     }
   }

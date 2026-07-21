@@ -305,10 +305,6 @@ export function StyleBibleContent({
           label: labels('texturePrompt'),
           value: details.assetImageStyle?.texture,
         },
-        {
-          label: labels('compositionPrompt'),
-          value: details.assetImageStyle?.composition,
-        },
       ],
     },
   ]

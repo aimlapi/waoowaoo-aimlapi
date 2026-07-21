@@ -2,6 +2,12 @@ import { randomUUID } from 'node:crypto'
 import { z } from 'zod'
 import { ApiError } from '@/lib/api-errors'
 import {
+  applyAssetImageFormatPolicy,
+  getAssetImageFormatPolicy,
+  hasCurrentFrozenAssetImageFormatPolicy,
+  resolveAssetImageKindForSchemaId,
+} from '@/lib/asset-generation/asset-image-format'
+import {
   getCapabilityOptionFields,
   resolveBuiltinCapabilitiesByModelKey,
   resolveGenerationOptionsForModel,
@@ -116,10 +122,10 @@ const createTextInputSchema = z.object({
 const createImageNewRequestSchema = z.object({
   ...commonNewMediaGenerationShape,
   imageReferences: imageReferenceSchema,
-  schemaId: z.enum(CREATIVE_RESOURCE_SCHEMA_IDS_BY_MEDIA.image).optional()
-    .describe('Professional meaning of the image Resource. Omit to use generic.image.'),
+  schemaId: z.enum(CREATIVE_RESOURCE_SCHEMA_IDS_BY_MEDIA.image)
+    .describe('Required image meaning. Use project.character_image, project.location_image, or project.prop_image for those asset kinds so the server applies their fixed asset-image format and ratio; use generic.image only for genuinely generic imagery.'),
   aspectRatio: z.string().trim().min(1).optional()
-    .describe('Requested output aspect ratio such as 9:16 or 16:9. Omit to use the project ratio.'),
+    .describe('Requested output aspect ratio. Professional character, location, and prop asset schemas use the fixed server-owned asset ratio and reject conflicts; generic imagery may omit this to use the project ratio.'),
   resolution: z.string().trim().min(1).optional()
     .describe('Optional resolution supported by the configured image generation capability, such as 1K or 2K.'),
   quality: z.string().trim().min(1).optional()
@@ -613,9 +619,37 @@ async function planNewMediaGeneration(
   input: NewMediaGenerationRequest,
   config: MediaPlanConfig,
 ): Promise<OperationPlan> {
-  const episodeId = resolveEpisodeId(input, ctx)
   const schemaId = requireSchemaForMedia(input.schemaId ?? config.schemaId, config.mediaType)
-  const normalizedReferences = normalizeMediaInputReferences(input)
+  const assetImageKind = config.mediaType === 'image'
+    ? resolveAssetImageKindForSchemaId(schemaId)
+    : null
+  const effectiveInput: NewMediaGenerationRequest = assetImageKind
+    ? (() => {
+      const imageInput = input as CreateImageNewRequest
+      const policy = getAssetImageFormatPolicy(assetImageKind)
+      const requestedAspectRatio = imageInput.aspectRatio?.trim()
+      if (requestedAspectRatio && requestedAspectRatio !== policy.aspectRatio) {
+        throw new ApiError('INVALID_PARAMS', {
+          code: 'ASSET_IMAGE_ASPECT_RATIO_FIXED',
+          field: 'aspectRatio',
+          requestedValue: requestedAspectRatio,
+          allowedValues: [policy.aspectRatio],
+          agentRetryableAfterCorrection: true,
+        })
+      }
+      return {
+        ...imageInput,
+        prompt: applyAssetImageFormatPolicy({
+          prompt: imageInput.prompt,
+          kind: assetImageKind,
+          locale: resolveOperationLocale(ctx.context),
+        }),
+        aspectRatio: policy.aspectRatio,
+      }
+    })()
+    : input
+  const episodeId = resolveEpisodeId(effectiveInput, ctx)
+  const normalizedReferences = normalizeMediaInputReferences(effectiveInput)
   const references = normalizedReferences.inputs
   await assertInputReferences(
     ctx.userId,
@@ -654,23 +688,23 @@ async function planNewMediaGeneration(
     ctx,
     config,
     modelKey,
-    publicInput: input,
+    publicInput: effectiveInput,
   })
   const inputHash = hashTaskInput({
     operationId: config.operationId,
-    prompt: input.prompt,
+    prompt: effectiveInput.prompt,
     modelKey,
     schemaId,
     references,
     imageInputPositions: normalizedReferences.imageInputPositions,
     generationOptions,
     ...(config.mediaType === 'audio' ? {
-      durationSeconds: (input as CreateAudioNewRequest).durationSeconds,
-      vocalMode: (input as CreateAudioNewRequest).vocalMode,
-      genre: (input as CreateAudioNewRequest).genre,
-      mood: (input as CreateAudioNewRequest).mood,
-      bpm: (input as CreateAudioNewRequest).bpm,
-      outputFormat: (input as CreateAudioNewRequest).outputFormat,
+      durationSeconds: (effectiveInput as CreateAudioNewRequest).durationSeconds,
+      vocalMode: (effectiveInput as CreateAudioNewRequest).vocalMode,
+      genre: (effectiveInput as CreateAudioNewRequest).genre,
+      mood: (effectiveInput as CreateAudioNewRequest).mood,
+      bpm: (effectiveInput as CreateAudioNewRequest).bpm,
+      outputFormat: (effectiveInput as CreateAudioNewRequest).outputFormat,
     } : {}),
   })
   const requestId = [
@@ -680,16 +714,16 @@ async function planNewMediaGeneration(
     ctx.projectId,
     episodeId ?? 'project',
     ctx.context.runId?.trim() || 'no-run',
-    ctx.toolCallId?.trim() || stableArgsHash({ input, modelKey, schemaId, references, generationOptions }),
+    ctx.toolCallId?.trim() || stableArgsHash({ input: effectiveInput, modelKey, schemaId, references, generationOptions }),
     inputHash,
   ].join(':')
-  const resources = Array.from({ length: input.count ?? 1 }, (_, candidateIndex) => ({
+  const resources = Array.from({ length: effectiveInput.count ?? 1 }, (_, candidateIndex) => ({
     resourceId: buildCreativeResourceOriginKey({
       operationId: config.operationId,
       requestId,
       candidateIndex,
     }),
-    name: input.name ?? `${config.mediaType[0]?.toUpperCase() ?? ''}${config.mediaType.slice(1)} ${String(candidateIndex + 1)}`,
+    name: effectiveInput.name ?? `${config.mediaType[0]?.toUpperCase() ?? ''}${config.mediaType.slice(1)} ${String(candidateIndex + 1)}`,
     candidateIndex,
   }))
   const candidateSetId = resources.length > 1
@@ -700,7 +734,7 @@ async function planNewMediaGeneration(
       resourceId: resource.resourceId,
       mediaType: config.mediaType,
       schemaId,
-      prompt: input.prompt,
+      prompt: effectiveInput.prompt,
       modelKey,
       inputHash,
       inputs: references,
@@ -715,16 +749,16 @@ async function planNewMediaGeneration(
     const payload = {
       resource: resourcePayload,
       [config.modelPayloadKey]: modelKey,
-      prompt: input.prompt,
+      prompt: effectiveInput.prompt,
       count: 1 as const,
       generationOptions,
       ...(config.mediaType === 'audio' ? {
-        durationSeconds: (input as CreateAudioNewRequest).durationSeconds,
-        ...((input as CreateAudioNewRequest).vocalMode ? { vocalMode: (input as CreateAudioNewRequest).vocalMode } : {}),
-        ...((input as CreateAudioNewRequest).genre ? { genre: (input as CreateAudioNewRequest).genre } : {}),
-        ...((input as CreateAudioNewRequest).mood ? { mood: (input as CreateAudioNewRequest).mood } : {}),
-        ...(typeof (input as CreateAudioNewRequest).bpm === 'number' ? { bpm: (input as CreateAudioNewRequest).bpm } : {}),
-        ...((input as CreateAudioNewRequest).outputFormat ? { outputFormat: (input as CreateAudioNewRequest).outputFormat } : {}),
+        durationSeconds: (effectiveInput as CreateAudioNewRequest).durationSeconds,
+        ...((effectiveInput as CreateAudioNewRequest).vocalMode ? { vocalMode: (effectiveInput as CreateAudioNewRequest).vocalMode } : {}),
+        ...((effectiveInput as CreateAudioNewRequest).genre ? { genre: (effectiveInput as CreateAudioNewRequest).genre } : {}),
+        ...((effectiveInput as CreateAudioNewRequest).mood ? { mood: (effectiveInput as CreateAudioNewRequest).mood } : {}),
+        ...(typeof (effectiveInput as CreateAudioNewRequest).bpm === 'number' ? { bpm: (effectiveInput as CreateAudioNewRequest).bpm } : {}),
+        ...((effectiveInput as CreateAudioNewRequest).outputFormat ? { outputFormat: (effectiveInput as CreateAudioNewRequest).outputFormat } : {}),
       } : {}),
     }
     return createPlannedTask({
@@ -787,7 +821,25 @@ async function planMediaGenerationRetry(
     })
   }
   const schemaId = requireSchemaForMedia(candidates[0]?.schemaId ?? config.schemaId, config.mediaType)
+  const assetImageKind = config.mediaType === 'image'
+    ? resolveAssetImageKindForSchemaId(schemaId)
+    : null
   for (const candidate of candidates) {
+    if (assetImageKind && !hasCurrentFrozenAssetImageFormatPolicy({
+      kind: assetImageKind,
+      taskPrompt: candidate.payload.prompt,
+      taskAspectRatio: candidate.payload.generationOptions.aspectRatio,
+      resourcePrompt: candidate.payload.resource.prompt,
+      resourceAspectRatio: candidate.payload.resource.generationOptions.aspectRatio,
+    })) {
+      throw new ApiError('INVALID_PARAMS', {
+        code: 'ASSET_IMAGE_RETRY_FORMAT_OUTDATED',
+        field: 'request.resourceIds',
+        resourceId: candidate.resourceId,
+        requiredAction: 'submit_new_generation',
+        agentRetryableAfterCorrection: true,
+      })
+    }
     const references = candidate.payload.resource.inputs
     const inputByPosition = new Map(references.map((reference) => [reference.position, reference]))
     const imageInputs = candidate.payload.resource.imageInputPositions.map((position) => {

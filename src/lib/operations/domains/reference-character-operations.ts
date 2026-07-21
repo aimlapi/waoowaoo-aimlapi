@@ -7,7 +7,7 @@ import {
   getProjectModelConfig,
   getUserModelConfig,
 } from '@/lib/config-service'
-import { CHARACTER_IMAGE_BANANA_RATIO } from '@/lib/constants'
+import { getAssetImageFormatPolicy } from '@/lib/asset-generation/asset-image-format'
 import { sanitizeImageInputsForTaskPayload } from '@/lib/media/outbound-image'
 import type { ProjectAgentOperationContext } from '@/lib/operations/types'
 import {
@@ -188,7 +188,7 @@ export async function planReferenceCharacterGeneration(params: {
       userId: params.ctx.userId,
       imageModel: config.characterModel,
       basePayload,
-      aspectRatio: CHARACTER_IMAGE_BANANA_RATIO,
+      aspectRatio: getAssetImageFormatPolicy('character').aspectRatio,
     })
   } else {
     const config = await getUserModelConfig(params.ctx.userId)
@@ -198,7 +198,7 @@ export async function planReferenceCharacterGeneration(params: {
       userModelConfig: config,
       imageModel: config.characterModel,
       basePayload,
-      aspectRatio: CHARACTER_IMAGE_BANANA_RATIO,
+      aspectRatio: getAssetImageFormatPolicy('character').aspectRatio,
     })
   }
 

@@ -8,7 +8,6 @@ export function buildZenStyleBibleFixture(): EditScriptStyleBible {
     assetImageStyle: {
       lighting: '清晨漫射光，阴影柔软，不过曝。',
       texture: '木纹、石面、薄雾与旧纸感，真实不塑料。',
-      composition: '留白克制，人物与空间保持安静距离。',
     },
   }
 }

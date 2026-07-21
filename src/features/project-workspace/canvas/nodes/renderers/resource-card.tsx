@@ -36,8 +36,7 @@ function renderStyleBibleOutput({
   if (!styleSummary || !visualStyle || !assetImageStyle) return null
   const lighting = readString(assetImageStyle, 'lighting')
   const texture = readString(assetImageStyle, 'texture')
-  const composition = readString(assetImageStyle, 'composition')
-  if (!lighting || !texture || !composition) return null
+  if (!lighting || !texture) return null
   return (
     <div className={`${SELECTABLE_TEXT_CLASS} space-y-4 rounded-2xl bg-slate-50 p-4 text-slate-700`}>
       <div>
@@ -48,11 +47,10 @@ function renderStyleBibleOutput({
         <p className="text-[11px] font-medium text-slate-400">{labels('visualStyle')}</p>
         <p className="mt-1 whitespace-pre-wrap text-xs leading-5">{visualStyle}</p>
       </div>
-      <div className="grid gap-3 sm:grid-cols-3">
+      <div className="grid gap-3 sm:grid-cols-2">
         {([
           ['styleLighting', lighting],
           ['styleTexture', texture],
-          ['styleComposition', composition],
         ] as const).map(([label, value]) => (
           <div key={label} className="rounded-xl bg-white p-3">
             <p className="text-[11px] font-medium text-slate-400">{labels(label)}</p>

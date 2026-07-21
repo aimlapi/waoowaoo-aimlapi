@@ -5,9 +5,9 @@ import { generateImage } from '@/lib/ai-exec/engine'
 import { fetchWithRetry } from '@/lib/retry'
 import { executeAiVisionStep } from '@/lib/ai-exec/engine'
 import {
-  CHARACTER_IMAGE_BANANA_RATIO,
-  addCharacterPromptSuffix,
-} from '@/lib/constants'
+  applyAssetImageFormatPolicy,
+  getAssetImageFormatPolicy,
+} from '@/lib/asset-generation/asset-image-format'
 import { encodeImageUrls } from '@/lib/contracts/image-urls-contract'
 import { getSignedUrl, uploadObject } from '@/lib/storage'
 import { buildTaskArtifactStorageKey } from '@/lib/task/artifact-storage'
@@ -47,7 +47,7 @@ async function generateReferenceImage(params: {
       referenceImages?: string[]
       aspectRatio: string
     } = {
-      aspectRatio: CHARACTER_IMAGE_BANANA_RATIO,
+      aspectRatio: getAssetImageFormatPolicy('character').aspectRatio,
     }
     if (referenceImages && referenceImages.length > 0) {
       options.referenceImages = referenceImages
@@ -179,7 +179,11 @@ export async function handleReferenceToCharacterTask(job: Job<TaskJobData>) {
     promptId: PROMPT_IDS.CHARACTER_REFERENCE_TO_SHEET,
     locale: job.data.locale,
   })
-  const prompt = addCharacterPromptSuffix(basePrompt)
+  const prompt = applyAssetImageFormatPolicy({
+    prompt: basePrompt,
+    kind: 'character',
+    locale: job.data.locale,
+  })
 
   const useReferenceImages = !customDescription
   const keyPrefix = isAssetHub ? 'ref-char' : `proj-ref-char-${job.data.projectId}`

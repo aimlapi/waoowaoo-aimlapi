@@ -1,13 +1,12 @@
 import { type Job } from 'bullmq'
 import { z } from 'zod'
 import { prisma } from '@/lib/prisma'
-import { addLocationPromptSuffix, addPropPromptSuffix } from '@/lib/constants'
+import { applyAssetImageFormatPolicy } from '@/lib/asset-generation/asset-image-format'
 import { normalizeImageGenerationCount } from '@/lib/image-generation/count'
 import { ensureMediaObjectFromStorageKey } from '@/lib/media/service'
 import { type TaskJobData } from '@/lib/task/types'
 import { executeAiStructuredTextStep } from '@/lib/ai-exec/structured-step'
 import {
-  appendLocationCompleteSceneRule,
   buildLocationCandidateStrategies,
   parseLocationCandidatePrompt,
   type LocationCandidateStrategy,
@@ -192,22 +191,20 @@ export async function handleLocationImageTask(job: Job<TaskJobData>) {
         strategy,
       })
       return buildLocationImagePromptCore({
-        description: appendLocationCompleteSceneRule({
-          prompt: candidatePrompt,
-          locale,
-        }),
+        description: candidatePrompt,
         locale,
       })
     })()
 
-    const promptWithSuffix = assetType === 'prop'
-      ? addPropPromptSuffix(promptCore)
-      : addLocationPromptSuffix(promptCore)
-    const promptBase = promptWithSuffix
-    const prompt = appendStyleBiblePromptBlock({
-      prompt: promptBase,
+    const styledPrompt = appendStyleBiblePromptBlock({
+      prompt: promptCore,
       styleBible,
       usage: 'assetImage',
+      locale: job.data.locale,
+    })
+    const prompt = applyAssetImageFormatPolicy({
+      prompt: styledPrompt,
+      kind: assetType,
       locale: job.data.locale,
     })
     await reportTaskProgress(job, 20 + Math.floor((i / Math.max(locationImages.length, 1)) * 55), {

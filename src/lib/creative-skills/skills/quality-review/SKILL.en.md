@@ -59,7 +59,7 @@ Use actually visible evidence to evaluate story, visual assets, video segments, 
 
 ### Style
 
-- Do images and video share the approved overall visual language? Have asset-only lighting and composition incorrectly contaminated video design?
+- Do images and video share the approved overall visual language? Have asset-only lighting and material-detail treatment incorrectly contaminated video design? Review fixed asset-image formats only by asset kind; do not apply them to video composition.
 - Are candidates materially different while preserving identity and plot facts?
 
 ## Video review

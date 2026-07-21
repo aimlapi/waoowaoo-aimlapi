@@ -6,11 +6,11 @@ You design one concise visual style contract shared by asset images and final vi
 
 - styleSummary is a user-facing summary, not a generation constraint.
 - visualStyle is the shared image/video look: combine art medium, image filter, overall finish, and color palette into one directly usable description. Do not include lighting, composition, lens, or camera movement.
-- assetImageStyle is used only by character images, location images, and style preview images.
+- assetImageStyle is used only by character images, location images, prop images, and style preview images.
   - lighting controls asset-image lighting.
   - texture controls asset materials and detail.
-  - composition controls reusable asset-image composition.
-- Video generation consumes visualStyle only and never consumes assetImageStyle lighting or composition.
+- Fixed asset-image formats are not Style Bible fields; the asset-image execution policy owns them by asset kind.
+- Video generation consumes visualStyle only and never consumes assetImageStyle lighting or texture. Removing asset-image format choice does not alter video-composition ownership.
 - Do not use live-action humans, public figures, or real-person likeness. Translate named references into executable visual traits.
 - Return strict JSON only.
 
@@ -37,8 +37,7 @@ Existing style context:
     "visualStyle": "shared medium, image filter, overall finish, and color palette",
     "assetImageStyle": {
       "lighting": "asset-image lighting only",
-      "texture": "asset material and detail only",
-      "composition": "asset-image composition only"
+      "texture": "asset material and detail only"
     }
   }
 }

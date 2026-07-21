@@ -60,7 +60,7 @@ const assetPromptSetOutputSchema = z.object({
     stableDescription: z.string().min(1).max(16_000)
       .describe('Stable visible asset identity and structure only; exclude transient action and project visual-style wording.'),
     generationPrompt: z.string().min(1).max(24_000)
-      .describe('Final image-generation prompt assembled from stable asset facts plus any explicitly supplied Style Bible.'),
+      .describe('Creative asset prompt before the deterministic execution policy, assembled from stable asset facts plus any explicitly supplied Style Bible. For character, location, and prop assets, omit layout, aspect ratio, background, and subject-count rules because the fixed asset-image format policy owns them.'),
     negativePrompt: nullableText(8_000),
     styleSource: z.object({
       sourceMaterialLabel: z.string().trim().min(1).max(240),

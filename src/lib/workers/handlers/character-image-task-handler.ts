@@ -1,7 +1,8 @@
 import { type Job } from 'bullmq'
 import { z } from 'zod'
 import { prisma } from '@/lib/prisma'
-import { addCharacterPromptSuffix, PRIMARY_APPEARANCE_INDEX } from '@/lib/constants'
+import { PRIMARY_APPEARANCE_INDEX } from '@/lib/constants'
+import { applyAssetImageFormatPolicy } from '@/lib/asset-generation/asset-image-format'
 import { type TaskJobData } from '@/lib/task/types'
 import { encodeImageUrls } from '@/lib/contracts/image-urls-contract'
 import { normalizeImageGenerationCount } from '@/lib/image-generation/count'
@@ -211,11 +212,15 @@ export async function handleCharacterImageTask(job: Job<TaskJobData>) {
   for (let i = 0; i < indexes.length; i++) {
     const index = indexes[i]
     const raw = effectiveDescriptions[index] || effectiveDescriptions[0]
-    const promptBase = addCharacterPromptSuffix(raw)
-    const prompt = appendStyleBiblePromptBlock({
-      prompt: promptBase,
+    const styledPrompt = appendStyleBiblePromptBlock({
+      prompt: raw,
       styleBible,
       usage: 'assetImage',
+      locale: job.data.locale,
+    })
+    const prompt = applyAssetImageFormatPolicy({
+      prompt: styledPrompt,
+      kind: 'character',
       locale: job.data.locale,
     })
 

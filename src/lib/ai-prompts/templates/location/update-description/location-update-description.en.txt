@@ -19,7 +19,7 @@ Rules:
 3. Keep scene name at the beginning: "[{location_name}] ..."
 4. No protagonist actions or story narration.
 5. Keep the scene spatially specific, with visible structure, depth, and stable anchors.
-6. Keep clear spatial anchors, foreground/midground/background structure, and nearby usable open space for later character placement, but do not output a separate placement list.
+6. Keep structural anchors and complete spatial relationships, but do not add people, crowds, loose furniture, or props presented as independent asset subjects. Do not prescribe aspect ratio or an alternate layout; the execution policy applies the fixed location-asset format.
 
 Output format:
 Return JSON only. ⚠️ JSON SAFETY: All quotation marks MUST be converted to corner brackets「」in JSON string values:

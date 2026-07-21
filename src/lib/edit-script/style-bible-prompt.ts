@@ -68,7 +68,6 @@ export function renderStyleBiblePromptBlock(input: {
     visual,
     locale === 'en' ? `Asset lighting: ${asset.lighting}` : `资产图光线：${asset.lighting}`,
     locale === 'en' ? `Asset texture: ${asset.texture}` : `资产图材质：${asset.texture}`,
-    locale === 'en' ? `Asset composition: ${asset.composition}` : `资产图构图：${asset.composition}`,
   ].join('\n')
 }
 
