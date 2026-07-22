@@ -1,10 +1,12 @@
 import type { Model } from '@openai/agents'
 import { z } from 'zod'
 import type { CreativeSkillId, CreativeSkillLocale } from '@/lib/creative-skills'
+import { editScriptStyleBibleSchema } from '@/lib/edit-script/types'
 import {
   CREATIVE_WORK_OUTPUT_KINDS,
   DEFAULT_CREATIVE_WORKER_BUDGETS,
 } from './constants'
+import { screenplayDraftOutputSchema } from './screenplay-contract'
 
 export type CreativeWorkOutputKind = (typeof CREATIVE_WORK_OUTPUT_KINDS)[number]
 
@@ -78,9 +80,43 @@ const creativeVideoProductionContextSchema = z.object({
   }
 })
 
+const frozenStyleBibleContextSchema = z.object({
+  source: z.object({
+    resourceId: z.string().trim().min(1).max(200),
+    revisionId: z.string().trim().min(1).max(200),
+    fingerprint: z.string().trim().min(1).max(500),
+    bindingVersion: z.number().int().nonnegative(),
+    schemaId: z.literal('project.style_bible'),
+  }).strict(),
+  snapshot: editScriptStyleBibleSchema.shape.styleBible,
+}).strict()
+
+export const creativeScreenplayProductionContextSchema = z.object({
+  style: frozenStyleBibleContextSchema
+    .describe('The exact adopted Style Bible revision compiled and frozen by the server. It is read-only screenplay context; the screenplay result may reference its identity but cannot rewrite its style fields.'),
+}).strict()
+
+export const creativeAssetProductionContextSchema = z.object({
+  screenplay: z.object({
+    source: z.object({
+      resourceId: z.string().trim().min(1).max(200),
+      revisionId: z.string().trim().min(1).max(200),
+      fingerprint: z.string().trim().min(1).max(500),
+      bindingVersion: z.number().int().nonnegative(),
+      schemaId: z.literal('project.source_script'),
+    }).strict(),
+    snapshot: screenplayDraftOutputSchema,
+  }).strict()
+    .describe('The exact confirmed structured screenplay. Its canonicalRegistries are the sole asset-list authority; the asset worker must not infer another list from prose.'),
+  style: frozenStyleBibleContextSchema
+    .describe('The exact adopted Style Bible used to design every canonical screenplay asset.'),
+}).strict()
+
 export const creativeWorkRequestSchema = creativeWorkDelegationRequestSchema.extend({
   productionContext: z.object({
     video: creativeVideoProductionContextSchema.nullable(),
+    screenplay: creativeScreenplayProductionContextSchema.nullable(),
+    asset: creativeAssetProductionContextSchema.nullable(),
   }).strict(),
 }).strict().describe('Server-compiled request for one isolated creative-worker run. productionContext is supplied by the execution layer, never by the primary Agent.')
 

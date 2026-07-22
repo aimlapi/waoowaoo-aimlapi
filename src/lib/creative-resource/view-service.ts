@@ -20,13 +20,16 @@ import type {
 import {
   CREATIVE_RESOURCE_CANONICAL_BINDINGS,
   isCreativeResourceMediaType,
-  isCreativeResourceScopeKind,
   isCreativeResourceStatus,
 } from './contracts'
 import { parseCreativeResourceGenerationTaskPayload, toCreativeResourceJsonValue } from './generation-contract'
 import { TASK_STATUS, TASK_TYPE } from '@/lib/task/types'
 import { parseCreativeResourceVideoMergeTaskPayload } from './video-merge-contract'
 import { CREATIVE_RESOURCE_SCHEMA, getCreativeResourceSchema } from './schema-registry'
+import {
+  parseCreativeResourceScopeRef,
+  resolveProjectCreativeResourceBindingScopes,
+} from './identity'
 
 type CreativeResourceReadClient = Pick<
   Prisma.TransactionClient,
@@ -85,19 +88,6 @@ function requireMediaType(value: string): CreativeResourceMediaType {
 function requireStatus(value: string): CreativeResourceStatus {
   if (!isCreativeResourceStatus(value)) throw new Error(`CREATIVE_RESOURCE_STATUS_INVALID:${value}`)
   return value
-}
-
-function scopeFromRow(row: Pick<ResourceRow, 'scopeKind' | 'scopeId' | 'userId' | 'projectId' | 'episodeId'>): CreativeResourceScopeRef {
-  if (!isCreativeResourceScopeKind(row.scopeKind)) {
-    throw new Error(`CREATIVE_RESOURCE_SCOPE_KIND_INVALID:${row.scopeKind}`)
-  }
-  return {
-    kind: row.scopeKind,
-    id: row.scopeId,
-    userId: row.userId,
-    projectId: row.projectId,
-    episodeId: row.episodeId,
-  }
 }
 
 function revisionContent(row: NonNullable<ResourceRow['headRevision']>): CreativeResourceRevisionContent {
@@ -173,7 +163,7 @@ export function projectCreativeResourceView(
   row: ResourceRow,
   pendingGeneration: CreativeResourcePendingGeneration | null = null,
 ): CreativeResourceView {
-  const scope = scopeFromRow(row)
+  const scope = parseCreativeResourceScopeRef(row)
   return {
     resourceId: row.id,
     origin: row.sourceType && row.sourceId
@@ -395,25 +385,6 @@ export async function getProjectCreativeResourceRevisionView(input: {
   return row ? revisionView(row) : null
 }
 
-function bindingScopeFromRow(row: {
-  readonly scopeKind: string
-  readonly scopeId: string
-  readonly userId: string
-  readonly projectId: string | null
-  readonly episodeId: string | null
-}): CreativeResourceScopeRef {
-  if (!isCreativeResourceScopeKind(row.scopeKind)) {
-    throw new Error(`CREATIVE_RESOURCE_BINDING_SCOPE_KIND_INVALID:${row.scopeKind}`)
-  }
-  return {
-    kind: row.scopeKind,
-    id: row.scopeId,
-    userId: row.userId,
-    projectId: row.projectId,
-    episodeId: row.episodeId,
-  }
-}
-
 function workingBindingView(row: {
   readonly id: string
   readonly userId: string
@@ -443,7 +414,7 @@ function workingBindingView(row: {
   }
   return {
     bindingId: row.id,
-    scope: bindingScopeFromRow(row),
+    scope: parseCreativeResourceScopeRef(row),
     role: row.role,
     slotKey: row.slotKey,
     version: row.version,
@@ -479,12 +450,14 @@ export async function readProjectCreativeResourceWorkingSet(input: {
   readonly client?: CreativeResourceReadClient
 }): Promise<CreativeResourceWorkingSetView> {
   const client = input.client ?? prisma
-  const scopeWhere: Prisma.CreativeResourceBindingWhereInput[] = input.episodeId
-    ? [
-        { scopeKind: 'episode', scopeId: input.episodeId },
-        { scopeKind: 'project', scopeId: input.projectId },
-      ]
-    : [{ scopeKind: 'project', scopeId: input.projectId }]
+  const bindingScopes = resolveProjectCreativeResourceBindingScopes(input)
+  const scopeWhere: Prisma.CreativeResourceBindingWhereInput[] = bindingScopes.map((scope) => ({
+    scopeKind: scope.kind,
+    scopeId: scope.id,
+  }))
+  const scopePriority = new Map(
+    bindingScopes.map((scope, index) => [`${scope.kind}:${scope.id}`, index] as const),
+  )
   const resourceScopeWhere: Prisma.CreativeResourceWhereInput[] = input.episodeId
     ? [{ episodeId: input.episodeId }, { episodeId: null }]
     : [{ episodeId: null }]
@@ -527,8 +500,10 @@ export async function readProjectCreativeResourceWorkingSet(input: {
   const bindings = rows
     .map(workingBindingView)
     .sort((left, right) => {
-      const leftPriority = left.scope.kind === 'episode' ? 0 : 1
-      const rightPriority = right.scope.kind === 'episode' ? 0 : 1
+      const leftPriority = scopePriority.get(`${left.scope.kind}:${left.scope.id}`)
+        ?? Number.MAX_SAFE_INTEGER
+      const rightPriority = scopePriority.get(`${right.scope.kind}:${right.scope.id}`)
+        ?? Number.MAX_SAFE_INTEGER
       return leftPriority - rightPriority
         || left.role.localeCompare(right.role)
         || left.slotKey.localeCompare(right.slotKey)

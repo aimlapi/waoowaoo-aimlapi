@@ -1,4 +1,5 @@
 import { createHash } from 'node:crypto'
+import { isCreativeResourceScopeKind } from './contracts'
 import type {
   CreativeResourceInputRef,
   CreativeResourceJsonValue,
@@ -72,19 +73,57 @@ export function buildCreativeResourceScopeRef(input: {
   return { kind: input.kind, id, userId, projectId, episodeId }
 }
 
+export function parseCreativeResourceScopeRef(input: {
+  readonly scopeKind: string
+  readonly scopeId: string
+  readonly userId: string
+  readonly projectId: string | null
+  readonly episodeId: string | null
+}): CreativeResourceScopeRef {
+  if (!isCreativeResourceScopeKind(input.scopeKind)) {
+    throw new Error(`CREATIVE_RESOURCE_SCOPE_KIND_INVALID:${input.scopeKind}`)
+  }
+  return buildCreativeResourceScopeRef({
+    kind: input.scopeKind,
+    id: input.scopeId,
+    userId: input.userId,
+    projectId: input.projectId,
+    episodeId: input.episodeId,
+  })
+}
+
 export function resolveProjectCreativeResourceScope(input: {
   readonly userId: string
   readonly projectId: string
   readonly episodeId?: string | null
 }): CreativeResourceScopeRef {
+  return resolveProjectCreativeResourceBindingScopes(input)[0]
+}
+
+export function resolveProjectCreativeResourceBindingScopes(input: {
+  readonly userId: string
+  readonly projectId: string
+  readonly episodeId?: string | null
+}): readonly [CreativeResourceScopeRef, ...CreativeResourceScopeRef[]] {
   const episodeId = input.episodeId?.trim() || null
-  return buildCreativeResourceScopeRef({
-    kind: episodeId ? 'episode' : 'project',
-    id: episodeId ?? input.projectId,
+  const projectScope = buildCreativeResourceScopeRef({
+    kind: 'project',
+    id: input.projectId,
     userId: input.userId,
     projectId: input.projectId,
-    episodeId,
+    episodeId: null,
   })
+  if (!episodeId) return [projectScope]
+  return [
+    buildCreativeResourceScopeRef({
+      kind: 'episode',
+      id: episodeId,
+      userId: input.userId,
+      projectId: input.projectId,
+      episodeId,
+    }),
+    projectScope,
+  ]
 }
 
 export function buildCreativeResourceOriginKey(input: {

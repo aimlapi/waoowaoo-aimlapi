@@ -36,11 +36,11 @@ export const CREATIVE_SKILL_REGISTRY: Readonly<Record<CreativeSkillId, CreativeS
   }),
   'story-development': defineSkill({
     id: 'story-development',
-    version: '1.0.0',
+    version: '2.1.0',
     title: { zh: '故事与剧本开发', en: 'Story Development' },
     summary: {
-      zh: '从创意问诊、关键方向收敛到时长受控、完整可拍摄剧本的创作方法。',
-      en: 'Methods for creative intake, high-impact direction setting, runtime control, and complete filmable scripts.',
+      zh: '在单个 screenplay_draft Task 内，以精确只读 Style Revision、唯一 canonicalRegistries 和 00–06T 内部阶段生成可拍摄剧本，再由确定性 07S 编译。',
+      en: 'Build a filmable screenplay inside one screenplay_draft Task using an exact read-only Style Revision, sole canonicalRegistries, and internal phases 00–06T, followed by deterministic 07S compilation.',
     },
     tags: ['story', 'script', 'screenplay', 'intake', 'writing'],
     keywords: {
@@ -92,11 +92,11 @@ export const CREATIVE_SKILL_REGISTRY: Readonly<Record<CreativeSkillId, CreativeS
   }),
   'asset-development': defineSkill({
     id: 'asset-development',
-    version: '1.1.0',
+    version: '2.0.0',
     title: { zh: '资产设计与生成提示词', en: 'Asset Development and Generation Prompts' },
     summary: {
-      zh: '角色、场景、道具、参考图、固定资产图格式、候选资产与已有资产修改的设计方法。',
-      en: 'Methods for characters, locations, props, reference images, fixed asset-image formats, candidates, and existing-asset modifications.',
+      zh: '从确认剧本的唯一 canonicalRegistries 与精确 Style Revision 穷尽设计角色、场景和道具，并遵守固定资产图格式。',
+      en: 'Exhaustively design characters, locations, and props from the confirmed screenplay sole canonicalRegistries and exact Style Revision under fixed asset-image formats.',
     },
     tags: ['asset', 'image', 'character', 'location', 'prop', 'reference', 'candidate'],
     keywords: {

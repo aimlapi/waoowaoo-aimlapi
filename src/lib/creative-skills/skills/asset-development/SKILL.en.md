@@ -2,24 +2,32 @@
 
 ## Purpose
 
-Translate story facts, user requirements, reference materials, and any confirmed Style Bible supplied in the input into reusable character, location, prop, and reference-asset designs. This Skill uses the union of all still-valid rules from the existing Chinese and English asset prompts so both languages follow the same discipline. Assets may be designed independently when no Style Bible exists. It returns asset design and generation prompts only; it does not generate images or write project state.
+For `outputKind=asset_prompt_set`, translate the exact confirmed structured screenplay and exact adopted Style Bible frozen by the server into reusable visual designs for every canonical character, location, and prop in the screenplay. Both frozen upstream inputs are required. This Skill uses the union of all still-valid rules from the existing Chinese and English asset prompts so both languages follow the same discipline. It returns asset designs and generation prompts only; it does not generate images or write project state.
+
+## Authoritative inputs and asset identity
+
+- `productionContext.asset.screenplay` is the exact confirmed structured screenplay frozen by the server; `productionContext.asset.style` is the exact adopted Style Bible frozen by the server. They are not optional references and cannot be replaced by the `goal`, `sourceMaterials`, a reference image, or model inference.
+- Only `productionContext.asset.screenplay.snapshot.canonicalRegistries.characters`, `locations`, and `props` form the sole and exhaustive asset list. `facts`, screenplay prose, and scenes are not a second list.
+- For every character, output `canonicalEntity={kind:"character",entityId:characterId}` exactly once; for every location, output `canonicalEntity={kind:"location",entityId:locationId}` exactly once; for every prop, output `canonicalEntity={kind:"prop",entityId:propId}` exactly once. Add none, omit none, duplicate none, merge none, and never rewrite an identity.
+- Never scan a story synopsis, screenplay prose, dialogue, scenes, or Stage 05/05A to infer, add, or remove an asset. Stage 05/05A usage scenes and entity-state changes, as well as other facts and scenes, may inform visible design and continuity requirements for an already registered entity only; they cannot change asset count or identity.
+- Top-level `source.screenplayRevision` must echo `resourceId`, `revisionId`, `fingerprint`, `bindingVersion`, and `schemaId` from `productionContext.asset.screenplay.source` field by field. `source.styleRevision` must echo the same identity fields from `productionContext.asset.style.source`. Never guess the "latest" revision, substitute another revision, or invent source identity.
 
 ## Style-consumption boundary
 
-- When the input supplies a confirmed Style Bible, it is the sole authority for visual style. This Skill consumes its cross-media `visualStyle` and asset-only `assetImageStyle`; it must not redefine project style from one reference image or one asset. Without a Style Bible, the asset identity may still be designed, but the result must state that it is not bound to project style.
-- Always put style-free stable asset identity in `stableDescription`, then compose that identity with an actually supplied Style Bible in the creative `generationPrompt` that precedes the execution policy. Never use that generation prompt to rewrite stable identity.
+- The frozen adopted Style Bible is the sole authority for visual style. Consume its cross-media `visualStyle` and asset-only `assetImageStyle.lighting/texture` exactly and read-only. Never redefine project style from one reference image or one asset, and never modify, supplement, or output another Style Bible.
+- Always put style-free stable asset identity in `stableDescription`, then compose that identity with the exact Style Bible in the creative `generationPrompt` that precedes the execution policy. Never use that generation prompt to rewrite stable identity or upstream style.
 - A stable character identity description excludes artistic style, filters, and lighting; the final image prompt appends them consistently.
 - A foundational location description preserves real spatial structure, materials, and physical lighting conditions. Stylized lighting and material treatment are composed with the Style Bible only in the final image prompt.
 - The execution layer's sole asset-image format policy appends and enforces the fixed format by asset kind. A `generationPrompt` must not introduce conflicting layout, background, or subject-count requirements.
 - These fixed formats govern asset images only; they do not own, override, or constrain video composition. Video framing, scale, camera placement, movement, and editing remain entirely within directing and video design.
-- User or project style outranks source-image style. A reference preserves identity and structure and cannot override explicit art direction. Ignore incidental source color cast, lighting, blur, noise, and defects.
+- The exact adopted Style Bible outranks source-image style. A reference preserves identity and structure and cannot override confirmed art direction. Ignore incidental source color cast, lighting, blur, noise, and defects.
 
 ## Fixed asset-image formats and execution boundary
 
-- A character asset is one image divided into equal left and right halves: the left half is a face close-up of the character, and the right half shows the same character completely from head to toe. The background is pure white. Only that character may appear; no location, prop, or other person may appear.
-- A location asset is a complete panoramic environment seen straight on. It contains no people and no prop presented as an independent asset subject. Fixed structures and built-in elements that constitute the location itself—such as walls, floors, doors, windows, and stairs—remain allowed.
-- A prop asset shows exactly one prop, squared to the view and completely visible, on a pure white background. It contains no person, other prop, or location.
-- These are asset-kind contracts, not style or composition candidates for a model to choose. The Skill keeps design content compatible with them; the execution policy is the sole writer of exact layout, aspect ratio, and final suffix.
+- A character asset is one fixed 4:3 landscape image divided into equal left and right halves: the left half is a face close-up of the character, and the right half shows the same character completely from head to toe. The background is pure white. Only that character may appear; no location, prop, or other person may appear.
+- A location asset is one fixed 4:3 landscape image: a complete panoramic environment seen straight on, never a multi-view sheet. It contains no people, loose furniture, or prop presented as an independent asset subject. Fixed structures and built-in elements that constitute the location itself—such as walls, floors, doors, windows, and stairs—remain allowed.
+- A prop asset is one fixed 4:3 landscape image that shows exactly one prop, squarely aligned, clearly oriented, centered, complete, and unobstructed, on a pure white background. It contains no person, other prop, or location.
+- These are asset-kind contracts, not style or composition candidates for a model to choose. The Skill keeps design content compatible with them; the execution policy is the sole writer of the 4:3 aspect ratio, exact layout, and final suffix. A `generationPrompt` must not duplicate those execution instructions.
 
 ## Character design
 
@@ -58,10 +66,11 @@ Translate story facts, user requirements, reference materials, and any confirmed
 
 ## Character candidates
 
+- Candidates are internal design comparisons for one canonical character only. Select one final direction and write it into that `canonicalEntity`'s sole `assets` entry.
 - Candidates are different design directions for the same character identity, not different characters.
-- Useful emphases include identity and silhouette fidelity, wardrobe/material/era texture, and role energy with video-reference usability.
+- Useful emphases include identity and silhouette fidelity, wardrobe/material/era texture, and role energy with cross-scene identity-reference usability.
 - Differences must be legible while preserving the shared core identity. Do not manufacture variety by changing age, species, relationship, or plot facts.
-- When a Style Bible exists, casting, clothing, palette, material, and atmosphere must remain compatible with it.
+- Casting, clothing, palette, material, and atmosphere must remain compatible with the exact adopted Style Bible.
 
 ## Location design
 
@@ -78,9 +87,10 @@ Translate story facts, user requirements, reference materials, and any confirmed
 
 ## Location candidates
 
-- Select the single scene most useful for later video reference instead of mechanically repeating the first mentioned place.
+- Candidates are internal design comparisons for one canonical location only. Select one final direction and write it into that `canonicalEntity`'s sole `assets` entry.
+- From the canonical location's usage scenes, select design evidence that best reveals its spatial identity and supports downstream visual reuse. Do not mechanically repeat its first appearance, and never replace it with another location.
 - A baseline direction faithfully renders identity, fixed structure, structural anchors, materials, and lighting.
-- A narrative-core direction chooses the location that best carries conflict, revelation, reversal, recurring pressure, or emotional turn. Express tension through architecture, negative space, fixed structures, motivated light, color, and material rather than explanatory prose.
+- A narrative-core direction strengthens how the same location carries conflict, revelation, reversal, recurring pressure, or emotional turn. Express tension through architecture, negative space, fixed structures, motivated light, color, and material rather than explanatory prose or a substituted location.
 - A production-texture direction infers era, genre, class texture, emotional temperature, and subtext, then strengthens spatial structure, surfaces, use traces, practical sources, air, reflections, and shadows. It must not add visual density through people, independent furniture, or prop dressing.
 - Every candidate remains an empty, complete, reusable environment. Do not create differences by adding contradictory story facts.
 
@@ -93,6 +103,7 @@ Translate story facts, user requirements, reference materials, and any confirmed
 
 ## Modifying an existing asset
 
+- A modification must not change or create a `canonicalEntity`; every entity in the three canonical registries must still be output exactly once.
 - First identify the exact visual features requested for change, then replace or add only the relevant material.
 - Preserve every unmodified identity, structure, material, color, decoration, and style fact.
 - When a reference image is present, absorb only features relevant to the requested change. Do not let the reference overwrite user-approved content or the Style Bible.
@@ -101,7 +112,9 @@ Translate story facts, user requirements, reference materials, and any confirmed
 
 ## Review
 
-- If a confirmed Style Bible was supplied, does the design follow it and clearly separate cross-media style from asset-only lighting and material? If none was supplied, does the result clearly keep style unbound?
+- Do the top-level screenplay and style source refs match the server-frozen identities field by field?
+- Does `assets` contain only `canonicalRegistries.characters/locations/props`, with every entity appearing exactly once through its exact `canonicalEntity`?
+- Does the design consume the exact adopted Style Bible read-only and clearly separate cross-media `visualStyle` from asset-only `assetImageStyle.lighting/texture`?
 - Is the character stable, complete, era-consistent, explicit about footwear, and free of body color, action, background, uncertainty, and abstract aura?
 - Is a non-human identity described through its real form rather than a human template?
 - Is the location faithful, complete and straight-on, structurally clear, stably anchored, and free of people and independent prop assets?
@@ -111,4 +124,4 @@ Translate story facts, user requirements, reference materials, and any confirmed
 
 ## Boundary
 
-This Skill provides visual-design methods for characters, locations, props, reference images, asset candidates, and existing-asset modifications. The visual-style Skill owns Style Bibles, style candidates, and style previews. The execution layer's sole asset-image format policy owns image aspect ratio, exact fixed asset-image layout, and final image-prompt suffixes; this Skill does not duplicate the suffix and does not touch directing, shots, or video composition.
+This Skill provides visual design for canonical characters, locations, and props. Reference images supply identity and structure evidence for already registered entities only, and candidates are internal comparisons for the same entity. The visual-style Skill owns Style Bibles, style candidates, and style previews; this Skill consumes the exact adopted revision read-only. The execution layer's sole asset-image format policy owns the 4:3 image aspect ratio, exact fixed asset-image layout, and final image-prompt suffixes. This Skill does not duplicate the suffix, create a new asset identity, or touch directing, shots, camera movement, video composition, editing, dialogue performance, sound, or music.

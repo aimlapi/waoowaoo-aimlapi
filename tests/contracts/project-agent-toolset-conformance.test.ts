@@ -7,6 +7,10 @@ import {
   readCreativeSkillResource,
 } from '@/lib/creative-skills'
 import {
+  CREATIVE_WORK_CHAPTER_OUTPUT_KINDS,
+  CREATIVE_WORK_OUTPUT_POLICY,
+  CREATIVE_WORK_REQUEST_BATCH_OUTPUT_KINDS,
+  CREATIVE_WORK_SINGLE_REQUEST_OUTPUT_KINDS,
   CREATIVE_WORK_TASK_PROTOCOL,
   CREATIVE_WORK_OUTPUT_KINDS,
   creativeWorkOutputRegistry,
@@ -231,6 +235,29 @@ describe('project agent toolset conformance', () => {
   it('uses dedicated exact-revision operations for canonical screenplay and Style Bible bindings', () => {
     const registry = createProjectAgentOperationRegistry()
 
+    expect(registry.materialize_screenplay_draft.channels.tool).toBe(true)
+    expect(registry.materialize_screenplay_draft.confirmation).toMatchObject({
+      kind: 'none',
+      required: false,
+    })
+    expect(registry.materialize_screenplay_draft.effects).toEqual({
+      writes: true,
+      workspaceResourceImpact: 'creative_resources',
+      billable: false,
+      destructive: false,
+      overwrite: false,
+      bulk: false,
+      externalSideEffects: false,
+      longRunning: false,
+    })
+    expect(Object.keys(registry.materialize_screenplay_draft.toolInputSchema.properties)).toEqual([
+      'taskId', 'name',
+    ])
+    expect(registry.materialize_screenplay_draft.inputSchema.safeParse({
+      taskId: 'task:screenplay',
+      name: 'Confirmed draft candidate',
+    }).success).toBe(true)
+
     expect(registry.confirm_script_resource.channels.tool).toBe(true)
     expect(Object.keys(registry.confirm_script_resource.toolInputSchema.properties)).toEqual([
       'resourceId', 'revisionId', 'expectedVersion',
@@ -310,6 +337,35 @@ describe('project agent toolset conformance', () => {
     const sourceBranches = (Array.isArray(delegationSchema.oneOf) ? delegationSchema.oneOf : [])
       .map((branch) => readRecord(readRecord(readRecord(branch).properties).source).const)
     expect(sourceBranches).toEqual(['requests', 'chapters'])
+    const chapterBranch = (Array.isArray(delegationSchema.oneOf) ? delegationSchema.oneOf : [])
+      .map(readRecord)
+      .find((branch) => readRecord(readRecord(branch.properties).source).const === 'chapters')
+    const chapterOutputKind = readRecord(readRecord(chapterBranch?.properties).outputKind)
+    expect(chapterOutputKind.enum).toEqual([...CREATIVE_WORK_CHAPTER_OUTPUT_KINDS])
+    expect(chapterOutputKind.enum).not.toContain('screenplay_draft')
+    expect(chapterOutputKind.enum).not.toContain('style_bible')
+    expect(chapterOutputKind.enum).not.toContain('asset_prompt_set')
+    expect(Object.keys(CREATIVE_WORK_OUTPUT_POLICY)).toEqual([...CREATIVE_WORK_OUTPUT_KINDS])
+    expect(CREATIVE_WORK_OUTPUT_POLICY.screenplay_draft).toEqual({
+      chapterDelegation: false,
+      requestBatching: false,
+    })
+    expect(CREATIVE_WORK_OUTPUT_POLICY.style_bible).toEqual({
+      chapterDelegation: false,
+      requestBatching: false,
+    })
+    expect(CREATIVE_WORK_OUTPUT_POLICY.asset_prompt_set).toEqual({
+      chapterDelegation: false,
+      requestBatching: false,
+    })
+    expect(CREATIVE_WORK_SINGLE_REQUEST_OUTPUT_KINDS).toEqual([
+      'screenplay_draft',
+      'style_bible',
+      'asset_prompt_set',
+    ])
+    expect(CREATIVE_WORK_REQUEST_BATCH_OUTPUT_KINDS).not.toContain('screenplay_draft')
+    expect(CREATIVE_WORK_REQUEST_BATCH_OUTPUT_KINDS).not.toContain('style_bible')
+    expect(CREATIVE_WORK_REQUEST_BATCH_OUTPUT_KINDS).not.toContain('asset_prompt_set')
     expect(operation.inputSchema.safeParse({
       delegation: {
         source: 'requests',
@@ -326,6 +382,75 @@ describe('project agent toolset conformance', () => {
         }],
       },
     }).success).toBe(true)
+    const wholeScreenplayRequest = {
+      requestKey: 'whole-screenplay-1',
+      outputKind: 'screenplay_draft' as const,
+      goal: 'Write one complete screenplay through the internal 00–06T method.',
+      context: {
+        userRequest: 'A lantern wakes in an abandoned shrine.',
+        sourceMaterials: [],
+        constraints: [],
+      },
+    }
+    expect(operation.inputSchema.safeParse({
+      delegation: { source: 'requests', requests: [wholeScreenplayRequest] },
+    }).success).toBe(true)
+    expect(operation.inputSchema.safeParse({
+      delegation: {
+        source: 'requests',
+        requests: [
+          wholeScreenplayRequest,
+          { ...wholeScreenplayRequest, requestKey: 'whole-screenplay-2' },
+        ],
+      },
+    }).success).toBe(false)
+    for (const outputKind of ['style_bible', 'asset_prompt_set'] as const) {
+      const singletonRequest = {
+        requestKey: `singleton-${outputKind}`,
+        outputKind,
+        goal: `Produce one complete ${outputKind} result.`,
+        context: {
+          userRequest: 'A lantern wakes in an abandoned shrine.',
+          sourceMaterials: [],
+          constraints: [],
+        },
+      }
+      expect(operation.inputSchema.safeParse({
+        delegation: { source: 'requests', requests: [singletonRequest] },
+      }).success).toBe(true)
+      expect(operation.inputSchema.safeParse({
+        delegation: {
+          source: 'requests',
+          requests: [singletonRequest, { ...singletonRequest, requestKey: `${singletonRequest.requestKey}-2` }],
+        },
+      }).success).toBe(false)
+    }
+    expect(operation.inputSchema.safeParse({
+      delegation: {
+        source: 'requests',
+        requests: [
+          wholeScreenplayRequest,
+          {
+            requestKey: 'mixed-review',
+            outputKind: 'creative_review',
+            goal: 'Review the screenplay in parallel.',
+            context: { userRequest: '', sourceMaterials: [], constraints: [] },
+          },
+        ],
+      },
+    }).success).toBe(false)
+    expect(operation.inputSchema.safeParse({
+      delegation: {
+        source: 'requests',
+        requests: [{
+          requestKey: 'forged-screenplay-context',
+          outputKind: 'screenplay_draft',
+          goal: 'Attempt to bypass server context compilation.',
+          context: { userRequest: '', sourceMaterials: [], constraints: [] },
+          productionContext: { video: null, screenplay: null, asset: null },
+        }],
+      },
+    }).success).toBe(false)
     expect(operation.inputSchema.safeParse({
       delegation: { source: 'requests', requests: [] },
     }).success).toBe(false)
@@ -340,6 +465,17 @@ describe('project agent toolset conformance', () => {
         referencedAssets: [],
       },
     }).success).toBe(true)
+    expect(operation.inputSchema.safeParse({
+      delegation: {
+        source: 'chapters',
+        chapters: [{ chapterId: 'chapter-1', requestKey: 'chapter-1-screenplay' }],
+        outputKind: 'screenplay_draft',
+        goal: 'Split one screenplay into per-Chapter screenplay Subagents.',
+        userRequest: 'Write the screenplay.',
+        constraints: [],
+        referencedAssets: [],
+      },
+    }).success).toBe(false)
     expect(operation.inputSchema.safeParse({
       delegation: {
         source: 'requests',
@@ -414,7 +550,7 @@ describe('project agent toolset conformance', () => {
   })
 
   it('keeps the Creative Task protocol explicit and its repeated result projections consistent', () => {
-    expect(CREATIVE_WORK_TASK_PROTOCOL).toBe('creative_work_v3')
+    expect(CREATIVE_WORK_TASK_PROTOCOL).toBe('creative_work_v4')
     const lifecycleProjection = {
       requestKey: 'review-1',
       outputKind: 'creative_review' as const,
@@ -436,7 +572,7 @@ describe('project agent toolset conformance', () => {
         outputKind: 'creative_review' as const,
         goal: 'Review the supplied result.',
         context: { userRequest: '', sourceMaterials: [], constraints: [] },
-        productionContext: { video: null },
+        productionContext: { video: null, screenplay: null, asset: null },
       },
       modelKey: 'test:model',
       inputFingerprint: 'fingerprint',
@@ -458,7 +594,7 @@ describe('project agent toolset conformance', () => {
     }).success).toBe(false)
     expect(creativeWorkTaskPayloadSchema.safeParse({
       ...payload,
-      protocol: 'creative_work_v2',
+      protocol: 'creative_work_v3',
     }).success).toBe(false)
 
     const result = {

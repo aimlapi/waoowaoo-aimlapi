@@ -15,6 +15,10 @@ const SELECTABLE_TOOL_DESCRIPTION_COPY: Record<string, { zh: string; en: string 
     zh: '把用户提供或上传的完整长剧本文本保存为不可变 SourceDocument，不调用 AI。返回的 normalizedText、id、version 和 checksum 是委派 edit_bible_bundle 时必须原样携带的领域来源事实。',
     en: 'Save a user-provided or uploaded long script as an immutable SourceDocument without calling AI. Preserve the returned normalizedText, id, version, and checksum exactly when delegating edit_bible_bundle work.',
   },
+  materialize_screenplay_draft: {
+    zh: '把一个已完成的 screenplay_draft Creative Task 结果保存为不可变的结构化 project.source_script Resource revision。必须传精确 taskId 和用户可见名称；系统会保留 canonical registries、精确 Style lineage 和 Task provenance。这个操作不确认剧本，保存后仍需让用户审阅并用 confirm_script_resource 确认返回的精确 revision。',
+    en: 'Save one completed screenplay_draft Creative Task result as an immutable structured project.source_script Resource revision. Pass the exact taskId and a user-facing name. The system preserves the canonical registries, exact Style lineage, and Task provenance. This operation does not confirm the screenplay; after review, call confirm_script_resource with the exact returned revision.',
+  },
   adopt_edit_bible_bundle: {
     zh: '把一个已完成的 edit_bible_bundle Creative Task 采用为正式 Bible，并由唯一切分器写出 Chapter。必须传精确 sourceDocumentId 和 taskId；系统会重新验证来源版本、内容与结构化结果，不会自动启动资产、Chapter Subagent 或视频任务。',
     en: 'Adopt one completed edit_bible_bundle Creative Task as the formal Bible and let the sole splitter write Chapters. Pass the exact sourceDocumentId and taskId. The system revalidates source revision, content, and strict output, and starts no asset, Chapter Subagent, or video task automatically.',
@@ -169,6 +173,10 @@ const GENERAL_PROJECT_AGENT_OPERATION_TITLE_COPY = {
   save_edit_source: {
     zh: '保存剧本源文档',
     en: 'Save script source',
+  },
+  materialize_screenplay_draft: {
+    zh: '保存剧本草稿',
+    en: 'Save screenplay draft',
   },
   adopt_edit_bible_bundle: {
     zh: '采用制作 Bible',

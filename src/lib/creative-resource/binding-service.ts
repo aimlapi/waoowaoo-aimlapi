@@ -1,9 +1,13 @@
 import { randomUUID } from 'node:crypto'
 import { Prisma } from '@prisma/client'
 import type { CreativeResourceBindingView, CreativeResourceScopeRef } from './contracts'
+import {
+  parseCreativeResourceScopeRef,
+  resolveProjectCreativeResourceBindingScopes,
+} from './identity'
 import type { CreativeResourcePersistenceClient } from './persistence'
 
-type LockedBindingRow = {
+type BindingViewRow = {
   id: string
   userId: string
   resourceId: string
@@ -12,13 +16,20 @@ type LockedBindingRow = {
   version: number
 }
 
+type LockedBindingRow = BindingViewRow & {
+  projectId: string | null
+  episodeId: string | null
+  scopeKind: string
+  scopeId: string
+}
+
 function requireNonEmpty(value: string, code: string): string {
   const normalized = value.trim()
   if (!normalized) throw new Error(code)
   return normalized
 }
 
-function bindingView(row: LockedBindingRow, scope: CreativeResourceScopeRef, role: string, slotKey: string): CreativeResourceBindingView {
+function bindingView(row: BindingViewRow, scope: CreativeResourceScopeRef, role: string, slotKey: string): CreativeResourceBindingView {
   return {
     bindingId: row.id,
     scope,
@@ -29,6 +40,48 @@ function bindingView(row: LockedBindingRow, scope: CreativeResourceScopeRef, rol
     version: row.version,
     source: row.source,
   }
+}
+
+export async function lockCanonicalCreativeResourceBindingInTransaction(
+  tx: CreativeResourcePersistenceClient,
+  input: {
+    readonly userId: string
+    readonly projectId: string
+    readonly episodeId: string | null
+    readonly role: string
+    readonly slotKey: string
+  },
+): Promise<CreativeResourceBindingView | null> {
+  const role = requireNonEmpty(input.role, 'CREATIVE_RESOURCE_BINDING_ROLE_REQUIRED')
+  const slotKey = requireNonEmpty(input.slotKey, 'CREATIVE_RESOURCE_BINDING_SLOT_REQUIRED')
+  const scopes = resolveProjectCreativeResourceBindingScopes(input)
+  let selected: { readonly row: LockedBindingRow; readonly scope: CreativeResourceScopeRef } | null = null
+  for (const scope of scopes) {
+    const rows = await tx.$queryRaw<LockedBindingRow[]>(Prisma.sql`
+      SELECT id, userId, projectId, episodeId, scopeKind, scopeId, resourceId, revisionId, source, version
+      FROM creative_resource_bindings
+      WHERE scopeKind = ${scope.kind}
+        AND scopeId = ${scope.id}
+        AND role = ${role}
+        AND slotKey = ${slotKey}
+      FOR UPDATE
+    `)
+    const row = rows[0] ?? null
+    if (row) {
+      const storedScope = parseCreativeResourceScopeRef(row)
+      if (
+        storedScope.userId !== input.userId
+        || storedScope.kind !== scope.kind
+        || storedScope.id !== scope.id
+        || storedScope.projectId !== scope.projectId
+        || storedScope.episodeId !== scope.episodeId
+      ) {
+        throw new Error('CREATIVE_RESOURCE_BINDING_SCOPE_INVALID')
+      }
+      if (!selected) selected = { row, scope: storedScope }
+    }
+  }
+  return selected ? bindingView(selected.row, selected.scope, role, slotKey) : null
 }
 
 export async function bindCreativeResourceRevisionInTransaction(
@@ -102,7 +155,7 @@ export async function bindCreativeResourceRevisionInTransaction(
   })
   if (!revision) throw new Error('CREATIVE_RESOURCE_BINDING_REVISION_NOT_OWNED')
   const rows = await tx.$queryRaw<LockedBindingRow[]>(Prisma.sql`
-    SELECT id, userId, resourceId, revisionId, source, version
+    SELECT id, userId, projectId, episodeId, scopeKind, scopeId, resourceId, revisionId, source, version
     FROM creative_resource_bindings
     WHERE scopeKind = ${input.scope.kind}
       AND scopeId = ${input.scope.id}
@@ -133,7 +186,16 @@ export async function bindCreativeResourceRevisionInTransaction(
     })
     return bindingView(created, input.scope, role, slotKey)
   }
-  if (existing.userId !== input.scope.userId) throw new Error('CREATIVE_RESOURCE_BINDING_NOT_OWNED')
+  const existingScope = parseCreativeResourceScopeRef(existing)
+  if (
+    existingScope.userId !== input.scope.userId
+    || existingScope.kind !== input.scope.kind
+    || existingScope.id !== input.scope.id
+    || existingScope.projectId !== input.scope.projectId
+    || existingScope.episodeId !== input.scope.episodeId
+  ) {
+    throw new Error('CREATIVE_RESOURCE_BINDING_SCOPE_INVALID')
+  }
   if (input.expectedVersion === null || existing.version !== input.expectedVersion) {
     throw new Error(`CREATIVE_RESOURCE_BINDING_VERSION_CONFLICT:${String(existing.version)}:${String(input.expectedVersion)}`)
   }
@@ -153,5 +215,5 @@ export async function bindCreativeResourceRevisionInTransaction(
     revisionId,
     source,
     version: existing.version + 1,
-  }, input.scope, role, slotKey)
+  }, existingScope, role, slotKey)
 }

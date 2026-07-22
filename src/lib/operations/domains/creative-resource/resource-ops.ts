@@ -1,6 +1,16 @@
 import { z } from 'zod'
 import { ApiError } from '@/lib/api-errors'
-import { bindCreativeResourceRevisionInTransaction } from '@/lib/creative-resource/binding-service'
+import {
+  buildScreenplayResourceDocument,
+  creativeWorkTaskPayloadSchema,
+  creativeWorkTaskResultSchema,
+  creativeWorkTaskResultMatchesPayload,
+  screenplayResourceDocumentSchema,
+} from '@/lib/creative-worker'
+import {
+  bindCreativeResourceRevisionInTransaction,
+  lockCanonicalCreativeResourceBindingInTransaction,
+} from '@/lib/creative-resource/binding-service'
 import {
   editCreativeResourceDataInTransaction,
   parseCreativeResourceDataValueJson,
@@ -20,10 +30,12 @@ import {
 } from '@/lib/creative-resource/view-service'
 import { defineOperation } from '@/lib/operations/define-operation'
 import type { ProjectAgentOperationRegistryDraft } from '@/lib/operations/types'
+import { stableArgsHash } from '@/lib/project-agent/stable-args-hash'
 import {
   CREATIVE_RESOURCE_SCHEMA,
   CREATIVE_RESOURCE_SCHEMAS,
 } from '@/lib/creative-resource/schema-registry'
+import { TASK_STATUS, TASK_TYPE } from '@/lib/task/types'
 
 function isReservedCreativeResourceBinding(input: {
   readonly role: string
@@ -378,18 +390,51 @@ export function createCreativeResourceOperations(): ProjectAgentOperationRegistr
       outputSchema: confirmScriptResourceOutputSchema,
       executeInTransaction: async (ctx, input, tx) => {
         const episodeId = input.episodeId === undefined ? (ctx.context.episodeId ?? null) : input.episodeId
+        const targetScope = resolveProjectCreativeResourceScope({
+          userId: ctx.userId,
+          projectId: ctx.projectId,
+          episodeId,
+        })
         const revision = await tx.creativeResourceRevision.findFirst({
           where: {
             id: input.revisionId,
             resourceId: input.resourceId,
             resource: {
               userId: ctx.userId,
+              projectId: ctx.projectId,
               status: 'ready',
               mediaType: 'text',
               schemaId: CREATIVE_RESOURCE_SCHEMA.SOURCE_SCRIPT,
             },
           },
-          select: { fingerprint: true },
+          select: {
+            fingerprint: true,
+            contentJson: true,
+            operationId: true,
+            taskId: true,
+            resource: {
+              select: {
+                sourceType: true,
+                sourceId: true,
+                scopeKind: true,
+                scopeId: true,
+                projectId: true,
+                episodeId: true,
+              },
+            },
+            task: {
+              select: {
+                id: true,
+                userId: true,
+                projectId: true,
+                episodeId: true,
+                type: true,
+                status: true,
+                payload: true,
+                result: true,
+              },
+            },
+          },
         })
         if (!revision) {
           throw new ApiError('NOT_FOUND', {
@@ -397,12 +442,104 @@ export function createCreativeResourceOperations(): ProjectAgentOperationRegistr
             field: 'revisionId',
           })
         }
+        const payload = revision.task
+          ? creativeWorkTaskPayloadSchema.safeParse(revision.task.payload)
+          : null
+        const result = revision.task
+          ? creativeWorkTaskResultSchema.safeParse(revision.task.result)
+          : null
+        const document = revision.contentJson === null
+          ? null
+          : screenplayResourceDocumentSchema.safeParse(revision.contentJson)
+        const taskOutput = result?.success
+          && result.data.outputKind === 'screenplay_draft'
+          && result.data.creativeWorkResult.outputKind === 'screenplay_draft'
+          && result.data.creativeWorkResult.output.kind === 'screenplay_draft'
+          ? result.data.creativeWorkResult.output
+          : null
+        const screenplayProduction = payload?.success
+          && payload.data.request.outputKind === 'screenplay_draft'
+          ? payload.data.request.productionContext.screenplay
+          : null
+        const taskStyleSource = screenplayProduction?.style.source
+        const outputStyleSource = taskOutput?.source.styleRevision
+        const expectedDocument = taskOutput ? buildScreenplayResourceDocument(taskOutput) : null
+        if (
+          revision.operationId !== 'materialize_screenplay_draft'
+          || !revision.taskId
+          || revision.resource.sourceType !== 'CreativeWorkScreenplayDraft'
+          || revision.resource.sourceId !== revision.taskId
+          || revision.resource.scopeKind !== targetScope.kind
+          || revision.resource.scopeId !== targetScope.id
+          || revision.resource.projectId !== targetScope.projectId
+          || revision.resource.episodeId !== targetScope.episodeId
+          || revision.task?.id !== revision.taskId
+          || revision.task?.userId !== ctx.userId
+          || revision.task?.projectId !== ctx.projectId
+          || revision.task?.episodeId !== episodeId
+          || revision.task?.type !== TASK_TYPE.CREATIVE_WORK
+          || revision.task?.status !== TASK_STATUS.COMPLETED
+          || !payload?.success
+          || !result?.success
+          || !creativeWorkTaskResultMatchesPayload(payload.data, result.data)
+          || !screenplayProduction
+          || !taskOutput
+          || !taskStyleSource
+          || !outputStyleSource
+          || outputStyleSource.resourceId !== taskStyleSource.resourceId
+          || outputStyleSource.revisionId !== taskStyleSource.revisionId
+          || outputStyleSource.fingerprint !== taskStyleSource.fingerprint
+          || outputStyleSource.bindingVersion !== taskStyleSource.bindingVersion
+          || outputStyleSource.schemaId !== taskStyleSource.schemaId
+          || !document?.success
+          || !expectedDocument
+          || stableArgsHash(document.data) !== stableArgsHash(expectedDocument)
+        ) {
+          throw new ApiError('INVALID_PARAMS', {
+            code: 'CONFIRMED_SCREENPLAY_STRUCTURE_INVALID',
+            field: 'revisionId',
+            agentRetryableAfterCorrection: true,
+          })
+        }
+        const currentStyleBinding = await lockCanonicalCreativeResourceBindingInTransaction(tx, {
+          userId: ctx.userId,
+          projectId: ctx.projectId,
+          episodeId,
+          ...CREATIVE_RESOURCE_CANONICAL_BINDINGS.adoptedStyleBible,
+        })
+        const currentStyleRevision = currentStyleBinding
+          ? await tx.creativeResourceRevision.findFirst({
+              where: {
+                id: currentStyleBinding.revisionId,
+                resourceId: currentStyleBinding.resourceId,
+                resource: {
+                  userId: ctx.userId,
+                  projectId: ctx.projectId,
+                  status: 'ready',
+                  schemaId: CREATIVE_RESOURCE_SCHEMA.STYLE_BIBLE,
+                },
+              },
+              select: { fingerprint: true },
+            })
+          : null
+        if (
+          !currentStyleBinding
+          || !currentStyleRevision
+          || !outputStyleSource
+          || outputStyleSource.resourceId !== currentStyleBinding.resourceId
+          || outputStyleSource.revisionId !== currentStyleBinding.revisionId
+          || outputStyleSource.fingerprint !== currentStyleRevision.fingerprint
+          || outputStyleSource.bindingVersion !== currentStyleBinding.version
+          || outputStyleSource.schemaId !== CREATIVE_RESOURCE_SCHEMA.STYLE_BIBLE
+        ) {
+          throw new ApiError('INVALID_PARAMS', {
+            code: 'CONFIRMED_SCREENPLAY_STYLE_STALE',
+            field: 'revisionId',
+            agentRetryableAfterCorrection: true,
+          })
+        }
         const binding = await bindCreativeResourceRevisionInTransaction(tx, {
-          scope: resolveProjectCreativeResourceScope({
-            userId: ctx.userId,
-            projectId: ctx.projectId,
-            episodeId,
-          }),
+          scope: targetScope,
           ...CREATIVE_RESOURCE_CANONICAL_BINDINGS.confirmedScreenplay,
           resourceId: input.resourceId,
           revisionId: input.revisionId,

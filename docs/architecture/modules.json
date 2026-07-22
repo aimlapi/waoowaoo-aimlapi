@@ -160,6 +160,8 @@
       "sourcePaths": [
         "src/lib/creative-resource",
         "src/lib/operations/domains/creative-resource",
+        "src/lib/operations/domains/assistant/creative-production-context.ts",
+        "src/lib/operations/domains/assistant/creative-screenplay-ops.ts",
         "src/lib/operations/domains/assistant/creative-style-ops.ts",
         "src/lib/workers/handlers/creative-resource-video-merge.ts",
         "src/app/api/projects/[projectId]/resources",
@@ -180,6 +182,7 @@
         "tests/contracts/project-agent-toolset-conformance.test.ts",
         "tests/contracts/task-definition-conformance.test.ts",
         "tests/contracts/canvas-node-conformance.test.ts",
+        "tests/unit/creative-worker/screenplay-compiler.test.ts",
         "tests/unit/creative-resource/creative-data.test.ts",
         "tests/golden-journey/journeys/freeform-resources.spec.ts",
         "tests/golden-journey/journeys/mainline-complete.spec.ts"
@@ -512,6 +515,8 @@
         "src/lib/creative-worker",
         "src/lib/operations/domains/assistant/creative-ops.ts",
         "src/lib/operations/domains/assistant/creative-bible-ops.ts",
+        "src/lib/operations/domains/assistant/creative-production-context.ts",
+        "src/lib/operations/domains/assistant/creative-screenplay-ops.ts",
         "src/lib/operations/domains/assistant/creative-style-ops.ts",
         "src/lib/edit-bible/creative-adoption.ts",
         "src/lib/workers/handlers/creative-work.ts",
@@ -529,6 +534,7 @@
       ],
       "testPaths": [
         "tests/contracts/project-agent-toolset-conformance.test.ts",
+        "tests/unit/creative-worker/screenplay-compiler.test.ts",
         "tests/unit/project-agent/subagent-events.test.ts"
       ],
       "guardPaths": [
@@ -606,6 +612,7 @@
         "src/lib/ai-prompts",
         "src/lib/creative-skills",
         "src/lib/creative-worker",
+        "src/lib/operations/domains/assistant/creative-production-context.ts",
         "src/lib/bgm-design/prompt.ts",
         "src/lib/bgm-design/types.ts",
         "src/lib/bgm-design/contract.ts",
@@ -632,6 +639,7 @@
       ],
       "testPaths": [
         "tests/contracts/project-agent-toolset-conformance.test.ts",
+        "tests/unit/creative-worker/screenplay-compiler.test.ts",
         "tests/golden-journey/self-tests/model-provider.test.ts",
         "tests/unit/asset-generation/asset-image-format.test.ts",
         "tests/unit/bgm-design/bgm-design-acceptance.test.ts",

@@ -13,6 +13,7 @@ import {
 import {
   creativeWorkTaskPayloadSchema,
   creativeWorkTaskResultSchema,
+  creativeWorkTaskResultMatchesPayload,
 } from '@/lib/creative-worker'
 import { defineOperation } from '@/lib/operations/define-operation'
 import type { ProjectAgentOperationRegistryDraft } from '@/lib/operations/types'
@@ -22,7 +23,7 @@ import { TASK_STATUS, TASK_TYPE } from '@/lib/task/types'
 const adoptStyleBibleInputSchema = z.object({
   taskId: z.string().trim().min(1)
     .describe('Exact completed creative_work Task whose strict style_bible result contains the final design or candidate being adopted.'),
-  name: z.string().trim().min(1).max(300)
+  name: z.string().trim().min(1).max(191)
     .describe('User-facing Resource name in the current conversation language.'),
   selection: z.discriminatedUnion('kind', [
     z.object({
@@ -149,10 +150,19 @@ export function createAssistantCreativeStyleOperations(): ProjectAgentOperationR
             agentRetryableAfterCorrection: true,
           })
         }
+        const operationEpisodeId = context.context.episodeId ?? null
+        if (task.episodeId !== operationEpisodeId) {
+          throw new ApiError('INVALID_PARAMS', {
+            code: 'CREATIVE_STYLE_BIBLE_TASK_SCOPE_MISMATCH',
+            field: 'taskId',
+            agentRetryableAfterCorrection: true,
+          })
+        }
         const payload = creativeWorkTaskPayloadSchema.parse(task.payload)
         const result = creativeWorkTaskResultSchema.parse(task.result)
         if (
-          payload.request.outputKind !== 'style_bible'
+          !creativeWorkTaskResultMatchesPayload(payload, result)
+          || payload.request.outputKind !== 'style_bible'
           || result.outputKind !== 'style_bible'
           || result.creativeWorkResult.outputKind !== 'style_bible'
           || result.creativeWorkResult.output.kind !== 'style_bible'
@@ -205,7 +215,7 @@ export function createAssistantCreativeStyleOperations(): ProjectAgentOperationR
         const scope = resolveProjectCreativeResourceScope({
           userId: context.userId,
           projectId: context.projectId,
-          episodeId: task.episodeId,
+          episodeId: operationEpisodeId,
         })
         const selectedSourceId = selection.kind === 'final'
           ? `${task.id}:final`

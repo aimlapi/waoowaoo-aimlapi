@@ -202,6 +202,78 @@ function parseFinalOutput(input: {
       actualKind: output.kind,
     })
   }
+  if (output.kind === 'screenplay_draft') {
+    const production = input.request.productionContext.screenplay
+    if (!production) {
+      throw new CreativeWorkerError('CREATIVE_WORK_REQUEST_INVALID', {
+        outputKind: output.kind,
+        reason: 'screenplay production context is required',
+      })
+    }
+    const expectedStyleSource = production.style.source
+    const actualStyleSource = output.source.styleRevision
+    if (
+      actualStyleSource.resourceId !== expectedStyleSource.resourceId
+      || actualStyleSource.revisionId !== expectedStyleSource.revisionId
+      || actualStyleSource.fingerprint !== expectedStyleSource.fingerprint
+      || actualStyleSource.bindingVersion !== expectedStyleSource.bindingVersion
+      || actualStyleSource.schemaId !== expectedStyleSource.schemaId
+    ) {
+      throw new CreativeWorkerError('CREATIVE_WORK_OUTPUT_INVALID', {
+        outputKind: output.kind,
+        reason: 'screenplay style revision does not match the server-frozen adopted Style Bible',
+      })
+    }
+  }
+  if (output.kind === 'asset_prompt_set') {
+    const production = input.request.productionContext.asset
+    if (!production) {
+      throw new CreativeWorkerError('CREATIVE_WORK_REQUEST_INVALID', {
+        outputKind: output.kind,
+        reason: 'asset production context is required',
+      })
+    }
+    const expectedScreenplay = production.screenplay.source
+    const expectedStyle = production.style.source
+    const actualScreenplay = output.source.screenplayRevision
+    const actualStyle = output.source.styleRevision
+    if (
+      actualScreenplay.resourceId !== expectedScreenplay.resourceId
+      || actualScreenplay.revisionId !== expectedScreenplay.revisionId
+      || actualScreenplay.fingerprint !== expectedScreenplay.fingerprint
+      || actualScreenplay.bindingVersion !== expectedScreenplay.bindingVersion
+      || actualScreenplay.schemaId !== expectedScreenplay.schemaId
+      || actualStyle.resourceId !== expectedStyle.resourceId
+      || actualStyle.revisionId !== expectedStyle.revisionId
+      || actualStyle.fingerprint !== expectedStyle.fingerprint
+      || actualStyle.bindingVersion !== expectedStyle.bindingVersion
+      || actualStyle.schemaId !== expectedStyle.schemaId
+    ) {
+      throw new CreativeWorkerError('CREATIVE_WORK_OUTPUT_INVALID', {
+        outputKind: output.kind,
+        reason: 'asset sources do not match the server-frozen confirmed screenplay and adopted Style Bible',
+      })
+    }
+    const registries = production.screenplay.snapshot.canonicalRegistries
+    const expectedEntityKeys = new Set([
+      ...registries.characters.map((entry) => `character:${entry.characterId}`),
+      ...registries.locations.map((entry) => `location:${entry.locationId}`),
+      ...registries.props.map((entry) => `prop:${entry.propId}`),
+    ])
+    const actualEntityKeys = output.assets.map(
+      (asset) => `${asset.canonicalEntity.kind}:${asset.canonicalEntity.entityId}`,
+    )
+    if (
+      actualEntityKeys.length !== expectedEntityKeys.size
+      || new Set(actualEntityKeys).size !== actualEntityKeys.length
+      || actualEntityKeys.some((key) => !expectedEntityKeys.has(key))
+    ) {
+      throw new CreativeWorkerError('CREATIVE_WORK_OUTPUT_INVALID', {
+        outputKind: output.kind,
+        reason: 'asset output must contain every and only canonical character, location, and prop exactly once',
+      })
+    }
+  }
   if (output.kind === 'video_prompt_set') {
     const production = input.request.productionContext.video
     const targetDurationSeconds = input.request.targetDurationSeconds

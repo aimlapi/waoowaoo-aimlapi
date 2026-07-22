@@ -4,23 +4,17 @@ import {
   editScriptStyleBibleSchema,
   editStylePreviewOptionsSchema,
 } from '@/lib/edit-script/types'
+import {
+  canonicalAssetEntityReferenceSchema,
+  exactStyleRevisionSchema,
+  screenplayDraftOutputSchema,
+} from './screenplay-contract'
 import type { CreativeWorkOutputKind } from './types'
 
 const nullableText = (max: number) => z.string().max(max).nullable()
 const textList = (maxItems: number, maxLength: number) => z.array(
   z.string().trim().min(1).max(maxLength),
 ).max(maxItems)
-
-const screenplayDraftOutputSchema = z.object({
-  kind: z.literal('screenplay_draft'),
-  title: z.string().trim().min(1).max(300),
-  logline: nullableText(2_000),
-  synopsis: z.string().max(12_000),
-  screenplay: z.string().min(1).max(100_000),
-  estimatedDurationSeconds: z.number().finite().nonnegative().nullable(),
-  assumptions: textList(64, 2_000),
-  openQuestions: textList(64, 2_000),
-}).strict()
 
 const editBibleBundleOutputSchema = z.object({
   kind: z.literal('edit_bible_bundle'),
@@ -52,24 +46,29 @@ const continuityAnalysisOutputSchema = z.object({
 
 const assetPromptSetOutputSchema = z.object({
   kind: z.literal('asset_prompt_set'),
+  source: z.object({
+    screenplayRevision: z.object({
+      resourceId: z.string().trim().min(1).max(200),
+      revisionId: z.string().trim().min(1).max(200),
+      fingerprint: z.string().trim().min(1).max(500),
+      bindingVersion: z.number().int().nonnegative(),
+      schemaId: z.literal('project.source_script'),
+    }).strict(),
+    styleRevision: exactStyleRevisionSchema,
+  }).strict(),
   overview: z.string().max(8_000),
   assets: z.array(z.object({
-    key: z.string().trim().min(1).max(160),
+    canonicalEntity: canonicalAssetEntityReferenceSchema
+      .describe('Exact character, location, or prop identity copied from the confirmed screenplay canonicalRegistries. It is the only asset identity.'),
     title: z.string().trim().min(1).max(300),
-    semanticKind: z.enum(['character', 'location', 'prop', 'other']),
     stableDescription: z.string().min(1).max(16_000)
       .describe('Stable visible asset identity and structure only; exclude transient action and project visual-style wording.'),
     generationPrompt: z.string().min(1).max(24_000)
       .describe('Creative asset prompt before the deterministic execution policy, assembled from stable asset facts plus any explicitly supplied Style Bible. For character, location, and prop assets, omit layout, aspect ratio, background, and subject-count rules because the fixed asset-image format policy owns them.'),
     negativePrompt: nullableText(8_000),
-    styleSource: z.object({
-      sourceMaterialLabel: z.string().trim().min(1).max(240),
-      fingerprint: z.string().trim().min(1).max(500).nullable(),
-    }).strict().nullable()
-      .describe('Exact supplied style source used by generationPrompt, or null when the asset is intentionally designed without a Style Bible.'),
     referenceRequirements: textList(64, 2_000),
     continuityRequirements: textList(64, 2_000),
-  }).strict()).min(1).max(256),
+  }).strict()).min(1).max(2_048),
   assumptions: textList(64, 2_000),
   warnings: textList(64, 2_000),
 }).strict()

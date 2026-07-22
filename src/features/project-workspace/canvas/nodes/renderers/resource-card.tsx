@@ -62,6 +62,27 @@ function renderStyleBibleOutput({
   )
 }
 
+function renderScreenplayOutput(data: unknown) {
+  if (!isRecord(data) || !isRecord(data.renderedScreenplay)) return null
+  const title = readString(data.renderedScreenplay, 'title')
+  const logline = readString(data.renderedScreenplay, 'logline')
+  const synopsis = readString(data.renderedScreenplay, 'synopsis')
+  const text = readString(data.renderedScreenplay, 'text')
+  if (!title || !logline || !synopsis || !text) return null
+  return (
+    <div className={`${SELECTABLE_TEXT_CLASS} max-h-96 space-y-4 overflow-auto rounded-2xl bg-slate-50 p-4 text-slate-700`}>
+      <div>
+        <h3 className="text-base font-semibold leading-6">{title}</h3>
+        <p className="mt-1 text-xs italic leading-5 text-slate-500">{logline}</p>
+      </div>
+      <p className="whitespace-pre-wrap text-xs leading-5">{synopsis}</p>
+      <pre className="whitespace-pre-wrap break-words border-t border-slate-200 pt-4 font-mono text-xs leading-5">
+        {text}
+      </pre>
+    </div>
+  )
+}
+
 function ResourceOutput({
   resource,
   labels,
@@ -97,6 +118,13 @@ function ResourceOutput({
   ) {
     const styleBible = renderStyleBibleOutput({ data: content.data, labels })
     if (styleBible) return styleBible
+  }
+  if (
+    resource.schemaId === CREATIVE_RESOURCE_SCHEMA.SOURCE_SCRIPT
+    && content.kind === 'structured'
+  ) {
+    const screenplay = renderScreenplayOutput(content.data)
+    if (screenplay) return screenplay
   }
   const text = content.kind === 'text'
     ? content.text

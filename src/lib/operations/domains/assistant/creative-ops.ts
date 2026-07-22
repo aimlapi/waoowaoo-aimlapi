@@ -31,6 +31,13 @@ import type { TaskBatchSubmittedPartData } from '@/lib/project-agent/types'
 import { createTaskBatchKey } from '@/lib/task/batch'
 import { TASK_TYPE } from '@/lib/task/types'
 import { createAssistantCreativeBibleOperations } from './creative-bible-ops'
+import {
+  resolveAssetProductionContext,
+  resolveScreenplayProductionContext,
+  resolveScreenplaySourceMaterials,
+  resolveStyleSourceMaterials,
+} from './creative-production-context'
+import { createAssistantCreativeScreenplayOperations } from './creative-screenplay-ops'
 import { createAssistantCreativeStyleOperations } from './creative-style-ops'
 
 const creativeWorkDelegationOutputSchema = refineTaskBatchSubmitOperationOutputSchema(z.object({
@@ -156,16 +163,58 @@ async function resolveTaskRequests(input: {
   readonly requests: readonly CreativeWorkDelegationItem[]
   readonly projectId: string
   readonly userId: string
+  readonly episodeId: string | null
 }): Promise<CreativeWorkTaskItem[]> {
-  const needsVideoProduction = input.requests.some((request) => request.outputKind === 'video_prompt_set')
-  if (!needsVideoProduction) {
-    return input.requests.map((request) => ({
+  const requests = await Promise.all(input.requests.map(async (request) => {
+    const sourceMaterials = request.outputKind === 'screenplay_draft'
+      ? await resolveScreenplaySourceMaterials({
+          projectId: input.projectId,
+          userId: input.userId,
+          episodeId: input.episodeId,
+          sourceMaterials: request.context.sourceMaterials,
+        })
+      : request.outputKind === 'style_bible'
+        ? await resolveStyleSourceMaterials({
+            projectId: input.projectId,
+            userId: input.userId,
+            episodeId: input.episodeId,
+            sourceMaterials: request.context.sourceMaterials,
+          })
+        : request.context.sourceMaterials
+    return {
       ...request,
-      productionContext: { video: null },
+      context: { ...request.context, sourceMaterials },
+    }
+  }))
+  const needsVideoProduction = requests.some((request) => request.outputKind === 'video_prompt_set')
+  const needsScreenplayProduction = requests.some((request) => request.outputKind === 'screenplay_draft')
+  const needsAssetProduction = requests.some((request) => request.outputKind === 'asset_prompt_set')
+  const screenplayProductionContext = needsScreenplayProduction
+    ? await resolveScreenplayProductionContext({
+        projectId: input.projectId,
+        userId: input.userId,
+        episodeId: input.episodeId,
+      })
+    : null
+  const assetProductionContext = needsAssetProduction
+    ? await resolveAssetProductionContext({
+        projectId: input.projectId,
+        userId: input.userId,
+        episodeId: input.episodeId,
+      })
+    : null
+  if (!needsVideoProduction) {
+    return requests.map((request) => ({
+      ...request,
+      productionContext: {
+        video: null,
+        screenplay: request.outputKind === 'screenplay_draft' ? screenplayProductionContext : null,
+        asset: request.outputKind === 'asset_prompt_set' ? assetProductionContext : null,
+      },
     }))
   }
 
-  const videoRequests = input.requests.filter((request) => request.outputKind === 'video_prompt_set')
+  const videoRequests = requests.filter((request) => request.outputKind === 'video_prompt_set')
   for (const request of videoRequests) {
     const resourceReferences = request.context.sourceMaterials
       .map((source) => source.provenance)
@@ -246,9 +295,16 @@ async function resolveTaskRequests(input: {
     })
   }
 
-  return input.requests.map((request) => {
+  return requests.map((request) => {
     if (request.outputKind !== 'video_prompt_set') {
-      return { ...request, productionContext: { video: null } }
+      return {
+        ...request,
+        productionContext: {
+          video: null,
+          screenplay: request.outputKind === 'screenplay_draft' ? screenplayProductionContext : null,
+          asset: request.outputKind === 'asset_prompt_set' ? assetProductionContext : null,
+        },
+      }
     }
     const targetDurationSeconds = request.targetDurationSeconds
     if (
@@ -268,6 +324,8 @@ async function resolveTaskRequests(input: {
     return {
       ...request,
       productionContext: {
+        screenplay: null,
+        asset: null,
         video: {
           aspectRatio,
           allowedSegmentDurationsSeconds,
@@ -283,6 +341,7 @@ async function resolveTaskRequests(input: {
 export function createAssistantCreativeOperations(): ProjectAgentOperationRegistryDraft {
   return {
     ...createAssistantCreativeBibleOperations(),
+    ...createAssistantCreativeScreenplayOperations(),
     ...createAssistantCreativeStyleOperations(),
     delegate_creative_work: defineOperation({
       id: 'delegate_creative_work',
@@ -308,6 +367,7 @@ export function createAssistantCreativeOperations(): ProjectAgentOperationRegist
           requests: delegatedRequests,
           projectId: context.projectId,
           userId: context.userId,
+          episodeId: context.context.episodeId ?? null,
         })
         const taskEpisodeId = input.delegation.source === 'chapters'
           ? resolveEpisodeId(undefined, context.context.episodeId)

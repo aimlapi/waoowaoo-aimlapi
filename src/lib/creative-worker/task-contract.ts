@@ -5,7 +5,12 @@ import {
 } from '@/lib/creative-skills'
 import { ledgerEntityRefSchema } from '@/lib/edit-ledger'
 import { stableArgsHash } from '@/lib/project-agent/stable-args-hash'
-import { CREATIVE_WORK_OUTPUT_KINDS } from './constants'
+import {
+  CREATIVE_WORK_CHAPTER_OUTPUT_KINDS,
+  CREATIVE_WORK_OUTPUT_KINDS,
+  CREATIVE_WORK_REQUEST_BATCH_OUTPUT_KINDS,
+  CREATIVE_WORK_SINGLE_REQUEST_OUTPUT_KINDS,
+} from './constants'
 import { CREATIVE_WORKER_ERROR_CODES } from './errors'
 import { creativeWorkOutputSchemas, type CreativeWorkOutput } from './output-registry'
 import {
@@ -95,6 +100,16 @@ export const creativeWorkDelegationItemSchema = creativeWorkDelegationRequestSch
     .describe('Caller-owned stable identity for this one logical Subagent request. It must be unique inside a batch and reused only for an explicit retry of the same logical item.'),
 }).strict()
 
+const creativeWorkSingleRequestItemSchema = creativeWorkDelegationItemSchema.extend({
+  outputKind: z.enum(CREATIVE_WORK_SINGLE_REQUEST_OUTPUT_KINDS)
+    .describe('One complete Style, screenplay, or exhaustive asset-design result produced by exactly one Subagent Task.'),
+}).strict()
+
+const creativeWorkBatchableDelegationItemSchema = creativeWorkDelegationItemSchema.extend({
+  outputKind: z.enum(CREATIVE_WORK_REQUEST_BATCH_OUTPUT_KINDS)
+    .describe('A strict output contract that may be submitted with other independent requests in one Task batch.'),
+}).strict()
+
 export const creativeWorkChapterBatchInputSchema = z.object({
   source: z.literal('chapters')
     .describe('Compile the persisted Chapter identities below into independent Creative Worker requests.'),
@@ -104,8 +119,8 @@ export const creativeWorkChapterBatchInputSchema = z.object({
     requestKey: z.string().trim().min(1).max(200)
       .describe('Caller-owned stable identity for this Chapter Subagent request.'),
   }).strict()).min(1).max(64),
-  outputKind: z.enum(CREATIVE_WORK_OUTPUT_KINDS)
-    .describe('Strict structured output contract requested from every Chapter Subagent.'),
+  outputKind: z.enum(CREATIVE_WORK_CHAPTER_OUTPUT_KINDS)
+    .describe('Strict structured output contract requested from every Chapter Subagent. A complete screenplay is one whole-project Subagent and is never split into Chapter requests.'),
   goal: z.string().trim().min(1).max(7_500)
     .describe('Shared professional objective; each Worker also receives its exact compiled Chapter context.'),
   userRequest: z.string().max(30_000)
@@ -124,8 +139,12 @@ export const creativeWorkChapterBatchInputSchema = z.object({
 const creativeWorkRequestBatchInputSchema = z.object({
   source: z.literal('requests')
     .describe('Delegate one or more caller-supplied, self-contained Creative Worker requests.'),
-  requests: z.array(creativeWorkDelegationItemSchema).min(1).max(64)
-    .describe('One request is one Subagent Task. Multiple independent requests run through the existing Task batch and collecting Wait.'),
+  requests: z.union([
+    z.tuple([creativeWorkSingleRequestItemSchema])
+      .describe('Exactly one complete Style, screenplay, or exhaustive asset-design request. It cannot be split, duplicated, or mixed with another request.'),
+    z.array(creativeWorkBatchableDelegationItemSchema).min(1).max(64)
+      .describe('Independent non-screenplay requests run through the existing Task batch and collecting Wait.'),
+  ]),
 }).strict()
 
 const creativeWorkDelegationSourceSchema = z.discriminatedUnion('source', [
@@ -167,7 +186,7 @@ export const creativeWorkTaskLifecycleProjectionSchema = z.object({
   events: z.array(creativeWorkTaskProgressEventSchema).max(64),
 }).strict()
 
-export const CREATIVE_WORK_TASK_PROTOCOL = 'creative_work_v3' as const
+export const CREATIVE_WORK_TASK_PROTOCOL = 'creative_work_v4' as const
 
 export const creativeWorkTaskPayloadSchema = z.object({
   protocol: z.literal(CREATIVE_WORK_TASK_PROTOCOL),
@@ -191,7 +210,29 @@ export const creativeWorkTaskPayloadSchema = z.object({
   runId: z.string().trim().min(1).optional(),
   ui: z.record(z.string(), z.unknown()).optional(),
   meta: z.record(z.string(), z.unknown()).optional(),
-}).strict()
+}).strict().superRefine((payload, context) => {
+  if (payload.lifecycleProjection.requestKey !== payload.requestKey) {
+    context.addIssue({
+      code: 'custom',
+      path: ['lifecycleProjection', 'requestKey'],
+      message: 'CREATIVE_WORK_PAYLOAD_LIFECYCLE_REQUEST_KEY_MISMATCH',
+    })
+  }
+  if (payload.lifecycleProjection.outputKind !== payload.request.outputKind) {
+    context.addIssue({
+      code: 'custom',
+      path: ['lifecycleProjection', 'outputKind'],
+      message: 'CREATIVE_WORK_PAYLOAD_LIFECYCLE_OUTPUT_KIND_MISMATCH',
+    })
+  }
+  if (payload.lifecycleProjection.goal !== payload.request.goal) {
+    context.addIssue({
+      code: 'custom',
+      path: ['lifecycleProjection', 'goal'],
+      message: 'CREATIVE_WORK_PAYLOAD_LIFECYCLE_GOAL_MISMATCH',
+    })
+  }
+})
 
 const creativeWorkContinuationProjectionSchema = z.object({
   requestKey: z.string().trim().min(1).max(200),
@@ -247,6 +288,17 @@ export type CreativeWorkTaskLifecycleProjection = z.infer<typeof creativeWorkTas
 export type CreativeWorkTaskPayload = z.infer<typeof creativeWorkTaskPayloadSchema>
 export type CreativeWorkTaskResult = z.infer<typeof creativeWorkTaskResultSchema>
 
+export function creativeWorkTaskResultMatchesPayload(
+  payload: CreativeWorkTaskPayload,
+  result: CreativeWorkTaskResult,
+): boolean {
+  return result.requestKey === payload.requestKey
+    && result.outputKind === payload.request.outputKind
+    && result.lifecycleProjection.requestKey === payload.lifecycleProjection.requestKey
+    && result.lifecycleProjection.outputKind === payload.lifecycleProjection.outputKind
+    && result.lifecycleProjection.goal === payload.lifecycleProjection.goal
+}
+
 export function buildCreativeWorkInputFingerprint(input: {
   request: CreativeWorkTaskRequest & { readonly requestKey: string }
   modelKey: string
@@ -264,7 +316,7 @@ export function buildCreativeWorkInputFingerprint(input: {
 export function summarizeCreativeWorkOutput(output: CreativeWorkOutput): string {
   switch (output.kind) {
     case 'screenplay_draft':
-      return output.logline || output.synopsis || output.title
+      return output.projectDefinition.logline
     case 'edit_bible_bundle':
       return output.bundle.bible.logline || output.bundle.bible.synopsis
     case 'continuity_analysis':

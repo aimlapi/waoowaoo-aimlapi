@@ -1,5 +1,9 @@
 export {
+  CREATIVE_WORK_CHAPTER_OUTPUT_KINDS,
   CREATIVE_WORK_OUTPUT_KINDS,
+  CREATIVE_WORK_OUTPUT_POLICY,
+  CREATIVE_WORK_REQUEST_BATCH_OUTPUT_KINDS,
+  CREATIVE_WORK_SINGLE_REQUEST_OUTPUT_KINDS,
   CREATIVE_WORKER_HARD_LIMITS,
   DEFAULT_CREATIVE_WORKER_BUDGETS,
 } from './constants'
@@ -14,6 +18,15 @@ export {
   readCreativeWorkOutputDefinition,
 } from './output-registry'
 export { runCreativeWorker } from './runtime'
+export {
+  canonicalAssetEntityReferenceSchema,
+  canonicalRegistriesSchema,
+  buildScreenplayResourceDocument,
+  compileScreenplaySceneInstances,
+  renderScreenplayText,
+  screenplayDraftOutputSchema,
+  screenplayResourceDocumentSchema,
+} from './screenplay-contract'
 export { buildCreativeWorkerSystemPrompt } from './system-prompt'
 export {
   CREATIVE_CONTEXT_COMPILER_ERROR_CODES,
@@ -31,10 +44,13 @@ export {
   creativeWorkTaskEventSchema,
   creativeWorkTaskPayloadSchema,
   creativeWorkTaskResultSchema,
+  creativeWorkTaskResultMatchesPayload,
   creativeWorkerResultSchema,
   summarizeCreativeWorkOutput,
 } from './task-contract'
 export {
+  creativeAssetProductionContextSchema,
+  creativeScreenplayProductionContextSchema,
   creativeWorkRequestSchema,
   defaultCreativeWorkerBudgets,
 } from './types'
@@ -52,6 +68,11 @@ export type {
   CreativeWorkOutput,
   CreativeWorkOutputDefinition,
 } from './output-registry'
+export type {
+  ScreenplayDraftOutput,
+  ScreenplayCompiledSceneInstance,
+  ScreenplayResourceDocument,
+} from './screenplay-contract'
 export type {
   CreativeSkillReadTraceEntry,
   CreativeWorkOutputKind,
