@@ -82,4 +82,30 @@ describe('workspace SSE server session', () => {
     expect(() => session.receiveLiveEvent(lifecycleEvent('11', 20)))
       .toThrow(SseEventIdentityWindowOverflowError)
   })
+
+  it('does not consume durable identity capacity for transient Assistant Run chunks', () => {
+    const emitted: SSEEvent[] = []
+    const session = new WorkspaceSseServerSession((event) => emitted.push(event), 10, 1)
+    const transient = {
+      id: 'assistant-stream:run-1:1',
+      type: 'assistant.run.stream',
+      projectId: 'project-1',
+      userId: 'user-1',
+      ts: '2026-04-24T00:00:01.000Z',
+      episodeId: 'episode-1',
+      assistantId: 'workspace-command',
+      runId: 'run-1',
+      requestId: 'request-1',
+      messageId: 'message-1',
+      sequence: 1,
+      chunk: { type: 'start', messageId: 'message-1' },
+    } as const satisfies SSEEvent
+    const durable = lifecycleEvent('10', 10)
+
+    session.completeBootstrap([])
+    session.receiveLiveEvent(transient)
+    session.receiveLiveEvent(durable)
+
+    expect(emitted).toEqual([transient, durable])
+  })
 })

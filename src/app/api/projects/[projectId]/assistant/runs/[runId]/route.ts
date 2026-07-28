@@ -3,6 +3,7 @@ import { apiHandler } from '@/lib/api-errors'
 import { isErrorResponse, requireProjectAuth } from '@/lib/api-auth'
 import { getPendingProjectAgentApprovalInterruption } from '@/lib/project-agent/interruptions'
 import { getProjectAgentRun } from '@/lib/project-agent/runs'
+import { stopProjectAgentRun } from '@/lib/project-agent/stop-command'
 
 export const runtime = 'nodejs'
 
@@ -59,4 +60,33 @@ export const GET = apiHandler(async (
         }
       : null,
   })
+})
+
+export const DELETE = apiHandler(async (
+  request: NextRequest,
+  context: { params: Promise<{ projectId: string; runId: string }> },
+) => {
+  const { projectId, runId } = await context.params
+  const authResult = await requireProjectAuth(projectId)
+  if (isErrorResponse(authResult)) return authResult
+  const episodeId = request.nextUrl.searchParams.get('episodeId')?.trim() || null
+  const result = await stopProjectAgentRun({
+    scope: {
+      projectId,
+      userId: authResult.session.user.id,
+      episodeId,
+      assistantId: 'workspace-command',
+    },
+    runId,
+  })
+  if (result === 'not_found') {
+    return NextResponse.json({
+      success: false,
+      error: {
+        code: 'PROJECT_AGENT_RUN_NOT_FOUND',
+        message: 'Project agent run not found',
+      },
+    }, { status: 404 })
+  }
+  return NextResponse.json({ success: true, cancelled: result === 'cancelled' })
 })

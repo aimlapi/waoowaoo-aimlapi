@@ -21,6 +21,10 @@ import {
   runProjectAgentWaitContinuationCommand,
   settleProjectAgentWaitContinuationDeliveryExhausted,
 } from '@/lib/project-agent/server-follow-up'
+import {
+  runProjectAgentExecuteCommand,
+  settleProjectAgentCommandDeliveryExhausted,
+} from '@/lib/project-agent/server-command'
 import { publishPersistedProjectAgentSessionChangedById } from '@/lib/project-agent/session-event'
 import { publishPersistedWorkspaceResourceEventByOutboxId } from '@/lib/workspace-resource/resource-change-events'
 import { getOutboxRuntimeConfig, getWorkerConcurrency } from './runtime-config'
@@ -73,6 +77,9 @@ async function deliverOutboxCommand(job: Job<OutboxJobData>): Promise<void> {
         break
       case OUTBOX_COMMAND_KIND.TASK_LIFECYCLE_BROADCAST:
         await publishPersistedTaskEventById(payload.eventId, payload.taskId)
+        break
+      case OUTBOX_COMMAND_KIND.PROJECT_AGENT_EXECUTE_COMMAND:
+        await runProjectAgentExecuteCommand(payload, outboxId)
         break
       case OUTBOX_COMMAND_KIND.PROJECT_AGENT_CONTINUE_WAIT:
         await runProjectAgentWaitContinuationCommand(payload, outboxId)
@@ -130,6 +137,23 @@ async function deliverOutboxCommand(job: Job<OutboxJobData>): Promise<void> {
           error: settlementError instanceof Error
             ? { name: settlementError.name, message: settlementError.message, stack: settlementError.stack }
             : { message: settlementMessage },
+        })
+        throw settlementError
+      }
+    }
+    if (dead && payload?.kind === OUTBOX_COMMAND_KIND.PROJECT_AGENT_EXECUTE_COMMAND) {
+      try {
+        await settleProjectAgentCommandDeliveryExhausted(payload)
+      } catch (settlementError) {
+        const settlementMessage = settlementError instanceof Error
+          ? settlementError.message
+          : String(settlementError)
+        await releaseOutboxCommand({
+          id: outboxId,
+          leaseOwner,
+          error: settlementMessage,
+          retryAt: new Date(Date.now() + Math.min(60_000, 1_000 * 2 ** Math.max(0, currentAttempt - 1))),
+          dead: false,
         })
         throw settlementError
       }

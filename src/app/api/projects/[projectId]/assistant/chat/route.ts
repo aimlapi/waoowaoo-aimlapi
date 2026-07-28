@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { safeValidateUIMessages, type UIMessage } from 'ai'
 import { apiHandler } from '@/lib/api-errors'
 import { isErrorResponse, requireProjectAuth } from '@/lib/api-auth'
-import { executeProjectAgentCommand } from '@/lib/project-agent/command-service'
+import { submitProjectAgentCommand } from '@/lib/project-agent/command-submission'
 import { clearProjectAssistantThread } from '@/lib/project-agent/thread-clear'
 import { getProjectAssistantThreadWatermarkedSnapshot } from '@/lib/project-agent/thread-snapshot'
 import { ensureUniqueUIMessages } from '@/lib/project-agent/ui-message-validation'
@@ -98,7 +98,7 @@ export const POST = apiHandler(async (
     const body = await readProjectAgentCommandHttpBody(request)
     assertChatCommandShape(body)
     const message = await validateUserMessage(body.message)
-    return await executeProjectAgentCommand({
+    return await submitProjectAgentCommand({
       request,
       scope: {
         projectId,

@@ -2,29 +2,30 @@
 
 import { useChat } from '@ai-sdk/react'
 import { AssistantChatTransport, useAISDKRuntime } from '@assistant-ui/react-ai-sdk'
-import type { AssistantRuntime } from '@assistant-ui/react'
 import {
   readUIMessageStream,
-  type ChatStatus,
   type UIMessage,
 } from 'ai'
 import { useLocale } from 'next-intl'
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { useProjectAssistantThread } from '@/lib/query/hooks'
 import type {
-  ProjectAgentSessionPendingInteraction,
   ProjectAgentSessionState,
 } from '@/lib/project-agent/session-state'
 import { ensureUniqueUIMessages } from '@/lib/project-agent/ui-message-validation'
 import {
   buildProjectAssistantTextAttachmentMetadata,
-  type ProjectAssistantTextAttachment,
 } from '@/lib/project-agent/text-attachments'
-import type { WorkspaceAssistantActiveFocusRequest } from '../../workspace-assistant-focus'
 import {
   useWorkspaceAssistantThreadSnapshotSync,
 } from './useWorkspaceAssistantThreadSnapshotSync'
+import { useWorkspaceAssistantRunStream } from './useWorkspaceAssistantRunStream'
 import { useWorkspaceAssistantSessionSync } from './useWorkspaceAssistantSessionSync'
+import type {
+  UseWorkspaceAssistantRuntimeParams,
+  UseWorkspaceAssistantRuntimeResult,
+  WorkspaceAssistantSendMessageInput,
+} from './workspace-assistant-runtime-types'
 import {
   buildWorkspaceAssistantChatId,
   canStopWorkspaceAssistantReply,
@@ -43,7 +44,6 @@ import {
   type WorkspaceAssistantControlIntent,
   type WorkspaceAssistantRunStatus,
 } from './workspace-assistant-runtime-state'
-import type { ProjectAgentSubagentView } from '@/lib/project-agent/subagent-events'
 import { resolveWorkspaceAssistantSubagents } from './workspace-assistant-subagents'
 import {
   buildWorkspaceAssistantControlError,
@@ -68,62 +68,7 @@ interface WorkspaceAssistantReplyActivity {
   requestSettled: boolean
 }
 
-export interface WorkspaceAssistantSendMessageInput {
-  readonly text: string
-  readonly attachments?: readonly ProjectAssistantTextAttachment[]
-}
-
-type WorkspaceAssistantPendingApproval = Extract<ProjectAgentSessionPendingInteraction, { kind: 'approval' }>
-
-interface UseWorkspaceAssistantRuntimeParams {
-  projectId: string
-  episodeId?: string
-  selectedScopeRef?: string | null
-  selectedAssetId?: string | null
-}
-
-interface UseWorkspaceAssistantRuntimeResult {
-  runtime: AssistantRuntime
-  messages: UIMessage[]
-  messageCount: number
-  status: ChatStatus
-  pending: boolean
-  canStopReply: boolean
-  replyInFlight: boolean
-  controlPending: boolean
-  pendingApprovalId: string | null
-  sessionState: ProjectAgentSessionState | null
-  pendingInteraction: ProjectAgentSessionPendingInteraction | null
-  error: Error | undefined
-  sessionStateError: string | null
-  storageError: string | null
-  storageLoading: boolean
-  pendingOperationId: string | null
-  activeFocusRequest: WorkspaceAssistantActiveFocusRequest | null
-  subagents: ProjectAgentSubagentView[]
-  pendingRunApproval: WorkspaceAssistantPendingApproval | null
-  sendMessage: (input: WorkspaceAssistantSendMessageInput) => Promise<void>
-  sendHiddenMessage: (text: string) => Promise<void>
-  stopReply: () => Promise<void>
-  submitChoiceResponse: (params: {
-    runId: string
-    interruptionId: string
-    cardId: string
-    toolCallId: string
-    output: Record<string, unknown>
-    visibleUserText?: string
-  }) => Promise<void>
-  addRunApprovalResponse: (params: {
-    runId: string
-    interruptionId: string
-    approvalId: string
-    operationId: string
-    approved: boolean
-    reason?: string
-  }) => Promise<void>
-  replaceMessages: (messages: UIMessage[]) => void
-  appendMessages: (messages: UIMessage[]) => void
-}
+export type { WorkspaceAssistantSendMessageInput } from './workspace-assistant-runtime-types'
 
 export function useWorkspaceAssistantRuntime({
   projectId,
@@ -315,6 +260,17 @@ export function useWorkspaceAssistantRuntime({
   }, [chat])
 
   refreshSessionStateRef.current = refreshSessionState
+  const {
+    activeRunId: activeStreamRunId,
+    ignoreRun: ignoreRunStream,
+    confirmRunStopped: confirmRunStreamStopped,
+    resumeRun: resumeRunStream,
+  } = useWorkspaceAssistantRunStream({
+    projectId,
+    episodeId,
+    mergeMessage: mergeStreamedAssistantMessage,
+    refreshSessionState,
+  })
 
   useEffect(() => {
     const pendingInterruptionId = sessionState?.pendingInteraction?.interruptionId ?? null
@@ -497,9 +453,42 @@ export function useWorkspaceAssistantRuntime({
 
   const stopReply = useCallback(async (): Promise<void> => {
     setControlError(null)
+    const runId = sessionState?.currentRun?.runId
+      ?? activeControlRun?.runId
+      ?? activeStreamRunId
+      ?? null
+    if (runId) {
+      ignoreRunStream(runId)
+    }
     controlAbortControllerRef.current?.abort()
     await chat.stop()
-  }, [chat])
+    if (!runId) return
+    const search = new URLSearchParams()
+    if (episodeId) search.set('episodeId', episodeId)
+    const response = await fetch(
+      `/api/projects/${projectId}/assistant/runs/${encodeURIComponent(runId)}?${search.toString()}`,
+      { method: 'DELETE' },
+    )
+    if (!response.ok) {
+      resumeRunStream(runId)
+      await refreshSessionState().catch(() => undefined)
+      const errorText = await response.text().catch(() => '')
+      throw new Error(errorText || `PROJECT_AGENT_STOP_REQUEST_FAILED:${String(response.status)}`)
+    }
+    confirmRunStreamStopped(runId)
+    await refreshSessionState().catch(() => undefined)
+  }, [
+    activeControlRun?.runId,
+    activeStreamRunId,
+    chat,
+    confirmRunStreamStopped,
+    episodeId,
+    ignoreRunStream,
+    projectId,
+    refreshSessionState,
+    resumeRunStream,
+    sessionState?.currentRun?.runId,
+  ])
 
   useEffect(() => {
     if (assistantThread.isLoading || !assistantThread.data) return
@@ -536,16 +525,17 @@ export function useWorkspaceAssistantRuntime({
   ])
   const controlPending = Boolean(activeControlRun && isWorkspaceAssistantRunBusyStatus(activeControlRun.status))
   const chatReplyInFlight = chat.status === 'submitted' || chat.status === 'streaming'
-  const canStopReply = canStopWorkspaceAssistantReply({
+  const serverRunActive = sessionState?.currentRun?.status === 'running'
+  const streamRunActive = Boolean(activeStreamRunId)
+  const canStopReply = serverRunActive || streamRunActive || canStopWorkspaceAssistantReply({
     chatStatus: chat.status,
     controlRequestActive,
   })
-  const serverRunActive = sessionState?.currentRun?.status === 'running'
   const replyInFlight = resolveWorkspaceAssistantReplyInFlight({
     requestActive: Boolean(replyActivity && !replyActivity.requestSettled),
     chatTransportActive: chatReplyInFlight,
     controlRunActive: controlPending,
-    serverRunActive,
+    serverRunActive: serverRunActive || streamRunActive,
   })
   const subagents = useMemo(() => resolveWorkspaceAssistantSubagents({ sessionSubagents: sessionState?.subagents ?? [], reasoningStreams: subagentReasoningStreams }), [sessionState?.subagents, subagentReasoningStreams])
 

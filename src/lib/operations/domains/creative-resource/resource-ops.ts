@@ -193,6 +193,7 @@ export function createCreativeResourceOperations(): ProjectAgentOperationRegistr
       id: 'list_resources',
       summary: 'Browse the persistent Resource index: candidates, history, reusable outputs, and unbound assets. Filter by media/schema/status, then call get_resource for one exact full revision. This does not decide which Resource is currently adopted; get_project_context owns that compact working-set projection.',
       intent: 'query',
+      toolExposure: 'direct',
       effects: {
         writes: false,
         billable: false,

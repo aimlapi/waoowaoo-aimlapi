@@ -679,7 +679,9 @@ test('[GJ-ASSISTANT-STOP-REPLY] stopping a streamed reply cancels its Run and pe
     password: 'golden-stop-reply-password',
   })
 
-  await setGoldenStreamPacing({ chunkSize: 8, delayMs: 5 })
+  // The durable Worker drains independently of browser rendering/backpressure.
+  // Keep the model attempt genuinely active long enough to exercise explicit stop.
+  await setGoldenStreamPacing({ chunkSize: 8, delayMs: 10 })
   let scope: GoldenWorkspaceScope | null = null
   try {
     scope = await launchGoldenStoryFromHome(page, GOLDEN_STOP_REPLY_REQUEST)
@@ -702,7 +704,7 @@ test('[GJ-ASSISTANT-STOP-REPLY] stopping a streamed reply cancels its Run and pe
     timeout: 60_000,
     message: 'the stop click must cancel its Run and an immediate new user turn must acquire the released lock',
   }).toEqual([
-    { status: 'cancelled', stopReason: 'stream_cancelled' },
+    { status: 'cancelled', stopReason: 'user_stop' },
     { status: 'completed', stopReason: 'completed' },
   ])
 
@@ -836,8 +838,30 @@ test('[GJ-APPROVAL-REJECTION-CONTINUATION] rejecting a media quote resumes the s
       status: 'settled',
     }),
   ])
+  const commandDeliveries = snapshot.outboxCommands.filter((command) => (
+    command.kind === 'project_agent.execute_command'
+  ))
+  expect(commandDeliveries).toHaveLength(2)
+  expect(commandDeliveries.map((command) => {
+    const payload = command.payload
+    expect(payload && typeof payload === 'object' && !Array.isArray(payload)).toBe(true)
+    const persistedCommand = (payload as Record<string, unknown>).command
+    expect(
+      persistedCommand
+      && typeof persistedCommand === 'object'
+      && !Array.isArray(persistedCommand),
+    ).toBe(true)
+    return (persistedCommand as Record<string, unknown>).kind
+  }).sort()).toEqual([
+    'approval_response',
+    'user_turn',
+  ])
+  expect(commandDeliveries.every((command) => (
+    command.acceptedAt !== null && command.deadAt === null
+  ))).toBe(true)
   expect(snapshot.outboxCommands.filter((command) => (
     command.kind !== 'project_agent.session_broadcast'
+    && command.kind !== 'project_agent.execute_command'
   ))).toHaveLength(0)
   browserObservations.assertClean()
   await testInfo.attach('approval-rejection-oracle', {

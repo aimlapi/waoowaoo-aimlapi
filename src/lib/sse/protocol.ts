@@ -127,6 +127,24 @@ export function isWorkspaceSseEvent(value: unknown): value is SSEEvent {
       && record.id === `agent:${record.agentEventId}`
       && (typeof record.episodeId === 'string' || record.episodeId === null)
   }
+  if (record.type === WORKSPACE_SSE_EVENT_TYPE.ASSISTANT_RUN_STREAM) {
+    return typeof record.assistantId === 'string'
+      && record.assistantId.length > 0
+      && typeof record.runId === 'string'
+      && record.runId.length > 0
+      && typeof record.requestId === 'string'
+      && record.requestId.length > 0
+      && typeof record.messageId === 'string'
+      && record.messageId.length > 0
+      && typeof record.sequence === 'number'
+      && Number.isSafeInteger(record.sequence)
+      && record.sequence > 0
+      && record.id === `assistant-stream:${record.runId}:${String(record.sequence)}`
+      && (typeof record.episodeId === 'string' || record.episodeId === null)
+      && !!record.chunk
+      && typeof record.chunk === 'object'
+      && !Array.isArray(record.chunk)
+  }
   const type = record.type
   return typeof type === 'string'
     && TASK_SSE_EVENT_TYPES.has(type)

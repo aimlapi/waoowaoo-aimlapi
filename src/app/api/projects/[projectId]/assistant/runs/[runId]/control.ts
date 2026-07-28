@@ -1,5 +1,6 @@
 import type { NextRequest } from 'next/server'
-import { executeProjectAgentCommand, type ProjectAgentCommand } from '@/lib/project-agent/command-service'
+import type { ProjectAgentCommand } from '@/lib/project-agent/command-service'
+import { submitProjectAgentCommand } from '@/lib/project-agent/command-submission'
 import { parseProjectAgentControlAction } from '@/lib/project-agent/control'
 import {
   mapProjectAgentCommandError,
@@ -77,7 +78,7 @@ export async function handleProjectAgentRunControlRequest(params: {
   try {
     const body = await readProjectAgentCommandHttpBody(params.request)
     assertNoLegacyMessagesField(body)
-    return await executeProjectAgentCommand({
+    return await submitProjectAgentCommand({
       request: params.request,
       scope: {
         projectId: params.projectId,

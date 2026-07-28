@@ -296,6 +296,14 @@ const commandServiceSource = fs.readFileSync(
   path.join(root, 'src/lib/project-agent/command-service.ts'),
   'utf8',
 )
+const commandSubmissionSource = fs.readFileSync(
+  path.join(root, 'src/lib/project-agent/command-submission.ts'),
+  'utf8',
+)
+const serverCommandSource = fs.readFileSync(
+  path.join(root, 'src/lib/project-agent/server-command.ts'),
+  'utf8',
+)
 for (const [label, source] of [
   ['chat route', chatRouteSource],
   ['run control route', controlRouteSource],
@@ -308,6 +316,7 @@ for (const [label, source] of [
     'consumeProjectAgentApprovalInterruption',
     'consumeProjectAgentChoiceInterruption',
     'settleProjectAgentRunFailureWithMessage',
+    'executeProjectAgentCommand',
     'x-project-agent-run-control',
     'new NextRequest(',
   ]) {
@@ -317,10 +326,10 @@ for (const [label, source] of [
   }
 }
 if (
-  !chatRouteSource.includes('executeProjectAgentCommand({')
-  || !controlRouteSource.includes('executeProjectAgentCommand({')
+  !chatRouteSource.includes('submitProjectAgentCommand({')
+  || !controlRouteSource.includes('submitProjectAgentCommand({')
 ) {
-  violations.push('Assistant HTTP user/control routes must use executeProjectAgentCommand')
+  violations.push('Assistant HTTP user/control routes must use submitProjectAgentCommand')
 }
 if (
   controlRouteSource.includes("from '../../chat/route'")
@@ -337,6 +346,24 @@ for (const required of [
 ]) {
   if (!commandServiceSource.includes(required)) {
     violations.push(`Assistant command service is missing required lifecycle composition ${required}`)
+  }
+}
+for (const required of [
+  'createProjectAgentCommandSubmissionIdentity',
+  'createOutboxCommandInTransaction',
+  'OUTBOX_COMMAND_KIND.PROJECT_AGENT_EXECUTE_COMMAND',
+]) {
+  if (!commandSubmissionSource.includes(required)) {
+    violations.push(`Assistant command submission authority is missing ${required}`)
+  }
+}
+for (const required of [
+  'executeProjectAgentCommand({',
+  'createProjectAgentExecutionSegment',
+  'projectAgentExecutionStartedIdempotencyKey',
+]) {
+  if (!serverCommandSource.includes(required)) {
+    violations.push(`Assistant Outbox command owner is missing ${required}`)
   }
 }
 
@@ -466,11 +493,24 @@ const commandServiceCallers = Object.entries(sourceFiles)
   .map(([filePath]) => filePath)
   .sort()
 const expectedCommandServiceCallers = [
+  'src/lib/project-agent/server-command.ts',
+]
+if (JSON.stringify(commandServiceCallers) !== JSON.stringify(expectedCommandServiceCallers)) {
+  violations.push(`Assistant command service caller must be exactly the Outbox command owner: ${commandServiceCallers.join(', ') || '(none)'}`)
+}
+const commandSubmissionCallers = Object.entries(sourceFiles)
+  .filter(([filePath, source]) => (
+    filePath !== 'src/lib/project-agent/command-submission.ts'
+    && source.includes('submitProjectAgentCommand(')
+  ))
+  .map(([filePath]) => filePath)
+  .sort()
+const expectedCommandSubmissionCallers = [
   'src/app/api/projects/[projectId]/assistant/chat/route.ts',
   'src/app/api/projects/[projectId]/assistant/runs/[runId]/control.ts',
 ]
-if (JSON.stringify(commandServiceCallers) !== JSON.stringify(expectedCommandServiceCallers)) {
-  violations.push(`Assistant command service callers must be exactly the user/control HTTP adapters: ${commandServiceCallers.join(', ') || '(none)'}`)
+if (JSON.stringify(commandSubmissionCallers) !== JSON.stringify(expectedCommandSubmissionCallers)) {
+  violations.push(`Assistant command submission callers must be exactly the user/control HTTP adapters: ${commandSubmissionCallers.join(', ') || '(none)'}`)
 }
 const runtimeCallers = Object.entries(sourceFiles)
   .filter(([filePath, source]) => (

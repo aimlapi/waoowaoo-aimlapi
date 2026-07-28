@@ -1,4 +1,5 @@
 import type { SSEEvent } from '@/lib/task/types'
+import { WORKSPACE_SSE_EVENT_TYPE } from '@/lib/task/types'
 import { getWorkspaceSseEventIdentity } from './protocol'
 
 export const DEFAULT_SSE_BOOTSTRAP_BUFFER_LIMIT = 1000
@@ -46,6 +47,10 @@ export class WorkspaceSseServerSession {
   }
 
   private emitOnce(event: SSEEvent): void {
+    if (event.type === WORKSPACE_SSE_EVENT_TYPE.ASSISTANT_RUN_STREAM) {
+      this.emit(event)
+      return
+    }
     const identity = getWorkspaceSseEventIdentity(event)
     const existingFingerprint = this.emittedIdentities.get(identity.key)
     if (existingFingerprint === identity.fingerprint) return

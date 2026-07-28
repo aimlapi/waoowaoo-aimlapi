@@ -1,8 +1,10 @@
 import { requireWorkspaceResourceRefs } from '@/lib/workspace-resource/resource-impact'
+import type { ProjectAgentCommand } from '@/lib/project-agent/command-service'
 
 export const OUTBOX_COMMAND_KIND = {
   TASK_ENQUEUE: 'task.enqueue',
   TASK_LIFECYCLE_BROADCAST: 'task.lifecycle.broadcast',
+  PROJECT_AGENT_EXECUTE_COMMAND: 'project_agent.execute_command',
   PROJECT_AGENT_CONTINUE_WAIT: 'project_agent.continue_wait',
   PROJECT_AGENT_SESSION_BROADCAST: 'project_agent.session_broadcast',
   WORKSPACE_RESOURCE_BROADCAST: 'workspace_resource.broadcast',
@@ -30,6 +32,19 @@ export type ProjectAgentContinueWaitCommand = {
   expectedEventSeq: string
 }
 
+export type ProjectAgentExecuteCommand = {
+  kind: typeof OUTBOX_COMMAND_KIND.PROJECT_AGENT_EXECUTE_COMMAND
+  requestId: string
+  executionRunId: string
+  projectId: string
+  userId: string
+  episodeId: string | null
+  assistantId: 'workspace-command'
+  context: unknown
+  locale: string | null
+  command: ProjectAgentCommand
+}
+
 export type ProjectAgentSessionBroadcastCommand = {
   kind: typeof OUTBOX_COMMAND_KIND.PROJECT_AGENT_SESSION_BROADCAST
   projectAgentEventId: string
@@ -46,13 +61,14 @@ export type WorkspaceResourceBroadcastCommand = {
 export type OutboxCommandPayload =
   | TaskEnqueueCommand
   | TaskLifecycleBroadcastCommand
+  | ProjectAgentExecuteCommand
   | ProjectAgentContinueWaitCommand
   | ProjectAgentSessionBroadcastCommand
   | WorkspaceResourceBroadcastCommand
 
 export type CreateOutboxCommandInput = {
   idempotencyKey: string
-  aggregateType: 'task' | 'project_agent_wait' | 'project_agent_event' | 'workspace_resource'
+  aggregateType: 'task' | 'project_agent_command' | 'project_agent_wait' | 'project_agent_event' | 'workspace_resource'
   aggregateId: string
   payload: OutboxCommandPayload
   availableAt?: Date
@@ -84,6 +100,65 @@ function readNullableString(record: Record<string, unknown>, key: string): strin
   const value = record[key]
   if (value === null) return null
   return readRequiredString(record, key)
+}
+
+function readProjectAgentCommand(record: Record<string, unknown>): ProjectAgentCommand {
+  const value = readRecord(record.command)
+  const kind = readRequiredString(value, 'kind')
+  if (kind === 'user_turn') {
+    const message = readRecord(value.message)
+    const id = readRequiredString(message, 'id')
+    if (message.role !== 'user' || !Array.isArray(message.parts)) {
+      throw new Error('OUTBOX_COMMAND_PROJECT_AGENT_USER_MESSAGE_INVALID')
+    }
+    return {
+      kind,
+      message: {
+        ...message,
+        id,
+        role: 'user',
+        parts: [...message.parts],
+      },
+    } as ProjectAgentCommand
+  }
+  const action = readRecord(value.action)
+  const runId = readRequiredString(action, 'runId')
+  const interruptionId = readRequiredString(action, 'interruptionId')
+  const visibleUserText = readNullableString(value, 'visibleUserText')
+  if (kind === 'approval_response') {
+    if (action.type !== kind || typeof action.approved !== 'boolean') {
+      throw new Error('OUTBOX_COMMAND_PROJECT_AGENT_APPROVAL_INVALID')
+    }
+    return {
+      kind,
+      action: {
+        type: kind,
+        runId,
+        interruptionId,
+        approved: action.approved,
+        reason: readNullableString(action, 'reason'),
+      },
+      visibleUserText,
+    }
+  }
+  if (kind === 'choice_response') {
+    if (action.type !== kind) {
+      throw new Error('OUTBOX_COMMAND_PROJECT_AGENT_CHOICE_INVALID')
+    }
+    return {
+      kind,
+      action: {
+        type: kind,
+        runId,
+        interruptionId,
+        cardId: readRequiredString(action, 'cardId'),
+        toolCallId: readRequiredString(action, 'toolCallId'),
+        output: readRecord(action.output),
+      },
+      visibleUserText,
+    }
+  }
+  throw new Error(`OUTBOX_COMMAND_PROJECT_AGENT_COMMAND_KIND_UNSUPPORTED:${kind}`)
 }
 
 function readRequiredInteger(record: Record<string, unknown>, key: string): number {
@@ -131,6 +206,24 @@ export function parseOutboxCommandPayload(value: unknown): OutboxCommandPayload 
         eventId: readPositiveInteger(record, 'eventId'),
         taskId: readRequiredString(record, 'taskId'),
       }
+    case OUTBOX_COMMAND_KIND.PROJECT_AGENT_EXECUTE_COMMAND: {
+      const assistantId = readRequiredString(record, 'assistantId')
+      if (assistantId !== 'workspace-command') {
+        throw new Error(`OUTBOX_COMMAND_ASSISTANT_ID_UNSUPPORTED:${assistantId}`)
+      }
+      return {
+        kind,
+        requestId: readRequiredString(record, 'requestId'),
+        executionRunId: readRequiredString(record, 'executionRunId'),
+        projectId: readRequiredString(record, 'projectId'),
+        userId: readRequiredString(record, 'userId'),
+        episodeId: readNullableString(record, 'episodeId'),
+        assistantId,
+        context: record.context,
+        locale: readNullableString(record, 'locale'),
+        command: readProjectAgentCommand(record),
+      }
+    }
     case OUTBOX_COMMAND_KIND.PROJECT_AGENT_CONTINUE_WAIT:
       return {
         kind,

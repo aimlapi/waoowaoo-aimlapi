@@ -156,25 +156,13 @@ interface ProjectAgentAgentsRunContext {
   locale: string
 }
 
-class ProjectAgentClientDisconnectedError extends Error {
-  constructor() {
-    super('PROJECT_AGENT_CLIENT_DISCONNECTED')
-    this.name = 'ProjectAgentClientDisconnectedError'
-  }
-}
-
 function readProjectAgentRunOwnershipLoss(signal: AbortSignal): Error | null {
   const reason = signal.reason
   return isProjectAgentRunOwnershipLostError(reason) ? reason : null
 }
 
-function readProjectAgentClientDisconnect(signal: AbortSignal): ProjectAgentClientDisconnectedError | null {
-  return signal.reason instanceof ProjectAgentClientDisconnectedError ? signal.reason : null
-}
-
 function resolveProjectAgentRunFailureTerminal(params: {
   ownershipLoss: Error | null
-  clientDisconnect: ProjectAgentClientDisconnectedError | null
   stopReason: string
   errorCode: string
   errorMessage: string
@@ -188,12 +176,6 @@ function resolveProjectAgentRunFailureTerminal(params: {
     return {
       status: 'cancelled',
       stopReason: 'run_lock_lost',
-    }
-  }
-  if (params.clientDisconnect) {
-    return {
-      status: 'cancelled',
-      stopReason: 'stream_cancelled',
     }
   }
   return {
@@ -786,6 +768,12 @@ export async function createProjectAgentChatResponse(input: {
   settleTaskFollowUp?: (outcome: ProjectAgentTaskFollowUpSettlement) => Promise<void>
   confirmTaskFollowUpSettlement?: () => Promise<void>
   onTaskFollowUpSettlementFailure?: (error: unknown) => void
+  onUiChunk?: (projection: {
+    runId: string
+    requestId: string
+    messageId: string
+    chunk: ProjectAgentUiChunk
+  }) => void
 }): Promise<Response> {
   const stableRequestId = getRequestId(input.request) ?? crypto.randomUUID()
   const runFence = createProjectAgentRunFence(input.run)
@@ -920,24 +908,13 @@ export async function createProjectAgentChatResponse(input: {
       runAbortController.abort(input.ownershipSignal?.reason)
     }
   }
-  const abortFromRequestSignal = (): void => {
-    if (!runAbortController.signal.aborted) {
-      runAbortController.abort(new ProjectAgentClientDisconnectedError())
-    }
-  }
   if (input.ownershipSignal?.aborted) {
     abortFromOwnershipSignal()
   } else {
     input.ownershipSignal?.addEventListener('abort', abortFromOwnershipSignal, { once: true })
   }
-  if (input.request.signal.aborted) {
-    abortFromRequestSignal()
-  } else {
-    input.request.signal.addEventListener('abort', abortFromRequestSignal, { once: true })
-  }
   const detachAbortSignals = (): void => {
     input.ownershipSignal?.removeEventListener('abort', abortFromOwnershipSignal)
-    input.request.signal.removeEventListener('abort', abortFromRequestSignal)
   }
   let heartbeatController: ReturnType<typeof startProjectAgentRunHeartbeat> | null = null
   const stopHeartbeatOnce = async () => {
@@ -1557,8 +1534,19 @@ export async function createProjectAgentChatResponse(input: {
     let assistantMessagePersisted = false
     let preparedAssistantMessage: UIMessage | null = null
     let latestRunStatusForPersistence: Pick<ProjectAgentRunPartData, 'status' | 'stopReason'> | null = null
+    const assistantMessageId = createPersistedAssistantMessageId({
+      runId: input.run.id,
+      controlKind: executionControlKind,
+      requestId,
+    })
     const persistedAssistantChunks: ProjectAgentUiChunk[] = []
     const recordAssistantChunk = (chunk: ProjectAgentUiChunk): void => {
+      input.onUiChunk?.({
+        runId: input.run.id,
+        requestId,
+        messageId: assistantMessageId,
+        chunk,
+      })
       if ((chunk as { type?: unknown }).type === 'finish') return
       persistedAssistantChunks.push(chunk)
     }
@@ -1582,11 +1570,7 @@ export async function createProjectAgentChatResponse(input: {
       if (preparedAssistantMessage) return preparedAssistantMessage
       recordLatestRunStatusForPersistence()
       preparedAssistantMessage = await buildAssistantMessageFromChunks({
-        messageId: createPersistedAssistantMessageId({
-          runId: input.run.id,
-          controlKind: executionControlKind,
-          requestId,
-        }),
+        messageId: assistantMessageId,
         chunks: persistedAssistantChunks,
       })
       return preparedAssistantMessage
@@ -1912,8 +1896,7 @@ export async function createProjectAgentChatResponse(input: {
       },
       onError: async (error) => {
         const ownershipLoss = readProjectAgentRunOwnershipLoss(runAbortController.signal)
-        const clientDisconnect = readProjectAgentClientDisconnect(runAbortController.signal)
-        const effectiveError = ownershipLoss ?? clientDisconnect ?? error
+        const effectiveError = ownershipLoss ?? error
         const errorMessage = effectiveError instanceof Error ? effectiveError.message : String(effectiveError)
         projectAgentLogger.error({
           action: 'assistant.agents.stream.failed',
@@ -1941,7 +1924,6 @@ export async function createProjectAgentChatResponse(input: {
         }
         const failureTerminal = resolveProjectAgentRunFailureTerminal({
           ownershipLoss,
-          clientDisconnect,
           stopReason: 'stream_error',
           errorCode: 'PROJECT_AGENT_STREAM_FAILED',
           errorMessage,
@@ -1960,9 +1942,9 @@ export async function createProjectAgentChatResponse(input: {
         }
         pendingRunSettlement = {
           status: 'cancelled',
-          stopReason: 'stream_cancelled',
+          stopReason: 'worker_stream_cancelled',
         }
-        recordAssistantChunk(createRuntimeStatusChunk('cancelled', 'stream_cancelled'))
+        recordAssistantChunk(createRuntimeStatusChunk('cancelled', 'worker_stream_cancelled'))
         await persistAssistantMessageOrSettleRun()
         runStatusFinalized = true
       },
@@ -2015,10 +1997,8 @@ export async function createProjectAgentChatResponse(input: {
     try {
       if (!input.settleTaskFollowUp) {
         const ownershipLoss = readProjectAgentRunOwnershipLoss(runAbortController.signal)
-        const clientDisconnect = readProjectAgentClientDisconnect(runAbortController.signal)
         const terminal = resolveProjectAgentRunFailureTerminal({
           ownershipLoss,
-          clientDisconnect,
           stopReason: 'run_failed',
           errorCode: 'PROJECT_AGENT_RUN_FAILED',
           errorMessage: error instanceof Error ? error.message : String(error),

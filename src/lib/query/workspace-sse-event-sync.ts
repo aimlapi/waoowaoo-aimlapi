@@ -37,6 +37,10 @@ export function applyWorkspaceSSEEvent(params: {
 }) {
   const { event, queryClient, projectId } = params
 
+  if (event.type === WORKSPACE_SSE_EVENT_TYPE.ASSISTANT_RUN_STREAM) {
+    return
+  }
+
   if (event.type === WORKSPACE_SSE_EVENT_TYPE.ASSISTANT_SESSION_CHANGED) {
     queryClient.invalidateQueries({
       queryKey: queryKeys.project.assistantThread(projectId, event.episodeId ?? ''),

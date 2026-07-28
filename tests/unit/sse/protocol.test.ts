@@ -67,4 +67,30 @@ describe('workspace SSE protocol parsing', () => {
       events: [unknown],
     })).toThrow('SSE_BOOTSTRAP_EVENTS_INVALID')
   })
+
+  it('accepts transient Assistant Run chunks without advancing a durable cursor', () => {
+    const event = {
+      id: 'assistant-stream:run-1:1',
+      type: 'assistant.run.stream',
+      projectId: 'project-1',
+      userId: 'user-1',
+      ts: '2026-04-24T00:00:01.000Z',
+      episodeId: 'episode-1',
+      assistantId: 'workspace-command',
+      runId: 'run-1',
+      requestId: 'request-1',
+      messageId: 'message-1',
+      sequence: 1,
+      chunk: {
+        type: 'start',
+        messageId: 'message-1',
+      },
+    } as const
+
+    expect(isWorkspaceSseEvent(event)).toBe(true)
+    expect(parseWorkspaceSseEventMessage(JSON.stringify(event))).toEqual(event)
+    expect(advanceWorkspaceSseCursor(EMPTY_WORKSPACE_SSE_CURSOR, event)).toEqual(
+      EMPTY_WORKSPACE_SSE_CURSOR,
+    )
+  })
 })

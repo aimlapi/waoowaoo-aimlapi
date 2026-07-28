@@ -1,4 +1,5 @@
 import type { Locale } from '@/i18n/routing'
+import type { UIMessageChunk } from 'ai'
 
 export const TASK_STATUS = {
   QUEUED: 'queued',
@@ -30,6 +31,7 @@ export const TASK_SSE_EVENT_TYPE = {
 export const WORKSPACE_SSE_EVENT_TYPE = {
   RESOURCE_CHANGED: 'resource.changed',
   ASSISTANT_SESSION_CHANGED: 'assistant.session.changed',
+  ASSISTANT_RUN_STREAM: 'assistant.run.stream',
 } as const
 
 export type TaskSSEEventType = (typeof TASK_SSE_EVENT_TYPE)[keyof typeof TASK_SSE_EVENT_TYPE]
@@ -190,10 +192,26 @@ export type AssistantSessionChangedSSEEvent = {
   agentEventId: string
 }
 
+export type AssistantRunStreamSSEEvent = {
+  id: string
+  type: typeof WORKSPACE_SSE_EVENT_TYPE.ASSISTANT_RUN_STREAM
+  projectId: string
+  userId: string
+  ts: string
+  episodeId: string | null
+  assistantId: string
+  runId: string
+  requestId: string
+  messageId: string
+  sequence: number
+  chunk: UIMessageChunk
+}
+
 export type SSEEvent =
   | TaskSSEEvent
   | ResourceChangedSSEEvent
   | AssistantSessionChangedSSEEvent
+  | AssistantRunStreamSSEEvent
 
 export type CreateTaskInput = {
   userId: string

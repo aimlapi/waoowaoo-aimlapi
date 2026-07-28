@@ -143,7 +143,10 @@ export const GET = apiHandler(async (request: NextRequest) => {
             if (payload.projectId !== projectId) {
               throw new Error(`SSE_MESSAGE_PROJECT_MISMATCH:${payload.projectId}:${projectId}`)
             }
-            if (payload.type === WORKSPACE_SSE_EVENT_TYPE.ASSISTANT_SESSION_CHANGED) {
+            if (
+              payload.type === WORKSPACE_SSE_EVENT_TYPE.ASSISTANT_SESSION_CHANGED
+              || payload.type === WORKSPACE_SSE_EVENT_TYPE.ASSISTANT_RUN_STREAM
+            ) {
               if (payload.userId !== session.user.id) return
               if (payload.assistantId !== 'workspace-command') return
               if ((payload.episodeId ?? null) !== (episodeId ?? null)) return

@@ -80,6 +80,7 @@ describe('project agent toolset conformance', () => {
     expect(toolset.directOperationIds).toEqual([
       'get_project_context',
       'get_resource',
+      'list_resources',
       'request_choice',
       'update_plan',
     ])

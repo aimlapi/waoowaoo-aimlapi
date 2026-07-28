@@ -140,6 +140,10 @@ export class WorkspaceSSEEventSequence {
 
   process(value: unknown, apply: (event: SSEEvent) => void): WorkspaceSSEEventDecision {
     if (!isWorkspaceSseEvent(value)) return 'invalid'
+    if (value.type === WORKSPACE_SSE_EVENT_TYPE.ASSISTANT_RUN_STREAM) {
+      apply(value)
+      return 'accepted'
+    }
     const identity = getWorkspaceSseEventIdentity(value)
     const existingFingerprint = this.processedEventFingerprints.get(identity.key)
     if (existingFingerprint === identity.fingerprint) return 'duplicate'

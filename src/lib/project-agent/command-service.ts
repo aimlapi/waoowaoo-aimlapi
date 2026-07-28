@@ -4,6 +4,7 @@ import type { NextRequest } from 'next/server'
 import { getRequestId } from '@/lib/api-errors'
 import { createProjectAgentChatResponse } from './runtime'
 import type { ProjectAgentResolvedControl } from './runtime'
+import type { ProjectAgentRunStreamProjection } from './run-stream-event'
 import { loadProjectAssistantThread } from './persistence'
 import { ensureUniqueUIMessages } from './ui-message-validation'
 import {
@@ -65,6 +66,8 @@ export interface ExecuteProjectAgentCommandInput {
   context: unknown
   locale: string | null
   command: ProjectAgentCommand
+  executionRunId?: string
+  onUiChunk?: (projection: ProjectAgentRunStreamProjection) => void
 }
 
 interface ResolvedProjectAgentControlCommand {
@@ -90,33 +93,6 @@ function readVisibleUserText(command: ProjectAgentCommand): string | null {
     case 'choice_response':
       return command.visibleUserText
   }
-}
-
-function isWorkspaceAssistantHiddenMessage(message: UIMessage): boolean {
-  const metadata = message.metadata
-  if (!metadata || typeof metadata !== 'object' || Array.isArray(metadata)) return false
-  const custom = (metadata as Record<string, unknown>).custom
-  if (!custom || typeof custom !== 'object' || Array.isArray(custom)) return false
-  return (custom as Record<string, unknown>).workspaceAssistantHidden === true
-}
-
-function readLatestVisibleUserText(messages: readonly UIMessage[]): string {
-  for (let index = messages.length - 1; index >= 0; index -= 1) {
-    const message = messages[index]
-    if (!message || message.role !== 'user') continue
-    if (isWorkspaceAssistantHiddenMessage(message)) continue
-    const text = message.parts
-      .flatMap((part) => {
-        const record = part as { type?: unknown; text?: unknown }
-        return record.type === 'text' && typeof record.text === 'string' && record.text.trim()
-          ? [record.text]
-          : []
-      })
-      .join('\n')
-      .trim()
-    if (text) return text
-  }
-  return ''
 }
 
 function buildControlVisibleUserMessage(params: {
@@ -251,9 +227,10 @@ async function resolveProjectAgentControl(params: {
 }
 
 /**
- * The unique HTTP command orchestration entry for the workspace Assistant.
- * Routes adapt transport only; lifecycle facts remain owned by Run,
- * interruption, runtime, Operation, Billing and Task Terminal authorities.
+ * The unique persisted-command execution entry for the workspace Assistant.
+ * The Outbox worker is its only production caller; HTTP routes only persist
+ * commands. Lifecycle facts remain owned by Run, interruption, runtime,
+ * Operation, Billing and Task Terminal authorities.
  */
 export async function executeProjectAgentCommand(
   input: ExecuteProjectAgentCommandInput,
@@ -261,6 +238,7 @@ export async function executeProjectAgentCommand(
   const { request, scope, command } = input
   const controlAction = readControlAction(command)
   const requestId = getRequestId(request) ?? crypto.randomUUID()
+  const executionRunId = input.executionRunId?.trim() || crypto.randomUUID()
 
   await ensureProjectAgentRunSlotAvailable(scope)
   const existingControlRun = controlAction
@@ -268,8 +246,8 @@ export async function executeProjectAgentCommand(
     : null
   const runId = existingControlRun
     && (existingControlRun.status === 'failed' || existingControlRun.status === 'cancelled')
-    ? crypto.randomUUID()
-    : controlAction?.runId ?? crypto.randomUUID()
+    ? executionRunId
+    : controlAction?.runId ?? executionRunId
   const runLock = await acquireProjectAgentRunLock({
     ...scope,
     runId,
@@ -362,6 +340,7 @@ export async function executeProjectAgentCommand(
       run,
       control,
       runLock,
+      onUiChunk: input.onUiChunk,
     })
   } catch (error) {
     if (run && controlTransitioned) {

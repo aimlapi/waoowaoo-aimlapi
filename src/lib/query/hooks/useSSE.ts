@@ -128,6 +128,7 @@ export function useSSE({ projectId, episodeId, enabled = true, onEvent }: UseSSE
       TASK_SSE_EVENT_TYPE.STREAM,
       WORKSPACE_SSE_EVENT_TYPE.RESOURCE_CHANGED,
       WORKSPACE_SSE_EVENT_TYPE.ASSISTANT_SESSION_CHANGED,
+      WORKSPACE_SSE_EVENT_TYPE.ASSISTANT_RUN_STREAM,
     ] as const
     const listeners: Array<{ type: string; handler: EventListener }> = []
     for (const type of namedEvents) {
