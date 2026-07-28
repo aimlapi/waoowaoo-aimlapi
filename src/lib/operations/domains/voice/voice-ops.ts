@@ -2,6 +2,7 @@ import { z } from 'zod'
 import { ApiError } from '@/lib/api-errors'
 import { VOICE_DESIGN_LANGUAGE_OPTIONS } from '@/lib/ai-registry/voice-design-contract'
 import {
+  CREATIVE_RESOURCE_ASSET_IMAGE_BINDING_ROLE,
   CREATIVE_RESOURCE_CHARACTER_VOICE_BINDING_ROLE,
 } from '@/lib/creative-resource/contracts'
 import {
@@ -30,6 +31,10 @@ import type {
 import { prisma } from '@/lib/prisma'
 import { stableArgsHash } from '@/lib/project-agent/stable-args-hash'
 import { TASK_STATUS, TASK_TYPE } from '@/lib/task/types'
+import {
+  getProviderConfig,
+  resolveModelSelection,
+} from '@/lib/user-api/runtime-config'
 import {
   bindCharacterVoiceInTransaction,
   type CharacterVoiceSelection,
@@ -124,12 +129,41 @@ async function requireCharacterAndBindingVersion(
       projectId: ctx.projectId,
       project: { userId: ctx.userId },
     },
-    select: { id: true },
+    select: {
+      id: true,
+      appearances: { select: { id: true } },
+    },
   })
   if (!character) {
     throw new ApiError('NOT_FOUND', {
       code: 'VOICE_CHARACTER_NOT_FOUND',
       field: 'target.characterId',
+    })
+  }
+  const appearanceIds = character.appearances.map((appearance) => appearance.id)
+  const imageBinding = appearanceIds.length > 0
+    ? await prisma.creativeResourceBinding.findFirst({
+        where: {
+          userId: ctx.userId,
+          projectId: ctx.projectId,
+          scopeKind: 'project',
+          scopeId: ctx.projectId,
+          role: CREATIVE_RESOURCE_ASSET_IMAGE_BINDING_ROLE,
+          slotKey: { in: appearanceIds },
+          resource: {
+            status: 'ready',
+            mediaType: 'image',
+          },
+        },
+        select: { id: true },
+      })
+    : null
+  if (!imageBinding) {
+    throw new ApiError('INVALID_PARAMS', {
+      code: 'VOICE_CHARACTER_IMAGE_REQUIRED',
+      field: 'target.characterId',
+      characterId: target.characterId,
+      agentRetryableAfterCorrection: true,
     })
   }
   const binding = await prisma.creativeResourceBinding.findFirst({
@@ -155,6 +189,18 @@ async function planGenerateVoice(
     projectId: ctx.projectId,
     purpose: 'voice-design',
   })
+  try {
+    const selection = await resolveModelSelection(ctx.userId, voiceModel, 'voice')
+    await getProviderConfig(ctx.userId, selection.provider)
+  } catch (error) {
+    throw new ApiError('INVALID_PARAMS', {
+      code: 'VOICE_MODEL_NOT_CONFIGURED',
+      field: 'voice-design',
+      modelKey: voiceModel,
+      cause: error instanceof Error ? error.message : String(error),
+      agentRetryableAfterCorrection: false,
+    })
+  }
   const expectedBindingVersion = await requireCharacterAndBindingVersion(ctx, input.target)
   const existing = input.resourceId
     ? await prisma.creativeResource.findFirst({

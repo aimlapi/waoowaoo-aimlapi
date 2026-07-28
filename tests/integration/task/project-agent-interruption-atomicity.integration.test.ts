@@ -48,6 +48,7 @@ function styleTaskPayload(runId: string, toolCallId: string) {
   return {
     protocol: CREATIVE_WORK_TASK_PROTOCOL,
     requestKey: `${TEST_PREFIX}style-request`,
+    locale: 'zh',
     request: {
       outputKind: 'creative_direction',
       goal: 'Create a visual direction.',
@@ -182,6 +183,7 @@ async function seedGenericStyleChoice(params: { validCommitment: boolean }) {
       label: '视觉方向',
       required: true,
       presentation: 'options' as const,
+      allowCustomText: undefined,
       options: [{ value: revision.id, label: '克制写实' }],
     }],
     submitLabel: '采用这个方向',

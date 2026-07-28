@@ -416,10 +416,18 @@ test('[GJ-FREEFORM-RESOURCE-CREATION] natural language creates, retries, reuses,
   })
   expect(afterChapterPlan.resourceLineage.filter((lineage) => (
     lineage.outputRevisionId === chapterPlanRevision?.id
-  ))).toEqual([expect.objectContaining({
-    inputRevisionId: screenplayRevision?.id,
-    role: 'source_material',
-  })])
+  ))).toEqual([
+    expect.objectContaining({
+      inputRevisionId: screenplayRevision?.id,
+      position: 0,
+      role: 'source_material',
+    }),
+    expect.objectContaining({
+      inputRevisionId: styleRevision?.id,
+      position: 1,
+      role: 'creative_direction',
+    }),
+  ])
   expect(afterChapterPlan.domain.chapters).toHaveLength(0)
 
   await sendNaturalLanguage(page, GOLDEN_FREEFORM_ADOPT_CHAPTERS_REQUEST)

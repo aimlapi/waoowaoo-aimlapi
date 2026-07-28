@@ -2,7 +2,7 @@ import { randomUUID } from 'node:crypto'
 import { z } from 'zod'
 import { ApiError } from '@/lib/api-errors'
 import {
-  applyAssetImageFormatPolicy,
+  compileAssetImagePrompt,
   getAssetImageFormatPolicy,
   resolveAssetImageKindForSchemaId,
 } from '@/lib/asset-generation'
@@ -18,6 +18,11 @@ import type {
   CreativeResourceInputRef,
   CreativeResourceMediaType,
 } from '@/lib/creative-resource/contracts'
+import {
+  CREATIVE_RESOURCE_ASSET_IMAGE_BINDING_ROLE,
+  CREATIVE_RESOURCE_CANONICAL_BINDINGS,
+} from '@/lib/creative-resource/contracts'
+import { creativeDirectionSchema } from '@/lib/creative-direction/contracts'
 import {
   CREATIVE_VIDEO_SEGMENT_DURATION_CEILING_SECONDS,
   creativeResourceInputRefSchema,
@@ -169,8 +174,6 @@ const createAssetImageRequestSchema = z.object({
   kind: z.literal('asset'),
   name: z.string().trim().min(1).max(200).optional()
     .describe('Optional display name for the generated asset image Resource.'),
-  prompt: z.string().trim().min(1)
-    .describe('Complete visual design instruction for this exact Project asset.'),
   contextReferences: contextReferenceSchema,
   imageReferences: imageReferenceSchema,
   assetBinding: z.object({
@@ -229,8 +232,6 @@ const createVideoNewRequestSchema = z.object({
     .describe('Optional resolution supported by the configured video generation capability, such as 720p or 1080p.'),
   fps: z.number().int().min(1).max(240).optional()
     .describe('Optional frame rate supported by the configured video generation capability.'),
-  generateAudio: z.boolean().optional()
-    .describe('Whether the configured video generation capability should generate synchronized native audio.'),
 }).strict()
 
 const createVideoInputSchema = z.object({
@@ -252,6 +253,122 @@ type RetryMediaGenerationRequest = z.infer<typeof retryMediaGenerationRequestSch
 type MediaGenerationInput = CreateImageInput | CreateAudioInput | CreateVideoInput
 type CreateImageGenerationRequest = CreateImageNewRequest | CreateAssetImageRequest
 type NewMediaGenerationRequest = CreateImageGenerationRequest | CreateAudioNewRequest | CreateVideoNewRequest
+
+async function resolveAssetImagePromptSource(input: {
+  readonly ctx: ProjectAgentOperationContext
+  readonly request: CreateAssetImageRequest
+}): Promise<{
+  readonly prompt: string
+  readonly canonicalReferences: z.infer<typeof creativeResourceInputRefSchema>[]
+}> {
+  const target = input.request.assetBinding.assetKind === 'character'
+    ? await prisma.characterAppearance.findFirst({
+        where: {
+          id: input.request.assetBinding.variantId,
+          characterId: input.request.assetBinding.assetId,
+          character: {
+            projectId: input.ctx.projectId,
+            project: { userId: input.ctx.userId },
+          },
+        },
+        select: { description: true },
+      })
+    : await prisma.locationImage.findFirst({
+        where: {
+          id: input.request.assetBinding.variantId,
+          locationId: input.request.assetBinding.assetId,
+          location: {
+            projectId: input.ctx.projectId,
+            assetKind: input.request.assetBinding.assetKind,
+            project: { userId: input.ctx.userId },
+          },
+        },
+        select: { description: true },
+      })
+  if (!target) {
+    throw new ApiError('NOT_FOUND', {
+      code: 'ASSET_IMAGE_BINDING_TARGET_NOT_FOUND',
+      field: 'assetBinding.variantId',
+    })
+  }
+  const stableDescription = target.description?.trim()
+  if (!stableDescription) {
+    throw new ApiError('INVALID_PARAMS', {
+      code: 'ASSET_STABLE_DESCRIPTION_REQUIRED',
+      field: 'assetBinding.variantId',
+      agentRetryableAfterCorrection: false,
+    })
+  }
+  const [directionBinding, manifestBinding] = await Promise.all([
+    prisma.creativeResourceBinding.findFirst({
+      where: {
+        userId: input.ctx.userId,
+        projectId: input.ctx.projectId,
+        scopeKind: 'project',
+        scopeId: input.ctx.projectId,
+        ...CREATIVE_RESOURCE_CANONICAL_BINDINGS.adoptedCreativeDirection,
+      },
+      select: {
+        revisionId: true,
+        revision: {
+          select: {
+            contentJson: true,
+            resource: { select: { schemaId: true, status: true } },
+          },
+        },
+      },
+    }),
+    prisma.creativeResourceBinding.findFirst({
+      where: {
+        userId: input.ctx.userId,
+        projectId: input.ctx.projectId,
+        scopeKind: 'project',
+        scopeId: input.ctx.projectId,
+        ...CREATIVE_RESOURCE_CANONICAL_BINDINGS.adoptedAssetManifest,
+      },
+      select: { revisionId: true },
+    }),
+  ])
+  if (
+    !directionBinding
+    || directionBinding.revision.resource.schemaId !== CREATIVE_RESOURCE_SCHEMA.CREATIVE_DIRECTION
+    || directionBinding.revision.resource.status !== 'ready'
+  ) {
+    throw new ApiError('INVALID_PARAMS', {
+      code: 'ASSET_CREATIVE_DIRECTION_REQUIRED',
+      field: 'assetBinding',
+      agentRetryableAfterCorrection: true,
+    })
+  }
+  const direction = creativeDirectionSchema.safeParse(directionBinding.revision.contentJson)
+  if (!direction.success) {
+    throw new ApiError('INVALID_PARAMS', {
+      code: 'ASSET_CREATIVE_DIRECTION_CONTRACT_INVALID',
+      field: 'assetBinding',
+      revisionId: directionBinding.revisionId,
+      agentRetryableAfterCorrection: true,
+    })
+  }
+  if (!manifestBinding) {
+    throw new ApiError('INVALID_PARAMS', {
+      code: 'ASSET_MANIFEST_ADOPTION_REQUIRED',
+      field: 'assetBinding',
+      agentRetryableAfterCorrection: true,
+    })
+  }
+  return {
+    prompt: compileAssetImagePrompt({
+      kind: input.request.assetBinding.assetKind,
+      stableDescription,
+      creativeDirection: direction.data,
+      locale: resolveOperationLocale(input.ctx.context),
+    }),
+    canonicalReferences: [
+      { revisionId: directionBinding.revisionId, role: 'creative_direction' },
+      { revisionId: manifestBinding.revisionId, role: 'asset_manifest' },
+    ],
+  }
+}
 
 const resourceRefOutputSchema = z.object({
   resourceId: z.string().min(1),
@@ -445,6 +562,46 @@ async function classifyProviderInputReferences(
     imageInputPositions: imageInputs.map((reference) => reference.position),
     audioInputPositions: audioInputs.map((reference) => reference.position),
     videoInputPositions: videoInputs.map((reference) => reference.position),
+  }
+}
+
+async function assertProjectAssetImageReferences(input: {
+  readonly ctx: ProjectAgentOperationContext
+  readonly schemaId: string
+  readonly imageInputs: readonly CreativeResourceInputRef[]
+}): Promise<void> {
+  const policy = requireCreativeResourceSchema(input.schemaId).generationPolicy
+  if (policy?.projectAssetImageReference !== 'required') return
+  if (input.imageInputs.length === 0) {
+    throw new ApiError('INVALID_PARAMS', {
+      code: 'VIDEO_PROJECT_ASSET_IMAGE_REQUIRED',
+      field: 'mediaReferences',
+      schemaId: input.schemaId,
+      agentRetryableAfterCorrection: true,
+    })
+  }
+  const revisionIds = input.imageInputs.map((reference) => reference.revisionId)
+  const bound = await prisma.creativeResourceBinding.findMany({
+    where: {
+      userId: input.ctx.userId,
+      projectId: input.ctx.projectId,
+      scopeKind: 'project',
+      scopeId: input.ctx.projectId,
+      role: CREATIVE_RESOURCE_ASSET_IMAGE_BINDING_ROLE,
+      revisionId: { in: revisionIds },
+    },
+    select: { revisionId: true },
+  })
+  const boundRevisionIds = new Set(bound.map((binding) => binding.revisionId))
+  const unboundRevisionId = revisionIds.find((revisionId) => !boundRevisionIds.has(revisionId))
+  if (unboundRevisionId) {
+    throw new ApiError('INVALID_PARAMS', {
+      code: 'VIDEO_PROJECT_ASSET_IMAGE_BINDING_REQUIRED',
+      field: 'mediaReferences',
+      revisionId: unboundRevisionId,
+      schemaId: input.schemaId,
+      agentRetryableAfterCorrection: true,
+    })
   }
 }
 
@@ -697,11 +854,12 @@ async function resolveFrozenGenerationOptions(input: {
     }
   } else if (input.config.mediaType === 'video') {
     const publicInput = input.publicInput as CreateVideoNewRequest
+    const schemaPolicy = requireCreativeResourceSchema(input.schemaId).generationPolicy
     const selections = {
       duration: publicInput.durationSeconds,
       resolution: publicInput.resolution,
       fps: publicInput.fps,
-      generateAudio: publicInput.generateAudio,
+      generateAudio: schemaPolicy?.nativeAudio === 'required' ? true : undefined,
     } as const
     for (const [field, value] of Object.entries(selections)) {
       requireCapabilityField({
@@ -826,44 +984,25 @@ async function planNewMediaGeneration(
     : requireSchemaForMedia(input.schemaId ?? config.schemaId, config.mediaType)
   const requestedAssetBinding = assetImageRequest?.assetBinding
   const episodeId = input.kind === 'asset' ? null : resolveEpisodeId(input, ctx)
-  const assetImageKind = config.mediaType === 'image'
-    ? resolveAssetImageKindForSchemaId(schemaId)
+  const assetPromptSource = assetImageRequest
+    ? await resolveAssetImagePromptSource({ ctx, request: assetImageRequest })
     : null
-  if (requestedAssetBinding) {
-    const targetExists = requestedAssetBinding.assetKind === 'character'
-      ? await prisma.characterAppearance.count({
-          where: {
-            id: requestedAssetBinding.variantId,
-            characterId: requestedAssetBinding.assetId,
-            character: { projectId: ctx.projectId, project: { userId: ctx.userId } },
-          },
-        })
-      : await prisma.locationImage.count({
-          where: {
-            id: requestedAssetBinding.variantId,
-            locationId: requestedAssetBinding.assetId,
-            location: {
-              projectId: ctx.projectId,
-              assetKind: requestedAssetBinding.assetKind,
-              project: { userId: ctx.userId },
-            },
-          },
-        })
-    if (targetExists !== 1) {
-      throw new ApiError('NOT_FOUND', {
-        code: 'ASSET_IMAGE_BINDING_TARGET_NOT_FOUND',
-        field: 'assetBinding.variantId',
-      })
-    }
-  }
-  const prompt = assetImageKind
-    ? applyAssetImageFormatPolicy({
-        prompt: input.prompt,
-        kind: assetImageKind,
-        locale: resolveOperationLocale(ctx.context),
-      })
-    : input.prompt
-  const effectiveInput = prompt === input.prompt ? input : { ...input, prompt }
+  const prompt = assetPromptSource
+    ? assetPromptSource.prompt
+    : input.kind === 'new'
+      ? input.prompt
+      : (() => {
+          throw new Error('CREATIVE_RESOURCE_NEW_MEDIA_PROMPT_UNAVAILABLE')
+        })()
+  const effectiveInput = assetPromptSource
+    ? {
+        ...input,
+        contextReferences: [
+          ...assetPromptSource.canonicalReferences,
+          ...(input.contextReferences ?? []),
+        ],
+      }
+    : input
   const normalizedReferences = normalizeMediaInputReferences(effectiveInput)
   const references = normalizedReferences.inputs
   await assertInputReferences(
@@ -876,6 +1015,11 @@ async function planNewMediaGeneration(
     normalizedReferences.providerInputs,
     config.mediaType,
   )
+  await assertProjectAssetImageReferences({
+    ctx,
+    schemaId,
+    imageInputs: providerReferences.imageInputs,
+  })
   const modelKey = await resolveGenerationModel({
     ctx,
     purpose: config.modelPurpose,
@@ -960,6 +1104,16 @@ async function planNewMediaGeneration(
     modelKey,
     publicInput: effectiveInput,
   })
+  const generationPolicy = requireCreativeResourceSchema(schemaId).generationPolicy
+  if (generationPolicy?.nativeAudio === 'required' && generationOptions.generateAudio !== true) {
+    throw new ApiError('INVALID_PARAMS', {
+      code: 'VIDEO_NATIVE_AUDIO_REQUIRED',
+      field: 'schemaId',
+      modelKey,
+      schemaId,
+      agentRetryableAfterCorrection: false,
+    })
+  }
   const inputHash = hashTaskInput({
     operationId: config.operationId,
     prompt,
@@ -1165,6 +1319,23 @@ async function planMediaGenerationRetry(
       }
     }
     if (config.mediaType === 'video') {
+      await assertProjectAssetImageReferences({
+        ctx,
+        schemaId,
+        imageInputs,
+      })
+      if (
+        requireCreativeResourceSchema(schemaId).generationPolicy?.nativeAudio === 'required'
+        && candidate.payload.resource.generationOptions.generateAudio !== true
+      ) {
+        throw new ApiError('INVALID_PARAMS', {
+          code: 'VIDEO_NATIVE_AUDIO_REQUIRED',
+          field: 'request.resourceIds',
+          modelKey: candidate.payload.resource.modelKey,
+          resourceId: candidate.resourceId,
+          agentRetryableAfterCorrection: false,
+        })
+      }
       if (audioInputs.length > 0 && imageInputs.length === 0) {
         throw new ApiError('INVALID_PARAMS', {
           code: 'VIDEO_MODEL_REFERENCE_AUDIO_REQUIRES_IMAGE',

@@ -23,7 +23,11 @@ import {
   PROJECT_AGENT_TOOL_CATALOG_DESCRIPTION_LIMIT,
   createProjectAgentToolCatalog,
 } from '@/lib/project-agent/tool-discovery'
-import { CREATIVE_RESOURCE_SCHEMA_IDS_BY_MEDIA } from '@/lib/creative-resource/schema-registry'
+import {
+  CREATIVE_RESOURCE_SCHEMA,
+  CREATIVE_RESOURCE_SCHEMA_IDS_BY_MEDIA,
+  requireCreativeResourceSchema,
+} from '@/lib/creative-resource/schema-registry'
 import { resolveAssetImageKindForSchemaId } from '@/lib/asset-generation'
 import { ASPECT_RATIO_CONFIGS } from '@/lib/constants'
 
@@ -306,6 +310,11 @@ describe('project agent toolset conformance', () => {
     expect(Object.keys(videoNewProperties)).toContain('mediaReferences')
     expect(Object.keys(videoNewProperties)).not.toContain('imageReferences')
     expect(Object.keys(videoNewProperties)).not.toContain('voiceReferenceKeys')
+    expect(Object.keys(videoNewProperties)).not.toContain('generateAudio')
+    expect(requireCreativeResourceSchema(CREATIVE_RESOURCE_SCHEMA.VIDEO_SEGMENT).generationPolicy).toEqual({
+      projectAssetImageReference: 'required',
+      nativeAudio: 'required',
+    })
 
     expect(registry.create_text.inputSchema.safeParse({
       prompt: 'Write one line.',
@@ -342,7 +351,6 @@ describe('project agent toolset conformance', () => {
     expect(Object.keys(imageAssetProperties)).toEqual([
       'kind',
       'name',
-      'prompt',
       'contextReferences',
       'imageReferences',
       'assetBinding',
@@ -359,7 +367,6 @@ describe('project agent toolset conformance', () => {
     expect(registry.create_image.inputSchema.safeParse({
       request: {
         kind: 'asset',
-        prompt: 'A precise reference portrait.',
         assetBinding: {
           assetKind: 'character',
           assetId: 'character-1',
@@ -372,6 +379,17 @@ describe('project agent toolset conformance', () => {
       request: {
         kind: 'asset',
         prompt: 'A precise reference portrait.',
+        assetBinding: {
+          assetKind: 'character',
+          assetId: 'character-1',
+          variantId: 'appearance-1',
+          expectedVersion: null,
+        },
+      },
+    }).success).toBe(false)
+    expect(registry.create_image.inputSchema.safeParse({
+      request: {
+        kind: 'asset',
         aspectRatio: '16:9',
         assetBinding: {
           assetKind: 'character',
@@ -731,10 +749,14 @@ describe('project agent toolset conformance', () => {
         styleSummary: 'Restrained procedural observation',
         rawUserStyle: '规则怪谈',
         visual: {
+          renderMedium: 'live_action',
+          realismLevel: 'grounded_stylized',
+          crossMediaStyle: 'Low-saturation institutional surveillance language.',
           visualStyle: 'Low-saturation institutional video.',
           assetImageStyle: {
             lighting: 'Flat fluorescent reference lighting.',
             texture: 'Compressed institutional video texture.',
+            renderingRules: 'Keep institutional flatness consistent across reusable asset references.',
           },
         },
         narrative: 'Release rules before revealing their consequences.',
@@ -743,7 +765,7 @@ describe('project agent toolset conformance', () => {
         sound: 'Preserve room tone and use silence for rule violations.',
         assetPolicy: 'Keep signage and recurring props legible and stable.',
       },
-    }
+    } as const
     for (const outputKind of CREATIVE_WORK_OUTPUT_KINDS) {
       const projected = projectAdoptedCreativeDirection({
         snapshot: adoptedDirection,
@@ -765,8 +787,39 @@ describe('project agent toolset conformance', () => {
       segments: [{
         key: 'clip-1',
         durationSeconds: 10,
-        prompt: '10-second 16:9 cinematic video. 0-10s: slow push toward a lantern that ignites as the shrine doors open; preserve the shrine layout and generate synchronized wind, timber creaks, and one ignition pulse.',
-        referenceKeys: [],
+        editRole: 'Reveal that the abandoned shrine is active.',
+        entryState: {
+          stateId: 'shrine-dark',
+          description: 'The shrine doors are closed and the lantern is unlit.',
+        },
+        incomingCut: null,
+        references: [{
+          key: 'Shrine image',
+          mediaType: 'image',
+          purpose: 'Preserve the shrine structure and lantern identity.',
+        }],
+        camera: {
+          shotSize: 'wide',
+          angle: 'eye_level',
+          subjectPlacement: 'right_third',
+          screenDirection: 'stationary',
+          movement: 'dolly',
+          lensAndDepth: 'Moderate wide lens with deep focus.',
+          gazeTarget: 'No character gaze; attention stays on the lantern.',
+          composition: 'Shrine doors fill the background; lantern occupies the right third.',
+        },
+        action: {
+          beatId: 'lantern-ignites',
+          description: 'The doors open and the lantern ignites once.',
+          dialogue: null,
+        },
+        exitState: {
+          stateId: 'shrine-lit',
+          description: 'The doors are open and the lantern burns steadily.',
+        },
+        cutPoint: 'Cut after the ignition has settled into a steady flame.',
+        sound: 'Native synchronized wind, timber creaks, and one ignition pulse.',
+        prohibitions: [],
       }],
     }
     expect(creativeWorkOutputRegistry.video_prompt_set.schema.safeParse(videoOutput).success).toBe(true)
@@ -799,7 +852,7 @@ describe('project agent toolset conformance', () => {
   })
 
   it('keeps the Creative Task protocol explicit and its repeated result projections consistent', () => {
-    expect(CREATIVE_WORK_TASK_PROTOCOL).toBe('creative_work_v9')
+    expect(CREATIVE_WORK_TASK_PROTOCOL).toBe('creative_work_v10')
     const lifecycleProjection = {
       requestKey: 'review-1',
       outputKind: 'creative_review' as const,
@@ -817,6 +870,7 @@ describe('project agent toolset conformance', () => {
     const payload = {
       protocol: CREATIVE_WORK_TASK_PROTOCOL,
       requestKey: 'review-1',
+      locale: 'zh',
       request: {
         outputKind: 'creative_review' as const,
         goal: 'Review the supplied result.',
@@ -869,10 +923,14 @@ describe('project agent toolset conformance', () => {
             styleSummary: 'Complete direction',
             rawUserStyle: null,
             visual: {
+              renderMedium: 'photographic',
+              realismLevel: 'photorealistic',
+              crossMediaStyle: 'Restrained naturalistic photographic language.',
               visualStyle: 'Restrained realism.',
               assetImageStyle: {
                 lighting: 'Soft daylight.',
                 texture: 'Natural material detail.',
+                renderingRules: 'Preserve natural material response and restrained photographic treatment.',
               },
             },
             narrative: 'Reveal information through behavior.',

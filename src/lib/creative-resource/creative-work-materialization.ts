@@ -13,6 +13,7 @@ import {
   compileAssetManifest,
   screenplaySchema,
 } from '@/lib/screenplay'
+import { compileVideoPromptSet } from '@/lib/video-prompt-set'
 
 export interface CreativeWorkResourceMaterializationPlan {
   readonly resourceScope: 'project' | 'episode'
@@ -217,12 +218,19 @@ export function planCreativeWorkResourceMaterialization(input: {
     })
   }
   if (output.kind === 'video_prompt_set') {
+    const videoContext = payload.request.productionContext.video
+    if (!videoContext) throw new Error('VIDEO_PROMPT_SET_PRODUCTION_CONTEXT_REQUIRED')
+    const compiled = compileVideoPromptSet({
+      output,
+      aspectRatio: videoContext.aspectRatio,
+      locale: payload.locale,
+    })
     return structuredOutput({
       ...common,
       taskId: input.taskId,
       schemaId: CREATIVE_RESOURCE_SCHEMA.VIDEO_PROMPT_SET,
       name: 'Video prompt set',
-      data: output,
+      data: compiled,
       generationOptions: { outputKind: output.kind, requestKey: payload.requestKey },
     })
   }

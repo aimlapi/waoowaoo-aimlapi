@@ -20,6 +20,7 @@ const selectionOffer: ProjectAgentChoiceOffer = {
       label: '方向',
       required: true,
       presentation: 'options',
+      allowCustomText: undefined,
       options: [
         { value: 'a', label: '方向 A' },
         { value: 'b', label: '方向 B' },

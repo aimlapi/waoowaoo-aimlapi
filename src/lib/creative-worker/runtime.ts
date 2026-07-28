@@ -266,6 +266,17 @@ function parseFinalOutput(input: {
       })
     }
     const allowedDurations = new Set(production.allowedSegmentDurationsSeconds)
+    const sourceKindByLabel = new Map<string, string>()
+    for (const source of input.request.context.sourceMaterials) {
+      if (sourceKindByLabel.has(source.label)) {
+        throw new CreativeWorkerError('CREATIVE_WORK_REQUEST_INVALID', {
+          outputKind: output.kind,
+          reason: 'source material label is duplicated',
+          sourceLabel: source.label,
+        })
+      }
+      sourceKindByLabel.set(source.label, source.kind)
+    }
     const segmentKeys = new Set<string>()
     let totalDurationSeconds = 0
     for (const segment of output.segments) {
@@ -277,6 +288,28 @@ function parseFinalOutput(input: {
         })
       }
       segmentKeys.add(segment.key)
+      const imageCount = segment.references.filter((reference) => reference.mediaType === 'image').length
+      const audioCount = segment.references.filter((reference) => reference.mediaType === 'audio').length
+      if (imageCount > production.maxReferenceImages || audioCount > production.maxReferenceAudios) {
+        throw new CreativeWorkerError('CREATIVE_WORK_OUTPUT_INVALID', {
+          outputKind: output.kind,
+          reason: 'video shot reference count exceeds configured production capability',
+          segmentKey: segment.key,
+          imageCount,
+          audioCount,
+        })
+      }
+      for (const reference of segment.references) {
+        if (sourceKindByLabel.get(reference.key) !== reference.mediaType) {
+          throw new CreativeWorkerError('CREATIVE_WORK_OUTPUT_INVALID', {
+            outputKind: output.kind,
+            reason: 'video shot reference does not resolve to an exact source material of the declared media type',
+            segmentKey: segment.key,
+            referenceKey: reference.key,
+            referenceMediaType: reference.mediaType,
+          })
+        }
+      }
       if (!allowedDurations.has(segment.durationSeconds)) {
         throw new CreativeWorkerError('CREATIVE_WORK_OUTPUT_INVALID', {
           outputKind: output.kind,

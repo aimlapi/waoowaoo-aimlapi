@@ -383,9 +383,13 @@ function buildToolArguments(request: GoldenChatCompletionRequest, toolName: stri
           label: '画面比例',
           required: true,
           presentation: 'aspect_ratio',
+          allowCustomText: false,
           options: ratios,
         }],
         submitLabel: '保存本次画面比例',
+        replyLabel: null,
+        replyPlaceholder: null,
+        replySubmitLabel: null,
       },
       commitments: ratios.map((ratio) => ({
         when: { kind: 'option', groupKey: 'videoRatio', optionValue: ratio.value },
@@ -585,6 +589,7 @@ function buildToolArguments(request: GoldenChatCompletionRequest, toolName: stri
           label: '当前决定',
           required: true,
           presentation: 'options',
+          allowCustomText: false,
           options: [
             {
               value: 'adopt',
@@ -599,6 +604,9 @@ function buildToolArguments(request: GoldenChatCompletionRequest, toolName: stri
           ],
         }],
         submitLabel: '提交本次视觉风格选择',
+        replyLabel: null,
+        replyPlaceholder: null,
+        replySubmitLabel: null,
       },
       commitments: [{
         when: { kind: 'option', groupKey: 'styleDecision', optionValue: 'adopt' },

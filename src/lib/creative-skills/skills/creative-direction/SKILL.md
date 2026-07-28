@@ -10,9 +10,10 @@
 
 - `styleSummary`：供卡片展示和快速理解的一句话摘要，不能替代六个可执行领域。
 - `rawUserStyle`：有用户原始风格表达时原样保存，否则为 `null`；下游 Worker 只能把它当作原始意图语境，不能用它覆盖六个可执行领域。
-- `visual`：跨媒体画面处理，以及资产参考图专用的灯光与材质。
-  - `visual.visualStyle` 定义媒介、色彩、画面处理、完成度与跨媒体质感。
-  - `visual.assetImageStyle.lighting` 和 `.texture` 只用于资产参考图，不自动成为所有剧情镜头的光影。
+- `visual`：跨媒体画面处理，以及资产参考图专用的灯光、材质和渲染纪律。
+  - `visual.renderMedium` 是权威渲染媒介，必须从严格枚举中选择；`visual.realismLevel` 是权威写实等级。二者共同阻止“风格化”被下游擅自解释成真人摄影。
+  - `visual.crossMediaStyle` 定义资产图、视频和其他媒体必须共同保留的造型语言；`visual.visualStyle` 定义色彩、轮廓、细节密度、画面处理和完成度。
+  - `visual.assetImageStyle.lighting`、`.texture` 和 `.renderingRules` 只用于资产参考图；`renderingRules` 必须明确如何落实媒介与写实等级，以及什么不得被改成照片或真人。
 - `narrative`：基调、叙事框架、视角、信息释放政策，以及确定、含混与揭示之间的关系。
 - `directing`：默认镜头行为、何时允许或禁止移动、构图、焦段/景别倾向、表演观察方式与镜头节奏。
 - `editing`：剪辑速度、切点语法、转场政策、时间跳跃方式，以及禁止的剪辑习惯。
@@ -74,7 +75,7 @@
 - 定义处理原则，不列具体生产资产清单。
 - 明确身份应写实、图形化、符号化、匿名化、手工化、档案化、产品主导、文字主导，还是有意不一致。
 - 说明反复图形、字体、道具、地点、人物和参考资料如何服务整体呈现机制。
-- 资产筛选与最终生成 Prompt 仍由 asset-development Skill 负责。
+- 资产筛选与稳定身份设计由 asset-development Skill 负责；最终生图 Prompt 由服务端把稳定身份与这份 Direction 确定性编译，Worker 不拥有最终 Prompt。
 
 ## 外部研究协议
 

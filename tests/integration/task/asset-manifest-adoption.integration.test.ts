@@ -24,10 +24,14 @@ const creativeDirection = {
   rawUserStyle: null,
   styleSummary: 'Restrained ink realism',
   visual: {
+    renderMedium: 'two_dimensional_illustration',
+    realismLevel: 'grounded_stylized',
+    crossMediaStyle: 'Observational ink-and-paper illustration with restrained color.',
     visualStyle: 'Observational ink-and-paper realism with restrained color.',
     assetImageStyle: {
       lighting: 'Soft directional daylight',
       texture: 'Fibrous paper and dry-brush edges',
+      renderingRules: 'Keep the result visibly illustrated and never photographic.',
     },
   },
   narrative: 'Reveal character intent through observable behavior.',
@@ -58,6 +62,7 @@ function creativeTaskPayload(input: {
   return {
     protocol: CREATIVE_WORK_TASK_PROTOCOL,
     requestKey,
+    locale: 'zh',
     request: {
       outputKind: input.outputKind,
       goal,
@@ -263,21 +268,18 @@ describe('Asset Manifest adoption DB integration', () => {
             canonicalName: 'Lin',
             aliases: [],
             stableDescription: 'A tired traveler with a weathered coat and alert posture.',
-            generationPrompt: 'Character reference for Lin in the adopted ink realism.',
           },
           {
             kind: 'location',
             canonicalName: 'Old Station',
             aliases: ['Station'],
             stableDescription: 'An abandoned station interior with worn platforms and iron beams.',
-            generationPrompt: 'Environment reference for the old station in the adopted ink realism.',
           },
           {
             kind: 'prop',
             canonicalName: 'Sealed Letter',
             aliases: ['Letter'],
             stableDescription: 'A weathered envelope closed by a dark wax seal.',
-            generationPrompt: 'Prop reference for the sealed letter in the adopted ink realism.',
           },
         ],
         assumptions: [],

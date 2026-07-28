@@ -20,6 +20,8 @@ Task 是长运行执行的唯一运行事实。Operation 负责校验与提交�
 - **TL-10 — UI 不解释生命周期。** Task、Resource 与 Assistant Session 生命周期 SSE 只传递持久事件；断线后按各自 watermark replay。`assistant.run.stream` 是明确不进入 durable cursor/bootstrap/replay 的瞬态消息增量，只能改善当前页面体验，不能解释 Task、Resource、Run 或 Session 终态。Canvas 收到终态影响后重新读取正式 Resource/Task View，不能依赖轮询、TTL、历史卡片或本地 overlay 完成业务交接。
 - **TL-11 — 本地媒体进程有界。** 视频合并只经 `video-compose/ffmpeg-command.ts`、`video-merge-ffmpeg.ts` 与 `video-merge-audio.ts`。FFmpeg 禁止交互 stdin，deadline 从明确媒体时长派生，音轨按 canonical duration pad/trim/reset PTS，不能用多路 EOF 或 `-shortest` 裁决正确性。
 - **TL-12 — 进度文案不是协议。** Task progress 只能使用当前 registry 的通用 Task/阶段 label；删除 TaskType 时必须同时删除旧文案，禁止让 UI 暗示已不存在的流程。
+- **TL-13 — 终态 reference projection 必须包含实际物化引用。** 对声明 `continuationResultProjection=reference` 的 Task，完整 Worker/provider 结果仍只保存在 `Task.result`，但 Terminal Service 产出的精确 `resources` 必须与摘要、typed error 一起进入 continuation projection。调用方不得在恢复后通过 list/get/poll、“最近记录”或历史消息重新发现本批结果。
+- **TL-14 — 声明的媒体后置条件必须在物化前验证。** Task completed 不能只等价于 provider 返回文件。schema registry 声明的内容后置条件由 worker 在上传后、Revision 物化前对真实对象验证；`project.video_segment` 当前要求存在可测量且非静音的原生音轨。验证失败必须补偿删除本次上传对象并由 Terminal Service 提交明确失败，不得留下成功 Resource。
 
 ## 状态所有权
 
@@ -61,6 +63,8 @@ Task 是长运行执行的唯一运行事实。Operation 负责校验与提交�
 
 ## 历史回归
 
+- Creative Work continuation 曾只收到 summary；虽然 Terminal Service 已在同一终态物化了 Resource，恢复模型仍需额外 `list_resources/get_resource` 才能找到它，真实长链因此把已完成事实变成概率性二次发现。当前 reference projection 保持小体积但合并同一 terminal result 的精确 `resources`，Task/Wait/continuation owner 不变。
+- 项目视频 Task 曾以 provider 返回 MP4 和成功上传作为 completed 的全部依据；文件可播放但没有音频 stream 或音量实为静音时，Resource 仍被物化为成功。当前媒体 schema policy 声明 native-audio 后置条件，video worker 在物化前通过 FFprobe/FFmpeg 读取真实对象验证；失败对象先补偿删除，再走唯一 Task terminal failure。
 - 最初分镜页面把“用户关闭失败提示”实现为 Task `failed → dismissed` 持久状态写入；页面移除后，route、React mutation、Operation 与 service writer 仍保留，并在 Agent 工具面全开后让模型能够改写真实失败终态。该动作不删除或修复 Task，只让 resolver 把失败投影成取消，因此形成了第二种失败解释。当前 `dismiss_failed_tasks` 的 Tool/API/前端入口和唯一 writer 已删除，失败 Task 保持 `failed` 并由 Agent 如实解释或在输入修正后精确重试。数据库枚举与 reader 暂时只为读取既有 `dismissed` 历史行而保留；本次未获数据迁移授权，未回填或删除这些行，彻底移除该状态仍需单独迁移与排空。
 - 旧 edit-first 为每个剧本、风格预览、镜头、BGM、视频段和最终渲染各建 TaskType、target 状态与 terminal projector，形成多套 writer。只删除 UI 卡片无法阻止 worker、投影与 guard 继续解释旧状态。当前整条专用链、表、writer、测试和治理入口一次删除，创作结果统一为 Resource，执行统一为六类通用 Task。
 - 旧 `generationTaskId/renderTaskId` owner fence 把 Task 生命周期复制到每个领域表，随后 target projector 与 reconciler 同时解释失败。当前 Task 是运行事实，Resource status/Revision 是领域事实，终态只由 Terminal Service 交接；不再存在专用 target ownership registry。

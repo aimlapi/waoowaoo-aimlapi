@@ -164,6 +164,10 @@ export interface CreativeResourceSchemaDefinition {
   readonly schemaId: CreativeResourceSchemaId
   readonly mediaType: CreativeResourceMediaType
   readonly structuredSummaryProjector?: CreativeResourceStructuredSummaryProjector
+  readonly generationPolicy?: {
+    readonly projectAssetImageReference: 'required'
+    readonly nativeAudio: 'required'
+  }
 }
 
 function schemaDefinitions(
@@ -181,7 +185,17 @@ export const CREATIVE_RESOURCE_SCHEMAS: readonly CreativeResourceSchemaDefinitio
   ...schemaDefinitions('text', CREATIVE_RESOURCE_SCHEMA_IDS_BY_MEDIA.text),
   ...schemaDefinitions('image', CREATIVE_RESOURCE_SCHEMA_IDS_BY_MEDIA.image),
   ...schemaDefinitions('audio', CREATIVE_RESOURCE_SCHEMA_IDS_BY_MEDIA.audio),
-  ...schemaDefinitions('video', CREATIVE_RESOURCE_SCHEMA_IDS_BY_MEDIA.video),
+  ...schemaDefinitions('video', CREATIVE_RESOURCE_SCHEMA_IDS_BY_MEDIA.video).map((definition) => (
+    definition.schemaId === CREATIVE_RESOURCE_SCHEMA.VIDEO_SEGMENT
+      ? {
+          ...definition,
+          generationPolicy: {
+            projectAssetImageReference: 'required' as const,
+            nativeAudio: 'required' as const,
+          },
+        }
+      : definition
+  )),
 ]
 
 const SCHEMA_BY_ID = new Map(CREATIVE_RESOURCE_SCHEMAS.map((definition) => [definition.schemaId, definition]))

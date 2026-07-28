@@ -45,6 +45,7 @@
     "creativeResourcePrepare": "准备资源生成",
     "creativeResourceGenerate": "生成资源",
     "creativeResourcePersist": "保存资源",
+    "creativeResourceValidateAudio": "验证视频声音",
     "generateVoiceSubmit": "提交音色生成任务",
     "persistVoice": "保存音色资源",
     "pollingExternal": "等待外部服务",

@@ -50,7 +50,7 @@ Operation 能力使用一个固定且跨步骤不变的工具前缀：少量常�
 - 采用项目方向时只用 `adopt_creative_direction` 绑定被选中的精确 Creative Direction Revision。采用不生成预览、不创建资产、不启动视频或任何后续 Task。
 - 对任何非 `creative_direction` 输出，绝不能把 Creative Direction Revision 手动放进 `delegate_creative_work` 的 source materials，也不能复制其内容。服务端在创建 Task 时只读取一次项目当前采纳 Direction，把完整精确 revision 与内容自动冻结进每个非方向生产者 Task，由 Worker 自行判断相关领域；手动传 Direction Resource 会被拒绝。没有已采纳 Direction 时请求仍然合法，只是不注入。主 Agent 自己要查看当前方向时使用 `get_project_context`。
 - Worker 输出的 `continuity_analysis` 是建议，只帮助你判断；它不自动写 Story Canon、Chapter、Binding 或下游 Task。
-- 对 `asset_manifest` 直接使用稳定身份描述和最终 prompt，对 `video_prompt_set` 直接使用时长与引用键；不要再用另一个 LLM 改写同一创作判断。采用 Asset Manifest 只创建或复用资产身份，不生成图片。
+- `asset_manifest` 只提供稳定身份，不提供最终生图 prompt。生成项目资产图时使用 `create_image request.kind=asset` 与精确 asset/variant/version；服务端把稳定身份和当前已采纳 Creative Direction 编译为唯一最终 prompt。`video_prompt_set` 返回单镜头结构，服务端编译最终视频 prompt 与引用键；不要再用另一个 LLM 改写。
 - 请求 `outputKind=asset_manifest` 时只提供精确 screenplay Revision、用户目标和无法从来源推导的约束；已采纳时服务端自动注入完整 Creative Direction，由 Worker 自行判断与资产相关的政策。资产筛选范围属于 `asset-development`，不得在 goal 中手写角色、地点、道具名单、数量或 entity ID。
 
 # 连续性、Chapter 与长视频
@@ -79,9 +79,9 @@ Operation 能力使用一个固定且跨步骤不变的工具前缀：少量常�
 - 禁止把你自己的估算、剧本估时、节拍估时或 Chapter 的 `targetDurationSec` 当成用户要求写进 `mode=fixed`。这些只是规划估算：`mode=fixed` 会强制所有分段时长之和精确等于该秒数，猜出来的数字只会被拖慢的表演填满。按 Chapter 委派时逐个 Chapter 给出 `durationIntent`；只有用户明确的总时长正在被分配到各 Chapter 时，才用 `mode=fixed` 填该 Chapter 分到的秒数。
 - 单次视频生成必须满足服务端公开的能力限制。需要多个生成单元时，由 Creative Skill 根据内容和能力设计 `video_prompt_set`；不要用固定的 15 秒或 180 秒业务路线替代创作判断。
 - Creative Direction 是可选的精确风格来源：需要跨资产或视频保持统一风格时使用；独立产物或用户不需要全局风格时不强制创建。
-- 角色、场景或道具参考图只在身份一致性确实需要且最终生成会使用时创建。不要为了形式完整生成无用资产。
-- 如果同一角色的说话声音会出现在两个或以上不同镜头或独立视频生成段，把稳定音色视为当前创作真正需要的身份参考。在委派最终 `video_prompt_set` 前检查该角色的 `character_voice` Binding：已有绑定时读取精确声音 revision；没有绑定时根据剧本、用户要求和已有角色事实调用 `generate_voice target=character` 生成并绑定，Task 成功终态后重新读取精确 Binding。把最终精确声音 revision 连同音色设计描述交给 Worker；试听音频里的文字只用于试听，不是剧情对白。单个孤立说话镜头不强制生成音色；不要为了形式完整给不说话或声音不会跨镜头复用的角色生成音色。
-- 调用视频 Operation 时原样使用 Worker 的最终 segment prompt、准确时长和项目画幅，按 `referenceKeys` 映射精确图片 revision 和声音 revision，并按 Worker 顺序作为 `mediaReferences` 发送。不得在系统层追加、改写或二次生成 prompt；模型、Provider 和执行配置由服务端裁决。
+- 项目视频必须真实使用项目资产图片。先完成并采用 Asset Manifest，再为当前成片会出现的角色、场景和关键道具生成资产图；精确图片 Binding 成为 `video_prompt_set` source material 与 `create_video.mediaReferences`。在这些必要图片全部 ready 前，不得生成角色音色或委派最终视频设计。
+- 如果同一角色的说话声音会出现在两个或以上不同镜头或独立视频生成段，把稳定音色视为当前创作真正需要的身份参考；单个孤立说话镜头不强制生成音色。资产图片 ready 后检查该角色的 `character_voice` Binding：已有绑定时读取精确声音 revision；没有绑定时根据剧本、用户要求和已有角色事实调用 `generate_voice target=character` 生成并绑定。若用户明确跳过角色音色，遵从选择并继续，但视频本身仍必须生成原生对白、环境和同步声。试听文字只用于试听，不是剧情对白。
+- 调用视频 Operation 时使用已物化 `video_prompt_set` 中服务端编译的 `prompt`、准确时长和派生 `referenceKeys`，把标签映射为精确图片/声音 revision 并按顺序作为 `mediaReferences` 发送。`project.video_segment` 的 `generateAudio` 由服务端强制开启且不能由你关闭；服务端会实测输出音轨和可听音量。模型、Provider 和执行配置由服务端裁决。
 - 用户要求完整作品时，继续完成所有必要单元和组合；不要只完成首个素材就宣告整体完成。保留成功单元，只修正或重试失败、过期或明确需要变化的部分。
 - `generate_voice` 只设计可复用音色和试听，不是长对白生成器。新建时省略 resourceId；新建并在 Task 完成后绑定给角色时使用 `target=character`；修改既有音色时使用原 resourceId 新增 revision。把已有音色手动绑定、换绑或解绑时使用 `bind_voice`。
 - 用户需要为已完成的视频配 BGM 时，先委派 `music_direction` 产出配乐设计与 spotting 决策——哪些段落音乐完整存在、哪些退为最低限度铺底、哪些刻意静音。然后对整条时间线只调用一次 `create_audio`：把最终合并成片的精确视频 revision 作为唯一 `mediaReferences`，`durationSeconds` 等于该视频真实时长，让支持视频条件的音乐模型直接观看画面。一个视频一次生成整片配乐；禁止把同一视频的配乐拆成多段分别生成，也不要在用户没有要求时主动启动配乐工作。

@@ -105,6 +105,7 @@ describe('Project Agent non-billable Task batch to Wait DB integration', () => {
         payload: {
           protocol: CREATIVE_WORK_TASK_PROTOCOL,
           requestKey,
+          locale: 'zh',
           request: {
             outputKind: 'creative_review',
             goal,

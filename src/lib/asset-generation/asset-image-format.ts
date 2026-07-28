@@ -2,6 +2,7 @@ import {
   CREATIVE_RESOURCE_SCHEMA,
   type CreativeResourceSchemaId,
 } from '@/lib/creative-resource/schema-registry'
+import type { CreativeDirection } from '@/lib/creative-direction/contracts'
 
 export type AssetImageKind = 'character' | 'location' | 'prop'
 export type AssetImageFormatLocale = 'zh' | 'en'
@@ -77,4 +78,77 @@ export function applyAssetImageFormatPolicy(input: {
   const cleanPrompt = stripAssetImageFormatPolicy(input.prompt, input.kind)
   const instruction = getAssetImageFormatPolicy(input.kind).instruction[normalizeLocale(input.locale)]
   return cleanPrompt ? `${cleanPrompt}\n\n${instruction}` : instruction
+}
+
+function assetIdentityLabel(kind: AssetImageKind, locale: AssetImageFormatLocale): string {
+  if (locale === 'en') {
+    if (kind === 'character') return 'Canonical character identity'
+    if (kind === 'location') return 'Canonical location identity'
+    return 'Canonical prop identity'
+  }
+  if (kind === 'character') return '角色稳定身份'
+  if (kind === 'location') return '场景稳定身份'
+  return '道具稳定身份'
+}
+
+function nonPhotographicConstraint(
+  direction: CreativeDirection,
+  locale: AssetImageFormatLocale,
+): string | null {
+  if (
+    direction.visual.renderMedium === 'photographic'
+    || direction.visual.renderMedium === 'live_action'
+    || direction.visual.realismLevel === 'photorealistic'
+  ) {
+    return null
+  }
+  return locale === 'en'
+    ? 'Do not convert this design into a photograph, live-action still, photoreal human, realistic skin photography, or cinematic production frame.'
+    : '禁止把该设计转成照片、真人实拍剧照、照片级真人、真实皮肤摄影或剧情电影帧。'
+}
+
+/**
+ * Sole semantic writer for project asset-image prompts. The Worker owns stable
+ * identity and Creative Direction owns style; neither writes a provider prompt.
+ */
+export function compileAssetImagePrompt(input: {
+  readonly kind: AssetImageKind
+  readonly stableDescription: string
+  readonly creativeDirection: CreativeDirection
+  readonly locale?: string | null
+}): string {
+  const locale = normalizeLocale(input.locale)
+  const direction = input.creativeDirection
+  const prompt = locale === 'en'
+    ? [
+        `[${assetIdentityLabel(input.kind, locale)}] ${input.stableDescription.trim()}`,
+        `[Canonical render medium] ${direction.visual.renderMedium}`,
+        `[Canonical realism level] ${direction.visual.realismLevel}`,
+        `[Cross-media style] ${direction.visual.crossMediaStyle}`,
+        `[Visual execution] ${direction.visual.visualStyle}`,
+        `[Asset lighting] ${direction.visual.assetImageStyle.lighting}`,
+        `[Asset texture] ${direction.visual.assetImageStyle.texture}`,
+        `[Asset rendering rules] ${direction.visual.assetImageStyle.renderingRules}`,
+        `[Asset policy] ${direction.assetPolicy}`,
+        'Render a static reusable design reference, not a story moment, film still, emotional performance, action pose, camera scene, or environmental portrait. Preserve the canonical identity exactly.',
+        nonPhotographicConstraint(direction, locale),
+      ].filter((line): line is string => line !== null).join('\n')
+    : [
+        `【${assetIdentityLabel(input.kind, locale)}】${input.stableDescription.trim()}`,
+        `【权威渲染媒介】${direction.visual.renderMedium}`,
+        `【权威写实等级】${direction.visual.realismLevel}`,
+        `【跨媒体风格】${direction.visual.crossMediaStyle}`,
+        `【视觉执行】${direction.visual.visualStyle}`,
+        `【资产图灯光】${direction.visual.assetImageStyle.lighting}`,
+        `【资产图材质】${direction.visual.assetImageStyle.texture}`,
+        `【资产图渲染规则】${direction.visual.assetImageStyle.renderingRules}`,
+        `【资产政策】${direction.assetPolicy}`,
+        '生成静态、可复用的设计参考，不得写成剧情瞬间、电影剧照、情绪表演、动作姿势、摄影场面或环境人像；必须逐项保持上述稳定身份。',
+        nonPhotographicConstraint(direction, locale),
+      ].filter((line): line is string => line !== null).join('\n')
+  return applyAssetImageFormatPolicy({
+    prompt,
+    kind: input.kind,
+    locale,
+  })
 }

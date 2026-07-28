@@ -133,6 +133,7 @@
         "src/lib/creative-direction",
         "src/lib/screenplay",
         "src/lib/asset-generation",
+        "src/lib/video-prompt-set",
         "src/lib/assets/services/project-asset-writer.ts",
         "src/lib/edit-source-document",
         "src/lib/operations/domains/creative-resource",
@@ -165,6 +166,8 @@
         "tests/unit/creative-resource/summary-projection.test.ts",
         "tests/unit/screenplay/contracts.test.ts",
         "tests/unit/asset-generation/asset-image-format.test.ts",
+        "tests/unit/asset-generation/asset-image-prompt-compiler.test.ts",
+        "tests/unit/video-prompt-set/compiler.test.ts",
         "tests/contracts/creative-result-resource-conformance.test.ts",
         "tests/integration/task/creative-resource-voice-binding.integration.test.ts",
         "tests/golden-journey/journeys/freeform-resources.spec.ts"
@@ -223,6 +226,8 @@
         "src/lib/ai-exec/engine.ts",
         "src/lib/video-compose/video-merge-audio.ts",
         "src/lib/video-compose/video-merge-ffmpeg.ts",
+        "src/lib/video-generation/audio-conformance.ts",
+        "src/lib/workers/handlers/creative-resource-video.ts",
         "src/lib/operations/domains/voice",
         "src/lib/voice",
         "src/lib/workers/voice.worker.ts",
@@ -238,6 +243,7 @@
         "tests/unit/billing/task-policy-media.test.ts",
         "tests/integration/task/creative-resource-voice-binding.integration.test.ts",
         "tests/integration/task/creative-resource-video-merge-ffmpeg.integration.test.ts",
+        "tests/unit/video-generation/audio-conformance.test.ts",
         "tests/contracts/task-definition-conformance.test.ts",
         "tests/golden-journey/self-tests/model-provider.test.ts",
         "tests/golden-journey/journeys/freeform-resources.spec.ts"
@@ -475,6 +481,7 @@
       "sourcePaths": [
         "src/lib/creative-skills",
         "src/lib/creative-worker",
+        "src/lib/video-prompt-set",
         "src/lib/ai-exec/agents-public-reasoning.ts",
         "src/lib/operations/domains/assistant/creative-ops.ts",
         "src/lib/operations/domains/assistant/creative-story-canon-ops.ts",
@@ -501,6 +508,7 @@
         "tests/unit/creative-worker/tool-lifecycle.test.ts",
         "tests/unit/project-agent/workspace-assistant-subagent-stream.test.ts",
         "tests/unit/creative-resource/creative-work-materialization.test.ts",
+        "tests/unit/video-prompt-set/compiler.test.ts",
         "tests/contracts/creative-result-resource-conformance.test.ts"
       ],
       "guardPaths": [

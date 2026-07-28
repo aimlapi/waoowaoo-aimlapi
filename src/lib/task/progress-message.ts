@@ -17,6 +17,7 @@ const STAGE_LABELS: Record<string, string> = {
   creative_resource_prepare: 'progress.stage.creativeResourcePrepare',
   creative_resource_generate: 'progress.stage.creativeResourceGenerate',
   creative_resource_persist: 'progress.stage.creativeResourcePersist',
+  creative_resource_validate_audio: 'progress.stage.creativeResourceValidateAudio',
   generate_voice_submit: 'progress.stage.generateVoiceSubmit',
   persist_voice: 'progress.stage.persistVoice',
   polling_external: 'progress.stage.pollingExternal',

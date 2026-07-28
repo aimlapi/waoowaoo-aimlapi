@@ -428,6 +428,7 @@ export function buildTaskFollowUpInputItem(
     ...(followUp.failedTaskIds.length > 0 ? [`failedTaskIds=${followUp.failedTaskIds.join(',')}`] : []),
     ...(followUp.completedTasks.length > 0 ? [`completedTasks=${JSON.stringify(followUp.completedTasks)}`] : []),
     ...(followUp.failedTasks.length > 0 ? [`failedTasks=${JSON.stringify(followUp.failedTasks)}`] : []),
+    'The task update above is the canonical terminal fact for this wait. Use the exact resource and revision references or exact errors already projected here. Do not call list_resources, get_resource, wait_tasks, or another polling/refetch operation merely to rediscover these completed task results. Continue the requested workflow from these facts, or give the user the final actionable outcome.',
   ]
   return {
     role: 'user',

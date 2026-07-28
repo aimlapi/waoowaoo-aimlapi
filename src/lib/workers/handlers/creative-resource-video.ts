@@ -5,11 +5,13 @@ import {
   parseCreativeResourceGenerationTaskPayload,
   type CreativeResourceGenerationTaskPayload,
 } from '@/lib/creative-resource/generation-contract'
+import { requireCreativeResourceSchema } from '@/lib/creative-resource/schema-registry'
 import { normalizeOwnedMediaToBase64ForGeneration } from '@/lib/media/outbound-image'
 import { ensureMediaObjectFromStorageKey } from '@/lib/media/service'
 import { prisma } from '@/lib/prisma'
-import { getSignedUrl } from '@/lib/storage'
+import { deleteObject, getObjectBuffer, getSignedUrl } from '@/lib/storage'
 import type { TaskJobData } from '@/lib/task/types'
+import { assertVideoHasAudibleAudio } from '@/lib/video-generation/audio-conformance'
 import { reportTaskProgress } from '@/lib/workers/shared'
 import { resolveVideoDownloadHeaders } from '@/lib/workers/video-download'
 import {
@@ -171,6 +173,22 @@ export async function handleCreativeResourceVideoTask(job: Job<TaskJobData>) {
     { taskId: job.data.taskId, artifact: `creative-resource:${payload.resource.resourceId}` },
   )
   const durationSeconds = typeof options.duration === 'number' ? options.duration : null
+  if (requireCreativeResourceSchema(payload.resource.schemaId).generationPolicy?.nativeAudio === 'required') {
+    await reportTaskProgress(job, 94, { stage: 'creative_resource_validate_audio' })
+    if (!durationSeconds) {
+      await deleteObject(storageKey)
+      throw new Error('VIDEO_NATIVE_AUDIO_DURATION_REQUIRED')
+    }
+    try {
+      await assertVideoHasAudibleAudio({
+        buffer: await getObjectBuffer(storageKey),
+        expectedDurationSeconds: durationSeconds,
+      })
+    } catch (error) {
+      await deleteObject(storageKey)
+      throw error
+    }
+  }
   const media = await ensureMediaObjectFromStorageKey(storageKey, {
     mimeType: 'video/mp4',
     ...(durationSeconds ? { durationMs: durationSeconds * 1000 } : {}),

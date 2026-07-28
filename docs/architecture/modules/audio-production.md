@@ -19,9 +19,11 @@
 - **AP-07 — 被删除能力不得残留入口。** 旧固定 BGM plan/generate、环境音/音效规划、专用 Canvas stage、TaskType、worker writer、状态字段和 Workflow recommendation 必须删除；历史名字只可出现在迁移删除语句或历史说明。
 - **AP-08 — 音色生成只有一个入口和固定模型。** `generate_voice` 是新建与原位重生成音色的唯一入口；Agent 只提交描述、试听文字、语言、可选原 Resource 与绑定目标。服务端解析正式 Voice Design 模型，报价和结算按同一冻结试听文字计算。
 - **AP-09 — 音色 Resource 与角色 Binding 解耦。** 音色事实只存在于 `CreativeResource(mediaType=audio,schemaId=project.voice_reference)` Revision；`bind_voice` 复用 Binding service CAS 写 `role=character_voice + slotKey=characterId`。生成期间发生较新换绑时保留新 Revision并返回显式 conflict。
-- **AP-11 — 跨镜头稳定音色由 Primary 显式组合。** 同一角色的说话声音将出现在两个或以上不同镜头或独立视频生成段时，Primary 把稳定音色视为当前创作真正需要的身份参考；在委派最终 `video_prompt_set` 前检查 `character_voice` Binding，已有绑定则读取精确 Revision，缺失则按剧本、用户要求和已有角色事实调用 `generate_voice target=character`，Task 成功终态后重新读取精确 Binding。Primary 把声音 Revision 与音色设计描述作为 Worker source material，Worker 用 `@AudioN` 写入唯一最终 Prompt，试听文字不得成为剧情对白。单个孤立说话镜头不强制生成音色；执行层不设置有对白即必须绑定的门禁，只校验、冻结和传输调用方显式选择的 exact Revision，也不从角色名、最新音色或试听内容推断引用。
+- **AP-11 — 角色音色只能在资产身份可见后生成。** 同一角色的说话声音将出现在两个以上镜头时，Primary 可组合稳定音色；但 `generate_voice target=character` 在创建 Task 前必须验证该角色至少一个 ready `project_asset_image` Binding，确保声音设计基于已经确立的视觉身份。用户明确跳过音色时可以继续，视频仍生成原生对白/环境/同步声。Primary 把精确声音 Revision 与描述作为 source material，Worker 只声明 audio reference；服务端编译器派生 `@AudioN`。试听文字不得成为剧情对白。
 - **AP-10 — 删除不物理清理媒体。** `delete_asset(kind=voice)` 只允许删除未生成中、未绑定且未被 Lineage 引用的音色 Resource；MediaObject 仍由独立生命周期拥有。
 - **AP-12 — 视频条件音乐生成由 capability registry 唯一裁决。** `create_audio` 可在 `mediaReferences` 携带恰好一个 ready 视频 Resource revision 作为音乐模型的画面条件输入；是否允许及上限只由生产 music capability 的 `maxReferenceVideos` 声明（缺失即不支持，提交前原地失败）。视频引用作为 `videoInputPositions` 冻结进 Task payload，worker 回库校验 owner/ready/mediaType 后以签名 URL 交给 provider adapter；soundtrack 的时间边界跟随该视频的真实时长。整片配乐一次生成，不得拆段分别生成再拼接；不存在从"最近视频"或历史消息推断条件输入的路径。
+- **AP-13 — Voice runtime 必须在收费 Task 前可执行。** `generate_voice` plan 在预留 Resource、冻结计费或创建 Task 前，必须经 production model selection 与 provider config 解析同一个固定 Voice identity；未启用、无 provider 配置或模态不匹配统一以 `VOICE_MODEL_NOT_CONFIGURED` 原地失败，不创建等待中 Task。
+- **AP-14 — 项目视频原生音轨是可验证后置条件。** `project.video_segment` 的 schema policy 强制 `generateAudio=true`，Agent 不能关闭。视频 worker 上传后、物化 Revision 前必须用真实 FFprobe/FFmpeg 验证存在音频 stream 且 mean volume 高于静音阈值；无音轨、全静音或无法测量时补偿删除本次上传对象并让 Task 明确失败。通用视频不继承该要求。
 
 ## 权威入口
 
@@ -31,6 +33,7 @@
 - 模型时长能力：生产 capability registry 与 provider adapter；调用方不得复制范围。
 - 确定性混音 primitive：`src/lib/video-compose/video-merge-audio.ts`；只由通用 `merge_videos` Resource Task 显式消费，没有固定最终渲染阶段。
 - 角色音色：`src/lib/operations/domains/voice/voice-ops.ts`、`src/lib/voice/voice-resource-service.ts` 与共享 Binding service。
+- 项目视频音轨后置校验：`src/lib/video-generation/audio-conformance.ts`，由 `creative-resource-video` worker 在 Resource 物化前调用。
 
 ## 验证
 
@@ -46,8 +49,9 @@
 - 音乐模型时长曾被调用方复制成离散 options。当前连续范围只由 capability registry 声明；它约束一次 provider 请求，不决定作品是否需要 Chapter 或全局连续性。
 - 最终混音曾因 AAC priming、不同 EOF 和 `-shortest` 挂起或截短。确定性执行仍统一服从 stitched duration、显式 `-t` 和 bounded FFmpeg；删除固定 BGM plan 不削弱该技术防线。
 - 旧声音提案曾观看/听取最终视频并写语义状态，形成第二事实解释器。当前音乐创意只来自显式 Creative Task 输入，混音只处理技术事实。
-- 角色音色与视频引用首次接入时只覆盖“已有 `character_voice` Binding 则传入”的条件分支。真实完整制作中，同一角色的对白跨多个镜头，但项目没有 Voice Resource、Binding 或 `generate_voice` Task；Primary 仍委派只含图片的 `video_prompt_set`，随后所有视频 Task 都以 `generateAudio=true + audioInputPositions=[]` 合法提交，现有 Tool conformance、Binding lifecycle 与媒体传输测试均未反证这个决策缺口。当前防线由双语 Primary Prompt 明确“跨镜头复用声音”是生成并绑定稳定音色的创作信号，同时保留单镜头自由组合和无执行层门禁；Prompt semantic guard 防止该判断静默丢失。真实外部模型是否稳定遵循仍是发布验证盲区。
-- 固定 Qwen Voice Design 初次上线时，能力、价格、adapter 与 Binding 生命周期测试全部通过，但运行时启用模型清单没有登记该 `voice` identity，且 provider contract mock 掉了真实 runtime selection；首个真实三音色批次因此全部在 Provider HTTP 前失败。当前固定模型由 FAL production identity 同时进入 platform/API runtime catalog，真实 catalog selection 成为 provider contract 的前置断言。
+- 角色音色与视频引用首次接入时只用 Prompt 要求 Primary “先生成音色”，没有执行前置条件；真实项目因此在人物图片尚未完成时先提交 Voice Task，用户跳过音色后又被模型当成流程失败。当前 `generate_voice target=character` 的计划层直接要求 ready asset-image Binding；这不是固定 workflow，而是角色视觉 identity 的输入完整性。用户跳过后视频仍以原生音轨继续。
+- 固定 Qwen Voice Design 初次上线时，能力、价格、adapter 与 Binding 生命周期测试全部通过，但真实 self-host runtime 的 voice model 列表为空，provider contract 又 mock 掉 runtime selection；首个真实三音色批次因此全部在 Task 内以 `MODEL_NOT_FOUND ... not enabled for voice` 失败。仅登记 provider catalog 没有覆盖“当前用户运行时确实可选”这一组合。当前 plan 在创建 Task 前执行真实 model selection/provider config preflight，缺失即返回稳定不可重试的 `VOICE_MODEL_NOT_CONFIGURED`；未配置 Voice 的真实 self-host 环境仍需人工配置或显式跳过。
+- 项目视频曾把 Agent-facing `generateAudio` 与服务端默认并存；模型可显式传 `false`，成功 Revision 只证明存在 MP4，不证明有音轨，UI 因而展示“生成成功”的无声视频。当前 `project.video_segment` 从 schema registry 派生原生声音政策，公开 Tool 删除该字段，new/retry 都冻结 true，并在物化前实测音频 stream 和平均音量；真实外部模型音质、对白准确度与口型同步仍是发布抽样盲区。
 
 ## 修改检查表
 

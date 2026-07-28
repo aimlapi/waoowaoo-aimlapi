@@ -53,8 +53,11 @@ export function projectTaskContinuationResult(
   if (!result) return null
   const definition = getTaskDefinition(taskType)
   if (definition.continuationResultProjection === 'full') return result
-  return requireProjectionRecord(
+  const continuationProjection = requireProjectionRecord(
     result.continuationProjection,
     `TASK_CONTINUATION_REFERENCE_PROJECTION_MISSING:${taskType}`,
   )
+  return Array.isArray(result.resources)
+    ? { ...continuationProjection, resources: result.resources }
+    : continuationProjection
 }

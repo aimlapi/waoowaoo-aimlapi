@@ -149,12 +149,13 @@ export const creativeWorkTaskLifecycleProjectionSchema = z.object({
   events: z.array(creativeWorkTaskProgressEventSchema).max(64),
 }).strict()
 
-export const CREATIVE_WORK_TASK_PROTOCOL = 'creative_work_v9' as const
+export const CREATIVE_WORK_TASK_PROTOCOL = 'creative_work_v10' as const
 
 export const creativeWorkTaskPayloadSchema = z.object({
   protocol: z.literal(CREATIVE_WORK_TASK_PROTOCOL),
   requestKey: z.string().trim().min(1).max(200),
   request: creativeWorkRequestSchema,
+  locale: z.string().trim().min(1).max(100),
   modelKey: z.string().trim().min(1).max(500),
   inputFingerprint: z.string().trim().min(1).max(200),
   origin: z.object({

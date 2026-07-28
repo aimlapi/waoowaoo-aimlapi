@@ -4,6 +4,7 @@ import { TASK_DEFINITIONS } from '@/lib/task/definition'
 import { TASK_TYPE } from '@/lib/task/types'
 import { getQueueTypeByTaskType } from '@/lib/task/queues'
 import { getTaskMaxAttempts } from '@/lib/task/retry-policy'
+import { projectTaskContinuationResult } from '@/lib/task/result-projection'
 
 describe('TaskDefinition conformance', () => {
   it('registers every surviving TaskType exactly once and owns its complete policy', () => {
@@ -40,5 +41,27 @@ describe('TaskDefinition conformance', () => {
     ]) {
       expect(TASK_DEFINITIONS[taskType].terminalOutputMaterializer).toBe('creative_resource')
     }
+  })
+
+  it('projects exact terminal materialized resources into Creative Work continuation without the full result', () => {
+    const resources = [{
+      resourceId: 'resource-1',
+      revisionId: 'revision-1',
+      schemaId: 'project.video_prompt_set',
+    }]
+    expect(projectTaskContinuationResult(TASK_TYPE.CREATIVE_WORK, {
+      privateWorkerPayload: { mustNotReachContinuation: true },
+      continuationProjection: {
+        requestKey: 'video-prompts',
+        outputKind: 'video_prompt_set',
+        summary: 'Video prompt set ready.',
+      },
+      resources,
+    })).toEqual({
+      requestKey: 'video-prompts',
+      outputKind: 'video_prompt_set',
+      summary: 'Video prompt set ready.',
+      resources,
+    })
   })
 })

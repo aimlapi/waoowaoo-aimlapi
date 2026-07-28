@@ -14,10 +14,14 @@ const creativeDirection = {
   rawUserStyle: null,
   styleSummary: 'Ink and paper animation',
   visual: {
+    renderMedium: 'two_dimensional_illustration',
+    realismLevel: 'stylized',
+    crossMediaStyle: 'Hand-painted ink illustration across still and moving media.',
     visualStyle: 'Hand-painted ink animation with restrained motion.',
     assetImageStyle: {
       lighting: 'Soft directional light',
       texture: 'Fibrous paper',
+      renderingRules: 'Preserve visible ink contours and paper texture; never render as photography.',
     },
   },
   narrative: 'Reveal information through observed behavior and withheld context.',
@@ -25,7 +29,7 @@ const creativeDirection = {
   editing: 'Use measured hard cuts and reserve dissolves for explicit time shifts.',
   sound: 'Keep a dry room tone, close voices, and intentional silence.',
   assetPolicy: 'Design reusable silhouettes and preserve paper texture across assets.',
-}
+} as const
 
 function taskPayload(
   outputKind: TestOutputKind,
@@ -43,6 +47,7 @@ function taskPayload(
   return {
     protocol: CREATIVE_WORK_TASK_PROTOCOL,
     requestKey: 'request-1',
+    locale: 'zh',
     request: {
       outputKind,
       goal: 'Create the requested work.',
@@ -310,7 +315,6 @@ describe('Creative Task Resource materialization planning', () => {
         canonicalName: 'Traveler',
         aliases: [],
         stableDescription: 'A tired traveler.',
-        generationPrompt: 'Styled design for Traveler',
       }],
       assumptions: [],
       warnings: [],

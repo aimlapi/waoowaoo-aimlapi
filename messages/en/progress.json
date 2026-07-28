@@ -45,6 +45,7 @@
     "creativeResourcePrepare": "Prepare resource generation",
     "creativeResourceGenerate": "Generate resource",
     "creativeResourcePersist": "Persist resource",
+    "creativeResourceValidateAudio": "Validate video audio",
     "generateVoiceSubmit": "Submit voice generation task",
     "persistVoice": "Persist voice resource",
     "pollingExternal": "Waiting for external service",

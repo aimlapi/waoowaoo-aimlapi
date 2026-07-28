@@ -476,6 +476,7 @@ export function createAssistantCreativeOperations(): ProjectAgentOperationRegist
             protocol: CREATIVE_WORK_TASK_PROTOCOL,
             requestKey,
             request,
+            locale,
             modelKey,
             inputFingerprint,
             origin: identity,
