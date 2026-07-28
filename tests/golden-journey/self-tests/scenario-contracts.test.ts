@@ -10,6 +10,7 @@ describe('Golden Journey scenario contracts', () => {
     expect(GOLDEN_SCENARIO_CONTRACTS.map((scenario) => scenario.id)).toEqual([
       'GJ-FREEFORM-RESOURCE-CREATION',
       'GJ-PARALLEL-OPERATION-BATCH',
+      'GJ-APPROVAL-REJECTION-CONTINUATION',
       'GJ-FREEFORM-ZERO-VIDEO',
       'GJ-ASSISTANT-STOP-REPLY',
       'GJ-AUTH-UNAUTHENTICATED-DENIAL',

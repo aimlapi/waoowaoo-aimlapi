@@ -60,6 +60,7 @@ function outcomeToDescriptor(input: ProjectAgentToolOutcomeInput): RuntimeSignal
       }
     case 'completed':
     case 'noop':
+    case 'rejected':
       return null
   }
 }

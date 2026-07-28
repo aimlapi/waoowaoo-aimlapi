@@ -10,6 +10,7 @@ import {
 export const GOLDEN_FREEFORM_TEXT_REQUEST = '自由生成三个文字候选'
 export const GOLDEN_FREEFORM_IMAGE_REQUEST = '自由生成三张图片候选'
 export const GOLDEN_PARALLEL_IMAGE_REQUEST = '并行生成三个独立图片资产'
+export const GOLDEN_APPROVAL_REJECTION_REQUEST = '生成一张图片，但如果我拒绝报价就跳过并继续回复'
 export const GOLDEN_FREEFORM_RETRY_REQUEST = '只重试失败的图片候选'
 export const GOLDEN_FREEFORM_VIDEO_REQUEST = '复用成功图片生成两个视频候选'
 export const GOLDEN_FREEFORM_AUDIO_REQUEST = '根据成功视频生成一段配乐'
@@ -34,6 +35,7 @@ const FREEFORM_REQUEST_MARKERS = [
   GOLDEN_FREEFORM_TEXT_REQUEST,
   GOLDEN_FREEFORM_IMAGE_REQUEST,
   GOLDEN_PARALLEL_IMAGE_REQUEST,
+  GOLDEN_APPROVAL_REJECTION_REQUEST,
   GOLDEN_FREEFORM_RETRY_REQUEST,
   GOLDEN_FREEFORM_VIDEO_REQUEST,
   GOLDEN_FREEFORM_AUDIO_REQUEST,
@@ -91,6 +93,7 @@ function instructionRequiresVideoRatio(instruction: string): boolean {
   return [
     GOLDEN_FREEFORM_IMAGE_REQUEST,
     GOLDEN_PARALLEL_IMAGE_REQUEST,
+    GOLDEN_APPROVAL_REJECTION_REQUEST,
     GOLDEN_FREEFORM_RETRY_REQUEST,
     GOLDEN_FREEFORM_VIDEO_REQUEST,
     GOLDEN_FREEFORM_ZERO_VIDEO_REQUEST,
@@ -769,6 +772,32 @@ export function decideGoldenModelResponse(input: {
   }
   if (instruction?.text.includes(GOLDEN_STOP_RECOVERY_REQUEST)) {
     return { kind: 'text', text: 'STOP_REPLY_RECOVERY_COMPLETED' }
+  }
+  if (instruction?.text.includes(GOLDEN_APPROVAL_REJECTION_REQUEST)) {
+    const called = calledToolsAfter(input.request, instruction.index)
+    if (currentProjectVideoRatio(input.request) === null && !called.has('request_choice')) {
+      return buildGatewayToolDecision({
+        request: input.request,
+        requestOrdinal: input.requestOrdinal,
+        operationId: 'request_choice',
+        operationArguments: buildToolArguments(input.request, 'request_choice'),
+      })
+    }
+    if (called.has('create_image')) {
+      return { kind: 'text', text: 'MEDIA_GENERATION_SKIPPED' }
+    }
+    return buildGatewayToolDecision({
+      request: input.request,
+      requestOrdinal: input.requestOrdinal,
+      operationId: 'create_image',
+      operationArguments: {
+        request: {
+          kind: 'new',
+          count: 1,
+          prompt: 'A single cinematic paper lantern floating above a moonlit lake.',
+        },
+      },
+    })
   }
   if (instruction?.text.includes(GOLDEN_PARALLEL_IMAGE_REQUEST)) {
     const called = calledToolsAfter(input.request, instruction.index)

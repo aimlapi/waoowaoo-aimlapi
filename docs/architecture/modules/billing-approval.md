@@ -89,6 +89,7 @@
 
 ## 历史回归
 
+- Approval group 恢复最初只在 `approved=true` 时签发 Grant，却无条件把所有持久成员映射到 Grant；用户拒绝人物声音或任意收费媒体时，合法的零 Grant 被解释为 `PROJECT_AGENT_APPROVAL_GRANT_MEMBER_MISMATCH`，Run 在模型收到拒绝结果前失败。现 control 使用 `approved/rejected` 判别联合：只有 approved 分支可签发并校验逐成员 Grant，rejected 分支只恢复同一 frozen RunState 并逐成员 `state.reject`，不得创建 Grant、Execution、Task、收费/资源 Outbox 或供应商调用；Run 事实自己的 Session broadcast Outbox 仍正常存在。`GJ-APPROVAL-REJECTION-CONTINUATION` 从真实取消按钮反证拒绝再次进入收费执行路径；已有历史失败 Run 不自动复活，需由新用户回合继续。
 - BGM 与环境音首次组成同一付费审批组时，interruption 只持久化首成员的 `operationPlan`，runtime 也只调用一次 Grant issuer；这使“一个 UI 批准”错误地等价于“只有一个 Operation 获得付费执行权”。当前 Approval payload 穷尽保存每个 `approvalId + toolCallId + planSnapshotId`，聚合 plan 只服务 UI 报价；即使旧固定声音链已经删除，同一步自由组合多个收费 Operation 仍逐成员获得精确授权。
 
 - 旧 Soundscape/BGM 各自维护文本 plan 与收费生成；统一 BgmDesign 后仍保留“先规划再生成”的固定创意链。当前旧 planner/generator pair 删除，独立 `create_audio` 像其他媒体 Operation 一样为本次完整输入形成精确计划与授权；音乐方向 Creative Task 免费但绝不自动派生收费任务。

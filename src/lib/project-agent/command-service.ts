@@ -201,12 +201,18 @@ async function resolveProjectAgentControl(params: {
     })
     if (!interruption) throw new Error('PROJECT_AGENT_INTERRUPTION_NOT_PENDING')
     return {
-      control: {
-        kind: 'approval',
-        interruption,
-        approved: controlAction.approved,
-        reason: controlAction.reason,
-      },
+      control: controlAction.approved
+        ? {
+            kind: 'approval',
+            interruption,
+            outcome: 'approved',
+          }
+        : {
+            kind: 'approval',
+            interruption,
+            outcome: 'rejected',
+            reason: controlAction.reason,
+          },
       retryInterruptionId: consumed ? null : interruption.id,
     }
   }

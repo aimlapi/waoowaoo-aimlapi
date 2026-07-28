@@ -7,6 +7,7 @@ import {
 } from '../browser/pages/home'
 import {
   readGoldenPendingInteractionOperationId,
+  rejectGoldenApproval,
   submitGoldenApproval,
 } from '../browser/pages/workspace'
 import { readGoldenOracleSnapshot } from '../oracle/reader'
@@ -21,6 +22,7 @@ import {
   GOLDEN_FREEFORM_PARALLEL_CHAPTERS_REQUEST,
   GOLDEN_FREEFORM_REPLAN_CHAPTERS_REQUEST,
   GOLDEN_FREEFORM_ADOPT_REPLANNED_CHAPTERS_REQUEST,
+  GOLDEN_APPROVAL_REJECTION_REQUEST,
   GOLDEN_PARALLEL_IMAGE_REQUEST,
   GOLDEN_FREEFORM_RETRY_REQUEST,
   GOLDEN_FREEFORM_SCREENPLAY_REQUEST,
@@ -779,4 +781,67 @@ test('[GJ-PARALLEL-OPERATION-BATCH] three same-Operation calls share one quote a
       .toHaveCount(1)
   }
   browserObservations.assertClean()
+})
+
+test('[GJ-APPROVAL-REJECTION-CONTINUATION] rejecting a media quote resumes the same Run without execution side effects', async ({
+  page,
+  browserObservations,
+}, testInfo) => {
+  test.setTimeout(3 * 60_000)
+  await registerGoldenUser(page, {
+    username: `golden-approval-rejection-${String(Date.now())}`,
+    password: 'golden-approval-rejection-password',
+  })
+  const scope = await launchGoldenStoryFromHome(page, GOLDEN_APPROVAL_REJECTION_REQUEST)
+  await resolveInitialVideoRatioChoice(page, scope)
+
+  await expect.poll(async () => await readGoldenPendingInteractionOperationId(page, scope), {
+    timeout: 60_000,
+    message: 'create_image must suspend at the existing quote Approval boundary',
+  }).toBe('create_image')
+  const beforeRejection = await readGoldenOracleSnapshot(scope)
+  expect(beforeRejection.interruptions.filter((item) => (
+    item.type === 'approval' && item.status === 'pending'
+  ))).toHaveLength(1)
+  expect(beforeRejection.tasks).toHaveLength(0)
+  expect(beforeRejection.approvalGrants).toHaveLength(0)
+  expect(beforeRejection.operationExecutions).toHaveLength(0)
+
+  await rejectGoldenApproval(page)
+  await expect(page.getByText('MEDIA_GENERATION_SKIPPED', { exact: true })).toBeVisible({ timeout: 60_000 })
+  await expect.poll(async () => (await readGoldenOracleSnapshot(scope)).runs.map((run) => ({
+    status: run.status,
+    stopReason: run.stopReason,
+  })), {
+    timeout: 60_000,
+    message: 'a rejected Approval must resume and complete the same foreground Run',
+  }).toEqual([{ status: 'completed', stopReason: 'completed' }])
+
+  const snapshot = await readGoldenOracleSnapshot(scope)
+  const approvals = snapshot.interruptions.filter((item) => item.type === 'approval')
+  expect(approvals).toHaveLength(1)
+  expect(approvals[0]).toMatchObject({
+    status: 'consumed',
+    response: { approved: false, reason: null },
+  })
+  expect(snapshot.tasks).toHaveLength(0)
+  expect(snapshot.approvalGrants).toHaveLength(0)
+  expect(snapshot.operationExecutions).toHaveLength(0)
+  expect(snapshot.resources).toHaveLength(0)
+  expect(snapshot.waits).toHaveLength(0)
+  expect(snapshot.handoffs).toEqual([
+    expect.objectContaining({
+      kind: 'approval',
+      operationId: 'create_image',
+      status: 'settled',
+    }),
+  ])
+  expect(snapshot.outboxCommands.filter((command) => (
+    command.kind !== 'project_agent.session_broadcast'
+  ))).toHaveLength(0)
+  browserObservations.assertClean()
+  await testInfo.attach('approval-rejection-oracle', {
+    body: Buffer.from(JSON.stringify(snapshot, null, 2)),
+    contentType: 'application/json',
+  })
 })

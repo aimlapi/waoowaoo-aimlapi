@@ -20,6 +20,15 @@ export const GOLDEN_SCENARIO_CONTRACTS = [
     zeroPaidProviderCalls: true,
   },
   {
+    id: 'GJ-APPROVAL-REJECTION-CONTINUATION',
+    kind: 'freeform',
+    title: 'the user rejects one media quote and the frozen foreground Run resumes without grants, execution, Tasks, Resources, or provider work',
+    startState: 'empty_project',
+    expectedTerminal: 'rejected_media_skipped_and_same_run_completed',
+    requiresWorkers: false,
+    zeroPaidProviderCalls: true,
+  },
+  {
     id: 'GJ-FREEFORM-ZERO-VIDEO',
     kind: 'freeform',
     title: 'the model resolves a missing ratio with one current Choice, then an empty project submits text-to-video without workflow artifacts',

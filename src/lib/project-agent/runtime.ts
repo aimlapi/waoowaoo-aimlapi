@@ -218,7 +218,12 @@ export type ProjectAgentResolvedControl =
   | {
     kind: 'approval'
     interruption: ProjectAgentApprovalInterruptionRecord
-    approved: boolean
+    outcome: 'approved'
+  }
+  | {
+    kind: 'approval'
+    interruption: ProjectAgentApprovalInterruptionRecord
+    outcome: 'rejected'
     reason: string | null
   }
   | {
@@ -583,6 +588,7 @@ function collectFunctionToolOutputs(
   toolResults: FunctionToolResult[],
   outcomesByToolCall: Map<string, ProjectAgentOperationOutcome>,
   operationIdByToolCallId: ReadonlyMap<string, string>,
+  rejectedToolCallIds: Set<string>,
 ): Array<{ toolCallId: string; toolName: string; outcome: ProjectAgentOperationOutcome }> {
   return toolResults.flatMap((result) => {
     if (result.type !== 'function_output') return []
@@ -592,8 +598,10 @@ function collectFunctionToolOutputs(
     if (!toolCallId) {
       throw new Error(`PROJECT_AGENT_TOOL_OUTCOME_CALL_ID_MISSING:${result.tool.name}`)
     }
-    const outcome = outcomesByToolCall.get(toolCallId)
-    if (!outcome) {
+    const settledOutcome = outcomesByToolCall.get(toolCallId)
+    const outcome: ProjectAgentOperationOutcome | null = settledOutcome
+      ?? (rejectedToolCallIds.delete(toolCallId) ? { kind: 'rejected' } : null)
+    if (outcome === null) {
       throw new Error(`PROJECT_AGENT_TOOL_OUTCOME_MISSING:${result.tool.name}:${toolCallId}`)
     }
     const operationId = operationIdByToolCallId.get(toolCallId)
@@ -816,7 +824,7 @@ export async function createProjectAgentChatResponse(input: {
   const persistedApprovalItems = control.kind === 'approval'
     ? readApprovalGroupItems(control.interruption.payload)
     : []
-  const issuedApprovalGrants = control.kind === 'approval' && control.approved
+  const issuedApprovalGrants = control.kind === 'approval' && control.outcome === 'approved'
     ? await issueApprovalGrantGroup({
         userId: input.userId,
         requests: persistedApprovalItems.flatMap((item) => item.operationPlan?.planSnapshotId
@@ -828,18 +836,20 @@ export async function createProjectAgentChatResponse(input: {
       })
     : []
   const issuedGrantByPlanSnapshotId = new Map(issuedApprovalGrants.map((grant) => [grant.planSnapshotId, grant]))
-  const approvedInvocationByToolCallId = Object.fromEntries(persistedApprovalItems.flatMap((item) => {
-    const planSnapshotId = item.operationPlan?.planSnapshotId ?? null
-    if (!item.toolCallId || !planSnapshotId) return []
-    const grant = issuedGrantByPlanSnapshotId.get(planSnapshotId)
-    if (!grant || grant.operationId !== item.operationId) {
-      throw new Error(`PROJECT_AGENT_APPROVAL_GRANT_MEMBER_MISMATCH:${item.toolCallId}`)
-    }
-    return [[item.toolCallId, {
-      approvalGrantId: grant.approvalGrantId,
-      requestId: grant.requestId,
-    }] as const]
-  }))
+  const approvedInvocationByToolCallId = control.kind === 'approval' && control.outcome === 'approved'
+    ? Object.fromEntries(persistedApprovalItems.flatMap((item) => {
+        const planSnapshotId = item.operationPlan?.planSnapshotId ?? null
+        if (!item.toolCallId || !planSnapshotId) return []
+        const grant = issuedGrantByPlanSnapshotId.get(planSnapshotId)
+        if (!grant || grant.operationId !== item.operationId) {
+          throw new Error(`PROJECT_AGENT_APPROVAL_GRANT_MEMBER_MISMATCH:${item.toolCallId}`)
+        }
+        return [[item.toolCallId, {
+          approvalGrantId: grant.approvalGrantId,
+          requestId: grant.requestId,
+        }] as const]
+      }))
+    : {}
   const context: ProjectAgentContext = {
     ...contextBase,
     locale,
@@ -1110,7 +1120,7 @@ export async function createProjectAgentChatResponse(input: {
       runId: input.run.id,
       interruptionId: control.interruption.id,
       approvalId: control.interruption.approvalId,
-      outcome: control.approved ? 'approved' : 'rejected',
+      outcome: control.outcome,
     } satisfies ProjectAgentInterruptionResolvedPartData))
   }
   if (control.kind === 'user_turn') {
@@ -1179,6 +1189,11 @@ export async function createProjectAgentChatResponse(input: {
   let latestStopPart: ProjectAgentStopPartData | null = null
   const preparedChoiceHandoffs = new Map<string, ProjectAgentChoiceHandoffReceipt>()
   const outcomesByToolCall = new Map<string, ProjectAgentOperationOutcome>()
+  const rejectedToolCallIds = new Set(
+    control.kind === 'approval' && control.outcome === 'rejected'
+      ? persistedApprovalItems.flatMap((item) => item.toolCallId ? [item.toolCallId] : [])
+      : [],
+  )
   const submittedTaskReceiptsByToolCall = new Map<string, ProjectAgentOperationOutcome & { kind: 'submitted_tasks' }>()
   const operationIdByToolCallId = new Map<string, string>()
   let activeOperationBatch = createProjectAgentOperationBatchCoordinator({ originRunId: input.run.id })
@@ -1369,6 +1384,7 @@ export async function createProjectAgentChatResponse(input: {
         toolResults,
         outcomesByToolCall,
         operationIdByToolCallId,
+        rejectedToolCallIds,
       )
       await sealActiveOperationBatch()
       const stopPart = stopController.evaluateStep(outcomes)
@@ -1405,11 +1421,15 @@ export async function createProjectAgentChatResponse(input: {
           ? storedApprovalItems.map((item) => findApprovalItem(state, item.approvalId))
           : [findApprovalItem(state, approvalInterruption.approvalId)]
         for (const approvalItem of approvals) {
-          if (control.kind === 'approval' && control.approved) {
+          if (control.kind === 'approval' && control.outcome === 'approved') {
             state.approve(approvalItem)
           } else {
             state.reject(approvalItem, {
-              message: (control.kind === 'approval' ? control.reason : null) || 'PROJECT_AGENT_TOOL_APPROVAL_REJECTED',
+              message: (
+                control.kind === 'approval' && control.outcome === 'rejected'
+                  ? control.reason
+                  : null
+              ) || 'PROJECT_AGENT_TOOL_APPROVAL_REJECTED',
             })
           }
         }

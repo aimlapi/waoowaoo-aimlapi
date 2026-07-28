@@ -58,6 +58,7 @@ export interface ProjectAgentTaskSubmissionReceipt {
 export type ProjectAgentOperationOutcome =
   | { kind: 'completed'; data: unknown }
   | { kind: 'noop'; data: unknown }
+  | { kind: 'rejected' }
   | { kind: 'submitted_tasks'; data: unknown; receipt: ProjectAgentTaskSubmissionReceipt }
   | { kind: 'wait_choice'; data: unknown; choiceHandoff: ProjectAgentChoiceHandoffReceipt }
   | { kind: 'wait_approval' }

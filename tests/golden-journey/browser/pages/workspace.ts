@@ -55,6 +55,19 @@ export function getGoldenApprovalButton(page: Page): Locator {
   return currentApprovalCard.getByRole('button').filter({ hasText: '继续执行' }).last()
 }
 
+export function getGoldenApprovalRejectionButton(page: Page): Locator {
+  const currentApprovalCard = page
+    .getByText('需要确认', { exact: true })
+    .filter({ visible: true })
+    .last()
+    .locator('..')
+  return currentApprovalCard.getByRole('button').filter({ hasText: '取消操作' }).last()
+}
+
 export async function submitGoldenApproval(page: Page): Promise<void> {
   await getGoldenApprovalButton(page).click()
+}
+
+export async function rejectGoldenApproval(page: Page): Promise<void> {
+  await getGoldenApprovalRejectionButton(page).click()
 }
