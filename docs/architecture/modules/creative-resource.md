@@ -91,6 +91,7 @@
 
 ## 历史回归
 
+- 当前仍存在尚未修复的道具媒体契约盲区：固定道具资产版式把纯白背景、接触阴影与主体一起写入无 Alpha 的 JPEG，而 `project.video_segment` 又把该完整 Revision 作为普通图片参考发送给视频 Provider。真实组合中，即使最终视频 Prompt 明确禁止继承资产白底，当白底道具是唯一视觉输入时，视频开头仍会直接继承白色像素。现有防线只证明精确 Binding、Lineage、Prompt 引用和原生声音，没有证明 Ready 道具具备可直接用于视频的透明主体格式，也没有验证出站转换保留 Alpha；在正式资产契约改为单主体透明背景、Ready 前完成 Alpha/边缘校验且视频出站拒绝旧白底 Revision 前，不得把文字“忽略白底”视为有效防线。
 - 项目资产图曾把 Asset Worker 自写的 `generationPrompt` 当最终视觉指令，再由 `create_image` 无条件追加偏向正视、白底、人物展示板的固定后缀；Creative Direction 只是可选上下文引用，不是编译输入。结果是资产身份、正式风格与媒体 Prompt 三个 writer 竞争，强风格项目仍反复产出真人摄影。当前 manifest 只保存无风格稳定身份，adopted Direction 显式声明渲染媒介、写实等级、跨媒体风格与资产渲染规则，`compileAssetImagePrompt` 是最终 Prompt 唯一 writer；项目资产图片请求不再接受 Agent prompt。
 - 项目视频曾允许任意图片 Revision 作为参考，`video_prompt_set` 又由模型分别写 Prompt 和 reference key；即使 Canvas 已有资产卡，也不能证明实际 provider input 使用了正式资产。当前 schema registry 对 `project.video_segment` 声明项目资产图引用为必需，new/retry planning 都要求每张图片有精确 `project_asset_image` Binding；服务端视频 Prompt 编译器从同一 source label 集生成 `@ImageN/@AudioN` 和 referenceKeys，禁止第二引用解释。
 - 通用视频第一次失败后，Primary 曾把“Retry the four exact frozen video-segment generations”作为四条新 prompt 再次调用 `create_video`，而旧 retry schema 同时允许模型填写新 prompt/references；系统因此给原 Resource 创建了四条内容相同、无参考图的新 Task，并把错误结果推进为 head。原 Golden 的 retry provider 也重新提交了同一句 prompt，只证明失败 identity 被复用，没有反证创作输入是否被改写。当前 `retry` 分支只能提交失败 Resource identity，服务端从唯一原始 `request.kind=new` 失败 Task 克隆冻结 payload，仅替换本次执行 identity；缺失、歧义、内容不匹配或引用失效均 typed-fail，不再允许模型重写。Freeform Golden 同时核验 retry 后 Revision 仍保存原 prompt。
