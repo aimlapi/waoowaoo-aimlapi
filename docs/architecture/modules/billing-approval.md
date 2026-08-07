@@ -71,6 +71,10 @@ Task 并扣费。Web、MCP 与未来 CLI 调用同一 planning/submit service；
   所有套餐与充值在创建支付对象前必须经过它。支付回调在与账本相同的事务内写已付；UI、回跳参数与
   轮询都不能占位或授予权益。释放未付款席位必须先由支付平台证明对应会话已过期或取消，禁止仅凭
   本地 timer 回收后又接受晚到付款。
+- **BA-20 — 支付平台客户身份唯一且可恢复。** 一个用户只持有一个持久 Stripe Customer 映射，且只能
+  由共享 customer resolver 创建、恢复和同步；Checkout 与 PaymentIntent 必须消费该映射，route 和
+  支付变体不得各自创建 Customer 或从临时会话字段解释客户身份。手机号和邮箱只写 Customer 联系字段，
+  不得复制到 PaymentIntent metadata、description、日志或幂等 identity。
 
 ## 权威入口
 
@@ -79,6 +83,7 @@ Task 并扣费。Web、MCP 与未来 CLI 调用同一 planning/submit service；
 | 价格条目、派生与毛利保险丝 | `src/lib/ai-registry/pricing-*.ts` |
 | quote、冻结、结算、退回、两池裁决 | `src/lib/billing/**` |
 | LLM 完成用量捕获与实时结算 | `src/lib/codex-model-gateway/**` → `src/lib/billing/llm-realtime-settlement.ts` |
+| Stripe Customer 身份创建、恢复与同步 | `src/lib/payments/stripe-customer.ts` |
 | PlanSnapshot 与 request identity | `src/lib/operations/planning.ts`、`operation-plan-snapshot.ts` |
 | Grant 与执行重验证 | approval routes + `operation-plan-revalidation.ts` |
 | Task/批次原子提交 | `src/lib/task/approved-plan-submitter.ts`、`transactional-create.ts` |

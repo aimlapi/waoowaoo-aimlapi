@@ -7,6 +7,7 @@ import {
 } from '@/lib/billing/subscription-plans'
 import { quoteRecharge, STRIPE_PAYMENT_CURRENCY, type RechargeQuote } from './recharge-config'
 import { createStripeClient } from './stripe-client'
+import { resolveStripeCustomerForUser } from './stripe-customer'
 import { admitPaidBetaPayment } from './paid-beta-admission'
 import {
   attachPaidBetaProviderObject,
@@ -85,9 +86,12 @@ export async function createWechatRechargeIntent(
   })
 
   try {
-    const intent = await createStripeClient().paymentIntents.create({
+    const stripe = createStripeClient()
+    const customer = await resolveStripeCustomerForUser(stripe, input.userId)
+    const intent = await stripe.paymentIntents.create({
       amount: quote.paymentUnitAmount,
       currency: STRIPE_PAYMENT_CURRENCY.toLowerCase(),
+      customer: customer.stripeCustomerId,
       // Named explicitly rather than left to automatic selection: this endpoint
       // exists to produce a WeChat QR code, and silently falling back to another
       // method would leave the browser confirming a payment it cannot render.
@@ -139,9 +143,12 @@ export async function createWechatPlanIntent(
   })
 
   try {
-    const intent = await createStripeClient().paymentIntents.create({
+    const stripe = createStripeClient()
+    const customer = await resolveStripeCustomerForUser(stripe, input.userId)
+    const intent = await stripe.paymentIntents.create({
       amount: minorAmount,
       currency: STRIPE_PAYMENT_CURRENCY.toLowerCase(),
+      customer: customer.stripeCustomerId,
       payment_method_types: ['wechat_pay'],
       metadata: {
         waoowaoo_kind: WECHAT_PLAN_KIND,

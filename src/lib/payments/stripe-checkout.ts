@@ -1,6 +1,7 @@
 import type Stripe from 'stripe'
 import { quoteRecharge, type RechargeQuote } from './recharge-config'
 import { createStripeClient } from './stripe-client'
+import { resolveStripeCustomerForUser } from './stripe-customer'
 import { admitPaidBetaPayment } from './paid-beta-admission'
 import {
   attachPaidBetaProviderObject,
@@ -11,7 +12,6 @@ import {
 
 export interface CreateStripeCheckoutSessionInput {
   userId: string
-  email?: string | null
   locale: 'zh' | 'en'
   origin: string
   credits: number
@@ -74,14 +74,16 @@ export async function createStripeCheckoutSession(input: CreateStripeCheckoutSes
   const metadata = buildCheckoutMetadata(quote, input.userId, attempt)
 
   try {
-    const session = await createStripeClient().checkout.sessions.create({
+    const stripe = createStripeClient()
+    const customer = await resolveStripeCustomerForUser(stripe, input.userId)
+    const session = await stripe.checkout.sessions.create({
       mode: 'payment',
       payment_method_types: ['card'],
       success_url: successUrl,
       cancel_url: cancelUrl,
       expires_at: Math.floor(attempt.expiresAt.getTime() / 1000),
       client_reference_id: input.userId,
-      ...(input.email ? { customer_email: input.email } : {}),
+      customer: customer.stripeCustomerId,
       line_items: [{
         quantity: 1,
         price_data: {

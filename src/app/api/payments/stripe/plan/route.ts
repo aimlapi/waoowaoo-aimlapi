@@ -47,7 +47,6 @@ export const POST = apiHandler(async (request: NextRequest) => {
   try {
     session = await createPlanPurchaseSession({
       userId: authResult.session.user.id,
-      email: authResult.session.user.email,
       locale: resolveCheckoutLocale(request),
       origin: resolveCheckoutPublicOrigin(request),
       planId: parsed.data.planId,

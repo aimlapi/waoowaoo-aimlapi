@@ -9,6 +9,7 @@ import {
 } from '@/lib/billing/subscription-plans'
 import { STRIPE_PAYMENT_CURRENCY } from './recharge-config'
 import { createStripeClient } from './stripe-client'
+import { resolveStripeCustomerForUser } from './stripe-customer'
 import { admitPaidBetaPayment } from './paid-beta-admission'
 import {
   attachPaidBetaProviderObject,
@@ -33,7 +34,6 @@ export const PLAN_PURCHASE_KIND = 'credit_plan_purchase'
 
 export interface CreatePlanPurchaseInput {
   readonly userId: string
-  readonly email?: string | null
   readonly locale: 'zh' | 'en'
   readonly origin: string
   readonly planId: SubscriptionPlanId
@@ -120,14 +120,16 @@ export async function createPlanPurchaseSession(
   }
 
   try {
-    const session = await createStripeClient().checkout.sessions.create({
+    const stripe = createStripeClient()
+    const customer = await resolveStripeCustomerForUser(stripe, input.userId)
+    const session = await stripe.checkout.sessions.create({
       mode: 'payment',
       payment_method_types: ['card'],
       success_url: `${origin}/${input.locale}/profile?section=billing&plan=success&session_id={CHECKOUT_SESSION_ID}`,
       cancel_url: `${origin}/${input.locale}/profile?section=billing&plan=cancel`,
       expires_at: Math.floor(attempt.expiresAt.getTime() / 1000),
       client_reference_id: input.userId,
-      ...(input.email ? { customer_email: input.email } : {}),
+      customer: customer.stripeCustomerId,
       line_items: [{
         quantity: 1,
         price_data: {

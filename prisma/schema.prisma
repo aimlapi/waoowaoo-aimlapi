@@ -291,6 +291,7 @@ model User {
   subscription         Subscription?
   preferences          UserPreference?
   paidBetaSeats        PaidBetaSeat[]
+  stripeCustomer       StripeCustomer?
   announcementReceipts AnnouncementReceipt[]
 
   // 资产中心
@@ -306,6 +307,20 @@ model User {
   workspaceResources              WorkspaceResource[]
 
   @@map("user")
+}
+
+/// Wao 用户与 Stripe Customer 的唯一持久映射。
+/// 本地行先于外部创建存在，`id` 同时作为可恢复的 Stripe 幂等身份；
+/// `stripeCustomerId` 为空只表示外部创建尚未完成，支付不得绕过 resolver。
+model StripeCustomer {
+  id               String   @id @default(uuid())
+  userId           String   @unique
+  stripeCustomerId String?  @unique @db.VarChar(191)
+  createdAt        DateTime @default(now())
+  updatedAt        DateTime @updatedAt
+  user             User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@map("stripe_customers")
 }
 
 model UserPreference {

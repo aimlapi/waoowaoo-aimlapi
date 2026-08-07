@@ -52,7 +52,6 @@ export const POST = apiHandler(async (request: NextRequest) => {
   try {
     session = await createStripeCheckoutSession({
       userId: authResult.session.user.id,
-      email: authResult.session.user.email,
       locale: resolveLocale(request),
       origin: resolvePublicOrigin(request),
       credits: parsed.data.credits,
