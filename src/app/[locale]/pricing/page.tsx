@@ -1,5 +1,5 @@
-import { PricingGlassPageContent } from '../_pricing-glass/page-content'
 import type { Locale } from '@/i18n/routing'
+import { editionPages } from '@/lib/edition/current/pages'
 
 export const dynamic = 'force-dynamic'
 
@@ -8,5 +8,5 @@ export default async function PricingPage({
 }: {
   readonly params: Promise<{ readonly locale: Locale }>
 }) {
-  return <PricingGlassPageContent params={params} />
+  return await editionPages.pricing({ params })
 }

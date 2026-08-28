@@ -10,7 +10,7 @@ import {
 import { resolveCodexModelGatewayUpstream } from './selection'
 import { requireCodexModelGatewayModelActiveTurn } from './active-turn-guard'
 import { projectCodexProviderResponse } from './error-projection'
-import { assertLlmSpendableBalance } from '@/lib/billing/llm-balance-gate'
+import { editionBilling } from '@/lib/edition/current/billing'
 import { InsufficientBalanceError } from '@/lib/billing/errors'
 import { attachOpenRouterRealtimeBilling } from './openrouter-realtime-billing'
 import { resolveAiProviderAdapter } from '@/lib/ai-providers'
@@ -355,7 +355,7 @@ export async function proxyCodexResponsesRequest(params: {
     modelRequest.runtimeTurnId,
   )
   try {
-    await assertLlmSpendableBalance(scope.userId)
+    await editionBilling.assertLlmSpendableBalance(scope.userId)
   } catch (error) {
     if (error instanceof InsufficientBalanceError) {
       throw new CodexModelGatewayError('BILLING_BALANCE_INSUFFICIENT', 429, error)

@@ -25,6 +25,9 @@
     "paths": {
       "@/*": [
         "./src/*"
+      ],
+      "@edition-implementation/*": [
+        "./src/editions/self-hosted/*"
       ]
     }
   },
@@ -41,6 +44,7 @@
     ".next-golden",
     ".next-security",
     "scripts",
-    "tmp"
+    "tmp",
+    "ee"
   ]
 }

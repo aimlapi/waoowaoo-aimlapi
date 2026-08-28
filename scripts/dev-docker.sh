@@ -10,7 +10,7 @@ fi
 : "${WAO_DEV_CODEX_RUNTIME_ROOT:=$PWD/.runtime/codex}"
 : "${WAO_DEV_FORCE_REBUILD:=0}"
 WAO_DEV_DEPENDENCY_FINGERPRINT=$(
-  git hash-object package.json package-lock.json |
+  git hash-object package.json package-lock.json ee/package.json ee/package-lock.json 2>/dev/null |
     git hash-object --stdin |
     cut -c1-16
 )
@@ -38,6 +38,8 @@ runtime_image=waoowaoo-codex-runtime:development
 app_fingerprint=$(fingerprint_files \
   package.json \
   package-lock.json \
+  ee/package.json \
+  ee/package-lock.json \
   prisma \
   Dockerfile \
   docker-compose.dev.yml \

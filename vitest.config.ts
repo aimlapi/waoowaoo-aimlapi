@@ -1,5 +1,8 @@
 import { configDefaults, defineConfig } from 'vitest/config'
 import { resolve } from 'node:path'
+import { readDeploymentEdition } from './src/lib/deployment/edition'
+
+const deploymentEdition = readDeploymentEdition()
 
 export default defineConfig({
   oxc: {
@@ -16,6 +19,11 @@ export default defineConfig({
     alias: {
       '@': resolve(__dirname, 'src'),
       '@skills': resolve(__dirname, 'skills'),
+      '@edition-implementation': resolve(
+        __dirname,
+        deploymentEdition === 'cloud' ? 'ee/src/edition' : 'src/editions/self-hosted',
+      ),
+      ...(deploymentEdition === 'cloud' ? { '@ee': resolve(__dirname, 'ee/src') } : {}),
     },
   },
   test: {

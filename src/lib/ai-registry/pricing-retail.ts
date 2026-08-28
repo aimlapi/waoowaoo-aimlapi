@@ -1,5 +1,5 @@
 import { CREDITS_PER_CNY } from '@/lib/billing/credits'
-import { minimumEffectiveCreditPriceCny } from '@/lib/billing/subscription-plans'
+import { editionServer } from '@/lib/edition/current/server'
 import type {
   BuiltinPricingCatalogEntry,
   BuiltinPricingDefinition,
@@ -137,7 +137,7 @@ export function findPricingMarginViolations(
   entries: readonly BuiltinPricingCatalogEntry[],
   minimumMargin: number = MINIMUM_RETAIL_MARGIN,
 ): PricingMarginViolation[] {
-  const worstCaseCreditPriceCny = minimumEffectiveCreditPriceCny()
+  const worstCaseCreditPriceCny = editionServer.billing.minimumEffectiveCreditPriceCny
   const violations: PricingMarginViolation[] = []
 
   for (const entry of entries) {

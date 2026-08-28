@@ -2,6 +2,7 @@ import { notFound } from 'next/navigation';
 import { getRequestConfig } from 'next-intl/server';
 import { routing, locales, type Locale } from './i18n/routing';
 import { DEFAULT_USER_TIME_ZONE } from './lib/user-time-zone';
+import { editionMessages } from './lib/edition/current/messages';
 
 // Re-export for convenience
 export { locales, type Locale, routing };
@@ -29,7 +30,6 @@ export default getRequestConfig(async ({ requestLocale }) => {
         workspace,
         workspaceDetail,
         profile,
-        billing,
         apiTypes,
         video,
         assets,
@@ -46,10 +46,7 @@ export default getRequestConfig(async ({ requestLocale }) => {
         home,
         assistantAgent,
         legal,
-        pricing,
-        paidBeta,
-        announcements,
-        contact
+        selectedEditionMessages
     ] = await Promise.all([
         import(`../messages/${locale}/common.json`),
         import(`../messages/${locale}/assetLibrary.json`),
@@ -62,7 +59,6 @@ export default getRequestConfig(async ({ requestLocale }) => {
         import(`../messages/${locale}/workspace.json`),
         import(`../messages/${locale}/workspaceDetail.json`),
         import(`../messages/${locale}/profile.json`),
-        import(`../messages/${locale}/billing.json`),
         import(`../messages/${locale}/apiTypes.json`),
         import(`../messages/${locale}/video.json`),
         import(`../messages/${locale}/assets.json`),
@@ -79,10 +75,7 @@ export default getRequestConfig(async ({ requestLocale }) => {
         import(`../messages/${locale}/home.json`),
         import(`../messages/${locale}/assistantAgent.json`),
         import(`../messages/${locale}/legal.json`),
-        import(`../messages/${locale}/pricing.json`),
-        import(`../messages/${locale}/paidBeta.json`),
-        import(`../messages/${locale}/announcements.json`),
-        import(`../messages/${locale}/contact.json`)
+        editionMessages.load(locale as Locale)
     ]);
 
     return {
@@ -102,7 +95,6 @@ export default getRequestConfig(async ({ requestLocale }) => {
             workspace: workspace.default,
             workspaceDetail: workspaceDetail.default,
             profile: profile.default,
-            billing: billing.default,
             apiTypes: apiTypes.default,
             video: video.default,
             assets: assets.default,
@@ -119,10 +111,7 @@ export default getRequestConfig(async ({ requestLocale }) => {
             home: home.default,
             assistantAgent: assistantAgent.default,
             legal: legal.default,
-            pricing: pricing.default,
-            paidBeta: paidBeta.default,
-            announcements: announcements.default,
-            contact: contact.default
+            ...selectedEditionMessages
         }
     };
 });

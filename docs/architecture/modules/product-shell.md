@@ -69,12 +69,12 @@
 - locale 路由与导航：`src/i18n/**`、`@/i18n/navigation`
 - 部署能力：`src/lib/deployment/**`、`/api/deployment`；用户 Provider 配置可用性由
   `src/lib/user-api/availability.ts` 统一裁决
-- 认证与账号初始化：`src/lib/auth/**`（`account-onboarding.ts` 是唯一账号 writer）；第一方身份声明：
-  `src/lib/auth/sso/**` 与 `/api/auth/sso/**`
+- 认证与账号初始化：`src/lib/auth/**`（`account-onboarding.ts` 是唯一账号 writer）与 edition auth
+  contract；Cloud 身份实现位于 `ee/src/auth/**`，第一方声明 route 只经 edition handler 进入
 - API 会话、管理员权限与错误边界：`src/lib/api-auth.ts`、`src/lib/auth/admin.ts`、`src/lib/errors/**`
-- 公测预约：`src/lib/public-beta/**`、`/api/public-beta/waitlist`；售罄事实来自
-  `src/lib/paid-beta/campaign.ts`
-- 部署启动边界：`docker-compose.yml`、`docker-entrypoint.sh`、`scripts/check-cloud-env.mjs`、
+- 公测预约：edition route contract 与 `ee/src/public-beta/**`；售罄事实来自
+  `ee/src/paid-beta/campaign.ts`
+- 部署启动边界：`docker-compose.yml`、`docker-entrypoint.sh`、`ee/scripts/check-cloud-env.mjs`、
   `src/lib/storage/**`
 
 ## 踩过的坑

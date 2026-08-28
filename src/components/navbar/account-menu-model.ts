@@ -2,7 +2,8 @@ import type { AppIconName } from '@/components/ui/icons'
 import type { PublicDeploymentFeatures } from '@/lib/deployment/public-client'
 import type { ProfileSection } from '@/lib/profile/sections'
 import { formatCredits } from '@/lib/billing/credits'
-import type { BalanceHealth } from '@/lib/billing/low-balance'
+
+type BalanceHealth = 'ok' | 'low' | 'empty'
 
 // Navbar 账户菜单的纯投影模型:仅根据 deployment features contract 与
 // 权威余额 payload 派生展示数据,不解释任何业务生命周期。

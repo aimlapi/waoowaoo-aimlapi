@@ -1,4 +1,11 @@
-export type DeploymentEdition = 'self-hosted' | 'cloud'
+import { compiledDeploymentEdition } from '@/lib/edition/current/manifest'
+import { editionServer } from '@/lib/edition/current/server'
+import {
+  readDeploymentEdition,
+  type DeploymentEdition,
+} from './edition'
+
+export type { DeploymentEdition } from './edition'
 export type ProviderCredentialMode = 'user-key' | 'platform-key'
 
 export interface DeploymentConfig {
@@ -6,20 +13,12 @@ export interface DeploymentConfig {
   providerCredentialMode: ProviderCredentialMode
 }
 
-const DEPLOYMENT_EDITIONS: DeploymentEdition[] = ['self-hosted', 'cloud']
 const PROVIDER_CREDENTIAL_MODES: ProviderCredentialMode[] = ['user-key', 'platform-key']
 
 function normalizeString(value: unknown): string | null {
   if (typeof value !== 'string') return null
   const trimmed = value.trim()
   return trimmed || null
-}
-
-function normalizeDeploymentEdition(value: unknown): DeploymentEdition | null {
-  const normalized = normalizeString(value)
-  if (!normalized) return null
-  if (!DEPLOYMENT_EDITIONS.includes(normalized as DeploymentEdition)) return null
-  return normalized as DeploymentEdition
 }
 
 function normalizeProviderCredentialMode(value: unknown): ProviderCredentialMode | null {
@@ -29,26 +28,32 @@ function normalizeProviderCredentialMode(value: unknown): ProviderCredentialMode
   return normalized as ProviderCredentialMode
 }
 
-function readDeploymentEdition(): DeploymentEdition {
-  const edition = normalizeDeploymentEdition(process.env.DEPLOYMENT_EDITION)
-  if (edition) return edition
-  if (process.env.DEPLOYMENT_EDITION) {
-    throw new Error(`DEPLOYMENT_EDITION_INVALID: ${process.env.DEPLOYMENT_EDITION}`)
-  }
-  return 'self-hosted'
-}
-
 function readProviderCredentialMode(edition: DeploymentEdition): ProviderCredentialMode {
   const mode = normalizeProviderCredentialMode(process.env.PROVIDER_CREDENTIAL_MODE)
   if (mode) return mode
   if (process.env.PROVIDER_CREDENTIAL_MODE) {
     throw new Error(`PROVIDER_CREDENTIAL_MODE_INVALID: ${process.env.PROVIDER_CREDENTIAL_MODE}`)
   }
-  return edition === 'cloud' ? 'platform-key' : 'user-key'
+  if (edition !== editionServer.edition) {
+    throw new Error(
+      `DEPLOYMENT_CONTRACT_EDITION_MISMATCH: contract=${editionServer.edition} runtime=${edition}`,
+    )
+  }
+  return editionServer.providerCredentials.defaultMode
 }
 
 export function getDeploymentConfig(): DeploymentConfig {
   const edition = readDeploymentEdition()
+  if (edition !== compiledDeploymentEdition) {
+    throw new Error(
+      `DEPLOYMENT_EDITION_BUILD_MISMATCH: compiled=${compiledDeploymentEdition} runtime=${edition}`,
+    )
+  }
+  if (editionServer.edition !== compiledDeploymentEdition) {
+    throw new Error(
+      `DEPLOYMENT_BINDING_CONTRACT_MISMATCH: manifest=${compiledDeploymentEdition} contract=${editionServer.edition}`,
+    )
+  }
   return {
     edition,
     providerCredentialMode: readProviderCredentialMode(edition),

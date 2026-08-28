@@ -6,8 +6,7 @@ import {
   priceCatalogLlmUsage,
   type LlmUsageFact,
 } from '@/lib/billing/llm-usage'
-import { settleRealtimeLlmUsage } from '@/lib/billing/llm-realtime-settlement'
-import { assertLlmSpendableBalance } from '@/lib/billing/llm-balance-gate'
+import { editionBilling } from '@/lib/edition/current/billing'
 import { InsufficientBalanceError } from '@/lib/billing/errors'
 import {
   createConfiguredWebSearchProvider,
@@ -166,7 +165,7 @@ async function recordSearchUsage(input: {
     toolCalls: input.usage.toolCalls,
   }
   try {
-    await settleRealtimeLlmUsage({
+    await editionBilling.settleRealtimeLlmUsage({
       // Identity is this search, not the Turn: a Turn may research several
       // times and a Turn-scoped id would drop every cost after the first.
       usageId: buildLlmUsageFactId('web-search', [input.turnId, input.requestId]),
@@ -249,7 +248,7 @@ export async function proxyCodexStandaloneSearchRequest(input: {
   } as const
   const activeTurn = await requireCodexModelGatewayActiveTurn(scope, input.scope.nonce)
   try {
-    await assertLlmSpendableBalance(scope.userId)
+    await editionBilling.assertLlmSpendableBalance(scope.userId)
   } catch (error) {
     if (error instanceof InsufficientBalanceError) {
       throw new CodexModelGatewayError('BILLING_BALANCE_INSUFFICIENT', 429, error)

@@ -1,23 +1,7 @@
-import { NextResponse } from 'next/server'
-import { requireUserAuth, isErrorResponse } from '@/lib/api-auth'
-import { apiHandler, ApiError } from '@/lib/api-errors'
-import { getRechargeConfig } from '@/lib/payments/recharge-config'
-import { isPaymentConfigurationError, readPaymentConfigurationErrorCode } from '@/lib/payments/config-errors'
+import type { NextRequest } from 'next/server'
+import type { EditionRouteContext } from '@/lib/edition/contracts/routes'
+import { editionRouteHandlers } from '@/lib/edition/current/routes'
 
-export const GET = apiHandler(async () => {
-  const authResult = await requireUserAuth()
-  if (isErrorResponse(authResult)) return authResult
-
-  try {
-    return NextResponse.json({
-      success: true,
-      recharge: getRechargeConfig(),
-    })
-  } catch (error) {
-    if (isPaymentConfigurationError(error)) {
-      const code = readPaymentConfigurationErrorCode(error)
-      throw new ApiError('MISSING_CONFIG', { code, message: code }, { cause: error })
-    }
-    throw error
-  }
-})
+export function GET(request: NextRequest, context: EditionRouteContext): Promise<Response> {
+  return editionRouteHandlers.paymentsRechargeConfigGet(request, context)
+}

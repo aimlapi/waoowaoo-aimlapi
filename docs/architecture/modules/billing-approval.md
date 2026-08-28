@@ -80,7 +80,7 @@ Task 并扣费。Web、MCP 与未来 CLI 调用同一 planning/submit service；
 | --- | --- |
 | 价格条目、派生与毛利保险丝 | `src/lib/ai-registry/pricing-*.ts` |
 | quote、冻结、结算、退回、两池裁决 | `src/lib/billing/**` |
-| LLM 完成用量捕获与实时结算 | `src/lib/codex-model-gateway/**` → `src/lib/billing/llm-realtime-settlement.ts` |
+| LLM 完成用量捕获与实时结算 | `src/lib/codex-model-gateway/**` → edition billing contract → `ee/src/billing/llm-realtime-settlement.ts` |
 | PlanSnapshot 与 request identity | `src/lib/operations/planning.ts`、`operation-plan-snapshot.ts` |
 | Grant 与执行重验证 | approval routes + `operation-plan-revalidation.ts` |
 | Task/批次原子提交 | `src/lib/task/approved-plan-submitter.ts`、`transactional-create.ts` |

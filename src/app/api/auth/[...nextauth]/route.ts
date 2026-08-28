@@ -1,13 +1,16 @@
 import NextAuth from "next-auth"
 import { NextRequest, NextResponse } from "next/server"
-import { authOptions } from "@/lib/auth"
+import { createAuthOptions } from "@/lib/auth"
 import { checkRateLimit, getClientIp, AUTH_LOGIN_LIMIT } from '@/lib/rate-limit'
 import { logAuthAction } from '@/lib/logging/semantic'
+import { editionAuth } from '@/lib/edition/current/auth'
 
 type NextAuthRouteContext = { params: Promise<{ nextauth: string[] }> }
 type NextAuthRouteHandler = (req: NextRequest, ctx: NextAuthRouteContext) => Promise<Response>
 
-const nextAuthHandler = NextAuth(authOptions) as unknown as NextAuthRouteHandler
+function createNextAuthHandler(): NextAuthRouteHandler {
+    return NextAuth(createAuthOptions()) as unknown as NextAuthRouteHandler
+}
 
 /**
  * 登录 POST 请求加 IP 限流保护。
@@ -23,11 +26,7 @@ async function handlePost(req: NextRequest, ctx: NextAuthRouteContext) {
     const credentialsProvider =
         segments.length >= 2
         && segments[0] === 'callback'
-        && (
-            segments[1] === 'credentials'
-            || segments[1] === 'phone'
-            || segments[1] === 'wechat-official'
-        )
+        && editionAuth.rateLimitedCredentialProviderIds.includes(segments[1])
 
     if (credentialsProvider) {
         const ip = getClientIp(req)
@@ -47,11 +46,11 @@ async function handlePost(req: NextRequest, ctx: NextAuthRouteContext) {
         }
     }
 
-    return nextAuthHandler(req, ctx)
+    return createNextAuthHandler()(req, ctx)
 }
 
 function handleGet(req: NextRequest, ctx: NextAuthRouteContext) {
-    return nextAuthHandler(req, ctx)
+    return createNextAuthHandler()(req, ctx)
 }
 
 export { handleGet as GET, handlePost as POST }

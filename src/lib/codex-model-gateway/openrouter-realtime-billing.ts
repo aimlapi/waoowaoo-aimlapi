@@ -4,7 +4,7 @@ import {
   priceReportedOpenRouterUsage,
   type LlmUsageFact,
 } from '@/lib/billing/llm-usage'
-import { settleRealtimeLlmUsage } from '@/lib/billing/llm-realtime-settlement'
+import { editionBilling } from '@/lib/edition/current/billing'
 
 const MAX_SSE_EVENT_CHARS = 20 * 1024 * 1024
 
@@ -89,7 +89,7 @@ async function settleCompletedPayload(input: {
   }
   const usageId = buildLlmUsageFactId('openrouter-generation', [completed.generationId])
   try {
-    const result = await settleRealtimeLlmUsage({
+    const result = await editionBilling.settleRealtimeLlmUsage({
       usageId,
       projectId: input.projectId,
       userId: input.userId,

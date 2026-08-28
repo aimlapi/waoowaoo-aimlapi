@@ -1,5 +1,6 @@
 import path from 'node:path'
-import { getDeploymentConfig, type DeploymentConfig } from '../deployment/config'
+import { getDeploymentConfig } from '../deployment/config'
+import { editionServer } from '@/lib/edition/current/server'
 import { DockerRuntimeContainerAdapter } from './docker-runtime-container'
 import { LocalProcessRuntimeContainerAdapter } from './local-process-runtime-container'
 import type { RuntimeClientInfo, RuntimeInitializeCapabilities } from './runtime-adapter'
@@ -42,11 +43,11 @@ export const PRODUCTION_CODEX_INITIALIZE_CAPABILITIES: RuntimeInitializeCapabili
 
 export function readCodexRuntimeConfig(
   environment: NodeJS.ProcessEnv = process.env,
-  deployment: DeploymentConfig = getDeploymentConfig(),
 ): CodexRuntimeConfig {
+  getDeploymentConfig()
   const driver = requireDriver(environment.CODEX_RUNTIME_DRIVER)
   if (
-    deployment.edition === 'cloud'
+    editionServer.codexRuntime.requireDockerInProduction
     && environment.NODE_ENV === 'production'
     && driver !== 'docker'
   ) {

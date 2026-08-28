@@ -1,6 +1,7 @@
 #!/usr/bin/env node
 
 import fs from 'node:fs'
+import path from 'node:path'
 import { spawnSync } from 'node:child_process'
 
 function readOption(name) {
@@ -16,8 +17,27 @@ if (!suite || roots.length === 0 || roots.some((root) => !root)) {
 
 fs.mkdirSync('reports/test-results', { recursive: true })
 const report = `reports/test-results/${suite}.json`
+
+function listTests(root) {
+  const output = []
+  const visit = (directory) => {
+    for (const entry of fs.readdirSync(directory, { withFileTypes: true })) {
+      const filePath = path.join(directory, entry.name)
+      if (entry.isDirectory()) {
+        visit(filePath)
+      } else if (entry.isFile() && /\.test\.tsx?$/.test(entry.name)) {
+        output.push(filePath.split(path.sep).join('/'))
+      }
+    }
+  }
+  visit(root)
+  return output
+}
+
+const testFiles = roots.flatMap(listTests).sort()
+if (testFiles.length === 0) throw new Error(`Suite ${suite} discovered zero test files`)
 const vitest = spawnSync('npx', [
-  'vitest', 'run', ...roots,
+  'vitest', 'run', ...testFiles,
   '--reporter=default', '--reporter=json', `--outputFile=${report}`,
 ], { stdio: 'inherit', env: process.env })
 

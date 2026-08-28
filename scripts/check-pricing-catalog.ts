@@ -17,7 +17,7 @@
 import { ensureAiCatalogsRegistered } from '@/lib/ai-exec/catalog-bootstrap'
 import { listBuiltinPricingCatalog, type BuiltinPricingDefinition } from '@/lib/ai-registry/pricing-catalog'
 import { MINIMUM_RETAIL_MARGIN } from '@/lib/ai-registry/pricing-retail'
-import { minimumEffectiveCreditPriceCny } from '@/lib/billing/subscription-plans'
+import { editionServer } from '@/lib/edition/current/server'
 
 const THINNEST_MARGIN_ROWS = 12
 
@@ -32,7 +32,7 @@ function main(): void {
   ensureAiCatalogsRegistered()
 
   const entries = listBuiltinPricingCatalog()
-  const worstCaseCreditPriceCny = minimumEffectiveCreditPriceCny()
+  const worstCaseCreditPriceCny = editionServer.billing.minimumEffectiveCreditPriceCny
 
   const rows: Array<{ label: string; cost: number; retail: number; margin: number }> = []
   for (const entry of entries) {

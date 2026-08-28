@@ -9,7 +9,8 @@ import {
 import { parseModelKeyStrict } from '@/lib/ai-registry/selection'
 import { resolveBuiltinModelContext, getCapabilityOptionFields, validateCapabilitySelectionsPayload, type CapabilityModelContext } from '@/lib/ai-registry/capabilities-catalog'
 import type { ProjectAgentOperationRegistryDraft } from '@/lib/operations/types'
-import { getDeploymentConfig, isCloudDeployment, toPublicDeploymentConfig } from '@/lib/deployment/config'
+import { getDeploymentConfig, toPublicDeploymentConfig } from '@/lib/deployment/config'
+import { editionServer } from '@/lib/edition/current/server'
 import {
   capabilitySelectionCommandSchema,
   capabilitySelectionCommandToSelections,
@@ -267,7 +268,7 @@ export function createConfigOperations(): ProjectAgentOperationRegistryDraft {
       }).passthrough(),
       execute: async (ctx) => {
         const deployment = getDeploymentConfig()
-        if (isCloudDeployment(deployment)) {
+        if (!editionServer.projectConfiguration.userManagedModels) {
           return {
             configurable: false,
             capabilityOverrides: {},
@@ -345,11 +346,10 @@ export function createConfigOperations(): ProjectAgentOperationRegistryDraft {
       inputSchema: updateProjectConfigInputSchema,
       outputSchema: z.unknown(),
       executeInTransaction: async (ctx, input, transaction) => {
-        const deployment = getDeploymentConfig()
-        const cloudDeployment = isCloudDeployment(deployment)
+        const platformManagedModels = !editionServer.projectConfiguration.userManagedModels
         const body: Record<string, unknown> = input
         assertNoLegacyStyleFields(body)
-        if (cloudDeployment) {
+        if (platformManagedModels) {
           assertCloudProjectConfigFields(body)
         }
 
@@ -371,9 +371,9 @@ export function createConfigOperations(): ProjectAgentOperationRegistryDraft {
         }
 
         const allowedProjectFields = [
-          ...(cloudDeployment ? [] : MODEL_FIELDS),
+          ...(platformManagedModels ? [] : MODEL_FIELDS),
           'videoRatio',
-          ...(cloudDeployment ? [] : ['capabilityOverrides'] as const),
+          ...(platformManagedModels ? [] : ['capabilityOverrides'] as const),
         ] as const
 
         const updateData: Record<string, unknown> = {}

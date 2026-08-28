@@ -73,6 +73,8 @@ function applicationEnvironment(testServices: TestServiceEndpoints): NodeJS.Proc
     NODE_ENV: 'development',
     BILLING_MODE: 'OFF',
     DEPLOYMENT_EDITION: 'self-hosted',
+    // This suite verifies auth and ownership, so it uses operator-owned test
+    // credentials instead of coupling those security oracles to API setup UI.
     PROVIDER_CREDENTIAL_MODE: 'platform-key',
     DATABASE_URL: testServices.databaseUrl,
     REDIS_HOST: testServices.redisHost,
@@ -108,7 +110,7 @@ async function writeTypeScriptConfig(): Promise<void> {
   await writeFile(
     path.resolve(process.cwd(), RUNTIME_IDENTITY.tsconfigPath),
     `${JSON.stringify({
-      extends: './tsconfig.json',
+      extends: './.generated/edition/tsconfig.json',
       compilerOptions: {
         incremental: true,
         tsBuildInfoFile: `${RUNTIME_IDENTITY.distDir}/tsconfig.tsbuildinfo`,

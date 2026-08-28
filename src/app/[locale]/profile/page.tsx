@@ -4,15 +4,14 @@ import { signOut, useSession } from 'next-auth/react'
 import { useSearchParams } from 'next/navigation'
 import { useTranslations } from 'next-intl'
 import Navbar from '@/components/Navbar'
-import AccountSecurityTab from './components/AccountSecurityTab'
 import ApiConfigTab from './components/ApiConfigTab'
 import ProfileSidebar, { type ProfileSectionItem } from './components/ProfileSidebar'
-import ProfileOverviewSection, { type ProfileBalanceSummary } from './components/ProfileOverviewSection'
-import ProfileBillingSection, {
-  type ProfileProjectCostDetail,
-  type ProfileProjectCostSummary,
-} from './components/ProfileBillingSection'
-import { type ProfileTransactionItem } from './components/ProfileTransactionsTable'
+import type {
+  ProfileBalanceSummary,
+  ProfileProjectCostDetail,
+  ProfileProjectCostSummary,
+  ProfileTransactionItem,
+} from '@/lib/edition/contracts/client'
 import { BrandPageLoading } from '@/components/ui/BrandLoading'
 import { AppIcon } from '@/components/ui/icons'
 import { useRouter } from '@/i18n/navigation'
@@ -20,7 +19,12 @@ import { readProfileSectionParam, type ProfileSection } from '@/lib/profile/sect
 import { apiFetch } from '@/lib/api-fetch'
 import { readClientApiError } from '@/lib/errors/client'
 import { useToast } from '@/contexts/ToastContext'
-import PaidBetaCheckoutSuccessDialog from '@/components/paid-beta/PaidBetaCheckoutSuccessDialog'
+import {
+  AccountSecurityTab,
+  PaidBetaCheckoutSuccessDialog,
+  ProfileBillingSection,
+  ProfileOverviewSection,
+} from '@/lib/edition/current/client'
 import {
   isPublicDeploymentFeatures,
   type PublicDeploymentFeatures,

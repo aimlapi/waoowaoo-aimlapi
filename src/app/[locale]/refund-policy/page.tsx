@@ -1,7 +1,5 @@
-import LegalPageShell from '@/components/legal/LegalPageShell'
-import { normalizeOfficialLocale, readOfficialLegalPage } from '@/lib/public-site/official-content'
-import { requireOfficialCloudLegalPage } from '@/lib/public-site/visibility'
 import type { Locale } from '@/i18n/routing'
+import { editionPages } from '@/lib/edition/current/pages'
 
 export const dynamic = 'force-dynamic'
 
@@ -10,17 +8,5 @@ export default async function RefundPolicyPage({
 }: {
   readonly params: Promise<{ readonly locale: Locale }>
 }) {
-  requireOfficialCloudLegalPage()
-  const { locale } = await params
-  const content = readOfficialLegalPage('refund-policy', normalizeOfficialLocale(locale))
-
-  return (
-    <LegalPageShell
-      eyebrow={content.eyebrow}
-      title={content.title}
-      description={content.description}
-      updatedAt={content.updatedAt}
-      sections={content.sections}
-    />
-  )
+  return await editionPages.refundPolicy({ params })
 }

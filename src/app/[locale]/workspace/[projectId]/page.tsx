@@ -15,7 +15,7 @@ import {
   readHomeAssistantAutoStartDraft,
   removeHomeAssistantAutoStartDraft,
 } from '@/lib/home/create-project-launch'
-import InAppAnnouncementHost from '@/components/announcements/InAppAnnouncementHost'
+import { WorkspaceAnnouncementHost } from '@/lib/edition/current/client'
 
 export default function ProjectDetailPage() {
   const params = useParams<{ projectId?: string }>()
@@ -87,7 +87,7 @@ export default function ProjectDetailPage() {
           onAssistantAutoStartConsumed={clearAssistantAutoStart}
         />
       </main>
-      <InAppAnnouncementHost placement="workspace_canvas" />
+      <WorkspaceAnnouncementHost />
     </div>
   )
 }

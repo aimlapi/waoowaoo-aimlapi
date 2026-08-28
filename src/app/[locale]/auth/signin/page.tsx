@@ -1,6 +1,6 @@
-import AuthEntryCard from '@/components/auth/AuthEntryCard'
 import { parseSsoPostAuthTarget } from '@/lib/auth/sso/post-auth-target'
 import { readPublicDeploymentFeatures } from '@/lib/deployment/server-features'
+import { AuthEntryCard } from '@/lib/edition/current/client'
 
 export const dynamic = 'force-dynamic'
 

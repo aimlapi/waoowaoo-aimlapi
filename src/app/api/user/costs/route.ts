@@ -1,22 +1,7 @@
-import { NextRequest, NextResponse } from 'next/server'
-import { requireUserAuth, isErrorResponse } from '@/lib/api-auth'
-import { apiHandler } from '@/lib/api-errors'
-import { executeProjectAgentOperationFromApi } from '@/lib/adapters/api/execute-project-agent-operation'
+import type { NextRequest } from 'next/server'
+import type { EditionRouteContext } from '@/lib/edition/contracts/routes'
+import { editionRouteHandlers } from '@/lib/edition/current/routes'
 
-export const GET = apiHandler(async (request: NextRequest) => {
-  const authResult = await requireUserAuth()
-  if (isErrorResponse(authResult)) return authResult
-  const { session } = authResult
-
-  const result = await executeProjectAgentOperationFromApi({
-    request,
-    operationId: 'get_user_costs',
-    projectId: 'system',
-    userId: session.user.id,
-    input: {},
-    source: 'user',
-  })
-
-  return NextResponse.json(result)
-})
-
+export function GET(request: NextRequest, context: EditionRouteContext): Promise<Response> {
+  return editionRouteHandlers.userCostsGet(request, context)
+}

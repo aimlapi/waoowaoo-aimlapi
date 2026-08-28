@@ -18,10 +18,20 @@ RUN --mount=type=cache,target=/var/cache/apt,sharing=locked \
 FROM base AS deps
 WORKDIR /app
 
-COPY package.json package-lock.json ./
-COPY prisma ./prisma
+ARG DEPLOYMENT_EDITION=self-hosted
+ENV DEPLOYMENT_EDITION=$DEPLOYMENT_EDITION
+
+# The root lockfile is the complete self-hosted dependency set. Cloud-only
+# packages have their own lockfile under ee/ and are installed only for a Cloud
+# build. Copying the source here keeps the ee/ input optional: an exported OSS
+# tree with ee/ physically absent still builds this same Dockerfile.
+COPY . .
 RUN --mount=type=cache,target=/root/.npm \
     npm ci --prefer-offline
+RUN --mount=type=cache,target=/root/.npm \
+    if [ "$DEPLOYMENT_EDITION" = "cloud" ]; then \
+      npm ci --prefix ee --prefer-offline --ignore-scripts; \
+    fi
 
 # ==================== Local container development ====================
 FROM deps AS development
@@ -40,42 +50,28 @@ RUN chmod 0755 /usr/local/bin/waoowaoo-dev-entrypoint
 ENTRYPOINT ["/usr/bin/tini", "--", "/usr/local/bin/waoowaoo-dev-entrypoint"]
 
 # ==================== Stage 2: Build ====================
-FROM base AS builder
-WORKDIR /app
-
-COPY --from=deps /app/node_modules ./node_modules
-COPY . .
+FROM deps AS builder
 RUN npm run build
+RUN if [ "$DEPLOYMENT_EDITION" = "self-hosted" ]; then rm -rf /app/ee; fi
 
 # ==================== Stage 3: Production ====================
 FROM base AS runner
 WORKDIR /app
 
+ARG DEPLOYMENT_EDITION=self-hosted
 ENV NODE_ENV=production
+ENV DEPLOYMENT_EDITION=$DEPLOYMENT_EDITION
+LABEL com.waoowaoo.deployment-edition=$DEPLOYMENT_EDITION
 
 RUN --mount=type=cache,target=/var/cache/apt,sharing=locked \
     --mount=type=cache,target=/var/lib/apt,sharing=locked \
     apt-get -o Acquire::Retries=5 update \
     && apt-get -o Acquire::Retries=5 install -y --no-install-recommends gosu tini
 
-# One immutable image contains both entrypoints, but Compose runs Web and each
-# Temporal Worker slot as separate containers. They never share a process or
-# failure domain. The Worker is currently executed from TypeScript through tsx.
-COPY --chown=node:node --from=builder /app/node_modules ./node_modules
-COPY --chown=node:node --from=builder /app/package.json ./package.json
-
-COPY --chown=node:node --from=builder /app/.next ./.next
-COPY --chown=node:node --from=builder /app/public ./public
-COPY --chown=node:node --from=builder /app/prisma ./prisma
-COPY --chown=node:node --from=builder /app/src ./src
-COPY --chown=node:node --from=builder /app/scripts ./scripts
-COPY --chown=node:node --from=builder /app/standards ./standards
-COPY --chown=node:node --from=builder /app/messages ./messages
-COPY --chown=node:node --from=builder /app/tsconfig.json ./tsconfig.json
-COPY --chown=node:node --from=builder /app/tsconfig.runtime-scripts.json ./tsconfig.runtime-scripts.json
-COPY --chown=node:node --from=builder /app/next.config.ts ./next.config.ts
-COPY --chown=node:node --from=builder /app/src/middleware.ts ./src/middleware.ts
-COPY --chown=node:node --from=builder /app/postcss.config.mjs ./postcss.config.mjs
+# Web and Temporal Worker run from this exact build snapshot. Self-hosted
+# builder output has ee/ removed before this copy; Cloud output retains the EE
+# source and its separately locked node_modules for the TypeScript Worker.
+COPY --chown=node:node --from=builder /app ./
 
 # The Web process starts one short-lived, restricted Codex container only while
 # a project is active. The Docker daemon remains a host concern; this image only

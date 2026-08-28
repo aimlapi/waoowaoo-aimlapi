@@ -1,6 +1,6 @@
 import { createHash } from 'node:crypto'
 import { isDeepStrictEqual } from 'node:util'
-import { assertLlmSpendableBalance } from '@/lib/billing/llm-balance-gate'
+import { editionBilling } from '@/lib/edition/current/billing'
 import { Prisma, type ProjectAgentTurn, type ProjectAssistantThread } from '@prisma/client'
 import { safeValidateUIMessages, type UIMessage } from 'ai'
 import { prisma } from '@/lib/prisma'
@@ -401,7 +401,7 @@ export async function admitAssistantRuntimeTurn(input: {
   // Model usage is priced only after it runs and billed daily, so this is the
   // one point where an empty balance can be refused before the platform starts
   // paying a provider on the user's behalf.
-  await assertLlmSpendableBalance(command.userId)
+  await editionBilling.assertLlmSpendableBalance(command.userId)
   return await prisma.$transaction(async (tx) => {
     await lockProjectScope(tx, command)
     const thread = await lockThread(tx, command, input.threadId)

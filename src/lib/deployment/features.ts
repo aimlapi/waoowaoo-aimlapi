@@ -1,5 +1,5 @@
 import type { DeploymentConfig } from './config'
-import { isUserProviderCredentialMode } from './config'
+import { editionServer } from '@/lib/edition/current/server'
 
 export type PasswordAuthIdentity = 'username' | 'phone'
 
@@ -23,58 +23,13 @@ export interface DeploymentFeatures {
   showBetaBadge: boolean
 }
 
-type EditionDeploymentFeatures = Omit<DeploymentFeatures, 'showApiConfig'>
-
-const SELF_HOSTED_DEPLOYMENT_FEATURES: EditionDeploymentFeatures = {
-  showOfficialPublicPages: false,
-  showPricingPage: false,
-  showLegalPages: false,
-  showRecharge: false,
-  showSubscription: false,
-  showBilling: false,
-  showPublicBetaWaitlist: false,
-  showAccountSecurity: false,
-  showGoogleOAuth: false,
-  showWechatOfficialAuth: false,
-  enablePhoneAuth: false,
-  enablePasswordAuth: true,
-  passwordAuthIdentity: 'username',
-  showDownloadLogs: false,
-  showUpdateCheck: true,
-  showBetaBadge: false,
-}
-
-const CLOUD_DEPLOYMENT_FEATURES: EditionDeploymentFeatures = {
-  showOfficialPublicPages: true,
-  showPricingPage: true,
-  showLegalPages: true,
-  showRecharge: true,
-  showSubscription: true,
-  showBilling: true,
-  showPublicBetaWaitlist: true,
-  showAccountSecurity: true,
-  showGoogleOAuth: true,
-  showWechatOfficialAuth: true,
-  enablePhoneAuth: false,
-  enablePasswordAuth: true,
-  passwordAuthIdentity: 'phone',
-  showDownloadLogs: false,
-  showUpdateCheck: false,
-  showBetaBadge: true,
-}
-
-function cloneEditionDeploymentFeatures(features: EditionDeploymentFeatures): EditionDeploymentFeatures {
-  return { ...features }
-}
-
 export function getDeploymentFeatures(config: DeploymentConfig): DeploymentFeatures {
-  const base = cloneEditionDeploymentFeatures(config.edition === 'cloud'
-    ? CLOUD_DEPLOYMENT_FEATURES
-    : SELF_HOSTED_DEPLOYMENT_FEATURES)
-  return {
-    ...base,
-    showApiConfig: isUserProviderCredentialMode(config),
+  if (config.edition !== editionServer.edition) {
+    throw new Error(
+      `DEPLOYMENT_FEATURE_EDITION_MISMATCH: compiled=${editionServer.edition} runtime=${config.edition}`,
+    )
   }
+  return editionServer.getDeploymentFeatures(config)
 }
 
 export function toPublicDeploymentFeatures(features: DeploymentFeatures): DeploymentFeatures {

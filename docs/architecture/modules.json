@@ -16,7 +16,7 @@
         "Dockerfile.codex-runtime",
         "docker/codex-runtime",
         ".env.example",
-        ".env.cloud.example",
+        "ee/.env.example",
         "prisma/migrations/20260802220000_codex_runtime_cutover"
       ]
     },
@@ -45,9 +45,10 @@
       "title": "计费与审批",
       "sourcePaths": [
         "src/lib/billing",
-        "src/lib/payments",
-        "src/lib/paid-beta",
-        "src/components/paid-beta",
+        "ee/src/billing",
+        "ee/src/payments",
+        "ee/src/paid-beta",
+        "ee/src/components",
         "src/app/api/payments",
         "src/app/api/paid-beta",
         "prisma/schema.prisma",
@@ -64,7 +65,8 @@
         "src/lib/ai-registry/pricing-coverage.ts",
         "src/lib/ai-providers/shared/seedance-pricing.ts",
         "scripts/check-pricing-catalog.ts",
-        "tests/integration/billing"
+        "tests/integration/billing",
+        "ee/tests/integration/billing"
       ]
     },
     {
@@ -191,7 +193,7 @@
         "src/lib/platform-models",
         "src/lib/platform-runtime",
         ".env.example",
-        ".env.cloud.example",
+        "ee/.env.example",
         "src/lib/user-api/runtime-config.ts",
         "src/lib/llm-observe",
         "src/lib/image-cache.ts",
@@ -206,9 +208,9 @@
       "title": "生产发布与主机治理",
       "sourcePaths": [
         ".github/workflows/verify.yml",
-        "scripts/production",
+        "ee/scripts/production",
         "scripts/reconcile-assistant-runtime-rollout.ts",
-        "ops/systemd",
+        "ee/ops/systemd",
         "scripts/temporal/worker-rollout.sh",
         "src/lib/codex-runtime/docker-runtime-container.ts"
       ]
@@ -278,13 +280,23 @@
         "src/lib/auth.ts",
         "src/lib/auth",
         "src/lib/deployment",
+        "src/lib/edition",
+        "src/editions/self-hosted",
+        "ee/src/edition",
+        "ee/src/auth",
+        "ee/src/pages",
+        "ee/src/public-site",
+        "ee/messages",
+        "scripts/edition",
+        "ee/package.json",
+        "ee/package-lock.json",
         "src/lib/home",
-        "src/lib/announcements",
-        "src/lib/public-beta",
+        "ee/src/announcements",
+        "ee/src/public-beta",
         "src/lib/profile",
         "src/lib/projects",
         "src/i18n.ts",
-        "src/components/announcements",
+        "ee/src/components/InAppAnnouncementHost.tsx",
         "src/app/api/announcements",
         "src/app/api/public-beta",
         "prisma/schema.prisma",
@@ -333,6 +345,7 @@
       "title": "测试治理",
       "sourcePaths": [
         "tests",
+        "ee/tests",
         "scripts/architecture-impact.mjs",
         "scripts/architecture-impact-lib.mjs",
         "scripts/test-verification",

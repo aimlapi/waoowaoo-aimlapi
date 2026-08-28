@@ -5,7 +5,7 @@
 
 import { getServerSession } from 'next-auth/next'
 import { NextResponse } from 'next/server'
-import { authOptions } from '@/lib/auth'
+import { createAuthOptions } from '@/lib/auth'
 import { prisma } from '@/lib/prisma'
 import { EXTERNAL_OPERATION } from '@/lib/external-operation/registry'
 import { withRetry } from '@/lib/retry'
@@ -147,7 +147,7 @@ export function serverError() {
  * @returns session 或 null
  */
 export async function getAuthSession(): Promise<AuthSession | null> {
-    const session = await getServerSession(authOptions)
+    const session = await getServerSession(createAuthOptions())
     return session as AuthSession | null
 }
 

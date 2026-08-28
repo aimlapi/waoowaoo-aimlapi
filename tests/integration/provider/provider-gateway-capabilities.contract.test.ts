@@ -53,7 +53,6 @@ import {
 import { resolveProviderRouteSet } from '@/lib/ai-registry/provider-route-set'
 import { listBuiltinPricingCatalog } from '@/lib/ai-registry/pricing-catalog'
 import {
-  getPlatformDefaultModelCatalog,
   getPlatformModels,
 } from '@/lib/platform-models/catalog'
 
@@ -174,25 +173,6 @@ describe('provider contract - gateway dispatch (connection tests, session, capab
       expect(pricing.has(model.modelId)).toBe(model.pricingUsdPerMillion !== null)
       expect(apiConfig.has(model.modelId)).toBe(model.showInApiConfig)
       expect(platform.has(model.modelId)).toBe(model.showInPlatform)
-    }
-  })
-
-  it('publishes only priced and capable platform defaults', () => {
-    const defaults = getPlatformDefaultModelCatalog()
-    for (const model of defaults) {
-      if (model.type === 'llm') {
-        expect(resolveRegisteredLlmProtocol(model.modelKey)).toBe('openrouter-chat')
-      }
-      expect(listBuiltinCapabilityCatalog().some((entry) => (
-        entry.modelType === model.type
-        && entry.provider === model.provider
-        && entry.modelId === model.modelId
-      ))).toBe(true)
-      expect(listBuiltinPricingCatalog().some((entry) => (
-        entry.apiType === (model.type === 'llm' ? 'text' : model.type)
-        && entry.provider === model.provider
-        && entry.modelId === model.modelId
-      ))).toBe(true)
     }
   })
 

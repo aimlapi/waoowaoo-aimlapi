@@ -2,6 +2,7 @@
 
 # dependencies
 /node_modules
+/ee/node_modules/
 /.pnp
 .pnp.*
 .yarn/*
@@ -19,7 +20,9 @@
 /.next-security/
 /.tsconfig-security-*.json
 /.next-verify/
+/.next-verify-*/
 /out/
+/.generated/
 
 # production
 /build
@@ -85,6 +88,8 @@ certificates
 .tmp-old-snapshot-*/
 # root-level throwaway debug scripts (may embed local project ids; never commit)
 /.tmp-*
+/debug-request.json
+/scripts/migrations/reports/
 .stryker-tmp/
 reports/mutation/
 reports/test-results/

@@ -32,11 +32,11 @@
 
 ## 权威入口
 
-- 已验证源码到生产镜像与服务交接：`.github/workflows/verify.yml`、`scripts/production/**`
+- 已验证源码到生产镜像与服务交接：`.github/workflows/verify.yml`、`ee/scripts/production/**`
 - Worker 版本路由与排空：`scripts/temporal/worker-rollout.sh`
 - Runtime Turn 恢复结算：`src/lib/assistant-runtime/persistence.ts`
 - 动态 Runtime 容器边界：`src/lib/codex-runtime/docker-runtime-container.ts`
-- 周期维护调度：`ops/systemd/**`
+- 周期维护调度：`ee/ops/systemd/**`
 
 ## 踩过的坑
 

@@ -10,7 +10,6 @@ import { createAssetHubLocationLibraryOperations } from './domains/asset-hub/ass
 import { createAssetHubPickerOperations } from './domains/asset-hub/asset-hub-picker-ops'
 import { createUserPreferenceOperations } from './domains/config/user-preference-ops'
 import { createUserModelsOperations } from './domains/config/user-models-ops'
-import { createUserBillingOperations } from './domains/billing/user-billing-ops'
 import { createUserApiConfigOperations } from './domains/config/user-api-config-ops'
 import { createWorkspaceResourceGenerationOperations } from './domains/workspace-resource/generation-ops'
 import { createWorkspaceResourceOperations } from './domains/workspace-resource/resource-ops'
@@ -21,6 +20,7 @@ import { createVoiceOperations } from './domains/voice/voice-ops'
 import { createAssetDeleteOperations } from './domains/asset/delete'
 import { withOperationPack } from './pack'
 import type { ProjectAgentOperationRegistry } from './types'
+import { editionOperations } from '@/lib/edition/current/operations'
 
 const CONFIRM_NONE = {
   kind: 'none',
@@ -74,11 +74,7 @@ export function createProjectAgentOperationRegistry(): ProjectAgentOperationRegi
       channels: API_ONLY,
       confirmation: CONFIRM_NONE,
     }),
-    ...withOperationPack(createUserBillingOperations(), {
-      groupPath: ['billing'],
-      channels: API_ONLY,
-      confirmation: CONFIRM_NONE,
-    }),
+    ...editionOperations.createProjectAgentOperationRegistry(),
     ...withOperationPack(createUserApiConfigOperations(), {
       groupPath: ['config', 'api'],
       channels: API_ONLY,

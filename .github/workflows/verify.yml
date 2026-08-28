@@ -59,6 +59,9 @@ jobs:
       - name: Install dependencies
         run: npm ci
 
+      - name: Install private Cloud edition dependencies
+        run: if [ -f ee/package.json ]; then npm run edition:deps:install:cloud; fi
+
       - name: Configure test database URL
         run: |
           printf 'DATABASE_URL=%s%s%s\n' 'mysql://root:' "$CI_MYSQL_PASSWORD" '@127.0.0.1:3307/waoowaoo_test' >> "$GITHUB_ENV"
@@ -154,7 +157,7 @@ jobs:
           ssh_args=(-i "$HOME/.ssh/production" -o BatchMode=yes -o StrictHostKeyChecking=yes)
           scp "${ssh_args[@]}" "release-${GITHUB_SHA}.tar.gz" \
             "$PRODUCTION_SSH_USER@$PRODUCTION_SSH_HOST:$remote_tmp"
-          scp "${ssh_args[@]}" scripts/production/deploy-release.sh \
+          scp "${ssh_args[@]}" ee/scripts/production/deploy-release.sh \
             "$PRODUCTION_SSH_USER@$PRODUCTION_SSH_HOST:$remote_script"
           ssh "${ssh_args[@]}" "$PRODUCTION_SSH_USER@$PRODUCTION_SSH_HOST" \
             "set -eu; install -d -m 0750 '$PRODUCTION_DEPLOY_ROOT/.incoming'; mv '$remote_tmp' '$remote_archive'"

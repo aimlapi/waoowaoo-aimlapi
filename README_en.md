@@ -169,10 +169,6 @@ npm run db:push
 npm run dev
 ```
 
-To debug the official Cloud product surface locally, copy `.env.cloud.example` to
-`.env.cloud.local` and run `npm run dev:cloud`. It uses the same local open-source
-Temporal service and does not require a Temporal Cloud account, TLS, or an API key.
-
 ---
 
 Visit [http://localhost:13000](http://localhost:13000) (Method 1 & 2) or [http://localhost:3000](http://localhost:3000) (Method 3) to get started!
