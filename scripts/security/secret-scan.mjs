@@ -25,6 +25,14 @@ const deniedPathRules = [
     test: (filePath) => /^(?:Caddyfile|Dockerfile\.production|docker-compose\.prod\.ya?ml)$/.test(filePath),
   },
   {
+    id: 'local-debug-artifact',
+    test: (filePath) => /^\.tmp[^/]*$/.test(filePath) || filePath === 'debug-request.json',
+  },
+  {
+    id: 'migration-execution-report',
+    test: (filePath) => filePath.startsWith('scripts/migrations/reports/'),
+  },
+  {
     id: 'private-company-document',
     test: (filePath) => /Hamood Entertainment/i.test(filePath),
   },
@@ -101,7 +109,7 @@ function splitNullList(buffer) {
 }
 
 function getRepoFiles() {
-  return splitNullList(runGit(['ls-files', '-z']))
+  return splitNullList(runGit(['ls-files', '-z'])).filter((filePath) => existsSync(filePath))
 }
 
 function getStagedFiles() {
