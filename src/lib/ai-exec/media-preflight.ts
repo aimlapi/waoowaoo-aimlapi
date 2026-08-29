@@ -11,6 +11,10 @@ import {
   resolveModelSelection,
 } from '@/lib/user-api/runtime-config'
 import { resolveProviderRouteSet } from '@/lib/ai-registry/provider-route-set'
+import {
+  resolveCompatibleMediaProviderRoutes,
+  type ProviderMediaInputKind,
+} from '@/lib/ai-exec/media-input-transport'
 
 export function normalizeMediaOptionsForSelection(input: {
   readonly selection: AiResolvedSelection
@@ -105,9 +109,18 @@ export function preflightMediaProviderRoutes(input: {
   readonly options: unknown
   readonly prompt?: string
   readonly musicGenerationMode?: MusicGenerationMode
+  readonly mediaInputKinds?: readonly ProviderMediaInputKind[]
 }): void {
   const routeSet = resolveProviderRouteSet(input.modality, input.selection.modelKey)
-  for (const route of routeSet.routes) {
+  const routes = input.modality === 'image' || input.modality === 'video'
+    ? resolveCompatibleMediaProviderRoutes({
+        routeSet,
+        selection: input.selection,
+        modality: input.modality,
+        mediaKinds: input.mediaInputKinds ?? [],
+      })
+    : routeSet.routes
+  for (const route of routes) {
     normalizeMediaOptionsForSelection({
       selection: {
         provider: route.provider,

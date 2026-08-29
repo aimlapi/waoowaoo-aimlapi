@@ -12,12 +12,19 @@ import { loadS3StorageConfig, toS3ClientConfig, type S3StorageConfig } from '@/l
 import type {
   DeleteObjectsResult,
   ObjectMetadata,
+  ObjectByteRange,
+  ObjectStreamResult,
   SignedUrlParams,
   StorageProvider,
   UploadObjectParams,
   UploadObjectResult,
 } from '@/lib/storage/types'
-import { normalizeKey, streamToBuffer, toFetchableUrl } from '@/lib/storage/utils'
+import {
+  normalizeKey,
+  streamToBuffer,
+  streamToWebStream,
+  toFetchableUrl,
+} from '@/lib/storage/utils'
 
 const MAX_DELETE_OBJECTS_PER_REQUEST = 1_000
 const MAX_SIGNED_URL_EXPIRES_SECONDS = 7 * 24 * 60 * 60
@@ -44,6 +51,7 @@ function normalizeSignedUrlExpiry(rawExpiry: number): number {
 
 export class S3StorageProvider implements StorageProvider {
   readonly kind = 's3' as const
+  readonly mediaObjectDelivery
 
   private readonly config: S3StorageConfig
   private readonly client: S3Client
@@ -51,6 +59,7 @@ export class S3StorageProvider implements StorageProvider {
 
   constructor(config: S3StorageConfig = loadS3StorageConfig()) {
     this.config = config
+    this.mediaObjectDelivery = config.mediaObjectDelivery
     this.client = new S3Client(toS3ClientConfig(config, config.endpoint))
     this.uploadClient = config.uploadEndpoint === config.endpoint
       ? this.client
@@ -104,6 +113,9 @@ export class S3StorageProvider implements StorageProvider {
   }
 
   async getSignedObjectUrl(params: SignedUrlParams): Promise<string> {
+    if (this.mediaObjectDelivery !== 'signed-https') {
+      throw new Error('S3_SIGNED_URL_DELIVERY_UNAVAILABLE')
+    }
     const url = await getSignedUrl(
       this.client,
       new GetObjectCommand({
@@ -122,6 +134,21 @@ export class S3StorageProvider implements StorageProvider {
       Key: normalizeKey(key),
     }))
     return await streamToBuffer(result.Body)
+  }
+
+  async getObjectStream(key: string, range?: ObjectByteRange): Promise<ObjectStreamResult> {
+    const result = await this.client.send(new GetObjectCommand({
+      Bucket: this.config.bucket,
+      Key: normalizeKey(key),
+      ...(range ? { Range: `bytes=${String(range.start)}-${String(range.end)}` } : {}),
+    }))
+    return {
+      body: streamToWebStream(result.Body),
+      contentType: result.ContentType ?? null,
+      contentLength: result.ContentLength ?? null,
+      etag: result.ETag ?? null,
+      contentRange: result.ContentRange ?? null,
+    }
   }
 
   async getObjectMetadata(key: string): Promise<ObjectMetadata> {

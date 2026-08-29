@@ -59,3 +59,48 @@ export async function streamToBuffer(body: unknown): Promise<Buffer> {
 
   return Buffer.concat(chunks)
 }
+
+function isAsyncIterable(value: unknown): value is AsyncIterable<unknown> {
+  return typeof value === 'object'
+    && value !== null
+    && Symbol.asyncIterator in value
+    && typeof Reflect.get(value, Symbol.asyncIterator) === 'function'
+}
+
+function streamChunkToUint8Array(chunk: unknown): Uint8Array {
+  if (chunk instanceof Uint8Array) return chunk
+  if (typeof chunk === 'string') return Buffer.from(chunk)
+  throw new Error('Unsupported response body chunk from storage provider')
+}
+
+export function streamToWebStream(body: unknown): ReadableStream<Uint8Array> {
+  if (!body) throw new Error('Empty response body from storage provider')
+  if (body instanceof ReadableStream) return body
+  if (body instanceof Uint8Array || typeof body === 'string') {
+    const chunk = streamChunkToUint8Array(body)
+    return new ReadableStream<Uint8Array>({
+      start(controller) {
+        controller.enqueue(chunk)
+        controller.close()
+      },
+    })
+  }
+  if (!isAsyncIterable(body)) {
+    throw new Error('Unsupported response body from storage provider')
+  }
+
+  const iterator = body[Symbol.asyncIterator]()
+  return new ReadableStream<Uint8Array>({
+    async pull(controller) {
+      const next = await iterator.next()
+      if (next.done) {
+        controller.close()
+        return
+      }
+      controller.enqueue(streamChunkToUint8Array(next.value))
+    },
+    async cancel() {
+      await iterator.return?.()
+    },
+  })
+}

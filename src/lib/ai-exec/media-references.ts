@@ -1,10 +1,3 @@
-type MediaReferenceOptions = {
-  readonly referenceImages?: unknown
-  readonly referenceAudios?: unknown
-  readonly referenceVideos?: unknown
-  readonly lastFrameImageUrl?: unknown
-}
-
 type MediaRequestIdentityInput = {
   readonly modality?: unknown
   readonly imageUrl?: unknown
@@ -12,56 +5,34 @@ type MediaRequestIdentityInput = {
   readonly [key: string]: unknown
 }
 
-function assertHttpsMediaUrl(value: unknown, field: string): void {
-  if (typeof value !== 'string' || !value.trim()) {
-    throw new Error(`PROVIDER_MEDIA_REFERENCE_INVALID:${field}`)
-  }
-  let url: URL
-  try {
-    url = new URL(value)
-  } catch {
-    throw new Error(`PROVIDER_MEDIA_REFERENCE_INVALID:${field}`)
-  }
-  if (url.protocol !== 'https:' || url.username || url.password) {
-    throw new Error(`PROVIDER_MEDIA_REFERENCE_HTTPS_REQUIRED:${field}`)
-  }
-}
-
-function assertHttpsMediaArray(value: unknown, field: string): void {
-  if (value === undefined) return
-  if (!Array.isArray(value)) {
-    throw new Error(`PROVIDER_MEDIA_REFERENCE_INVALID:${field}`)
-  }
-  value.forEach((item, index) => assertHttpsMediaUrl(item, `${field}[${String(index)}]`))
-}
-
-function stableMediaUrl(value: unknown, field: string): unknown {
+function stableMediaReference(value: unknown, field: string): unknown {
   if (typeof value !== 'string' || !value) return value
-  let url: URL
+  const normalized = value.trim()
+  if (!normalized) return value
   try {
-    url = new URL(value)
+    new URL(normalized)
   } catch {
-    throw new Error(`PROVIDER_MEDIA_REFERENCE_INVALID:${field}`)
+    if (/^[a-z][a-z\d+.-]*:/i.test(normalized) || normalized.includes('\\')) {
+      throw new Error(`PROVIDER_MEDIA_REFERENCE_INVALID:${field}`)
+    }
+    return normalized.replace(/^\/+/, '')
   }
-  url.search = ''
-  url.hash = ''
-  return url.toString()
+  throw new Error(`PROVIDER_MEDIA_REFERENCE_CANONICAL_IDENTITY_REQUIRED:${field}`)
 }
 
-function stableMediaUrlArray(value: unknown, field: string): unknown {
+function stableMediaReferenceArray(value: unknown, field: string): unknown {
   if (value === undefined) return undefined
   if (!Array.isArray(value)) {
     throw new Error(`PROVIDER_MEDIA_REFERENCE_INVALID:${field}`)
   }
-  return value.map((item, index) => stableMediaUrl(item, `${field}[${String(index)}]`))
+  return value.map((item, index) => stableMediaReference(item, `${field}[${String(index)}]`))
 }
 
 /**
- * Builds the durable identity input for a media provider request. Signed S3
- * query credentials are transport capabilities and can change between Task
- * attempts; the HTTPS object origin/path and every non-media option remain
- * identity-bearing. The original request object is never mutated and remains
- * the wire input used by the adapter.
+ * Builds the durable identity input for a media provider request. Canonical
+ * storage keys remain identity-bearing while signed query credentials and
+ * inline serialization are transport details. The original request object is
+ * never mutated and remains the source for final provider projection.
  */
 export function createMediaProviderRequestIdentity<T extends MediaRequestIdentityInput>(
   input: T,
@@ -72,43 +43,22 @@ export function createMediaProviderRequestIdentity<T extends MediaRequestIdentit
     : rawOptions
   const result: Record<string, unknown> = { ...input }
   if (input.modality === 'video' && input.imageUrl) {
-    result.imageUrl = stableMediaUrl(input.imageUrl, 'imageUrl')
+    result.imageUrl = stableMediaReference(input.imageUrl, 'imageUrl')
   }
   if (options && typeof options === 'object' && !Array.isArray(options)) {
     if ('referenceImages' in options) {
-      options.referenceImages = stableMediaUrlArray(options.referenceImages, 'referenceImages')
+      options.referenceImages = stableMediaReferenceArray(options.referenceImages, 'referenceImages')
     }
     if ('referenceAudios' in options) {
-      options.referenceAudios = stableMediaUrlArray(options.referenceAudios, 'referenceAudios')
+      options.referenceAudios = stableMediaReferenceArray(options.referenceAudios, 'referenceAudios')
     }
     if ('referenceVideos' in options) {
-      options.referenceVideos = stableMediaUrlArray(options.referenceVideos, 'referenceVideos')
+      options.referenceVideos = stableMediaReferenceArray(options.referenceVideos, 'referenceVideos')
     }
     if ('lastFrameImageUrl' in options && options.lastFrameImageUrl !== undefined) {
-      options.lastFrameImageUrl = stableMediaUrl(options.lastFrameImageUrl, 'lastFrameImageUrl')
+      options.lastFrameImageUrl = stableMediaReference(options.lastFrameImageUrl, 'lastFrameImageUrl')
     }
     result.options = options
   }
   return result as T
-}
-
-export function assertImageMediaReferencesUseHttps(options: unknown): void {
-  if (!options || typeof options !== 'object' || Array.isArray(options)) return
-  const mediaOptions = options as MediaReferenceOptions
-  assertHttpsMediaArray(mediaOptions.referenceImages, 'referenceImages')
-}
-
-export function assertVideoMediaReferencesUseHttps(input: {
-  readonly imageUrl: string
-  readonly options?: unknown
-}): void {
-  if (input.imageUrl) assertHttpsMediaUrl(input.imageUrl, 'imageUrl')
-  if (!input.options || typeof input.options !== 'object' || Array.isArray(input.options)) return
-  const mediaOptions = input.options as MediaReferenceOptions
-  assertHttpsMediaArray(mediaOptions.referenceImages, 'referenceImages')
-  assertHttpsMediaArray(mediaOptions.referenceAudios, 'referenceAudios')
-  assertHttpsMediaArray(mediaOptions.referenceVideos, 'referenceVideos')
-  if (mediaOptions.lastFrameImageUrl !== undefined) {
-    assertHttpsMediaUrl(mediaOptions.lastFrameImageUrl, 'lastFrameImageUrl')
-  }
 }

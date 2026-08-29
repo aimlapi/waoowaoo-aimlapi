@@ -10,11 +10,13 @@ import {
 import {
   OwnedMediaOutboundError,
   resolveOwnedMediaForGeneration,
+  projectOwnedMediaForGeneration,
 } from '@/lib/media/outbound-owned-media'
 import { isOutboundImageStorageKey } from '@/lib/media/storage-key'
 import { resolveStorageKeyFromMediaValue } from '@/lib/media/service'
 import { MAX_IMAGE_BYTES, readResponseBufferWithLimit } from '@/lib/http/body-limits'
 import { withRetry } from '@/lib/retry'
+import { getDeploymentConfig } from '@/lib/deployment/config'
 
 export { detectMimeFromBuffer } from '@/lib/media/media-mime'
 
@@ -379,9 +381,10 @@ export async function normalizeToBase64ForGeneration(input: string): Promise<str
  * ownership decision used by the authenticated media routes. This avoids using
  * a browser session or a second internal-auth protocol for background work.
  */
-export async function resolveOwnedImageHttpsForGeneration(
+export async function resolveOwnedImageForGeneration(
   input: string,
   userId: string,
+  transport: 'inline-data-url' | 'public-https',
 ): Promise<string> {
   const normalizedInput = normalizeInput(input)
   try {
@@ -390,7 +393,11 @@ export async function resolveOwnedImageHttpsForGeneration(
       label: 'owned outbound image',
       supportedMimeTypes: SUPPORTED_PROVIDER_IMAGE_MIME_TYPES,
     })
-    return media.url
+    return await projectOwnedMediaForGeneration(media, {
+      mediaInput: normalizedInput,
+      label: 'owned outbound image',
+      transport,
+    })
   } catch (error) {
     if (error instanceof OwnedMediaOutboundError) {
       throw new OutboundImageNormalizeError({
@@ -418,7 +425,11 @@ function isOwnedStorageInputCandidate(input: string): boolean {
 
 async function normalizeReferenceForGeneration(input: string, ownerUserId?: string): Promise<string> {
   if (ownerUserId && isOwnedStorageInputCandidate(input)) {
-    return await resolveOwnedImageHttpsForGeneration(input, ownerUserId)
+    return await resolveOwnedImageForGeneration(
+      input,
+      ownerUserId,
+      getDeploymentConfig().providerMediaInputTransport,
+    )
   }
   return await normalizeToBase64ForGeneration(input)
 }

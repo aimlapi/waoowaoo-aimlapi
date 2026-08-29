@@ -11,13 +11,11 @@ import { exchangeWechatOfficialAttempt } from '@ee/auth/wechat-official-attempt'
 import { logAuthAction } from '@/lib/logging/semantic'
 import type { EditionAuthContract } from '@/lib/edition/contracts/auth'
 import { editionServer } from './server'
+import { getDeploymentConfig } from '@/lib/deployment/config'
 
 export const editionAuth = {
   createProviders() {
-    const deploymentFeatures = editionServer.getDeploymentFeatures({
-      edition: 'cloud',
-      providerCredentialMode: editionServer.providerCredentials.defaultMode,
-    })
+    const deploymentFeatures = editionServer.getDeploymentFeatures(getDeploymentConfig())
     const passwordProvider = deploymentFeatures.enablePasswordAuth
       ? CredentialsProvider({
           id: 'credentials',

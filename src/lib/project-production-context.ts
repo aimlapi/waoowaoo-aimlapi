@@ -1,5 +1,5 @@
 import { createHash } from 'node:crypto'
-import { resolveBuiltinCapabilitiesByModelKey } from '@/lib/ai-registry/capabilities-catalog'
+import { resolveEffectiveCapabilitiesByModelKey } from '@/lib/ai-exec/media-input-transport'
 import { getProjectModelConfig, type ProjectModelConfig } from '@/lib/config-service'
 import { prisma } from '@/lib/prisma'
 import { CREATIVE_VIDEO_SEGMENT_DURATION_CEILING_SECONDS } from '@/lib/workspace-resource/generation-contract'
@@ -58,7 +58,7 @@ export class ProjectProductionContextError extends Error {
 
 function resolveProductionCapabilities(config: ProjectModelConfig): ProjectProductionCapabilities {
   const video = config.videoModel
-    ? resolveBuiltinCapabilitiesByModelKey('video', config.videoModel)?.video
+    ? resolveEffectiveCapabilitiesByModelKey('video', config.videoModel)?.video
     : undefined
   const allowedSegmentDurationsSeconds = Array.from(new Set(
     (video?.durationOptions ?? []).filter((duration): duration is number => (
@@ -92,7 +92,7 @@ function resolveProductionCapabilities(config: ProjectModelConfig): ProjectProdu
     : null
 
   const music = config.musicModel
-    ? resolveBuiltinCapabilitiesByModelKey('music', config.musicModel)?.music
+    ? resolveEffectiveCapabilitiesByModelKey('music', config.musicModel)?.music
     : undefined
   const compositionPlan = music?.compositionPlan
   const musicCapabilities = config.musicModel

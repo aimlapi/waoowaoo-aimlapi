@@ -17,6 +17,21 @@ WAO_DEV_DEPENDENCY_FINGERPRINT=$(
 export COMPOSE_PROJECT_NAME WAO_DEV_CODEX_RUNTIME_ROOT WAO_DEV_ENV_FILE WAO_DEV_DEPENDENCY_FINGERPRINT
 mkdir -p "$WAO_DEV_CODEX_RUNTIME_ROOT"
 
+deployment_edition=$(
+  sed -n 's/^[[:space:]]*DEPLOYMENT_EDITION[[:space:]]*=[[:space:]]*//p' "$dev_env_file" |
+    tail -n 1 |
+    tr -d '"' |
+    tr -d "'" |
+    tr -d '[:space:]'
+)
+case "$deployment_edition" in
+  cloud|self-hosted) ;;
+  *)
+    echo "DEPLOYMENT_EDITION in $dev_env_file must be cloud or self-hosted" >&2
+    exit 1
+    ;;
+esac
+
 dev_build_state_dir=$PWD/.runtime/dev-docker
 mkdir -p "$dev_build_state_dir"
 
@@ -50,6 +65,16 @@ runtime_fingerprint=$(fingerprint_files \
   docker/codex-runtime/entrypoint.sh)
 
 compose() {
+  if [ "$deployment_edition" = "self-hosted" ]; then
+    docker compose \
+      --env-file "$dev_env_file" \
+      -f docker-compose.yml \
+      -f docker-compose.self-hosted.yml \
+      -f docker-compose.dev.yml \
+      -f docker-compose.self-hosted.dev.yml \
+      "$@"
+    return
+  fi
   docker compose \
     --env-file "$dev_env_file" \
     -f docker-compose.yml \

@@ -24,14 +24,27 @@ export interface ObjectMetadata {
   contentLength: number | null
 }
 
+export interface ObjectByteRange {
+  start: number
+  end: number
+}
+
+export interface ObjectStreamResult extends ObjectMetadata {
+  body: ReadableStream<Uint8Array>
+  etag: string | null
+  contentRange: string | null
+}
+
 export interface StorageProvider {
   readonly kind: 's3'
+  readonly mediaObjectDelivery: 'authenticated-proxy' | 'signed-https'
   verifyReady(): Promise<void>
   uploadObject(params: UploadObjectParams): Promise<UploadObjectResult>
   deleteObject(key: string): Promise<void>
   deleteObjects(keys: string[]): Promise<DeleteObjectsResult>
   getSignedObjectUrl(params: SignedUrlParams): Promise<string>
   getObjectBuffer(key: string): Promise<Buffer>
+  getObjectStream(key: string, range?: ObjectByteRange): Promise<ObjectStreamResult>
   getObjectMetadata(key: string): Promise<ObjectMetadata>
   extractStorageKey(input: string | null | undefined): string | null
   toFetchableUrl(inputUrl: string): string

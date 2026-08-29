@@ -23,6 +23,8 @@ async function main(): Promise<void> {
   assert(compiledDeploymentEdition === 'cloud', 'compiled edition must be cloud')
   assert(config.edition === 'cloud', 'runtime edition must be cloud')
   assert(config.providerCredentialMode === 'platform-key', 'Cloud must use platform keys')
+  assert(config.mediaObjectDelivery === 'signed-https', 'Cloud media must use signed HTTPS delivery')
+  assert(config.providerMediaInputTransport === 'public-https', 'Cloud provider media must use public HTTPS transport')
   assert(editionServer.billing.mustEnforce, 'Cloud billing enforcement must be required')
   assert(features.showBilling && features.showPricingPage, 'Cloud commerce features are missing')
   assert(features.showAccountSecurity, 'Cloud account security feature is missing')

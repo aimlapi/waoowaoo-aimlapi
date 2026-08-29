@@ -14,6 +14,7 @@ import { findBuiltinCapabilities } from '@/lib/ai-registry/capabilities-catalog'
 import { findBuiltinPricingCatalogEntry } from '@/lib/ai-registry/pricing-catalog'
 import { type VideoPricingTier } from '@/lib/ai-registry/video-capabilities'
 import type { ProjectAgentOperationRegistryDraft } from '@/lib/operations/types'
+import { projectEffectiveMediaCapabilities } from '@/lib/ai-exec/media-input-transport'
 
 type StoredModelType = UnifiedModelType | string
 
@@ -233,7 +234,11 @@ export function createUserModelsOperations(): ProjectAgentOperationRegistryDraft
           if (provider && modelId) {
             const capabilities = findBuiltinCapabilities(modelType, provider, modelId)
             if (capabilities) {
-              option.capabilities = capabilities
+              option.capabilities = projectEffectiveMediaCapabilities(
+                modelType,
+                modelKey,
+                capabilities,
+              )
             }
 
             if (modelType === 'video') {

@@ -54,6 +54,13 @@ export const ERROR_CATALOG = {
     userMessageKey: 'errors.INVALID_PARAMS',
     defaultMessage: 'Invalid parameters',
   },
+  MEDIA_INPUT_TRANSPORT_UNSUPPORTED: defineErrorSpec(
+    'MEDIA_INPUT_TRANSPORT_UNSUPPORTED',
+    422,
+    false,
+    ERROR_CATEGORY.VALIDATION,
+    'The selected model cannot receive this media input in the current deployment',
+  ),
   PAYLOAD_TOO_LARGE: defineErrorSpec('PAYLOAD_TOO_LARGE', 413, false, ERROR_CATEGORY.VALIDATION, 'Payload is too large'),
   UPLOAD_FILE_EMPTY: defineErrorSpec('UPLOAD_FILE_EMPTY', 400, false, ERROR_CATEGORY.VALIDATION, 'Uploaded file is empty'),
   UPLOAD_MEDIA_TYPE_UNSUPPORTED: defineErrorSpec('UPLOAD_MEDIA_TYPE_UNSUPPORTED', 415, false, ERROR_CATEGORY.VALIDATION, 'Uploaded media type is unsupported'),

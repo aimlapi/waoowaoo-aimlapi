@@ -44,15 +44,17 @@
 启动时不依赖宿主机上的仓库脚本：
 
 ```bash
-# 下载 docker-compose.yml
+# 下载共用 Compose 与自托管 overlay
 curl -O https://raw.githubusercontent.com/saturndec/waoowaoo/main/docker-compose.yml
+curl -O https://raw.githubusercontent.com/saturndec/waoowaoo/main/docker-compose.self-hosted.yml
 curl -O https://raw.githubusercontent.com/saturndec/waoowaoo/main/.env.example
 curl -O https://raw.githubusercontent.com/saturndec/waoowaoo/main/scripts/temporal/worker-rollout.sh
 cp .env.example .env
 
 # 编辑 .env：为所有空白密钥生成独立随机值，并让 MYSQL_PASSWORD、
 # DATABASE_URL 与 COMPOSE_DATABASE_URL 中的密码保持一致（URL 中需编码特殊字符）。
-# 另外填写一个预先创建、可通过公网 HTTPS 访问的 S3-compatible 存储桶。
+# 另外填写 MINIO_ROOT_PASSWORD 与 MINIO_APP_SECRET_KEY；Compose 会在私有 Docker 网络内
+# 启动 MinIO、创建桶并准备独立的应用访问凭据。
 # TEMPORAL_WORKER_BLUE_IMAGE 和 TEMPORAL_WORKER_GREEN_IMAGE 都必须填写完整的
 # repository@sha256:<64位digest>；首次安装可以先让两个 slot 指向同一镜像。
 # APP_IMAGE 必须指向同一个digest，不能保留 .env.example 中的全零占位值。
@@ -156,7 +158,7 @@ cd waoowaoo
 
 # 复制环境变量配置文件（必须在 npm install 之前完成）
 cp .env.example .env
-# ⚠️ 编辑 .env，填写数据库、Redis、Temporal、外部 S3-compatible 存储、认证与加密配置
+# ⚠️ 编辑 .env，填写数据库、Redis、Temporal、MinIO、认证与加密配置
 # MYSQL_PASSWORD 必须与两个数据库 URL 中的密码一致
 
 npm install
@@ -173,13 +175,12 @@ npm run dev
 > [!WARNING]
 > 跳过 `npm run db:push` 会导致数据库表结构缺失；请务必在启动应用与 worker 前运行。
 >
-> 对象存储桶必须预先创建，并允许当前凭据执行 bucket 检查以及对象读、写、删操作。
-> `S3_ENDPOINT` 是对象读取、签名与控制操作的 HTTPS endpoint，必须能被外部 AI Provider 访问；
-> `S3_UPLOAD_ENDPOINT` 是同一桶的 PUT endpoint，可显式填写跨地域加速地址；不需要加速时填写与
-> `S3_ENDPOINT` 相同的地址。本地开发同样使用开发桶，
-> 不需要 ngrok、cloudflared、本地文件存储或 Docker MinIO。AWS S3、Cloudflare R2、
-> 腾讯云 COS 与阿里云 OSS 只需切换同一组 `S3_*` 配置；GCS 需使用 XML API + HMAC 凭据。
-> Azure Blob 不是 S3 协议，本版本不直接支持。
+> 自托管版固定使用 Compose 内置的私有 MinIO。对象保存在 `minio_data` volume 中；对象 API 和
+> 管理控制台均不映射宿主机端口，因此不需要公网 IP、域名、HTTPS、ngrok 或 cloudflared。
+> 浏览器通过应用的 owner-aware 媒体路由读取对象，支持 Range；发送给 AI Provider 的私有媒体会按
+> Provider 契约转换为内联 Data URL。只接受公网 HTTPS 引用的模型/媒体组合会在创建任务和计费前
+> 显式标记不可用，不会自动降级。请备份该 volume，且不要执行 `docker compose down -v`，否则会
+> 删除包括 MinIO 对象在内的持久数据。
 >
 > 从旧 BullMQ/Outbox/Run/Wait 架构升级到 B+ 前，必须先停止旧 Web、Bull worker
 > 和 Outbox dispatcher，完成数据库备份，再运行

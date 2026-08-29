@@ -7,6 +7,10 @@ import {
   preflightMediaGenerationOptions,
   preflightMediaProviderRoutes,
 } from '@/lib/ai-exec/media-preflight'
+import {
+  MediaInputTransportUnsupportedError,
+  type ProviderMediaInputKind,
+} from '@/lib/ai-exec/media-input-transport'
 import { resolveBuiltinCapabilitiesByModelKey } from '@/lib/ai-registry/capabilities-catalog'
 import type { CapabilityValue } from '@/lib/ai-registry/types'
 import { ApiError } from '@/lib/api-errors'
@@ -308,6 +312,18 @@ function providerTransportPreflightOptions(input: {
   }
 }
 
+function providerMediaInputKinds(input: {
+  readonly imageCount: number
+  readonly audioCount: number
+  readonly videoCount: number
+}): ProviderMediaInputKind[] {
+  return [
+    ...(input.imageCount > 0 ? ['image' as const] : []),
+    ...(input.audioCount > 0 ? ['audio' as const] : []),
+    ...(input.videoCount > 0 ? ['video' as const] : []),
+  ]
+}
+
 function frozenScalarOptions(value: Record<string, unknown> | undefined): Record<string, string | number | boolean | null> {
   const result: Record<string, string | number | boolean | null> = {}
   for (const [key, option] of Object.entries(value ?? {})) {
@@ -333,6 +349,14 @@ function throwMediaPreflightError(
   },
 ): never {
   if (error instanceof ApiError || error instanceof AppError) throw error
+  if (error instanceof MediaInputTransportUnsupportedError) {
+    throw new ApiError('MEDIA_INPUT_TRANSPORT_UNSUPPORTED', {
+      provider: error.provider,
+      mediaType: input.mediaType,
+      mediaKind: error.mediaKind,
+      transport: error.transport,
+    }, { cause: error })
+  }
   if (error instanceof AiOptionValidationError) {
     if (error.field === 'aspectRatio' && input.aspectRatio && input.modelKey) {
       if (input.ratioOwner === 'project') {
@@ -729,6 +753,7 @@ async function compileMediaExecution(input: {
       selection: preflight.selection,
       modality: item.mediaType === 'audio' ? 'music' : item.mediaType,
       options: frozenExecutionOptions,
+      mediaInputKinds: providerMediaInputKinds({ imageCount, audioCount, videoCount }),
       ...(prompt ? { prompt } : {}),
       ...(item.mediaType === 'audio' ? { musicGenerationMode: 'composition_plan' as const } : {}),
     })
@@ -844,6 +869,11 @@ async function preflightFrozenRetry(input: {
       selection: preflight.selection,
       modality: input.mediaType === 'audio' ? 'music' : input.mediaType,
       options,
+      mediaInputKinds: providerMediaInputKinds({
+        imageCount: input.source.resource.imageInputPositions.length,
+        audioCount: input.source.resource.audioInputPositions.length,
+        videoCount: input.source.resource.videoInputPositions.length,
+      }),
       ...(input.prompt ? { prompt: input.prompt } : {}),
       ...(musicSpecification ? { musicGenerationMode: 'composition_plan' as const } : {}),
     })

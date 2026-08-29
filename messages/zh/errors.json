@@ -22,6 +22,7 @@
   "SENSITIVE_CONTENT": "外部服务依据其内容政策拒绝了本次请求。请调整请求后重试。",
   "CONTENT_RIGHTS_RESTRICTION": "外部服务未能完成本次生成，因为结果可能涉及版权或其他受保护内容。请调整创意或参考素材后重试。",
   "INVALID_PARAMS": "参数错误",
+  "MEDIA_INPUT_TRANSPORT_UNSUPPORTED": "当前部署方式无法把该媒体输入发送给所选模型，请更换模型或输入方式。",
   "PAYLOAD_TOO_LARGE": "上传内容过大，请选择更小的文件后重试。",
   "UPLOAD_FILE_EMPTY": "所选文件为空，请选择其他文件。",
   "UPLOAD_MEDIA_TYPE_UNSUPPORTED": "不支持这种媒体文件，请使用 PNG、JPEG、WebP、MP3、WAV 或 OGG。",

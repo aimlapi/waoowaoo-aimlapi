@@ -22,6 +22,7 @@ import { emitStreamStage, resolveStreamStepMeta } from '@/lib/ai-providers/share
 import { normalizeReferenceImagesForGeneration } from '@/lib/media/outbound-image'
 import { resolveReasoningEffort } from '@/lib/ai-exec/reasoning-effort'
 import { runAiSdkLanguageModel } from '@/lib/ai-exec/llm/sdk-runner'
+import { assertSelectionSupportsMediaInputs } from '@/lib/ai-exec/media-input-transport'
 
 ensureAiCatalogsRegistered()
 
@@ -58,6 +59,11 @@ async function executeVision(input: {
   stream: boolean
 }): Promise<AiLlmExecutionResult> {
   const selection = await resolveLlmRuntimeModel(input.userId, input.model)
+  assertSelectionSupportsMediaInputs({
+    selection,
+    modality: 'vision',
+    mediaKinds: input.imageUrls.length > 0 ? ['image'] : [],
+  })
   const providerKey = getProviderKey(selection.provider).toLowerCase()
   const providerConfig = await getProviderConfig(input.userId, selection.provider)
   const projectId = typeof input.options.projectId === 'string' && input.options.projectId.trim()

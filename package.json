@@ -10,7 +10,7 @@
     "postinstall": "prisma generate && npm run edition:prepare",
     "prepare": "husky",
     "dev": "cross-env WAO_DEV_ENV_FILE=.env sh scripts/dev-docker.sh",
-    "dev:infra": "docker compose up -d mysql redis temporal-create-namespace",
+    "dev:infra": "docker compose -f docker-compose.yml -f docker-compose.self-hosted.yml up -d minio minio-init mysql redis temporal-create-namespace",
     "dev:cloud": "npm run edition:deps:check:cloud && npm run env:cloud:check:dev && npm run runtime:sms:smoke && cross-env WAO_DEV_ENV_FILE=.env.cloud.local sh scripts/dev-docker.sh",
     "dev:cloud:rebuild": "npm run edition:deps:check:cloud && npm run env:cloud:check:dev && npm run runtime:sms:smoke && cross-env WAO_DEV_ENV_FILE=.env.cloud.local WAO_DEV_FORCE_REBUILD=1 sh scripts/dev-docker.sh",
     "dev:next": "npm run edition:prepare && cross-env NODE_OPTIONS=\"--no-deprecation\" next dev --turbopack -H 0.0.0.0",

@@ -1,4 +1,7 @@
-import { resolveOwnedMediaForGeneration } from '@/lib/media/outbound-owned-media'
+import {
+  projectOwnedMediaForGeneration,
+  resolveOwnedMediaForGeneration,
+} from '@/lib/media/outbound-owned-media'
 
 const MAX_VIDEO_REFERENCE_AUDIO_BYTES = 15 * 1024 * 1024
 const SUPPORTED_VIDEO_REFERENCE_AUDIO_MIME_TYPES = new Set([
@@ -30,9 +33,10 @@ function normalizeAudioMimeType(mimeType: string): string {
   return mimeType
 }
 
-export async function resolveOwnedAudioHttpsForGeneration(
+export async function resolveOwnedAudioForGeneration(
   input: string,
   userId: string,
+  transport: 'inline-data-url' | 'public-https',
 ): Promise<string> {
   const normalizedInput = input.trim()
   if (!normalizedInput) {
@@ -49,5 +53,9 @@ export async function resolveOwnedAudioHttpsForGeneration(
     supportedMimeTypes: SUPPORTED_VIDEO_REFERENCE_AUDIO_MIME_TYPES,
     normalizeMimeType: normalizeAudioMimeType,
   })
-  return media.url
+  return await projectOwnedMediaForGeneration(media, {
+    mediaInput: normalizedInput,
+    label: 'owned outbound video reference audio',
+    transport,
+  })
 }

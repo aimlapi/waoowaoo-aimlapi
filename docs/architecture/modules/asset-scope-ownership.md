@@ -28,8 +28,9 @@ Asset Hub 是用户级可复用角色、场景和道具库；Project 内的任�
   DNS/socket/redirect；内部 hostname 或签名 URL 不能成为私网 allowlist。
 - **ASO-08 — 顶层删除唯一。** Hub 顶层实体走 Hub 删除入口，变体使用精确 parent/variant identity；
   Project Resource 删除走 WorkspaceResource 契约，不走 Hub service。
-- **ASO-09 — 存储配置唯一。** 所有部署只使用同一套 S3 兼容配置；桶预建、endpoint 为 HTTPS，
-  不回退本地目录或运行时建桶。
+- **ASO-09 — 存储协议与对象 writer 唯一。** 所有部署只使用 S3 兼容协议与同一个对象写入口；
+  自托管编排唯一初始化私有 MinIO 桶，Cloud 绑定预建 HTTPS 桶。应用不得回退本地目录、暴露私有
+  endpoint 或在媒体调用方创建桶；浏览器交付与 Provider wire 投影都必须复用同一 owner 事实。
 - **ASO-10 — Project 删除先关闭执行。** 删除前在同一事务确认没有非终态 Task、活跃 Turn 或待恢复
   交互；数据库 cascade 不能替代外部执行取消。
 

@@ -50,6 +50,7 @@ import {
   capabilitySelectionCommandToSelections,
 } from '@/lib/ai-registry/capability-selection-command'
 import { assertUserProviderConfigurationAvailable } from './availability'
+import { projectEffectiveMediaCapabilities } from '@/lib/ai-exec/media-input-transport'
 
 export async function getUserApiConfig(userId: string) {
   assertUserProviderConfigurationAvailable()
@@ -114,7 +115,11 @@ export async function getUserApiConfig(userId: string) {
     models: pricedModels,
     providers,
     catalog: buildApiConfigServerCatalog({
-      resolveCapabilities: (model) => resolveBuiltinCapabilities(model.type, model.provider, model.modelId),
+      resolveCapabilities: (model) => projectEffectiveMediaCapabilities(
+        model.type,
+        `${model.provider}::${model.modelId}`,
+        resolveBuiltinCapabilities(model.type, model.provider, model.modelId),
+      ),
     }),
     defaultModels: enabledDefaultModels,
     capabilityDefaults,

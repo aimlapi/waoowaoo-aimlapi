@@ -3,7 +3,8 @@ import { resolveMediaMimeType } from '@/lib/media/media-mime'
 import { resolveStorageKeyFromMediaValue } from '@/lib/media/service'
 import { authorizeStorageObjectReadForUser } from '@/lib/media/storage-access-policy'
 import { DEFAULT_SIGNED_URL_EXPIRES_SECONDS } from '@/lib/storage/utils'
-import { getObjectMetadata, getSignedObjectUrl } from '@/lib/storage'
+import { getObjectBuffer, getObjectMetadata, getSignedObjectUrl } from '@/lib/storage'
+import type { ProviderMediaInputTransport } from '@/lib/deployment/config'
 
 function storageErrorSummary(error: unknown): string {
   if (error instanceof Error) return `${error.name}: ${error.message}`
@@ -17,6 +18,8 @@ export type OwnedMediaOutboundErrorCode =
   | 'OWNED_MEDIA_EMPTY'
   | 'OWNED_MEDIA_SIZE_EXCEEDED'
   | 'OWNED_MEDIA_FORMAT_UNSUPPORTED'
+  | 'OWNED_MEDIA_BODY_READ_FAILED'
+  | 'OWNED_MEDIA_BODY_SIZE_MISMATCH'
   | 'OWNED_MEDIA_SIGNED_URL_INVALID'
 
 export class OwnedMediaOutboundError extends Error {
@@ -39,7 +42,6 @@ export class OwnedMediaOutboundError extends Error {
 }
 
 export type OwnedMediaForGeneration = {
-  readonly url: string
   readonly storageKey: string
   readonly contentType: string
   readonly sizeBytes: number
@@ -49,8 +51,9 @@ export type OwnedMediaForGeneration = {
 /**
  * The only background-task projection path for private provider-bound media.
  * It resolves canonical storage identity, applies the same relation owner
- * policy as authenticated media routes, validates object metadata, and issues
- * a bounded HTTPS URL without a browser route, cookie, or internal credential.
+ * policy as authenticated media routes and validates object metadata. Provider
+ * transport projection is a separate final step so durable request identity
+ * remains the canonical storage key rather than an expiring URL or Data URL.
  */
 export async function resolveOwnedMediaForGeneration(
   input: string,
@@ -130,6 +133,44 @@ export async function resolveOwnedMediaForGeneration(
     })
   }
 
+  return {
+    storageKey: media.storageKey,
+    contentType,
+    sizeBytes,
+    durationMs: media.durationMs,
+  }
+}
+
+export async function projectOwnedMediaForGeneration(
+  media: OwnedMediaForGeneration,
+  input: {
+    readonly mediaInput: string
+    readonly label: string
+    readonly transport: ProviderMediaInputTransport
+  },
+): Promise<string> {
+  if (input.transport === 'inline-data-url') {
+    let body: Buffer
+    try {
+      body = await getObjectBuffer(media.storageKey)
+    } catch (error) {
+      throw new OwnedMediaOutboundError({
+        code: 'OWNED_MEDIA_BODY_READ_FAILED',
+        mediaInput: input.mediaInput,
+        message: `${input.label} body read failed for ${media.storageKey}: ${storageErrorSummary(error)}`,
+        cause: error,
+      })
+    }
+    if (body.length !== media.sizeBytes) {
+      throw new OwnedMediaOutboundError({
+        code: 'OWNED_MEDIA_BODY_SIZE_MISMATCH',
+        mediaInput: input.mediaInput,
+        message: `${input.label} body size changed while reading ${media.storageKey}`,
+      })
+    }
+    return `data:${media.contentType};base64,${body.toString('base64')}`
+  }
+
   const url = await getSignedObjectUrl(media.storageKey, {
     expiresInSeconds: DEFAULT_SIGNED_URL_EXPIRES_SECONDS,
   })
@@ -139,22 +180,16 @@ export async function resolveOwnedMediaForGeneration(
   } catch {
     throw new OwnedMediaOutboundError({
       code: 'OWNED_MEDIA_SIGNED_URL_INVALID',
-      mediaInput: normalizedInput,
-      message: `${options.label} signed URL is invalid`,
+      mediaInput: input.mediaInput,
+      message: `${input.label} signed URL is invalid`,
     })
   }
   if (parsedUrl.protocol !== 'https:') {
     throw new OwnedMediaOutboundError({
       code: 'OWNED_MEDIA_SIGNED_URL_INVALID',
-      mediaInput: normalizedInput,
-      message: `${options.label} signed URL must use HTTPS`,
+      mediaInput: input.mediaInput,
+      message: `${input.label} signed URL must use HTTPS`,
     })
   }
-  return {
-    url: parsedUrl.toString(),
-    storageKey: media.storageKey,
-    contentType,
-    sizeBytes,
-    durationMs: media.durationMs,
-  }
+  return parsedUrl.toString()
 }

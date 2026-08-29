@@ -35,9 +35,9 @@ Provider 差异只停留在 `ai-providers` 的实现、`ai-exec` 的统一执行
   请求的调用。断连、超时、无法证明是否受理的响应进入 `outcome_unknown`，禁止自动重提；纯本地
   校验失败不得伪装成 Provider 拒绝。fence 只消费 adapter 明确声明的 submission disposition，
   禁止从 HTTP 状态、异常 retryable 或 message 猜测“未受理”；typed failure 必须原样穿过 handler。
-- **PG-06C — request identity 排除临时传输凭据。** durable request hash 包含媒体对象的
-  origin/path、顺序与全部非媒体 canonical option，但必须剥除签名 URL 的 query/hash——签名和过期
-  时间只授权本次传输，不是业务输入。wire request 仍使用本次新签发的完整 URL。
+- **PG-06C — request identity 排除临时传输表示。** durable request hash 包含媒体对象的 canonical
+  storage identity、顺序与全部非媒体 canonical option；签名 query、过期时间、Data URL 与 Base64
+  字节只属于本次 wire 投影，不得进入持久请求身份。
 - **PG-06A — 排队与生成分开计时。** 排队与生成消耗互不透支的独立预算。排队超预算是"pending 只能
   恢复"的唯一受控例外，且必须按固定顺序：先持久化"旧 external id 作废"，再尽力取消 provider 侧
   任务，最后抛可重试错误由下一 attempt 经 fence 取得新提交权。绝不允许先取消或先重提再作废——
@@ -61,10 +61,11 @@ Provider 差异只停留在 `ai-providers` 的实现、`ai-exec` 的统一执行
 - **PG-15 — 模型 option 只规范化一次。** 允许字段、必填/冲突、值域和 canonical normalize 由同一
   schema 拥有；adapter 只把 canonical option 映射为 provider wire 字段，不再维护同义 allowed-key、
   枚举、默认值或跨字段裁决。把重复解释移到 shared wrapper 但保留第二裁判不算收敛。
-- **PG-17 — 媒体引用只有一条投影链。** 私有图片/音频/视频在进入 Gateway 前必须经 owner-aware
-  出站入口，按模态校验后投影为有界时效的绝对 HTTPS URL；Gateway 再次拒绝 HTTP、相对路径、
-  Data URL 与内嵌凭据。Base64 不是跨 provider 的媒体协议，只允许在明确要求 inline bytes 的
-  adapter 内部有界转换。
+- **PG-17 — 媒体引用只有一条投影链。** 私有图片/音频/视频以 canonical storage identity 进入
+  Gateway；唯一 owner-aware 出站入口先校验所有权、格式和大小，再由穷尽 transport registry 按
+  部署能力与 Provider 协议投影为 HTTPS URL 或内联媒体。Data URL/Base64 是 wire 表示而不是第二份
+  业务输入。缺少所需 transport 的模型/媒体组合必须在 Plan、Task、计费和 Provider 调用前显式拒绝，
+  不得静默降级、临时上传或让 adapter 猜测。
 - **PG-18 — 外部下载只有一个 SSRF-safe 出口。** scheme、凭据、私网/保留地址、DNS 全部结果与
   每一次 redirect 都 fail closed，实际 socket lookup 必须再次执行同一 policy（防 DNS rebinding）。
   禁止 hostname-only 内网例外、普通 fetch 旁路或只检查首跳。
@@ -95,7 +96,7 @@ Provider 差异只停留在 `ai-providers` 的实现、`ai-exec` 的统一执行
 - 账户额度耗尽时用生产 route 自动前进到另一 provider → 自动降级让 Provider 成为隐藏状态解释者，
   且违背"用户选定模型就是实际模型" → 删除全部生产 route 声明，typed 拒绝只结束本次调用。
 - 视频 retry 每次重新签发私有媒体 URL，而 request hash 包含完整签名串，"可重试"的任务永远无法
-  重新提交 → 把传输凭据当业务输入 → identity projector 剥除 query/hash（PG-06C）。
+  重新提交 → 把传输表示当业务输入 → identity projector 改用 canonical storage identity（PG-06C）。
 - 同步图片的 POST 断连已被 fence 判为 `outcome_unknown`，但上层 helper 捕获所有异常统一包装成
   通用错误，Task 因此被调度三次 → typed disposition 没有穿过 handler → 分类原样抛出（PG-06）。
 - 结构化输出的 fence 剥离曾与"JSON 内容修复、正文截取"写在一起，删除修复路径时把安全的外层

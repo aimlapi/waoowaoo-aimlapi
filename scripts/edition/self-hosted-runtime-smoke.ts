@@ -15,6 +15,8 @@ async function main(): Promise<void> {
   assert(compiledDeploymentEdition === 'self-hosted', 'compiled edition must be self-hosted')
   assert(config.edition === 'self-hosted', 'runtime edition must be self-hosted')
   assert(config.providerCredentialMode === 'user-key', 'self-hosted must default to user keys')
+  assert(config.mediaObjectDelivery === 'authenticated-proxy', 'self-hosted media must use the authenticated proxy')
+  assert(config.providerMediaInputTransport === 'inline-data-url', 'self-hosted provider media must use inline transport')
   assert(editionServer.edition === 'self-hosted', 'server contract must be self-hosted')
   assert(!editionServer.billing.mustEnforce, 'self-hosted billing enforcement must be disabled')
   const providers = editionAuth.createProviders()

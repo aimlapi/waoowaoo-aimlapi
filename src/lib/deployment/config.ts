@@ -7,10 +7,14 @@ import {
 
 export type { DeploymentEdition } from './edition'
 export type ProviderCredentialMode = 'user-key' | 'platform-key'
+export type MediaObjectDelivery = 'authenticated-proxy' | 'signed-https'
+export type ProviderMediaInputTransport = 'inline-data-url' | 'public-https'
 
 export interface DeploymentConfig {
   edition: DeploymentEdition
   providerCredentialMode: ProviderCredentialMode
+  mediaObjectDelivery: MediaObjectDelivery
+  providerMediaInputTransport: ProviderMediaInputTransport
 }
 
 const PROVIDER_CREDENTIAL_MODES: ProviderCredentialMode[] = ['user-key', 'platform-key']
@@ -57,6 +61,8 @@ export function getDeploymentConfig(): DeploymentConfig {
   return {
     edition,
     providerCredentialMode: readProviderCredentialMode(edition),
+    mediaObjectDelivery: edition === 'cloud' ? 'signed-https' : 'authenticated-proxy',
+    providerMediaInputTransport: edition === 'cloud' ? 'public-https' : 'inline-data-url',
   }
 }
 
@@ -76,6 +82,8 @@ export function toPublicDeploymentConfig(config: DeploymentConfig = getDeploymen
   return {
     edition: config.edition,
     providerCredentialMode: config.providerCredentialMode,
+    mediaObjectDelivery: config.mediaObjectDelivery,
+    providerMediaInputTransport: config.providerMediaInputTransport,
     isCloud: isCloudDeployment(config),
     usesPlatformProviderKeys: isPlatformProviderCredentialMode(config),
   }

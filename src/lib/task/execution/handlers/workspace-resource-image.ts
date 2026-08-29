@@ -2,7 +2,6 @@ import {
   parseWorkspaceResourceGenerationTaskPayload,
   type WorkspaceResourceGenerationTaskPayload,
 } from '@/lib/workspace-resource/generation-contract'
-import { resolveOwnedImageHttpsForGeneration } from '@/lib/media/outbound-image'
 import { ensureMediaObjectFromStorageKey } from '@/lib/media/service'
 import { resolveWorkspaceResourceInputMedia } from '@/lib/workspace-resource/input-media'
 import { reportTaskProgress } from '../progress'
@@ -42,12 +41,7 @@ async function loadImageReferences(
     references: imageInputs,
     expectedMediaType: 'image',
   })
-  return await Promise.all(resources.map(async (resource) => {
-    return await resolveOwnedImageHttpsForGeneration(
-      resource.storageKey,
-      context.data.userId,
-    )
-  }))
+  return resources.map((resource) => resource.storageKey)
 }
 
 export async function handleWorkspaceResourceImageTask(

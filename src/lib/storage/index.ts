@@ -5,6 +5,8 @@ import { S3StorageProvider } from '@/lib/storage/providers/s3'
 import type {
   DeleteObjectsResult,
   ObjectMetadata,
+  ObjectByteRange,
+  ObjectStreamResult,
   StorageProvider,
 } from '@/lib/storage/types'
 import { DEFAULT_SIGNED_URL_EXPIRES_SECONDS } from '@/lib/storage/utils'
@@ -23,6 +25,10 @@ export function getStorageProvider(): StorageProvider {
     storageLogger.info(`[Storage] provider initialized: ${providerSingleton.kind}`)
   }
   return providerSingleton
+}
+
+export function getMediaObjectDelivery(): StorageProvider['mediaObjectDelivery'] {
+  return getStorageProvider().mediaObjectDelivery
 }
 
 export function toFetchableUrl(inputUrl: string): string {
@@ -73,6 +79,16 @@ export async function getObjectBuffer(key: string): Promise<Buffer> {
   return await withRetry({
     operation: EXTERNAL_OPERATION.STORAGE_READ,
     run: async () => await getStorageProvider().getObjectBuffer(key),
+  })
+}
+
+export async function getObjectStream(
+  key: string,
+  range?: ObjectByteRange,
+): Promise<ObjectStreamResult> {
+  return await withRetry({
+    operation: EXTERNAL_OPERATION.STORAGE_READ,
+    run: async () => await getStorageProvider().getObjectStream(key, range),
   })
 }
 

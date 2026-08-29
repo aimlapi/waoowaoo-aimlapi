@@ -38,15 +38,17 @@ database, schema, and namespace bootstrap commands; it has no bind mount to a
 host-side repository script:
 
 ```bash
-# Download docker-compose.yml
+# Download the shared Compose file and self-hosted overlay
 curl -O https://raw.githubusercontent.com/saturndec/waoowaoo/main/docker-compose.yml
+curl -O https://raw.githubusercontent.com/saturndec/waoowaoo/main/docker-compose.self-hosted.yml
 curl -O https://raw.githubusercontent.com/saturndec/waoowaoo/main/.env.example
 curl -O https://raw.githubusercontent.com/saturndec/waoowaoo/main/scripts/temporal/worker-rollout.sh
 cp .env.example .env
 
 # Edit .env: generate a distinct random value for every blank secret. Keep
 # MYSQL_PASSWORD in sync with DATABASE_URL and COMPOSE_DATABASE_URL (URL-encode special characters).
-# Also configure a pre-created S3-compatible bucket reachable over public HTTPS.
+# Set MINIO_ROOT_PASSWORD and MINIO_APP_SECRET_KEY; Compose starts private
+# MinIO, creates the bucket, and provisions separate application credentials.
 # TEMPORAL_WORKER_BLUE_IMAGE and TEMPORAL_WORKER_GREEN_IMAGE must both be full
 # repository@sha256:<64-hex-digest> references. They may initially use the same image.
 # APP_IMAGE must use that same digest; do not retain the all-zero placeholder.
@@ -156,7 +158,7 @@ cd waoowaoo
 
 # Copy environment config (must be done before npm install)
 cp .env.example .env
-# ⚠️ Configure database, Redis, Temporal, external S3-compatible storage,
+# ⚠️ Configure database, Redis, Temporal, MinIO,
 # authentication, and encryption. MYSQL_PASSWORD must match both database URLs.
 
 npm install
@@ -173,20 +175,18 @@ npm run dev
 
 Visit [http://localhost:13000](http://localhost:13000) (Method 1 & 2) or [http://localhost:3000](http://localhost:3000) (Method 3) to get started!
 
-> Methods 1 and 2 initialize the database on first container launch; the external storage configuration and pre-created bucket are still required.
+> Methods 1 and 2 initialize both the database and a private MinIO bucket on first container launch.
 
 > [!WARNING]
 > When running the app directly, do not skip `npm run db:push`. It synchronizes the Prisma schema before the application and workers start.
 >
-> Pre-create the object-storage bucket and grant the configured credentials permission to check
-> the bucket and read, write, and delete objects. `S3_ENDPOINT` is the HTTPS endpoint for reads,
-> signing, and control operations and must be reachable by external AI providers.
-> `S3_UPLOAD_ENDPOINT` is the PUT endpoint for the same bucket and may explicitly use a
-> cross-region acceleration endpoint; set it equal to `S3_ENDPOINT` when acceleration is not needed.
-> Local development uses a development bucket too, so no ngrok,
-> cloudflared, local-file storage, or Docker MinIO is required. AWS S3, Cloudflare R2, Tencent COS,
-> and Alibaba OSS share the same `S3_*` configuration. GCS requires its XML API and HMAC credentials.
-> Azure Blob does not implement S3 and is not directly supported.
+> The self-hosted edition always uses the private MinIO service bundled with Compose. Objects are
+> persisted in the `minio_data` volume, while neither the object API nor the admin console is mapped
+> to a host port. No public IP, domain, HTTPS, ngrok, or cloudflared is required. Browsers read through
+> the owner-aware application media route with Range support. Private Provider inputs are serialized
+> as inline Data URLs when the Provider contract permits it; URL-only model/input combinations fail
+> before task creation or billing and never silently fall back. Back up this volume and do not run
+> `docker compose down -v`, which deletes persistent MinIO objects together with the other volumes.
 >
 > Before the one-time B+ cutover, stop the old Web, Bull worker, and Outbox
 > dispatcher, back up the database, and run `npm run db:bplus-cutover-preflight`.

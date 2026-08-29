@@ -1,4 +1,5 @@
 import type { S3ClientConfig } from '@aws-sdk/client-s3'
+import { getDeploymentConfig, type MediaObjectDelivery } from '@/lib/deployment/config'
 import { StorageConfigError } from '@/lib/storage/errors'
 import { requireEnv } from '@/lib/storage/utils'
 
@@ -10,6 +11,7 @@ export type S3StorageConfig = {
   readonly region: string
   readonly bucket: string
   readonly forcePathStyle: boolean
+  readonly mediaObjectDelivery: MediaObjectDelivery
   readonly credentials: {
     readonly accessKeyId: string
     readonly secretAccessKey: string
@@ -17,7 +19,11 @@ export type S3StorageConfig = {
   }
 }
 
-function parseHttpsEndpoint(name: string, rawEndpoint: string): string {
+function parseEndpoint(
+  name: string,
+  rawEndpoint: string,
+  mediaObjectDelivery: MediaObjectDelivery,
+): string {
   let endpoint: URL
   try {
     endpoint = new URL(rawEndpoint)
@@ -25,8 +31,15 @@ function parseHttpsEndpoint(name: string, rawEndpoint: string): string {
     throw new StorageConfigError(`${name} must be a valid absolute URL`)
   }
 
-  if (endpoint.protocol !== 'https:') {
-    throw new StorageConfigError(`${name} must use HTTPS`)
+  const allowedProtocols = mediaObjectDelivery === 'signed-https'
+    ? new Set(['https:'])
+    : new Set(['http:', 'https:'])
+  if (!allowedProtocols.has(endpoint.protocol)) {
+    throw new StorageConfigError(
+      mediaObjectDelivery === 'signed-https'
+        ? `${name} must use HTTPS for signed media delivery`
+        : `${name} must use HTTP or HTTPS`,
+    )
   }
   if (endpoint.username || endpoint.password) {
     throw new StorageConfigError(`${name} must not contain credentials`)
@@ -50,13 +63,19 @@ function parseBooleanEnv(name: string, defaultValue: boolean): boolean {
 }
 
 export function loadS3StorageConfig(): S3StorageConfig {
+  const { mediaObjectDelivery } = getDeploymentConfig()
   const sessionToken = process.env.S3_SESSION_TOKEN?.trim()
   return {
-    endpoint: parseHttpsEndpoint('S3_ENDPOINT', requireEnv('S3_ENDPOINT')),
-    uploadEndpoint: parseHttpsEndpoint('S3_UPLOAD_ENDPOINT', requireEnv('S3_UPLOAD_ENDPOINT')),
+    endpoint: parseEndpoint('S3_ENDPOINT', requireEnv('S3_ENDPOINT'), mediaObjectDelivery),
+    uploadEndpoint: parseEndpoint(
+      'S3_UPLOAD_ENDPOINT',
+      requireEnv('S3_UPLOAD_ENDPOINT'),
+      mediaObjectDelivery,
+    ),
     region: process.env.S3_REGION?.trim() || DEFAULT_S3_REGION,
     bucket: requireEnv('S3_BUCKET'),
     forcePathStyle: parseBooleanEnv('S3_FORCE_PATH_STYLE', false),
+    mediaObjectDelivery,
     credentials: {
       accessKeyId: requireEnv('S3_ACCESS_KEY_ID'),
       secretAccessKey: requireEnv('S3_SECRET_ACCESS_KEY'),

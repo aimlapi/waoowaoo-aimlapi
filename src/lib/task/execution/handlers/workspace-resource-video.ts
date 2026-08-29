@@ -2,9 +2,6 @@ import {
   parseWorkspaceResourceGenerationTaskPayload,
   type WorkspaceResourceGenerationTaskPayload,
 } from '@/lib/workspace-resource/generation-contract'
-import { resolveOwnedAudioHttpsForGeneration } from '@/lib/media/outbound-audio'
-import { resolveOwnedImageHttpsForGeneration } from '@/lib/media/outbound-image'
-import { resolveOwnedVideoHttpsForGeneration } from '@/lib/media/outbound-video'
 import { ensureMediaObjectFromStorageKey } from '@/lib/media/service'
 import { resolveWorkspaceResourceInputMedia } from '@/lib/workspace-resource/input-media'
 import { reportTaskProgress } from '../progress'
@@ -44,21 +41,18 @@ async function loadVideoImageReferences(
     references: imageInputs,
     expectedMediaType: 'image',
   })
-  return await Promise.all(resources.map(async (resource, index) => {
+  return resources.map((resource, index) => {
     const reference = resource.reference
     const role: 'first_frame' | 'last_frame' | 'reference_image' = reference.role === 'first_frame' || reference.role === 'last_frame'
       ? reference.role
       : 'reference_image'
     return {
-      url: await resolveOwnedImageHttpsForGeneration(
-        resource.storageKey,
-        context.data.userId,
-      ),
+      url: resource.storageKey,
       role,
       order: index + 1,
       source: 'generated' as const,
     }
-  }))
+  })
 }
 
 async function loadVideoReferences(
@@ -78,9 +72,7 @@ async function loadVideoReferences(
     references: videoInputs,
     expectedMediaType: 'video',
   })
-  return await Promise.all(resources.map(async (resource) => (
-    await resolveOwnedVideoHttpsForGeneration(resource.storageKey, context.data.userId)
-  )))
+  return resources.map((resource) => resource.storageKey)
 }
 
 export async function loadVideoAudioReferences(
@@ -101,9 +93,7 @@ export async function loadVideoAudioReferences(
     references: audioInputs,
     expectedMediaType: 'audio',
   })
-  return await Promise.all(resources.map(async (resource) => {
-    return await resolveOwnedAudioHttpsForGeneration(resource.storageKey, userId)
-  }))
+  return resources.map((resource) => resource.storageKey)
 }
 
 export async function handleWorkspaceResourceVideoTask(

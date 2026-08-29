@@ -1,56 +1,47 @@
 import { describe, expect, it } from 'vitest'
 import { createMediaProviderRequestIdentity } from '@/lib/ai-exec/media-references'
 
-function videoRequest(signature: string) {
+function videoRequest() {
   return {
     modality: 'video',
     prompt: 'same prompt',
-    imageUrl: `https://media.example.com/first.png?X-Amz-Signature=${signature}#transport`,
+    imageUrl: 'images/first.png',
     options: {
       durationSeconds: 5,
-      referenceImages: [
-        `https://media.example.com/reference.png?X-Amz-Signature=${signature}`,
-      ],
-      referenceAudios: [
-        `https://media.example.com/voice.wav?X-Amz-Signature=${signature}`,
-      ],
-      referenceVideos: [
-        `https://media.example.com/motion.mp4?X-Amz-Signature=${signature}`,
-      ],
-      lastFrameImageUrl: `https://media.example.com/last.png?X-Amz-Signature=${signature}`,
+      referenceImages: ['images/reference.png'],
+      referenceAudios: ['audio/voice.wav'],
+      referenceVideos: ['videos/motion.mp4'],
+      lastFrameImageUrl: 'images/last.png',
     },
   } as const
 }
 
 describe('media provider durable request identity', () => {
-  it('ignores temporary URL credentials without changing the wire request', () => {
-    const firstWireRequest = videoRequest('first')
-    const secondWireRequest = videoRequest('second')
-    const firstSnapshot = structuredClone(firstWireRequest)
+  it('preserves canonical storage identities without changing the source request', () => {
+    const request = videoRequest()
+    const snapshot = structuredClone(request)
 
-    expect(createMediaProviderRequestIdentity(firstWireRequest)).toEqual(
-      createMediaProviderRequestIdentity(secondWireRequest),
-    )
-    expect(firstWireRequest).toEqual(firstSnapshot)
+    expect(createMediaProviderRequestIdentity(request)).toEqual(request)
+    expect(request).toEqual(snapshot)
   })
 
   it('keeps object paths, reference order, and real options identity-bearing', () => {
-    const base = videoRequest('first')
+    const base = videoRequest()
     const differentObject = {
-      ...videoRequest('second'),
-      imageUrl: 'https://media.example.com/other.png?X-Amz-Signature=second',
+      ...videoRequest(),
+      imageUrl: 'images/other.png',
     }
     const differentOption = {
-      ...videoRequest('second'),
-      options: { ...videoRequest('second').options, durationSeconds: 10 },
+      ...videoRequest(),
+      options: { ...videoRequest().options, durationSeconds: 10 },
     }
     const reversedReferences = {
       ...base,
       options: {
         ...base.options,
         referenceImages: [
-          'https://media.example.com/second.png?token=1',
-          'https://media.example.com/reference.png?token=2',
+          'images/second.png',
+          'images/reference.png',
         ],
       },
     }
@@ -71,5 +62,16 @@ describe('media provider durable request identity', () => {
     expect(createMediaProviderRequestIdentity(reversedReferences)).not.toEqual(
       createMediaProviderRequestIdentity(oppositeOrder),
     )
+  })
+
+  it('rejects temporary URL and inline wire representations as durable identity', () => {
+    expect(() => createMediaProviderRequestIdentity({
+      ...videoRequest(),
+      imageUrl: 'https://media.example.com/first.png?X-Amz-Signature=temporary',
+    })).toThrow('PROVIDER_MEDIA_REFERENCE_CANONICAL_IDENTITY_REQUIRED:imageUrl')
+    expect(() => createMediaProviderRequestIdentity({
+      ...videoRequest(),
+      imageUrl: 'data:image/png;base64,AAAA',
+    })).toThrow('PROVIDER_MEDIA_REFERENCE_CANONICAL_IDENTITY_REQUIRED:imageUrl')
   })
 })

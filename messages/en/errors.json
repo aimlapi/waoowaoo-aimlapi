@@ -22,6 +22,7 @@
   "SENSITIVE_CONTENT": "The external provider rejected this request under its content policy. Revise the request and try again.",
   "CONTENT_RIGHTS_RESTRICTION": "The provider could not complete this generation because the result may involve copyrighted or otherwise protected material. Revise the concept or references, then try again.",
   "INVALID_PARAMS": "Invalid parameters",
+  "MEDIA_INPUT_TRANSPORT_UNSUPPORTED": "The selected model cannot receive this media input in the current deployment.",
   "PAYLOAD_TOO_LARGE": "The upload is too large. Choose a smaller file and try again.",
   "UPLOAD_FILE_EMPTY": "The selected file is empty. Choose another file.",
   "UPLOAD_MEDIA_TYPE_UNSUPPORTED": "This media type is not supported. Use PNG, JPEG, WebP, MP3, WAV, or OGG.",

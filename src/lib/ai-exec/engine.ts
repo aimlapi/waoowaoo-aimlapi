@@ -35,9 +35,17 @@ import { EXTERNAL_OPERATION } from '@/lib/external-operation/registry'
 import { resolveReasoningEffort } from '@/lib/ai-exec/reasoning-effort'
 import {
   createMediaProviderRequestIdentity,
-  assertImageMediaReferencesUseHttps,
-  assertVideoMediaReferencesUseHttps,
 } from '@/lib/ai-exec/media-references'
+import {
+  assertSelectionSupportsMediaInputs,
+  collectMediaInputKinds,
+  resolveCompatibleMediaProviderRoutes,
+  type ProviderMediaInputKind,
+} from '@/lib/ai-exec/media-input-transport'
+import {
+  projectImageMediaInputs,
+  projectVideoMediaInputs,
+} from '@/lib/ai-exec/media-input-projector'
 import {
   executeTaskDurableInvocation,
   executeTaskProviderInvocation,
@@ -162,116 +170,138 @@ export async function executeMediaGeneration(
   invocation?: TaskProviderInvocation,
   wait?: AsyncProviderWaitCallbacks,
 ): Promise<GenerateResult> {
-  if (input.modality === 'image') {
-    assertImageMediaReferencesUseHttps(input.options)
-  } else if (input.modality === 'video') {
-    assertVideoMediaReferencesUseHttps({
-      imageUrl: input.imageUrl,
-      options: input.options,
-    })
-  }
-
   const selection = await resolveModelSelection(input.userId, input.modelKey, input.modality)
   logMediaModelSelectionResolved({
     modality: input.modality,
     provider: selection.provider,
     modelKey: selection.modelKey,
   })
+  let mediaInputKinds: ProviderMediaInputKind[] = []
+  let executionInput: AiMediaExecutionInput = input
+  if (input.modality === 'image') {
+    mediaInputKinds = collectMediaInputKinds({ modality: 'image', options: input.options })
+    assertSelectionSupportsMediaInputs({
+      selection,
+      modality: 'image',
+      mediaKinds: mediaInputKinds,
+    })
+    executionInput = {
+      ...input,
+      options: await projectImageMediaInputs({ userId: input.userId, options: input.options }),
+    }
+  } else if (input.modality === 'video') {
+    mediaInputKinds = collectMediaInputKinds({
+      modality: 'video',
+      imageUrl: input.imageUrl,
+      options: input.options,
+    })
+    assertSelectionSupportsMediaInputs({
+      selection,
+      modality: 'video',
+      mediaKinds: mediaInputKinds,
+    })
+    const projected = await projectVideoMediaInputs({
+      userId: input.userId,
+      imageUrl: input.imageUrl,
+      options: input.options,
+    })
+    executionInput = { ...input, ...projected }
+  }
   // Descriptor resolution and option normalization are local preflight. They
   // must finish before executeTaskProviderInvocation claims the durable
   // "submitting" fence; only adapter execution may cross that boundary.
   const buildRoute = (routeSelection: AiResolvedSelection): TaskProviderInvocationRoute<GenerateResult> => {
     const adapter = resolveAiProviderAdapter(routeSelection.provider)
-    switch (input.modality) {
+    switch (executionInput.modality) {
     case 'image': {
-      const modalityAdapter = adapter[input.modality]
+      const modalityAdapter = adapter[executionInput.modality]
       if (!modalityAdapter) {
-        throw new Error(`AI_PROVIDER_MODALITY_UNSUPPORTED:${routeSelection.provider}:${input.modality}`)
+        throw new Error(`AI_PROVIDER_MODALITY_UNSUPPORTED:${routeSelection.provider}:${executionInput.modality}`)
       }
       const options = normalizeMediaOptionsForSelection({
         selection: routeSelection,
-        modality: input.modality,
-        options: input.options,
-        prompt: input.prompt,
+        modality: executionInput.modality,
+        options: executionInput.options,
+        prompt: executionInput.prompt,
       }) as AiImageExecutionOptions | undefined
       return {
         provider: routeSelection.provider,
         modelKey: routeSelection.modelKey,
         request: createMediaProviderRequestIdentity({ ...input, modelKey: routeSelection.modelKey }),
         execute: async () => await modalityAdapter.execute({
-          userId: input.userId,
+          userId: executionInput.userId,
           selection: routeSelection,
-          prompt: input.prompt,
+          prompt: executionInput.prompt,
           options,
         }),
       }
     }
     case 'video': {
-      const modalityAdapter = adapter[input.modality]
+      const modalityAdapter = adapter[executionInput.modality]
       if (!modalityAdapter) {
-        throw new Error(`AI_PROVIDER_MODALITY_UNSUPPORTED:${routeSelection.provider}:${input.modality}`)
+        throw new Error(`AI_PROVIDER_MODALITY_UNSUPPORTED:${routeSelection.provider}:${executionInput.modality}`)
       }
       const options = normalizeMediaOptionsForSelection({
         selection: routeSelection,
-        modality: input.modality,
-        options: input.options,
-        prompt: input.options?.prompt,
+        modality: executionInput.modality,
+        options: executionInput.options,
+        prompt: executionInput.options?.prompt,
       }) as AiVideoExecutionOptions | undefined
       return {
         provider: routeSelection.provider,
         modelKey: routeSelection.modelKey,
         request: createMediaProviderRequestIdentity({ ...input, modelKey: routeSelection.modelKey }),
         execute: async () => await modalityAdapter.execute({
-          userId: input.userId,
+          userId: executionInput.userId,
           selection: routeSelection,
-          imageUrl: input.imageUrl,
+          imageUrl: executionInput.imageUrl,
           options,
         }),
       }
     }
     case 'music': {
-      const modalityAdapter = adapter[input.modality]
+      const modalityAdapter = adapter[executionInput.modality]
       if (!modalityAdapter) {
-        throw new Error(`AI_PROVIDER_MODALITY_UNSUPPORTED:${routeSelection.provider}:${input.modality}`)
+        throw new Error(`AI_PROVIDER_MODALITY_UNSUPPORTED:${routeSelection.provider}:${executionInput.modality}`)
       }
       const options = normalizeMediaOptionsForSelection({
         selection: routeSelection,
-        modality: input.modality,
-        options: input.options,
-        prompt: input.generation.kind === 'prompt' ? input.generation.prompt : undefined,
-        musicGenerationMode: input.generation.kind,
+        modality: executionInput.modality,
+        options: executionInput.options,
+        prompt: executionInput.generation.kind === 'prompt' ? executionInput.generation.prompt : undefined,
+        musicGenerationMode: executionInput.generation.kind,
       }) as AiMusicExecutionOptions | undefined
       return {
         provider: routeSelection.provider,
         modelKey: routeSelection.modelKey,
         request: createMediaProviderRequestIdentity({ ...input, modelKey: routeSelection.modelKey }),
         execute: async () => await modalityAdapter.execute({
-          userId: input.userId,
+          userId: executionInput.userId,
           selection: routeSelection,
-          generation: input.generation,
+          generation: executionInput.generation,
           options,
         }),
       }
     }
     case 'voice': {
-      const modalityAdapter = adapter[input.modality]
+      const modalityAdapter = adapter[executionInput.modality]
       if (!modalityAdapter) {
-        throw new Error(`AI_PROVIDER_MODALITY_UNSUPPORTED:${routeSelection.provider}:${input.modality}`)
+        throw new Error(`AI_PROVIDER_MODALITY_UNSUPPORTED:${routeSelection.provider}:${executionInput.modality}`)
       }
       const options = normalizeMediaOptionsForSelection({
         selection: routeSelection,
-        modality: input.modality,
-        options: input.options,
+        modality: executionInput.modality,
+        options: executionInput.options,
       }) as AiVoiceExecutionOptions | undefined
       return {
         provider: routeSelection.provider,
         modelKey: routeSelection.modelKey,
         request: createMediaProviderRequestIdentity({ ...input, modelKey: routeSelection.modelKey }),
         execute: async () => await modalityAdapter.execute({
-          userId: input.userId,
+          userId: executionInput.userId,
           selection: routeSelection,
-          description: input.description,
-          text: input.text,
+          description: executionInput.description,
+          text: executionInput.text,
           options,
         }),
       }
@@ -309,7 +339,15 @@ export async function executeMediaGeneration(
   } else {
     if (!invocation) throw new Error(`TASK_PROVIDER_INVOCATION_KEY_REQUIRED:${taskId}:${input.modality}`)
     const routeSet = resolveProviderRouteSet(input.modality, selection.modelKey)
-    const routes = routeSet.routes.map((route) => buildObservedRoute({
+    const compatibleRoutes = input.modality === 'image' || input.modality === 'video'
+      ? resolveCompatibleMediaProviderRoutes({
+          routeSet,
+          selection,
+          modality: input.modality,
+          mediaKinds: mediaInputKinds,
+        })
+      : routeSet.routes
+    const routes = compatibleRoutes.map((route) => buildObservedRoute({
       provider: route.provider,
       modelId: route.modelId,
       modelKey: route.modelKey,

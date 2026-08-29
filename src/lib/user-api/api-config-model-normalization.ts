@@ -6,6 +6,7 @@ import type { StoredModel, StoredProvider } from './api-config-types'
 import { isRecord, isUnifiedModelType, readTrimmedString } from './api-config-shared'
 import { resolveProviderByIdOrKey } from './api-config-provider-normalization'
 import { resolveBuiltinCapabilities } from './api-config-pricing-display'
+import { projectEffectiveMediaCapabilities } from '@/lib/ai-exec/media-input-transport'
 
 const BILLABLE_MODEL_TYPE_TO_PRICING_API_TYPE: Readonly<Record<StoredModel['type'], PricingApiType | null>> = {
   llm: 'text',
@@ -26,7 +27,7 @@ export function withBuiltinCapabilities(model: StoredModel): StoredModel {
 
   return {
     ...model,
-    capabilities,
+    capabilities: projectEffectiveMediaCapabilities(model.type, model.modelKey, capabilities),
   }
 }
 
