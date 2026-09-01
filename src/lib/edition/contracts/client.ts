@@ -11,7 +11,6 @@ export interface AuthEntryCardProps {
     | 'showGoogleOAuth'
     | 'showWechatOfficialAuth'
   >
-  readonly postAuthTarget: string | null
 }
 
 export interface PaidBetaCheckoutSuccessDialogProps {

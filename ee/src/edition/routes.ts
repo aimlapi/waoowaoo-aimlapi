@@ -4,9 +4,6 @@ import { handleAnnouncementsGet } from '@ee/routes/announcements'
 import { handlePublicBetaWaitlistPost } from '@ee/routes/public-beta-waitlist'
 import { handleAuthPhoneCaptchaPost } from '@ee/routes/auth-phone-captcha'
 import { handleAuthPhoneSendCodePost } from '@ee/routes/auth-phone-send-code'
-import { handleAuthSsoAuthorizeGet } from '@ee/routes/auth-sso-authorize'
-import { handleAuthSsoTokenPost } from '@ee/routes/auth-sso-token'
-import { handleAuthSsoUserinfoGet } from '@ee/routes/auth-sso-userinfo'
 import { handleAuthWechatAttemptPost } from '@ee/routes/auth-wechat-attempt'
 import {
   handleAuthWechatCallbackGet,
@@ -44,9 +41,6 @@ export const editionRouteHandlers = {
   authWechatCallbackGet: handleAuthWechatCallbackGet,
   authWechatCallbackPost: handleAuthWechatCallbackPost,
   authWechatEventsPost: handleAuthWechatEventsPost,
-  authSsoAuthorizeGet: handleAuthSsoAuthorizeGet,
-  authSsoTokenPost: handleAuthSsoTokenPost,
-  authSsoUserinfoGet: handleAuthSsoUserinfoGet,
   userSecurityGet: handleUserSecurityGet,
   userSecurityPost: handleUserSecurityPost,
   userSecurityPatch: handleUserSecurityPatch,

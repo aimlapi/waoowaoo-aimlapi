@@ -43,7 +43,7 @@ function readImageCaptchaPayload(payload: unknown): ImageCaptchaPayload | null {
   return { captchaId, imageDataUrl }
 }
 
-export default function AuthEntryCard({ features, postAuthTarget }: AuthEntryCardProps) {
+export default function AuthEntryCard({ features }: AuthEntryCardProps) {
   const [destinationId, setDestinationId] = useState<SmsDestinationId>('CN')
   const [phoneNumber, setPhoneNumber] = useState('')
   const [verificationCode, setVerificationCode] = useState('')
@@ -104,10 +104,6 @@ export default function AuthEntryCard({ features, postAuthTarget }: AuthEntryCar
   }, [resendSeconds])
 
   const finishAuthentication = () => {
-    if (postAuthTarget) {
-      window.location.assign(postAuthTarget)
-      return
-    }
     router.push(buildAuthenticatedHomeTarget())
     router.refresh()
   }
@@ -552,7 +548,6 @@ export default function AuthEntryCard({ features, postAuthTarget }: AuthEntryCar
                 label={t('continueWithGoogle')}
                 loadingLabel={t('googleButtonLoading')}
                 onError={() => setError(t('googleLoginError'))}
-                postAuthTarget={postAuthTarget}
               />
             </>
           ) : null}

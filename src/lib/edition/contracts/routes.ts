@@ -19,9 +19,6 @@ export interface EditionRouteHandlersContract {
   readonly authWechatCallbackGet: EditionRequestHandler
   readonly authWechatCallbackPost: EditionRequestHandler
   readonly authWechatEventsPost: EditionRequestHandler
-  readonly authSsoAuthorizeGet: EditionRequestHandler
-  readonly authSsoTokenPost: EditionRequestHandler
-  readonly authSsoUserinfoGet: EditionRequestHandler
   readonly userSecurityGet: EditionRequestHandler
   readonly userSecurityPost: EditionRequestHandler
   readonly userSecurityPatch: EditionRequestHandler

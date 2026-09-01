@@ -11,14 +11,12 @@ interface GoogleSignInButtonProps {
   label: string
   loadingLabel: string
   onError: () => void
-  postAuthTarget: string | null
 }
 
 export default function GoogleSignInButton({
   label,
   loadingLabel,
   onError,
-  postAuthTarget,
 }: GoogleSignInButtonProps) {
   const [loading, setLoading] = useState(false)
   const locale = useLocale()
@@ -26,7 +24,7 @@ export default function GoogleSignInButton({
   const handleClick = async () => {
     setLoading(true)
     try {
-      const callbackUrl = postAuthTarget ?? getPathname({ locale, href: buildAuthenticatedHomeTarget() })
+      const callbackUrl = getPathname({ locale, href: buildAuthenticatedHomeTarget() })
       await signIn('google', { callbackUrl })
     } catch {
       setLoading(false)
