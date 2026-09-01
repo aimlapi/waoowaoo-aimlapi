@@ -156,6 +156,7 @@ export async function getProjectModelConfig(
   projectId: string,
   userId: string,
 ): Promise<ProjectModelConfig> {
+  ensureAiCatalogsRegistered()
   const deployment = getDeploymentConfig()
   const platformDefaults = isPlatformProviderCredentialMode(deployment)
     ? getPlatformDefaultModels()
@@ -199,6 +200,7 @@ export async function getProjectModelConfig(
  * 获取用户级模型配置（无项目时使用）
  */
 export async function getUserModelConfig(userId: string): Promise<UserModelConfig> {
+  ensureAiCatalogsRegistered()
   const deployment = getDeploymentConfig()
   if (isPlatformProviderCredentialMode(deployment)) {
     const platformDefaults = getPlatformDefaultModels()
@@ -238,6 +240,7 @@ export function resolveModelCapabilityGenerationOptions(input: {
   capabilityOverrides?: CapabilitySelections
   runtimeSelections?: Record<string, CapabilityValue>
 }): Record<string, CapabilityValue> {
+  ensureAiCatalogsRegistered()
   const parsed = parseModelKeyStrict(input.modelKey)
   if (!parsed) {
     throw new Error(`MODEL_KEY_INVALID: ${input.modelKey}`)
@@ -403,4 +406,3 @@ export function buildImageBillingPayloadFromUserConfig(input: {
     ...(Object.keys(generationOptions).length > 0 ? { generationOptions } : {}),
   }
 }
-ensureAiCatalogsRegistered()

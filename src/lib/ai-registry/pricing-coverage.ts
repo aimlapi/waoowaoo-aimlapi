@@ -1,17 +1,16 @@
 import { listApiConfigCatalogModels } from './api-config-catalog'
 import { findBuiltinPricingCatalogEntry, type PricingApiType } from './pricing-catalog'
-import { PLATFORM_MODEL_INPUTS } from './platform-models'
+import { listPlatformModelInputs } from './platform-models'
 import type { UnifiedModelType } from './types'
 
 /**
  * Every model a user can pick must have a price.
  *
- * Model identity is declared across four independent surfaces — capabilities,
- * pricing, API config and platform presets — joined only by the
- * `(type, provider, modelId)` triple. Nothing type-checks that join, so a model
- * can be offered in the picker while having no pricing entry; it then fails at
- * billing time with `BILLING_UNKNOWN_MODEL`, after the user has already chosen
- * it. This check closes that gap at catalog registration instead.
+ * Provider Manifests assemble capabilities, pricing, API config and platform
+ * presets, but their entries are still joined by the `(type, provider,
+ * modelId)` triple. A model can therefore be offered in the picker while
+ * having no matching pricing entry; this check rejects that manifest at
+ * catalog registration instead of failing later at billing time.
  */
 
 function modelTypeToPricingApiType(modelType: UnifiedModelType): PricingApiType {
@@ -46,7 +45,7 @@ export function findUnpricedSelectableModels(): UnpricedSelectableModel[] {
   for (const model of listApiConfigCatalogModels()) {
     check('api-config', model.type, model.provider, model.modelId)
   }
-  for (const preset of PLATFORM_MODEL_INPUTS) {
+  for (const preset of listPlatformModelInputs()) {
     check('platform-preset', preset.type, preset.provider, preset.modelId)
   }
 

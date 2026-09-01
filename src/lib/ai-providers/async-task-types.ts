@@ -1,13 +1,7 @@
 import type { AiLlmProviderConfig } from '@/lib/ai-registry/types'
 import { parseFailureRecord, type FailureRecord } from '@/lib/errors/failure'
 
-export type AsyncExternalIdProvider =
-  | 'FAL'
-  | 'ARK'
-  | 'GEMINI'
-  | 'GOOGLE'
-  | 'OPENROUTER'
-  | 'TOONFLOW'
+export type AsyncExternalIdProvider = Uppercase<string>
 
 export type AsyncExternalIdType = 'VIDEO' | 'IMAGE' | 'MUSIC' | 'VOICE' | 'BATCH'
 

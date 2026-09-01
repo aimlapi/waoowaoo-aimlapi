@@ -26,6 +26,7 @@ function composePricingDisplayKey(modelType: UnifiedModelType, provider: string,
 }
 
 export function resolveBuiltinCapabilities(modelType: UnifiedModelType, provider: string, modelId: string): ModelCapabilities | undefined {
+  ensureAiCatalogsRegistered()
   const modelKey = composeModelKey(provider, modelId)
   if (!modelKey) return undefined
   return resolveBuiltinCapabilitiesByModelKey(modelType, modelKey)
@@ -70,6 +71,7 @@ function applyVideoDurationRangeIfNeeded(input: {
 }
 
 export function buildPricingDisplayMap(): PricingDisplayMap {
+  ensureAiCatalogsRegistered()
   const map: PricingDisplayMap = {}
   const entries = listBuiltinPricingCatalog()
 
@@ -164,4 +166,3 @@ export function withDisplayPricing(model: StoredModel, map: PricingDisplayMap): 
     ...(typeof display.output === 'number' ? { priceOutput: display.output } : {}),
   }
 }
-ensureAiCatalogsRegistered()

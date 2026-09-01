@@ -3,18 +3,7 @@ import type {
   AsyncExternalIdProvider,
   AsyncTaskProviderRegistration,
 } from '@/lib/ai-providers/async-task-types'
-import { arkAdapter } from '@/lib/ai-providers/ark/adapter'
-import { arkAsyncTaskProvider } from '@/lib/ai-providers/ark/async-task'
-import { falAdapter } from '@/lib/ai-providers/fal/adapter'
-import { falAsyncTaskProvider } from '@/lib/ai-providers/fal/async-task'
-import { elevenLabsAdapter } from '@/lib/ai-providers/elevenlabs/adapter'
-import { googleAdapter } from '@/lib/ai-providers/google/adapter'
-import { geminiBatchAsyncTaskProvider, googleVideoAsyncTaskProvider } from '@/lib/ai-providers/google/async-task'
-import { openRouterAdapter } from '@/lib/ai-providers/openrouter/adapter'
-import { openAiAdapter } from '@/lib/ai-providers/openai/adapter'
-import { openRouterAsyncTaskProvider } from '@/lib/ai-providers/openrouter/async-task'
-import { toonflowAdapter } from '@/lib/ai-providers/toonflow/adapter'
-import { toonflowAsyncTaskProvider } from '@/lib/ai-providers/toonflow/async-task'
+import { AI_PROVIDER_MANIFESTS } from '@/lib/ai-providers/manifests'
 import type { AiProviderAdapter, AiProviderLanguageModelContext } from '@/lib/ai-providers/runtime-types'
 import type {
   AiProviderLanguageModelRequestContext,
@@ -34,28 +23,17 @@ import {
   resolveRegisteredPublicReasoningMode,
 } from '@/lib/ai-registry/llm-protocol'
 
-const runtimeProviderRegistry = new AiRegistry<AiProviderAdapter>([
-  arkAdapter,
-  elevenLabsAdapter,
-  falAdapter,
-  googleAdapter,
-  openAiAdapter,
-  openRouterAdapter,
-  toonflowAdapter,
-])
+const runtimeProviderRegistry = new AiRegistry<AiProviderAdapter>(
+  AI_PROVIDER_MANIFESTS.map((manifest) => manifest.adapter),
+)
 
 for (const adapter of runtimeProviderRegistry.getAdapters()) {
   assertProviderFailureAdapterIdentity(adapter.providerKey, adapter.failure)
 }
 
-const asyncTaskProviderRegistry: AsyncTaskProviderRegistration[] = [
-  falAsyncTaskProvider,
-  arkAsyncTaskProvider,
-  geminiBatchAsyncTaskProvider,
-  googleVideoAsyncTaskProvider,
-  openRouterAsyncTaskProvider,
-  toonflowAsyncTaskProvider,
-]
+const asyncTaskProviderRegistry: AsyncTaskProviderRegistration[] = AI_PROVIDER_MANIFESTS.flatMap(
+  (manifest) => manifest.asyncTasks ?? [],
+)
 
 for (const registration of asyncTaskProviderRegistry) {
   resolveAiProviderAdapter(registration.providerKey)
@@ -64,9 +42,12 @@ for (const registration of asyncTaskProviderRegistry) {
 export function resolveAsyncTaskProviderByExternalId(externalId: string): AsyncTaskProviderRegistration {
   const registration = asyncTaskProviderRegistry.find((candidate) => candidate.canParseExternalId(externalId))
   if (!registration) {
+    const supportedProviderCodes = asyncTaskProviderRegistry
+      .map((candidate) => candidate.providerCode)
+      .join(', ')
     throw new Error(
       `无法识别的 externalId 格式: "${externalId}". ` +
-      `支持的格式: FAL:TYPE:endpoint:requestId, ARK:TYPE:requestId, GEMINI:BATCH:batchName, GOOGLE:VIDEO:operationName, OPENROUTER:VIDEO:requestId, TOONFLOW:VIDEO:taskICode`,
+      `已注册的异步 Provider: ${supportedProviderCodes}`,
     )
   }
   return registration

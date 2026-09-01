@@ -6,14 +6,19 @@ import {
   parseModelKeyStrict,
 } from '@/lib/ai-registry/selection'
 
-ensureAiCatalogsRegistered()
+let publicModelNameByKey: ReadonlyMap<string, string> | null = null
 
-const PUBLIC_MODEL_NAME_BY_KEY = new Map(
-  listApiConfigCatalogModels().map((model) => [
-    composeModelKey(model.provider, model.modelId),
-    model.name,
-  ]),
-)
+function getPublicModelNameByKey(): ReadonlyMap<string, string> {
+  if (publicModelNameByKey) return publicModelNameByKey
+  ensureAiCatalogsRegistered()
+  publicModelNameByKey = new Map(
+    listApiConfigCatalogModels().map((model) => [
+      composeModelKey(model.provider, model.modelId),
+      model.name,
+    ]),
+  )
+  return publicModelNameByKey
+}
 
 /**
  * Projects an internal provider-qualified model identity into a public model
@@ -29,11 +34,12 @@ export function resolvePublicModelName(
   const parsed = parseModelKeyStrict(value)
   if (!parsed) return value
 
-  const exactName = PUBLIC_MODEL_NAME_BY_KEY.get(parsed.modelKey)
+  const namesByKey = getPublicModelNameByKey()
+  const exactName = namesByKey.get(parsed.modelKey)
   if (exactName) return exactName
 
   const providerKey = getProviderKey(parsed.provider).toLowerCase()
-  const builtinName = PUBLIC_MODEL_NAME_BY_KEY.get(
+  const builtinName = namesByKey.get(
     composeModelKey(providerKey, parsed.modelId),
   )
   return builtinName ?? parsed.modelId

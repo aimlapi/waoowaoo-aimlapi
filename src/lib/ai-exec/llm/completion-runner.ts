@@ -24,8 +24,6 @@ import { resolveReasoningEffort } from '@/lib/ai-exec/reasoning-effort'
 import { prepareAiTextModelMessages } from '@/lib/ai-exec/language-model'
 import { runAiSdkLanguageModel } from '@/lib/ai-exec/llm/sdk-runner'
 
-ensureAiCatalogsRegistered()
-
 type ResolvedTextExecution = {
   selection: Awaited<ReturnType<typeof resolveLlmRuntimeModel>>
   providerConfig: Awaited<ReturnType<typeof getProviderConfig>>
@@ -44,6 +42,7 @@ async function resolveTextExecution(input: {
   options: AiLlmCallOptions
   stream: boolean
 }): Promise<ResolvedTextExecution> {
+  ensureAiCatalogsRegistered()
   const selection = await resolveLlmRuntimeModel(input.userId, input.model)
   const providerKey = getProviderKey(selection.provider).toLowerCase()
   const providerConfig = await getProviderConfig(input.userId, selection.provider)

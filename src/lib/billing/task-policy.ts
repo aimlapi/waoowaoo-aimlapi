@@ -202,6 +202,7 @@ export function isBillableTaskType(taskType: TaskType) {
 }
 
 export function buildDefaultTaskBillingInfo(taskType: TaskType, payload: AnyPayload): TaskBillingInfo | null {
+  ensureAiCatalogsRegistered()
   const billingPolicy = getTaskDefinition(taskType).billingPolicy
   switch (billingPolicy) {
     case 'none':
@@ -220,4 +221,3 @@ export function buildDefaultTaskBillingInfo(taskType: TaskType, payload: AnyPayl
   const exhaustive: never = billingPolicy
   throw new Error(`TASK_BILLING_POLICY_UNSUPPORTED:${String(exhaustive)}`)
 }
-ensureAiCatalogsRegistered()

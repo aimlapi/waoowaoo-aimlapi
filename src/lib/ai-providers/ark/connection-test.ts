@@ -1,6 +1,6 @@
 import { createAiSdkConnectionTester } from '@/lib/ai-providers/shared/connection-test'
 import { createAiProviderFailureAdapter } from '@/lib/ai-providers/failure'
-import { requireApiConfigCatalogProviderBaseUrl } from '@/lib/ai-registry/api-config-catalog'
+import { ARK_DEFAULT_BASE_URL } from '@/lib/ai-providers/ark/config'
 import { createArkLanguageModel } from './language-model'
 import { ARK_PROVIDER_TEST_LLM_MODEL_ID } from './models'
 
@@ -10,7 +10,7 @@ export const arkConnectionTester = createAiSdkConnectionTester({
   providerKey: 'ark',
   failure: arkFailureAdapter,
   displayName: 'Ark',
-  defaultBaseUrl: requireApiConfigCatalogProviderBaseUrl('ark'),
+  defaultBaseUrl: ARK_DEFAULT_BASE_URL,
   defaultTestModel: ARK_PROVIDER_TEST_LLM_MODEL_ID,
   protocol: 'openai-responses',
   createLanguageModel: createArkLanguageModel,

@@ -1,9 +1,6 @@
 import { composeModelKey } from '@/lib/ai-registry/selection'
 import type { UnifiedModelType } from '@/lib/ai-registry/types'
-import {
-  PLATFORM_MODEL_INPUTS,
-  type PlatformDefaultModelField,
-} from '@/lib/ai-registry/platform-models'
+import { listPlatformModelInputs, type PlatformDefaultModelField } from '@/lib/ai-registry/platform-models'
 import type { DefaultModelsPayload, StoredModel } from '@/lib/user-api/api-config-types'
 import type { PlatformModelPreset } from './types'
 
@@ -48,7 +45,7 @@ function requireEnvModelKey(field: PlatformDefaultModelField): string {
 }
 
 export function getPlatformModels(): StoredModel[] {
-  return PLATFORM_MODEL_INPUTS.map(toPlatformModel)
+  return listPlatformModelInputs().map(toPlatformModel)
 }
 
 export function getPlatformDefaultModelCatalog(): StoredModel[] {

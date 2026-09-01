@@ -1,8 +1,8 @@
 import { composeModelKey, parseModelKeyStrict } from './selection'
 import type { UnifiedModelType } from './types'
 import {
-  API_CONFIG_CATALOG_PROVIDERS,
   getApiConfigProviderKey,
+  listApiConfigCatalogProviders,
 } from './api-config-catalog'
 
 export type RuntimeModelMediaType = UnifiedModelType
@@ -28,7 +28,7 @@ export function normalizeProviderRuntimeBaseUrl(providerId: string, rawBaseUrl?:
   const baseUrl = typeof rawBaseUrl === 'string' ? rawBaseUrl.trim() : ''
   if (baseUrl) return baseUrl
   const providerKey = getApiConfigProviderKey(providerId)
-  return API_CONFIG_CATALOG_PROVIDERS.find((provider) => provider.id === providerKey)?.baseUrl
+  return listApiConfigCatalogProviders().find((provider) => provider.id === providerKey)?.baseUrl
 }
 
 function assertRuntimeModelKey(value: string, field: string): { provider: string; modelId: string; modelKey: string } {

@@ -737,6 +737,7 @@ export async function withTextBilling<T>(
   recordParams: BillingRecordParams,
   generateFn: () => Promise<T>,
 ): Promise<T> {
+  ensureAiCatalogsRegistered()
   if (getLogContext().taskId) return await generateFn()
   const mode = await getBillingMode()
   if (mode === 'OFF') {
@@ -771,6 +772,7 @@ export async function withImageBilling<T>(
   recordParams: BillingRecordParams,
   generateFn: () => Promise<T>,
 ): Promise<T> {
+  ensureAiCatalogsRegistered()
   return await withSyncBillingCore(
     {
       userId,
@@ -795,6 +797,7 @@ export async function withVideoBilling<T>(
   recordParams: BillingRecordParams,
   generateFn: () => Promise<T>,
 ): Promise<T> {
+  ensureAiCatalogsRegistered()
   return await withSyncBillingCore(
     {
       userId,
@@ -928,6 +931,7 @@ export async function prepareTaskBillingInTransaction(
   task: TaskBillingPreparation,
   mode: Awaited<ReturnType<typeof getBillingMode>>,
 ): Promise<TaskBillingInfo | { billable: false } | null> {
+  ensureAiCatalogsRegistered()
   return await prepareTaskBillingSnapshot(
     task,
     mode,
@@ -949,6 +953,7 @@ export async function settleTaskBillingInTransaction(
     textUsage?: TextUsageEntry[]
   },
 ): Promise<TaskBillingInfo | { billable: false } | null> {
+  ensureAiCatalogsRegistered()
   const info = task.billingInfo
   if (!info || !info.billable) return info
   if (!info.modeSnapshot) {
@@ -1067,6 +1072,7 @@ export async function rollbackTaskBillingInTransaction(
     billingInfo: TaskBillingInfo | { billable: false } | null
   },
 ): Promise<TaskBillingInfo | { billable: false } | null> {
+  ensureAiCatalogsRegistered()
   const info = task.billingInfo
   if (!info || !info.billable || !info.freezeId || info.modeSnapshot !== 'ENFORCE') return info
   await rollbackFreezeInTransaction(tx, info.freezeId, {
@@ -1076,5 +1082,3 @@ export async function rollbackTaskBillingInTransaction(
   })
   return { ...info, status: 'rolled_back' }
 }
-
-ensureAiCatalogsRegistered()

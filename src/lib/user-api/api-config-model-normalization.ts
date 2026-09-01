@@ -3,10 +3,11 @@ import { composeModelKey, parseModelKeyStrict } from '@/lib/ai-registry/selectio
 import { findBuiltinPricingCatalogEntry, type PricingApiType } from '@/lib/ai-registry/pricing-catalog'
 import { ensureAiCatalogsRegistered } from '@/lib/ai-exec/catalog-bootstrap'
 import type { StoredModel, StoredProvider } from './api-config-types'
-import { isRecord, isUnifiedModelType, readTrimmedString } from './api-config-shared'
+import { getProviderKey, isRecord, isUnifiedModelType, readTrimmedString } from './api-config-shared'
 import { resolveProviderByIdOrKey } from './api-config-provider-normalization'
 import { resolveBuiltinCapabilities } from './api-config-pricing-display'
 import { projectEffectiveMediaCapabilities } from '@/lib/ai-exec/media-input-transport'
+import { listApiConfigCatalogProviders } from '@/lib/ai-registry/api-config-catalog'
 
 const BILLABLE_MODEL_TYPE_TO_PRICING_API_TYPE: Readonly<Record<StoredModel['type'], PricingApiType | null>> = {
   llm: 'text',
@@ -17,6 +18,7 @@ const BILLABLE_MODEL_TYPE_TO_PRICING_API_TYPE: Readonly<Record<StoredModel['type
 }
 
 export function withBuiltinCapabilities(model: StoredModel): StoredModel {
+  ensureAiCatalogsRegistered()
   const capabilities = resolveBuiltinCapabilities(model.type, model.provider, model.modelId)
   if (!capabilities) {
     return {
@@ -114,11 +116,24 @@ export function validateModelProviderConsistency(models: StoredModel[], provider
 }
 
 export function validateModelProviderTypeSupport(models: StoredModel[], providers: StoredProvider[]) {
-  void models
-  void providers
+  const catalogProviders = listApiConfigCatalogProviders()
+  for (let index = 0; index < models.length; index += 1) {
+    const model = models[index]
+    const configuredProvider = resolveProviderByIdOrKey(providers, model.provider)
+    const providerKey = getProviderKey(configuredProvider?.id ?? model.provider)
+    const catalogProvider = catalogProviders.find((provider) => provider.id === providerKey)
+    if (catalogProvider?.modelTypes.includes(model.type)) continue
+    throw new ApiError('INVALID_PARAMS', {
+      code: 'MODEL_PROVIDER_TYPE_UNSUPPORTED',
+      field: `models[${index}].type`,
+      providerId: model.provider,
+      modelType: model.type,
+    })
+  }
 }
 
 export function hasBuiltinPricingForModel(apiType: PricingApiType, provider: string, modelId: string): boolean {
+  ensureAiCatalogsRegistered()
   // findBuiltinPricingCatalogEntry handles providerKey stripping and alias fallback internally
   return !!findBuiltinPricingCatalogEntry(apiType, provider, modelId)
 }
@@ -163,4 +178,3 @@ export function parseStoredModels(rawModels: string | null | undefined): StoredM
   }
   return normalized
 }
-ensureAiCatalogsRegistered()

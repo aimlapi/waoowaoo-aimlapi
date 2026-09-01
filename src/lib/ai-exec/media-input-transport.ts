@@ -8,9 +8,15 @@ import type {
   UnifiedModelType,
   VideoInputMode,
 } from '@/lib/ai-registry/types'
+import { AI_PROVIDER_MANIFESTS } from '@/lib/ai-providers/manifests'
+import type {
+  ProviderMediaInputDeclaration,
+  ProviderMediaInputKind,
+  ProviderMediaInputModality,
+} from '@/lib/ai-providers/manifest'
 
-export type ProviderMediaInputKind = 'image' | 'audio' | 'video'
-type MediaInputModality = 'vision' | 'image' | 'video'
+export type { ProviderMediaInputKind } from '@/lib/ai-providers/manifest'
+type MediaInputModality = ProviderMediaInputModality
 
 export type ProviderMediaInputContract = {
   readonly provider: string
@@ -18,52 +24,19 @@ export type ProviderMediaInputContract = {
   readonly transports: Readonly<Partial<Record<ProviderMediaInputKind, readonly ProviderMediaInputTransport[]>>>
 }
 
-const BOTH_TRANSPORTS = ['public-https', 'inline-data-url'] as const
-const PUBLIC_HTTPS_ONLY = ['public-https'] as const
+function withProvider(
+  provider: string,
+  declaration: ProviderMediaInputDeclaration,
+): ProviderMediaInputContract {
+  return { provider, ...declaration }
+}
 
-/**
- * The provider adapter transport registry. Entries describe documented wire
- * capabilities; deployment policy selects exactly one transport at runtime.
- * Missing entries fail closed whenever a request contains private media.
- */
-const PROVIDER_MEDIA_INPUT_CONTRACTS: readonly ProviderMediaInputContract[] = [
-  { provider: 'ark', modality: 'vision', transports: { image: BOTH_TRANSPORTS } },
-  { provider: 'ark', modality: 'image', transports: { image: BOTH_TRANSPORTS } },
-  {
-    provider: 'ark',
-    modality: 'video',
-    transports: { image: BOTH_TRANSPORTS, audio: BOTH_TRANSPORTS, video: PUBLIC_HTTPS_ONLY },
-  },
-  { provider: 'fal', modality: 'image', transports: { image: BOTH_TRANSPORTS } },
-  {
-    provider: 'fal',
-    modality: 'video',
-    transports: { image: BOTH_TRANSPORTS, audio: BOTH_TRANSPORTS, video: BOTH_TRANSPORTS },
-  },
-  { provider: 'google', modality: 'image', transports: { image: BOTH_TRANSPORTS } },
-  { provider: 'google', modality: 'video', transports: { image: BOTH_TRANSPORTS } },
-  { provider: 'google', modality: 'vision', transports: { image: BOTH_TRANSPORTS } },
-  { provider: 'openrouter', modality: 'vision', transports: { image: BOTH_TRANSPORTS } },
-  { provider: 'openrouter', modality: 'image', transports: { image: BOTH_TRANSPORTS } },
-  {
-    provider: 'openrouter',
-    modality: 'video',
-    transports: {
-      image: PUBLIC_HTTPS_ONLY,
-      audio: PUBLIC_HTTPS_ONLY,
-      video: PUBLIC_HTTPS_ONLY,
-    },
-  },
-  {
-    provider: 'toonflow',
-    modality: 'video',
-    transports: {
-      image: PUBLIC_HTTPS_ONLY,
-      audio: PUBLIC_HTTPS_ONLY,
-      video: PUBLIC_HTTPS_ONLY,
-    },
-  },
-]
+const PROVIDER_MEDIA_INPUT_CONTRACTS: readonly ProviderMediaInputContract[] = AI_PROVIDER_MANIFESTS.flatMap(
+  (manifest) => (manifest.mediaInputs ?? []).map((declaration) => withProvider(
+    manifest.providerKey,
+    declaration,
+  )),
+)
 
 const CONTRACT_BY_PROVIDER_MODALITY = new Map(
   PROVIDER_MEDIA_INPUT_CONTRACTS.map((contract) => [

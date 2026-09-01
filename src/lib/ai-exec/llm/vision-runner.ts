@@ -24,8 +24,6 @@ import { resolveReasoningEffort } from '@/lib/ai-exec/reasoning-effort'
 import { runAiSdkLanguageModel } from '@/lib/ai-exec/llm/sdk-runner'
 import { assertSelectionSupportsMediaInputs } from '@/lib/ai-exec/media-input-transport'
 
-ensureAiCatalogsRegistered()
-
 async function normalizeVisionImageUrls(imageUrls: readonly string[], userId: string): Promise<string[]> {
   const normalized: string[] = []
   for (const imageUrl of imageUrls) {
@@ -58,6 +56,7 @@ async function executeVision(input: {
   callbacks?: AiLlmStreamCallbacks
   stream: boolean
 }): Promise<AiLlmExecutionResult> {
+  ensureAiCatalogsRegistered()
   const selection = await resolveLlmRuntimeModel(input.userId, input.model)
   assertSelectionSupportsMediaInputs({
     selection,

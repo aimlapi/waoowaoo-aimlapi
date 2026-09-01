@@ -1,35 +1,18 @@
-import { ARK_API_CONFIG_CATALOG_MODELS, ARK_BUILTIN_CAPABILITY_CATALOG_ENTRIES, ARK_BUILTIN_PRICING_CATALOG_ENTRIES } from '@/lib/ai-providers/ark/models'
-import { ELEVENLABS_API_CONFIG_CATALOG_MODELS, ELEVENLABS_BUILTIN_CAPABILITY_CATALOG_ENTRIES, ELEVENLABS_BUILTIN_PRICING_CATALOG_ENTRIES } from '@/lib/ai-providers/elevenlabs/models'
-import { FAL_API_CONFIG_CATALOG_MODELS, FAL_BUILTIN_CAPABILITY_CATALOG_ENTRIES, FAL_BUILTIN_PRICING_CATALOG_ENTRIES } from '@/lib/ai-providers/fal/models'
-import { GOOGLE_API_CONFIG_CATALOG_MODELS, GOOGLE_BUILTIN_CAPABILITY_CATALOG_ENTRIES, GOOGLE_BUILTIN_PRICING_CATALOG_ENTRIES } from '@/lib/ai-providers/google/models'
-import { OPENAI_BUILTIN_PRICING_CATALOG_ENTRIES } from '@/lib/ai-providers/openai/models'
-import { OPENROUTER_API_CONFIG_CATALOG_MODELS, OPENROUTER_BUILTIN_CAPABILITY_CATALOG_ENTRIES, OPENROUTER_BUILTIN_PRICING_CATALOG_ENTRIES } from '@/lib/ai-providers/openrouter/models'
-import { TOONFLOW_API_CONFIG_CATALOG_MODELS, TOONFLOW_BUILTIN_CAPABILITY_CATALOG_ENTRIES, TOONFLOW_BUILTIN_PRICING_CATALOG_ENTRIES } from '@/lib/ai-providers/toonflow/models'
+import { AI_PROVIDER_MANIFESTS } from '@/lib/ai-providers/manifests'
+import type {
+  ProviderCapabilityCatalogDeclaration,
+  ProviderPricingCatalogDeclaration,
+} from '@/lib/ai-providers/manifest'
+import type { ApiConfigCatalogModel } from '@/lib/ai-registry/api-config-catalog'
 
-export const BUILTIN_CAPABILITY_CATALOG_ENTRIES = [
-  ...ARK_BUILTIN_CAPABILITY_CATALOG_ENTRIES,
-  ...ELEVENLABS_BUILTIN_CAPABILITY_CATALOG_ENTRIES,
-  ...FAL_BUILTIN_CAPABILITY_CATALOG_ENTRIES,
-  ...GOOGLE_BUILTIN_CAPABILITY_CATALOG_ENTRIES,
-  ...OPENROUTER_BUILTIN_CAPABILITY_CATALOG_ENTRIES,
-  ...TOONFLOW_BUILTIN_CAPABILITY_CATALOG_ENTRIES,
-] as const
+export function listBuiltinCapabilityCatalogEntries(): readonly ProviderCapabilityCatalogDeclaration[] {
+  return AI_PROVIDER_MANIFESTS.flatMap((manifest) => manifest.catalogs.capabilities)
+}
 
-export const BUILTIN_PRICING_CATALOG_ENTRIES = [
-  ...ARK_BUILTIN_PRICING_CATALOG_ENTRIES,
-  ...ELEVENLABS_BUILTIN_PRICING_CATALOG_ENTRIES,
-  ...FAL_BUILTIN_PRICING_CATALOG_ENTRIES,
-  ...GOOGLE_BUILTIN_PRICING_CATALOG_ENTRIES,
-  ...OPENAI_BUILTIN_PRICING_CATALOG_ENTRIES,
-  ...OPENROUTER_BUILTIN_PRICING_CATALOG_ENTRIES,
-  ...TOONFLOW_BUILTIN_PRICING_CATALOG_ENTRIES,
-] as const
+export function listBuiltinPricingCatalogEntries(): readonly ProviderPricingCatalogDeclaration[] {
+  return AI_PROVIDER_MANIFESTS.flatMap((manifest) => manifest.catalogs.pricing)
+}
 
-export const BUILTIN_API_CONFIG_CATALOG_MODELS = [
-  ...ARK_API_CONFIG_CATALOG_MODELS,
-  ...ELEVENLABS_API_CONFIG_CATALOG_MODELS,
-  ...FAL_API_CONFIG_CATALOG_MODELS,
-  ...GOOGLE_API_CONFIG_CATALOG_MODELS,
-  ...OPENROUTER_API_CONFIG_CATALOG_MODELS,
-  ...TOONFLOW_API_CONFIG_CATALOG_MODELS,
-] as const
+export function listBuiltinApiConfigCatalogModels(): readonly ApiConfigCatalogModel[] {
+  return AI_PROVIDER_MANIFESTS.flatMap((manifest) => manifest.catalogs.apiConfigModels)
+}
