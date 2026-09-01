@@ -9,7 +9,10 @@ import type {
   AsyncPollResult,
   ParsedAsyncExternalId,
 } from '@/lib/ai-providers/async-task-types'
-import { getProviderConfig, getUserModels } from '@/lib/user-api/runtime-config'
+import {
+  getProviderConfigForExistingExecution,
+  getUserModelsForExistingExecution,
+} from '@/lib/user-api/runtime-config'
 import { EXTERNAL_OPERATION } from '@/lib/external-operation/registry'
 import { withRetry } from '@/lib/retry'
 
@@ -43,8 +46,8 @@ export async function pollAsyncTask(
         parsed,
         context: {
           userId,
-          getProviderConfig,
-          getUserModels,
+          getProviderConfig: getProviderConfigForExistingExecution,
+          getUserModels: getUserModelsForExistingExecution,
         },
       }),
     }),
@@ -79,8 +82,8 @@ export async function cancelAsyncTask(
         parsed,
         context: {
           userId,
-          getProviderConfig,
-          getUserModels,
+          getProviderConfig: getProviderConfigForExistingExecution,
+          getUserModels: getUserModelsForExistingExecution,
         },
       }),
     }),

@@ -46,16 +46,15 @@ interface ApiConfigProviderListProps {
   onDeleteProvider: (providerId: string) => void
   onAddModel: (model: Omit<CustomModel, 'enabled'>) => void
   onFlushConfig: () => Promise<void>
-  onToggleProviderHidden: (providerId: string, hidden: boolean) => void
+  onToggleProviderEnabled: (providerId: string, enabled: boolean) => void
   labels: {
     providerPool: string
     dragToSort: string
     dragToSortHint: string
-    hideProvider: string
-    showProvider: string
-    showHiddenProviders: string
-    hideHiddenProviders: string
-    hiddenProvidersPrefix: string
+    disableProvider: string
+    enableProvider: string
+    showProviderExtensions: string
+    hideProviderExtensions: string
   }
 }
 
@@ -73,10 +72,10 @@ export function ApiConfigProviderList({
   onDeleteProvider,
   onAddModel,
   onFlushConfig,
-  onToggleProviderHidden,
+  onToggleProviderEnabled,
   labels,
 }: ApiConfigProviderListProps) {
-  const [showHiddenProviders, setShowHiddenProviders] = useState(false)
+  const [showProviderExtensions, setShowProviderExtensions] = useState(false)
   const sensors = useSensors(
     useSensor(PointerSensor, {
       activationConstraint: {
@@ -105,16 +104,14 @@ export function ApiConfigProviderList({
     return map
   }, [getModelsForProvider, modelProviders])
 
-  const hiddenProviders = useMemo(() => {
-    return modelProviders.filter((provider) => provider.hidden === true)
+  const extensionProviders = useMemo(() => {
+    return modelProviders.filter((provider) => provider.featured !== true && !provider.enabled)
   }, [modelProviders])
 
-  const visibleProviders = useMemo(() => {
-    const hiddenIds = new Set(hiddenProviders.map((provider) => provider.id))
-    return modelProviders.filter((provider) => !hiddenIds.has(provider.id))
-  }, [hiddenProviders, modelProviders])
-
-  const hiddenProviderNames = hiddenProviders.map((provider) => provider.name).join(' / ')
+  const primaryProviders = useMemo(() => {
+    const extensionIds = new Set(extensionProviders.map((provider) => provider.id))
+    return modelProviders.filter((provider) => !extensionIds.has(provider.id))
+  }, [extensionProviders, modelProviders])
 
   return (
     <>
@@ -131,9 +128,9 @@ export function ApiConfigProviderList({
           </div>
         </div>
         <DndContext sensors={sensors} collisionDetection={closestCenter} onDragEnd={handleDragEnd}>
-          <SortableContext items={visibleProviders.map((provider) => provider.id)} strategy={rectSortingStrategy}>
+          <SortableContext items={primaryProviders.map((provider) => provider.id)} strategy={rectSortingStrategy}>
             <div className="grid grid-cols-1 gap-3 md:grid-cols-2">
-              {visibleProviders.map((provider) => (
+              {primaryProviders.map((provider) => (
                 <SortableProviderCardItem key={provider.id} providerId={provider.id} dragLabel={labels.dragToSort}>
                   {({ dragHandle }) => (
                     <ProviderCard
@@ -150,9 +147,9 @@ export function ApiConfigProviderList({
                       onDeleteProvider={onDeleteProvider}
                       onAddModel={onAddModel}
                       onFlushConfig={onFlushConfig}
-                      onToggleProviderHidden={onToggleProviderHidden}
-                      hideProviderLabel={labels.hideProvider}
-                      showProviderLabel={labels.showProvider}
+                      onToggleProviderEnabled={onToggleProviderEnabled}
+                      disableProviderLabel={labels.disableProvider}
+                      enableProviderLabel={labels.enableProvider}
                     />
                   )}
                 </SortableProviderCardItem>
@@ -160,33 +157,28 @@ export function ApiConfigProviderList({
             </div>
           </SortableContext>
         </DndContext>
-        {hiddenProviders.length > 0 && (
+        {extensionProviders.length > 0 && (
           <>
             <button
               type="button"
-              onClick={() => setShowHiddenProviders((prev) => !prev)}
+              onClick={() => setShowProviderExtensions((prev) => !prev)}
               className="glass-btn-base glass-btn-secondary flex w-full items-center justify-between rounded-xl px-3 py-2.5 text-left"
             >
-              <div className="min-w-0">
-                <p className="truncate text-sm font-medium text-[var(--glass-text-primary)]">
-                  {showHiddenProviders
-                    ? labels.hideHiddenProviders
-                    : `${labels.showHiddenProviders} (${hiddenProviders.length})`}
-                </p>
-                <p className="truncate text-xs text-[var(--glass-text-tertiary)]">
-                  {labels.hiddenProvidersPrefix}: {hiddenProviderNames}
-                </p>
-              </div>
+              <p className="truncate text-sm font-medium text-[var(--glass-text-primary)]">
+                {showProviderExtensions
+                  ? labels.hideProviderExtensions
+                  : `${labels.showProviderExtensions} (${extensionProviders.length})`}
+              </p>
               <AppIcon
-                name={showHiddenProviders ? 'chevronUp' : 'chevronDown'}
+                name={showProviderExtensions ? 'chevronUp' : 'chevronDown'}
                 className="h-4 w-4 shrink-0 text-[var(--glass-text-secondary)]"
               />
             </button>
-            {showHiddenProviders && (
+            {showProviderExtensions && (
               <div className="grid grid-cols-1 gap-3 md:grid-cols-2">
-                {hiddenProviders.map((provider) => (
+                {extensionProviders.map((provider) => (
                   <ProviderCard
-                    key={`hidden-${provider.id}`}
+                    key={`extension-${provider.id}`}
                     provider={provider}
                     models={providerModelsById.get(provider.id) || []}
                     allModels={allModels}
@@ -199,9 +191,9 @@ export function ApiConfigProviderList({
                     onDeleteProvider={onDeleteProvider}
                     onAddModel={onAddModel}
                     onFlushConfig={onFlushConfig}
-                    onToggleProviderHidden={onToggleProviderHidden}
-                    hideProviderLabel={labels.hideProvider}
-                    showProviderLabel={labels.showProvider}
+                    onToggleProviderEnabled={onToggleProviderEnabled}
+                    disableProviderLabel={labels.disableProvider}
+                    enableProviderLabel={labels.enableProvider}
                   />
                 ))}
               </div>

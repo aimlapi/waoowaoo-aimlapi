@@ -1,35 +1,61 @@
 import { describe, expect, it } from 'vitest'
-import { BUILTIN_API_CONFIG_CATALOG_MODELS } from '@/lib/ai-providers/builtin-catalog'
 import { tryResolveAiProviderAdapter } from '@/lib/ai-providers'
 import {
-  API_CONFIG_CATALOG_PROVIDERS,
   isApiConfigCatalogProviderId,
+  listApiConfigCatalogProviders,
+  listApiConfigCatalogModels,
 } from '@/lib/ai-registry/api-config-catalog'
-import PLATFORM_PROVIDER_ENV from '@/lib/deployment/platform-provider-env.json'
+import { AI_PROVIDER_MANIFESTS } from '@/lib/ai-providers/manifests'
 import { ApiError } from '@/lib/api-errors'
 import { normalizeProvidersInput } from '@/lib/user-api/api-config-provider-normalization'
 import { normalizeProviderRuntimeBaseUrl } from '@/lib/ai-registry/runtime-selection'
+import { ensureAiCatalogsRegistered } from '@/lib/ai-exec/catalog-bootstrap'
+import { getDeploymentConfig } from '@/lib/deployment/config'
+import {
+  listProviderMediaInputContracts,
+} from '@/lib/ai-exec/media-input-transport'
+
+ensureAiCatalogsRegistered()
 
 describe('API config provider registry conformance', () => {
   it('keeps every catalog provider executable, configurable, and platform-declared', () => {
-    const catalogProviderIds = API_CONFIG_CATALOG_PROVIDERS.map((provider) => provider.id)
+    const catalogProviders = listApiConfigCatalogProviders()
+    const catalogProviderIds = catalogProviders.map((provider) => provider.id)
     expect(new Set(catalogProviderIds).size).toBe(catalogProviderIds.length)
 
     const modelProviderIds = Array.from(new Set(
-      BUILTIN_API_CONFIG_CATALOG_MODELS.map((model) => model.provider),
+      listApiConfigCatalogModels().map((model) => model.provider),
     )).sort()
     expect(modelProviderIds).toEqual([...catalogProviderIds].sort())
-    expect(Object.keys(PLATFORM_PROVIDER_ENV).sort()).toEqual([...catalogProviderIds].sort())
+    expect(AI_PROVIDER_MANIFESTS
+      .filter((manifest) => manifest.apiConfig)
+      .every((manifest) => Boolean(manifest.platformCredentials)))
+      .toBe(true)
+    expect(new Set(AI_PROVIDER_MANIFESTS.map((manifest) => manifest.providerKey)).size)
+      .toBe(AI_PROVIDER_MANIFESTS.length)
+    expect(AI_PROVIDER_MANIFESTS.every((manifest) => (
+      manifest.adapter.providerKey === manifest.providerKey
+    ))).toBe(true)
+    expect(listProviderMediaInputContracts().every((contract) => (
+      AI_PROVIDER_MANIFESTS.some((manifest) => manifest.providerKey === contract.provider)
+    ))).toBe(true)
+    if (getDeploymentConfig().edition === 'self-hosted') {
+      expect(catalogProviders
+        .filter((provider) => provider.featured)
+        .map((provider) => provider.id)
+        .sort())
+        .toEqual(['ark', 'openrouter'])
+    }
 
-    for (const provider of API_CONFIG_CATALOG_PROVIDERS) {
+    for (const provider of catalogProviders) {
       expect(isApiConfigCatalogProviderId(provider.id)).toBe(true)
       expect(tryResolveAiProviderAdapter(provider.id)).not.toBeNull()
       expect(normalizeProviderRuntimeBaseUrl(provider.id)).toBe(provider.baseUrl)
-      expect(normalizeProvidersInput([provider])).toEqual([{
+      expect(normalizeProvidersInput([{ ...provider, enabled: false }])).toEqual([{
         id: provider.id,
         name: provider.name,
         ...(provider.baseUrl ? { baseUrl: provider.baseUrl } : {}),
-        hidden: false,
+        enabled: false,
       }])
     }
   })

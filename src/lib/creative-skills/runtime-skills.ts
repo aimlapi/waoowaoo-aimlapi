@@ -51,7 +51,7 @@ export const CREATIVE_RUNTIME_SKILL_REGISTRY: Readonly<
     title: '资产范围与视觉设计',
     description: '筛选和设计生产资产，形成带最终图片提示词的 asset_generation_batch 专业结果。',
     skillIds: ['creative-core', 'asset-development'],
-    executionFacts: 'Every asset must include its stable creative identity, complete final prompt, explicit generation parameters, and user-visible name. The server owns Resource placement.',
+    executionFacts: 'Use only the non-null productionCapabilities.image facts injected by the Wao system. Every asset must include its stable creative identity, complete final prompt, explicit generation parameters, and user-visible name. The server owns Resource placement.',
   }),
   video: defineRuntimeSkill({
     kind: 'video',

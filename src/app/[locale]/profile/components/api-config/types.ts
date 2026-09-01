@@ -12,6 +12,9 @@ export interface ApiConfigCatalogProvider {
     id: string
     name: string
     baseUrl?: string
+    featured: boolean
+    connectionTest: boolean
+    modelTypes: UnifiedModelType[]
 }
 
 export interface ApiConfigCatalogModel {
@@ -34,7 +37,10 @@ export interface Provider {
     baseUrl?: string
     apiKey?: string
     hasApiKey?: boolean
-    hidden?: boolean
+    enabled: boolean
+    featured?: boolean
+    connectionTest?: boolean
+    modelTypes?: UnifiedModelType[]
 }
 
 // 模型接口

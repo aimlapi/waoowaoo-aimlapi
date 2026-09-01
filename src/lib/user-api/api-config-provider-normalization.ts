@@ -24,7 +24,10 @@ function normalizeProviderBaseUrl(value: string, field: string): string {
   }
 }
 
-export function resolveProviderByIdOrKey(providers: StoredProvider[], providerId: string): StoredProvider | null {
+export function resolveProviderByIdOrKey(
+  providers: readonly StoredProvider[],
+  providerId: string,
+): StoredProvider | null {
   const exact = providers.find((provider) => provider.id === providerId)
   if (exact) return exact
 
@@ -75,11 +78,11 @@ export function normalizeProvidersInput(rawProviders: unknown): StoredProvider[]
         field: `providers[${index}].id`,
       })
     }
-    const hiddenRaw = item.hidden
-    if (hiddenRaw !== undefined && typeof hiddenRaw !== 'boolean') {
+    const enabledRaw = item.enabled
+    if (typeof enabledRaw !== 'boolean') {
       throw new ApiError('INVALID_PARAMS', {
-        code: 'PROVIDER_HIDDEN_INVALID',
-        field: `providers[${index}].hidden`,
+        code: 'PROVIDER_ENABLED_INVALID',
+        field: `providers[${index}].enabled`,
       })
     }
 
@@ -93,7 +96,7 @@ export function normalizeProvidersInput(rawProviders: unknown): StoredProvider[]
       name,
       baseUrl,
       apiKey: typeof item.apiKey === 'string' ? item.apiKey.trim() : undefined,
-      hidden: hiddenRaw === true,
+      enabled: enabledRaw,
     })
   }
 
@@ -139,11 +142,11 @@ export function parseStoredProviders(rawProviders: string | null | undefined): S
 
     assertSupportedProvider(id, `customProviders[${index}].id`)
 
-    const hiddenRaw = raw.hidden
-    if (hiddenRaw !== undefined && typeof hiddenRaw !== 'boolean') {
+    const enabledRaw = raw.enabled
+    if (typeof enabledRaw !== 'boolean') {
       throw new ApiError('INVALID_PARAMS', {
-        code: 'PROVIDER_HIDDEN_INVALID',
-        field: `customProviders[${index}].hidden`,
+        code: 'PROVIDER_ENABLED_INVALID',
+        field: `customProviders[${index}].enabled`,
       })
     }
 
@@ -154,7 +157,7 @@ export function parseStoredProviders(rawProviders: string | null | undefined): S
       name,
       baseUrl,
       apiKey: typeof raw.apiKey === 'string' ? raw.apiKey.trim() : undefined,
-      hidden: hiddenRaw === true,
+      enabled: enabledRaw,
     })
   }
 

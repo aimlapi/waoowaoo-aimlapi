@@ -82,10 +82,16 @@ Provider 差异只停留在 `ai-providers` 的实现、`ai-exec` 的统一执行
   模式；Workspace 输入用 `first_frame`、`last_frame`、`reference_image`、`reference_audio`、
   `reference_video` 明确角色，Planner 在报价和副作用前验证唯一模式与各通道上限。普通参考图无论
   数量都不得被共享层或 adapter 推断成首帧；Provider adapter 只映射已冻结的显式角色。
+- **PG-22 — Provider 实例与启用状态只有一个裁判。** 每个 Provider 的 identity、adapter、异步协议、
+  模型/价格/能力目录、平台凭证和媒体 transport 必须由同一 compile-time Manifest 声明，Edition 只能
+  通过 AI contract 追加 Manifest 或给既有 Manifest 追加模型目录；禁止共享调用方另列 Provider 清单或按文件/环境猜实例。自托管用户的
+  `enabled` 是新调用可用性的唯一持久意图，必须与凭证 readiness 一起经同一 effective resolver 投影到
+  模型选择、项目配置、Agent、MCP 与执行 preflight；关闭不得静默清槽位或中断已受理异步任务的轮询。
 
 ## 权威入口
 
-- Provider adapter 与媒体/LLM 实现：`src/lib/ai-providers/**`
+- Provider Manifest、adapter 与媒体/LLM 实现：`src/lib/ai-providers/**`
+- 自托管 Provider 启用状态与有效模型投影：`src/lib/user-api/effective-config.ts`
 - 执行引擎、结果归一、异步轮询与等待：`src/lib/ai-exec/**`
 - 模型目录、价格、能力与运行时选择：`src/lib/ai-registry/**`、`src/lib/platform-models/**`
 - 提交 fence 与结果重放：`src/lib/task/provider-invocation.ts`

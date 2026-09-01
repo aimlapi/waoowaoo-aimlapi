@@ -19,10 +19,10 @@ export function ProviderCard({
   onDeleteModel,
   onUpdateModel,
   onDeleteProvider,
-  onToggleProviderHidden,
+  onToggleProviderEnabled,
   onAddModel,
-  hideProviderLabel,
-  showProviderLabel,
+  disableProviderLabel,
+  enableProviderLabel,
 }: ProviderCardProps) {
   const t = useTranslations('apiConfig')
 
@@ -43,9 +43,9 @@ export function ProviderCard({
       provider={provider}
       dragHandle={dragHandle}
       onDeleteProvider={onDeleteProvider}
-      onToggleProviderHidden={onToggleProviderHidden}
-      hideProviderLabel={hideProviderLabel}
-      showProviderLabel={showProviderLabel}
+      onToggleProviderEnabled={onToggleProviderEnabled}
+      disableProviderLabel={disableProviderLabel}
+      enableProviderLabel={enableProviderLabel}
       t={t}
       state={state}
     >

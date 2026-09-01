@@ -51,8 +51,91 @@ import {
 } from '@/lib/ai-registry/capability-selection-command'
 import { assertUserProviderConfigurationAvailable } from './availability'
 import { projectEffectiveMediaCapabilities } from '@/lib/ai-exec/media-input-transport'
+import { parseModelKeyStrict } from '@/lib/ai-registry/selection'
+import {
+  assertEnabledProvidersReady,
+  filterEffectiveModels,
+  listDisabledProviderKeys,
+} from './effective-config'
+
+const PROJECT_MODEL_REFERENCE_FIELDS = [
+  'analysisModel',
+  'imageModel',
+  'characterModel',
+  'locationModel',
+  'editModel',
+  'videoModel',
+  'musicModel',
+] as const
+
+function defaultModelsFromPreference(pref: {
+  assistantModel?: string | null
+  analysisModel?: string | null
+  characterModel?: string | null
+  locationModel?: string | null
+  editModel?: string | null
+  videoModel?: string | null
+  musicModel?: string | null
+} | null): DefaultModelsPayload {
+  return {
+    assistantModel: pref?.assistantModel || '',
+    analysisModel: pref?.analysisModel || '',
+    characterModel: pref?.characterModel || '',
+    locationModel: pref?.locationModel || '',
+    editModel: pref?.editModel || '',
+    videoModel: pref?.videoModel || '',
+    musicModel: pref?.musicModel || '',
+  }
+}
+
+function providerFromModelKey(modelKey: string | undefined): string | null {
+  return parseModelKeyStrict(modelKey)?.provider ?? null
+}
+
+function assertDisabledProvidersUnusedByDefaults(
+  disabledProviderIds: readonly string[],
+  defaults: DefaultModelsPayload,
+): void {
+  const disabled = new Set(disabledProviderIds)
+  for (const [field, modelKey] of Object.entries(defaults)) {
+    const providerId = providerFromModelKey(modelKey)
+    if (!providerId || !disabled.has(providerId)) continue
+    throw new ApiError('INVALID_PARAMS', {
+      code: 'PROVIDER_IN_USE',
+      field,
+      providerId,
+      scope: 'user-default',
+    })
+  }
+}
+
+async function assertDisabledProvidersUnusedByProjects(
+  userId: string,
+  disabledProviderIds: readonly string[],
+  client: Pick<Prisma.TransactionClient, 'project'>,
+): Promise<void> {
+  for (const providerId of disabledProviderIds) {
+    const prefix = `${providerId}::`
+    const references: Prisma.ProjectWhereInput[] = PROJECT_MODEL_REFERENCE_FIELDS.map((field) => ({
+      [field]: { startsWith: prefix },
+    }))
+    const project = await client.project.findFirst({
+      where: { userId, OR: references },
+      select: { id: true },
+    })
+    if (!project) continue
+    throw new ApiError('INVALID_PARAMS', {
+      code: 'PROVIDER_IN_USE',
+      field: 'providers',
+      providerId,
+      projectId: project.id,
+      scope: 'project-override',
+    })
+  }
+}
 
 export async function getUserApiConfig(userId: string) {
+  ensureAiCatalogsRegistered()
   assertUserProviderConfigurationAvailable()
   const pref = await prisma.userPreference.findUnique({
     where: { userId },
@@ -73,11 +156,13 @@ export async function getUserApiConfig(userId: string) {
     },
   })
 
-  const providers = parseStoredProviders(pref?.customProviders).map((provider) => ({
+  const storedProviders = parseStoredProviders(pref?.customProviders)
+  assertEnabledProvidersReady(storedProviders)
+  const providers = storedProviders.map((provider) => ({
     id: provider.id,
     name: provider.name,
     baseUrl: provider.baseUrl,
-    hidden: provider.hidden,
+    enabled: provider.enabled,
     hasApiKey: Boolean(provider.apiKey),
   }))
 
@@ -88,22 +173,15 @@ export async function getUserApiConfig(userId: string) {
   const pricingDisplay = buildPricingDisplayMap()
   const pricedModels = models.map((model) => withDisplayPricing(model, pricingDisplay))
 
-  const rawDefaults: DefaultModelsPayload = {
-    assistantModel: pref?.assistantModel || '',
-    analysisModel: pref?.analysisModel || '',
-    characterModel: pref?.characterModel || '',
-    locationModel: pref?.locationModel || '',
-    editModel: pref?.editModel || '',
-    videoModel: pref?.videoModel || '',
-    musicModel: pref?.musicModel || '',
-  }
+  const rawDefaults = defaultModelsFromPreference(pref)
   const defaultModels = billingMode === 'OFF'
     ? rawDefaults
     : sanitizeDefaultModelsForBilling(rawDefaults)
-  const enabledDefaultModels = sanitizeDefaultModelsAgainstModels(defaultModels, models)
+  const effectiveModels = filterEffectiveModels(models, storedProviders)
+  const enabledDefaultModels = sanitizeDefaultModelsAgainstModels(defaultModels, effectiveModels)
   const capabilityDefaults = sanitizeCapabilitySelectionsAgainstModels(
     parseStoredCapabilitySelections(pref?.capabilityDefaults, 'capabilityDefaults'),
-    models,
+    effectiveModels,
   )
   const workflowConcurrency = normalizeWorkflowConcurrencyConfig({
     analysis: pref?.analysisConcurrency,
@@ -132,8 +210,9 @@ export async function getUserApiConfig(userId: string) {
 export async function putUserApiConfig(
   userId: string,
   body: unknown,
-  client: Pick<Prisma.TransactionClient, 'userPreference'> = prisma,
+  client: Pick<Prisma.TransactionClient, 'userPreference' | 'project'> = prisma,
 ) {
+  ensureAiCatalogsRegistered()
   assertUserProviderConfigurationAvailable()
   if (!isRecord(body)) {
     throw new ApiError('INVALID_PARAMS', {
@@ -182,7 +261,29 @@ export async function putUserApiConfig(
   const existingModels = parseStoredModels(existingPref?.customModels)
   const normalizedModels = normalizedModelsInput
 
-  const providerSourceForValidation = normalizedProviders ?? existingProviders
+  const providersToSave = normalizedProviders?.map((provider) => {
+    const existing = existingProviders.find((candidate) => candidate.id === provider.id)
+    let finalApiKey: string | undefined
+    if (provider.apiKey === undefined) {
+      finalApiKey = existing?.apiKey
+    } else if (provider.apiKey === '') {
+      finalApiKey = undefined
+    } else {
+      finalApiKey = encryptApiKey(provider.apiKey)
+    }
+
+    return {
+      id: provider.id,
+      name: provider.name,
+      baseUrl: provider.baseUrl,
+      enabled: provider.enabled,
+      apiKey: finalApiKey,
+    }
+  })
+  const nextProviders = providersToSave ?? existingProviders
+  assertEnabledProvidersReady(nextProviders)
+
+  const providerSourceForValidation = nextProviders
   if (normalizedModels !== undefined) {
     validateModelProviderConsistency(normalizedModels, providerSourceForValidation)
     validateModelProviderTypeSupport(normalizedModels, providerSourceForValidation)
@@ -195,37 +296,28 @@ export async function putUserApiConfig(
     updateData.customModels = JSON.stringify(normalizedModels)
   }
 
-  if (normalizedProviders !== undefined) {
-    const providersToSave = normalizedProviders.map((provider) => {
-      const existing = existingProviders.find((candidate) => candidate.id === provider.id)
-      let finalApiKey: string | undefined
-      if (provider.apiKey === undefined) {
-        finalApiKey = existing?.apiKey
-      } else if (provider.apiKey === '') {
-        finalApiKey = undefined
-      } else {
-        finalApiKey = encryptApiKey(provider.apiKey)
-      }
-      const finalHidden = provider.hidden === undefined
-        ? existing?.hidden === true
-        : provider.hidden === true
-
-      return {
-        id: provider.id,
-        name: provider.name,
-        baseUrl: provider.baseUrl,
-        hidden: finalHidden,
-        apiKey: finalApiKey,
-      }
-    })
+  if (providersToSave !== undefined) {
     updateData.customProviders = JSON.stringify(providersToSave)
   }
 
+  const existingDefaults = defaultModelsFromPreference(existingPref)
+  const nextDefaults = {
+    ...existingDefaults,
+    ...(normalizedDefaults ?? {}),
+  }
+  const disabledProviderIds = listDisabledProviderKeys(existingProviders, nextProviders)
+  if (disabledProviderIds.length > 0) {
+    assertDisabledProvidersUnusedByDefaults(disabledProviderIds, nextDefaults)
+    await assertDisabledProvidersUnusedByProjects(userId, disabledProviderIds, client)
+  }
+
+  const configuredModelSource = billingMode === 'OFF'
+    ? (normalizedModels ?? existingModels)
+    : sanitizeModelsForBilling(normalizedModels ?? existingModels)
+  const effectiveModelSource = filterEffectiveModels(configuredModelSource, nextProviders)
+
   if (normalizedDefaults !== undefined) {
-    const modelSource = billingMode === 'OFF'
-      ? (normalizedModels ?? existingModels)
-      : sanitizeModelsForBilling(normalizedModels ?? existingModels)
-    validateDefaultModelsAgainstModels(normalizedDefaults, modelSource)
+    validateDefaultModelsAgainstModels(normalizedDefaults, effectiveModelSource)
     if (billingMode !== 'OFF') {
       validateDefaultModelPricing(normalizedDefaults)
     }
@@ -253,23 +345,7 @@ export async function putUserApiConfig(
   }
 
   if (normalizedModels !== undefined) {
-    const modelSource = billingMode === 'OFF'
-      ? normalizedModels
-      : sanitizeModelsForBilling(normalizedModels)
-    const existingDefaults: DefaultModelsPayload = {
-      assistantModel: existingPref?.assistantModel || '',
-      analysisModel: existingPref?.analysisModel || '',
-      characterModel: existingPref?.characterModel || '',
-      locationModel: existingPref?.locationModel || '',
-      editModel: existingPref?.editModel || '',
-      videoModel: existingPref?.videoModel || '',
-      musicModel: existingPref?.musicModel || '',
-    }
-    const nextDefaults = {
-      ...existingDefaults,
-      ...(normalizedDefaults || {}),
-    }
-    const cleanedDefaults = sanitizeDefaultModelsAgainstModels(nextDefaults, modelSource)
+    const cleanedDefaults = sanitizeDefaultModelsAgainstModels(nextDefaults, effectiveModelSource)
     for (const field of Object.keys(cleanedDefaults) as Array<keyof DefaultModelsPayload>) {
       const cleanedValue = cleanedDefaults[field]
       if (cleanedValue === undefined) continue
@@ -291,12 +367,11 @@ export async function putUserApiConfig(
   }
 
   if (normalizedCapabilityDefaults !== undefined) {
-    const modelSource = normalizedModels ?? existingModels
     const cleanedCapabilityDefaults = sanitizeCapabilitySelectionsAgainstModels(
       normalizedCapabilityDefaults,
-      modelSource,
+      effectiveModelSource,
     )
-    validateCapabilitySelectionsAgainstModels(cleanedCapabilityDefaults, modelSource)
+    validateCapabilitySelectionsAgainstModels(cleanedCapabilityDefaults, effectiveModelSource)
     updateData.capabilityDefaults = serializeCapabilitySelections(cleanedCapabilityDefaults)
   }
 
@@ -308,4 +383,3 @@ export async function putUserApiConfig(
 
   return { success: true }
 }
-ensureAiCatalogsRegistered()

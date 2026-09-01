@@ -4,8 +4,27 @@ import { getProjectModelConfig, type ProjectModelConfig } from '@/lib/config-ser
 import { prisma } from '@/lib/prisma'
 import { CREATIVE_VIDEO_SEGMENT_DURATION_CEILING_SECONDS } from '@/lib/workspace-resource/generation-contract'
 import type { VideoInputMode } from '@/lib/ai-registry/types'
+import {
+  getUserModels,
+  hasEffectiveProviderConfiguration,
+} from '@/lib/user-api/runtime-config'
+import { PLATFORM_VOICE_DESIGN_MODEL_KEY } from '@/lib/ai-registry/voice-design-contract'
+
+export const PROJECT_PRODUCTION_OPERATION_IDS = [
+  'create_image',
+  'create_video',
+  'create_audio',
+  'generate_voice',
+] as const
+
+export type ProjectProductionOperationId = typeof PROJECT_PRODUCTION_OPERATION_IDS[number]
 
 export type ProjectProductionCapabilities = {
+  readonly image: {
+    readonly characterModelKey: string | null
+    readonly locationModelKey: string | null
+    readonly editModelKey: string | null
+  } | null
   readonly video: {
     readonly modelKey: string
     readonly aspectRatio: string
@@ -33,10 +52,13 @@ export type ProjectProductionCapabilities = {
     readonly maxNegativeStyles: number
     readonly contextAdherenceOptions: readonly ('low' | 'medium' | 'high')[]
   } | null
+  readonly voice: {
+    readonly modelKey: string
+  } | null
 }
 
 export type ProjectProductionContext = {
-  readonly schemaVersion: 4
+  readonly schemaVersion: 5
   readonly version: string
   readonly project: {
     readonly projectId: string
@@ -47,6 +69,7 @@ export type ProjectProductionContext = {
     readonly imageResolution: string
   }
   readonly productionCapabilities: ProjectProductionCapabilities
+  readonly availableOperations: readonly ProjectProductionOperationId[]
 }
 
 export class ProjectProductionContextError extends Error {
@@ -56,9 +79,27 @@ export class ProjectProductionContextError extends Error {
   }
 }
 
-function resolveProductionCapabilities(config: ProjectModelConfig): ProjectProductionCapabilities {
-  const video = config.videoModel
-    ? resolveEffectiveCapabilitiesByModelKey('video', config.videoModel)?.video
+function effectiveModelKey(
+  modelKey: string | null,
+  effectiveModelKeys: ReadonlySet<string>,
+): string | null {
+  return modelKey && effectiveModelKeys.has(modelKey) ? modelKey : null
+}
+
+function resolveProductionCapabilities(
+  config: ProjectModelConfig,
+  effectiveModelKeys: ReadonlySet<string>,
+  voiceAvailable: boolean,
+): ProjectProductionCapabilities {
+  const characterModelKey = effectiveModelKey(config.characterModel, effectiveModelKeys)
+  const locationModelKey = effectiveModelKey(config.locationModel, effectiveModelKeys)
+  const editModelKey = effectiveModelKey(config.editModel, effectiveModelKeys)
+  const imageCapabilities = characterModelKey || locationModelKey || editModelKey
+    ? { characterModelKey, locationModelKey, editModelKey }
+    : null
+  const videoModelKey = effectiveModelKey(config.videoModel, effectiveModelKeys)
+  const video = videoModelKey
+    ? resolveEffectiveCapabilitiesByModelKey('video', videoModelKey)?.video
     : undefined
   const allowedSegmentDurationsSeconds = Array.from(new Set(
     (video?.durationOptions ?? []).filter((duration): duration is number => (
@@ -69,13 +110,13 @@ function resolveProductionCapabilities(config: ProjectModelConfig): ProjectProdu
   )).sort((left, right) => left - right)
   const minSegmentDurationSeconds = allowedSegmentDurationsSeconds[0]
   const maxSegmentDurationSeconds = allowedSegmentDurationsSeconds.at(-1)
-  const videoCapabilities = config.videoModel
+  const videoCapabilities = videoModelKey
     && config.videoRatio
     && video
     && minSegmentDurationSeconds !== undefined
     && maxSegmentDurationSeconds !== undefined
     ? {
-        modelKey: config.videoModel,
+        modelKey: videoModelKey,
         aspectRatio: config.videoRatio,
         allowedSegmentDurationsSeconds,
         minSegmentDurationSeconds,
@@ -91,15 +132,16 @@ function resolveProductionCapabilities(config: ProjectModelConfig): ProjectProdu
       }
     : null
 
-  const music = config.musicModel
-    ? resolveEffectiveCapabilitiesByModelKey('music', config.musicModel)?.music
+  const musicModelKey = effectiveModelKey(config.musicModel, effectiveModelKeys)
+  const music = musicModelKey
+    ? resolveEffectiveCapabilitiesByModelKey('music', musicModelKey)?.music
     : undefined
   const compositionPlan = music?.compositionPlan
-  const musicCapabilities = config.musicModel
+  const musicCapabilities = musicModelKey
     && music?.generationModes?.includes('composition_plan')
     && compositionPlan
       ? {
-        modelKey: config.musicModel,
+        modelKey: musicModelKey,
         generationMode: 'composition_plan' as const,
         maxChunks: compositionPlan.maxChunks,
         minChunkDurationMs: compositionPlan.minChunkDurationMs,
@@ -112,7 +154,23 @@ function resolveProductionCapabilities(config: ProjectModelConfig): ProjectProdu
       }
     : null
 
-  return { video: videoCapabilities, music: musicCapabilities }
+  return {
+    image: imageCapabilities,
+    video: videoCapabilities,
+    music: musicCapabilities,
+    voice: voiceAvailable ? { modelKey: PLATFORM_VOICE_DESIGN_MODEL_KEY } : null,
+  }
+}
+
+export function listAvailableProjectProductionOperations(
+  capabilities: ProjectProductionCapabilities,
+): readonly ProjectProductionOperationId[] {
+  return [
+    ...(capabilities.image ? ['create_image' as const] : []),
+    ...(capabilities.video ? ['create_video' as const] : []),
+    ...(capabilities.music ? ['create_audio' as const] : []),
+    ...(capabilities.voice ? ['generate_voice' as const] : []),
+  ]
 }
 
 function contextVersion(value: Omit<ProjectProductionContext, 'version'>): string {
@@ -123,7 +181,7 @@ export async function readProjectProductionContext(input: {
   readonly projectId: string
   readonly userId: string
 }): Promise<ProjectProductionContext> {
-  const [project, modelConfig] = await Promise.all([
+  const [project, modelConfig, effectiveModels, voiceAvailable] = await Promise.all([
     prisma.project.findFirst({
       where: { id: input.projectId, userId: input.userId },
       select: {
@@ -135,10 +193,17 @@ export async function readProjectProductionContext(input: {
       },
     }),
     getProjectModelConfig(input.projectId, input.userId),
+    getUserModels(input.userId),
+    hasEffectiveProviderConfiguration(input.userId, 'fal'),
   ])
   if (!project) throw new ProjectProductionContextError()
+  const productionCapabilities = resolveProductionCapabilities(
+    modelConfig,
+    new Set(effectiveModels.map((model) => model.modelKey)),
+    voiceAvailable,
+  )
   const value: Omit<ProjectProductionContext, 'version'> = {
-    schemaVersion: 4,
+    schemaVersion: 5,
     project: {
       projectId: project.id,
       name: project.name,
@@ -147,7 +212,8 @@ export async function readProjectProductionContext(input: {
       videoResolution: project.videoResolution,
       imageResolution: project.imageResolution,
     },
-    productionCapabilities: resolveProductionCapabilities(modelConfig),
+    productionCapabilities,
+    availableOperations: listAvailableProjectProductionOperations(productionCapabilities),
   }
   return { ...value, version: contextVersion(value) }
 }

@@ -39,7 +39,7 @@ export function ApiConfigTabContainer() {
     saveStatus,
     saveError,
     flushConfig,
-    updateProviderHidden,
+    updateProviderEnabled,
     updateProviderApiKey,
     updateProviderBaseUrl,
     reorderProviders,
@@ -56,8 +56,11 @@ export function ApiConfigTabContainer() {
 
   const t = useTranslations('apiConfig')
   const tc = useTranslations('common')
-  const saveFailedLabel =
-    saveError?.code === 'PROVIDER_NOT_SUPPORTED' && saveError.providerId
+  const saveFailedLabel = saveError?.code === 'PROVIDER_IN_USE'
+    ? t('providerInUse')
+    : saveError?.code === 'PROVIDER_API_KEY_REQUIRED'
+      ? t('providerApiKeyRequired')
+      : saveError?.code === 'PROVIDER_NOT_SUPPORTED' && saveError.providerId
       ? t('saveFailedProviderUnsupported', {
           provider: getProviderDisplayName(saveError.providerId, locale),
         })
@@ -146,16 +149,15 @@ export function ApiConfigTabContainer() {
             onDeleteProvider={deleteProvider}
             onAddModel={addModel}
             onFlushConfig={flushConfig}
-            onToggleProviderHidden={updateProviderHidden}
+            onToggleProviderEnabled={updateProviderEnabled}
             labels={{
               providerPool: t('providerPool'),
               dragToSort: t('dragToSort'),
               dragToSortHint: t('dragToSortHint'),
-              hideProvider: t('hideProvider'),
-              showProvider: t('showProvider'),
-              showHiddenProviders: t('showHiddenProviders'),
-              hideHiddenProviders: t('hideHiddenProviders'),
-              hiddenProvidersPrefix: t('hiddenProvidersPrefix'),
+              disableProvider: t('disableProvider'),
+              enableProvider: t('enableProvider'),
+              showProviderExtensions: t('showProviderExtensions'),
+              hideProviderExtensions: t('hideProviderExtensions'),
             }}
           />
         </div>

@@ -41,7 +41,8 @@ async function readSaveError(response: Response, providers: Provider[]): Promise
   const field = readString(details?.field) || readString(payload.field)
   const providerIndexMatch = /^providers\[(\d+)]\.id$/.exec(field)
   const providerIndex = providerIndexMatch ? Number.parseInt(providerIndexMatch[1], 10) : -1
-  const providerId = providerIndex >= 0 ? providers[providerIndex]?.id : undefined
+  const providerId = readString(details?.providerId)
+    || (providerIndex >= 0 ? providers[providerIndex]?.id : undefined)
   const requestId = readString(payload.requestId) || readString(details?.requestId)
 
   return {
@@ -70,6 +71,7 @@ export function useApiConfigSaver(input: {
   const [saveStatus, setSaveStatus] = useState<'idle' | 'saving' | 'saved' | 'error'>('idle')
   const [saveError, setSaveError] = useState<ApiConfigSaveError | null>(null)
   const saveTimeoutRef = useRef<NodeJS.Timeout | null>(null)
+  const saveQueueRef = useRef<Promise<void>>(Promise.resolve())
 
   const performSave = useCallback(async (
     overrides?: {
@@ -96,28 +98,32 @@ export function useApiConfigSaver(input: {
       const currentCapabilityDefaults = overrides?.capabilityDefaults ?? input.latestCapabilityDefaultsRef.current
       const enabledModels = currentModels.filter((model) => model.enabled)
 
-      const res = await apiFetch('/api/user/api-config', {
+      const requestBody = JSON.stringify({
+        models: enabledModels.map((model) => ({
+          modelId: model.modelId,
+          name: model.name,
+          type: model.type,
+          provider: model.provider,
+        })),
+        providers: currentProviders.map((provider) => ({
+          id: provider.id,
+          name: provider.name,
+          ...(provider.baseUrl ? { baseUrl: provider.baseUrl } : {}),
+          ...(provider.apiKey !== undefined ? { apiKey: provider.apiKey } : {}),
+          enabled: provider.enabled,
+        })),
+        defaultModels: currentDefaultModels,
+        workflowConcurrency: currentWorkflowConcurrency,
+        capabilityDefaults: capabilitySelectionsToCommand(currentCapabilityDefaults),
+      })
+      const executeSave = async () => await apiFetch('/api/user/api-config', {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          models: enabledModels.map((model) => ({
-            modelId: model.modelId,
-            name: model.name,
-            type: model.type,
-            provider: model.provider,
-          })),
-          providers: currentProviders.map((provider) => ({
-            id: provider.id,
-            name: provider.name,
-            ...(provider.baseUrl ? { baseUrl: provider.baseUrl } : {}),
-            ...(provider.apiKey !== undefined ? { apiKey: provider.apiKey } : {}),
-            ...(provider.hidden !== undefined ? { hidden: provider.hidden } : {}),
-          })),
-          defaultModels: currentDefaultModels,
-          workflowConcurrency: currentWorkflowConcurrency,
-          capabilityDefaults: capabilitySelectionsToCommand(currentCapabilityDefaults),
-        }),
+        body: requestBody,
       })
+      const responsePromise = saveQueueRef.current.then(executeSave, executeSave)
+      saveQueueRef.current = responsePromise.then(() => undefined, () => undefined)
+      const res = await responsePromise
       if (!res.ok) {
         if (!silent) {
           setSaveError(await readSaveError(res, currentProviders))
@@ -127,6 +133,7 @@ export function useApiConfigSaver(input: {
       }
 
       if (!silent) {
+        if (saveTimeoutRef.current) clearTimeout(saveTimeoutRef.current)
         setSaveError(null)
         setSaveStatus('saved')
         saveTimeoutRef.current = setTimeout(() => setSaveStatus('idle'), 3000)

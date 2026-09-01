@@ -40,7 +40,12 @@ export const DEFAULT_MODEL_FIELDS = [
 ] as const satisfies ReadonlyArray<keyof DefaultModels>
 
 export function createInitialProviders(presetProviders: Provider[]): Provider[] {
-  return presetProviders.map((provider) => ({ ...provider, apiKey: '', hasApiKey: false }))
+  return presetProviders.map((provider) => ({
+    ...provider,
+    apiKey: '',
+    hasApiKey: false,
+    enabled: false,
+  }))
 }
 
 export function createInitialModels(presetModels: ReadonlyArray<Omit<CustomModel, 'modelKey' | 'price' | 'priceLabel' | 'enabled'> & Partial<Pick<CustomModel, 'modelKey' | 'price' | 'priceLabel' | 'enabled'>>>): CustomModel[] {
@@ -74,7 +79,7 @@ export function mergeProvidersForDisplay(
       merged.push({
         ...matchedPreset,
         hasApiKey: savedProvider.hasApiKey === true,
-        hidden: savedProvider.hidden === true,
+        enabled: savedProvider.enabled === true,
         baseUrl: savedProvider.baseUrl || matchedPreset.baseUrl,
       })
       seenPresetKeys.add(providerKey)
@@ -85,6 +90,7 @@ export function mergeProvidersForDisplay(
       ...savedProvider,
       apiKey: undefined,
       hasApiKey: savedProvider.hasApiKey === true,
+      enabled: savedProvider.enabled === true,
     })
   }
 
@@ -94,7 +100,7 @@ export function mergeProvidersForDisplay(
       ...presetProvider,
       apiKey: '',
       hasApiKey: false,
-      hidden: false,
+      enabled: false,
     })
   }
 

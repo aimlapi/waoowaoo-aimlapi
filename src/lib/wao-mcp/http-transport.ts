@@ -14,6 +14,11 @@ import type {
 import { createProductionWaoMcpOperationExecutor } from './production-executor'
 import type { WaoRuntimeTokenPayload } from './runtime-token'
 import { createWaoMcpServer } from './server'
+import {
+  listAvailableProjectProductionOperations,
+  PROJECT_PRODUCTION_OPERATION_IDS,
+  readProjectProductionContext,
+} from '@/lib/project-production-context'
 
 const WAO_MCP_MAX_ACTIVE_HTTP_SESSIONS = 1_024
 const WAO_MCP_SESSION_ID_MAX_CHARS = 191
@@ -215,6 +220,20 @@ async function startHttpSessionExclusive(params: {
       },
     }),
     contextResolver: createBoundContextResolver(params.scope),
+    operationAvailability: {
+      async resolveUnavailableOperationIds() {
+        const context = await readProjectProductionContext({
+          userId: params.scope.userId,
+          projectId: params.scope.projectId,
+        })
+        const available = new Set(listAvailableProjectProductionOperations(
+          context.productionCapabilities,
+        ))
+        return new Set<string>(
+          PROJECT_PRODUCTION_OPERATION_IDS.filter((operationId) => !available.has(operationId)),
+        )
+      },
+    },
   })
   entry = {
     id: '',

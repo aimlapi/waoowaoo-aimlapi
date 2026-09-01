@@ -13,7 +13,7 @@ export interface StoredProvider {
   name: string
   baseUrl?: string
   apiKey?: string
-  hidden?: boolean
+  enabled: boolean
 }
 
 export interface StoredModel {

@@ -2,7 +2,6 @@
 
 import { useMemo } from 'react'
 import type { CustomModel, Provider } from '../../api-config'
-import { getProviderKey } from '../../api-config'
 
 interface UseApiConfigFiltersParams {
   providers: Provider[]
@@ -13,15 +12,7 @@ interface EnabledModelOption extends CustomModel {
   providerName: string
 }
 
-const ALWAYS_SHOW_PROVIDERS: string[] = []
-const ALLOWED_PROVIDER_KEYS = new Set(['ark', 'openrouter', 'fal', 'google'])
 const PROVIDER_MODEL_TYPES: Array<'llm' | 'image' | 'video' | 'music'> = ['llm', 'image', 'video', 'music']
-const MODEL_PROVIDER_KEYS = [
-  'ark',
-  'google',
-  'openrouter',
-  'fal',
-]
 
 function isProviderModelType(type: CustomModel['type']): type is 'llm' | 'image' | 'video' | 'music' {
   return PROVIDER_MODEL_TYPES.includes(type as 'llm' | 'image' | 'video' | 'music')
@@ -40,40 +31,19 @@ function hasProviderApiKey(provider: Provider | undefined): boolean {
 
 function shouldExposeModelForProvider(provider: Provider | undefined, model: CustomModel): boolean {
   if (!provider) return false
-  return ALLOWED_PROVIDER_KEYS.has(getProviderKey(provider.id)) && isProviderModelType(model.type)
+  return isProviderModelType(model.type)
 }
 
 export function useApiConfigFilters({
   providers,
   models,
 }: UseApiConfigFiltersParams) {
-  const modelProviderKeys = useMemo(() => {
-    const keys = new Set<string>(MODEL_PROVIDER_KEYS)
-    models.forEach((model) => {
-      if (!isProviderModelType(model.type)) return
-      keys.add(getProviderKey(model.provider))
-    })
-    return keys
-  }, [models])
-
-  const isPresetProvider = (providerId: string) => {
-    // Built-in catalog providers use plain ids without ':'.
-    return !providerId.includes(':')
-  }
-
   const modelProviders = useMemo(() => {
-    return providers.filter((provider) => {
-      const providerKey = getProviderKey(provider.id)
-      if (!ALLOWED_PROVIDER_KEYS.has(providerKey)) return false
-      const isCustomProvider = !isPresetProvider(provider.id)
-
-      return (
-        (isCustomProvider && modelProviderKeys.has(providerKey)) ||
-        modelProviderKeys.has(providerKey) ||
-        ALWAYS_SHOW_PROVIDERS.includes(providerKey)
-      )
-    })
-  }, [modelProviderKeys, providers])
+    const modelProviderIds = new Set(models
+      .filter((model) => isProviderModelType(model.type))
+      .map((model) => model.provider))
+    return providers.filter((provider) => modelProviderIds.has(provider.id))
+  }, [models, providers])
 
   const enabledModelsByType = useMemo(() => {
     const grouped: Record<'llm' | 'image' | 'video' | 'music', EnabledModelOption[]> = {
@@ -89,6 +59,7 @@ export function useApiConfigFilters({
       if (!model.enabled) continue
       if (!isDefaultModelType(model.type)) continue
       const provider = providersById.get(model.provider)
+      if (!provider?.enabled) continue
       if (!hasProviderApiKey(provider)) continue
       if (!shouldExposeModelForProvider(provider, model)) continue
 

@@ -21,6 +21,10 @@ import {
   PROJECT_VIDEO_RATIO_VALUES,
   writeProjectVideoRatioInTransaction,
 } from '@/lib/projects/video-ratio-write'
+import type { StoredModel } from '@/lib/user-api/api-config-types'
+import { parseStoredModels } from '@/lib/user-api/api-config-model-normalization'
+import { parseStoredProviders } from '@/lib/user-api/api-config-provider-normalization'
+import { filterEffectiveModels } from '@/lib/user-api/effective-config'
 
 const MODEL_FIELDS = [
   'analysisModel',
@@ -160,6 +164,33 @@ function validateModelKeyField(field: typeof MODEL_FIELDS[number], value: unknow
     throw new ApiError('INVALID_PARAMS', {
       code: 'MODEL_KEY_INVALID',
       field,
+    })
+  }
+}
+
+function validateEffectiveProjectModel(
+  field: typeof MODEL_FIELDS[number],
+  value: unknown,
+  effectiveModelsByKey: ReadonlyMap<string, StoredModel>,
+): void {
+  validateModelKeyField(field, value)
+  if (value === null) return
+  const modelKey = typeof value === 'string' ? value.trim() : ''
+  const model = effectiveModelsByKey.get(modelKey)
+  if (!model) {
+    throw new ApiError('INVALID_PARAMS', {
+      code: 'PROJECT_MODEL_NOT_EFFECTIVE',
+      field,
+      modelKey,
+    })
+  }
+  const expectedType = MODEL_FIELD_TO_TYPE[field]
+  if (model.type !== expectedType) {
+    throw new ApiError('INVALID_PARAMS', {
+      code: 'PROJECT_MODEL_TYPE_INVALID',
+      field,
+      modelKey,
+      expectedType,
     })
   }
 }
@@ -370,6 +401,19 @@ export function createConfigOperations(): ProjectAgentOperationRegistryDraft {
           throw new ApiError('NOT_FOUND')
         }
 
+        let effectiveModelsByKey: ReadonlyMap<string, StoredModel> = new Map()
+        if (!platformManagedModels) {
+          const preference = await transaction.userPreference.findUnique({
+            where: { userId: ctx.userId },
+            select: { customModels: true, customProviders: true },
+          })
+          const providers = parseStoredProviders(preference?.customProviders)
+          effectiveModelsByKey = new Map(
+            filterEffectiveModels(parseStoredModels(preference?.customModels), providers)
+              .map((model) => [model.modelKey, model]),
+          )
+        }
+
         const allowedProjectFields = [
           ...(platformManagedModels ? [] : MODEL_FIELDS),
           'videoRatio',
@@ -381,7 +425,11 @@ export function createConfigOperations(): ProjectAgentOperationRegistryDraft {
           if (body[field] === undefined) continue
 
           if ((MODEL_FIELDS as readonly string[]).includes(field)) {
-            validateModelKeyField(field as typeof MODEL_FIELDS[number], body[field])
+            validateEffectiveProjectModel(
+              field as typeof MODEL_FIELDS[number],
+              body[field],
+              effectiveModelsByKey,
+            )
           }
 
           if (field === 'capabilityOverrides') {

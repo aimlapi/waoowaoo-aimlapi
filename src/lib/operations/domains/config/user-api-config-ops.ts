@@ -10,12 +10,12 @@ const modelKeySchema = z.string().regex(/^(?:$|[^:]+::.+)$/)
 const apiConfigInputSchema = z.object({
   providers: z.array(z.object({
     id: z.string().trim().min(1)
-      .describe('Provider identity using a supported provider key such as ark, openrouter, fal, or google.'),
+      .describe('Exact provider identity returned by get_user_api_config; unsupported identities fail.'),
     name: z.string().trim().min(1).describe('User-visible provider name.'),
     baseUrl: z.string().trim().min(1).optional().describe('Optional provider API base URL.'),
     apiKey: z.string().optional()
       .describe('Provider API key. Omit to preserve the stored key; pass an empty string to remove it.'),
-    hidden: z.boolean().optional().describe('Whether this provider is disabled in model selection.'),
+    enabled: z.boolean().describe('Whether this provider is available to model selection and execution.'),
   }).strict()).optional(),
   models: z.array(z.object({
     modelId: z.string().trim().min(1).describe('Provider model ID.'),

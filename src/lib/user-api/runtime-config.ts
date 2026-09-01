@@ -12,7 +12,7 @@ import { decryptApiKey } from '@/lib/crypto-utils'
 import { isApiConfigCatalogProviderId } from '@/lib/ai-registry/api-config-catalog'
 import { parseModelKeyStrict } from '@/lib/ai-registry/selection'
 import { getDeploymentConfig, isPlatformProviderCredentialMode } from '@/lib/deployment/config'
-import PLATFORM_PROVIDER_ENV from '@/lib/deployment/platform-provider-env.json'
+import { resolveAiProviderManifest } from '@/lib/ai-providers/manifests'
 import { getPlatformModels } from '@/lib/platform-models/catalog'
 import type { UnifiedModelType } from '@/lib/ai-registry/types'
 import { isUnifiedModelType } from '@/lib/user-api/api-config-shared'
@@ -25,6 +25,11 @@ import {
   type RuntimeModelMediaType,
   type RuntimeModelSelection,
 } from '@/lib/ai-registry/runtime-selection'
+import {
+  assertEnabledProvidersReady,
+  filterEffectiveModels,
+  isStoredProviderEffective,
+} from '@/lib/user-api/effective-config'
 
 export interface CustomModel {
   modelId: string
@@ -42,6 +47,7 @@ export type ModelSelection = RuntimeModelSelection
 interface CustomProvider {
   id: string
   name: string
+  enabled: boolean
   baseUrl?: string
   apiKey?: string
 }
@@ -71,7 +77,7 @@ function getProviderFamily(providerId: string): string {
 
 function resolvePlatformProviderEnv(providerId: string): PlatformProviderEnv {
   const providerFamily = getProviderFamily(providerId)
-  const entry = (PLATFORM_PROVIDER_ENV as Record<string, { envPrefix: string; requiresBaseUrl?: boolean }>)[providerFamily]
+  const entry = resolveAiProviderManifest(providerFamily).platformCredentials
   if (!entry) {
     throw new Error(`PLATFORM_PROVIDER_UNSUPPORTED: ${providerId}`)
   }
@@ -131,9 +137,14 @@ function parseCustomProviders(rawProviders: string | null | undefined): CustomPr
 
     const baseUrl = readTrimmedString(Reflect.get(raw, 'baseUrl')) || undefined
     const apiKey = readTrimmedString(Reflect.get(raw, 'apiKey')) || undefined
+    const enabled = Reflect.get(raw, 'enabled')
+    if (typeof enabled !== 'boolean') {
+      throw new Error(`PROVIDER_PAYLOAD_INVALID: customProviders[${index}].enabled must be boolean`)
+    }
     providers.push({
       id,
       name,
+      enabled,
       ...(baseUrl ? { baseUrl } : {}),
       ...(apiKey ? { apiKey } : {}),
     })
@@ -202,7 +213,7 @@ function pickProviderStrict(providers: CustomProvider[], providerId: string): Cu
   })
 }
 
-async function readUserConfig(userId: string): Promise<{ models: CustomModel[]; providers: CustomProvider[] }> {
+async function readStoredUserConfig(userId: string): Promise<{ models: CustomModel[]; providers: CustomProvider[] }> {
   const pref = await prisma.userPreference.findUnique({
     where: { userId },
     select: {
@@ -211,9 +222,19 @@ async function readUserConfig(userId: string): Promise<{ models: CustomModel[]; 
     },
   })
 
+  const providers = parseCustomProviders(pref?.customProviders)
+  assertEnabledProvidersReady(providers)
   return {
     models: parseCustomModels(pref?.customModels),
-    providers: parseCustomProviders(pref?.customProviders),
+    providers,
+  }
+}
+
+async function readUserConfig(userId: string): Promise<{ models: CustomModel[]; providers: CustomProvider[] }> {
+  const stored = await readStoredUserConfig(userId)
+  return {
+    models: filterEffectiveModels(stored.models, stored.providers),
+    providers: stored.providers.filter(isStoredProviderEffective),
   }
 }
 
@@ -312,6 +333,57 @@ export async function getProviderConfig(userId: string, providerId: string): Pro
   }
 }
 
+async function getStoredProviderConfigWithoutEnabledGate(
+  userId: string,
+  providerId: string,
+): Promise<ProviderConfig> {
+  if (isPlatformProviderCredentialMode()) {
+    return await getProviderConfig(userId, providerId)
+  }
+  const { providers } = await readStoredUserConfig(userId)
+  const provider = pickProviderStrict(providers, providerId)
+  if (!provider.apiKey) {
+    throw new AppError('PROVIDER_AUTH_INVALID', 'Provider API key is missing', {
+      provider: provider.id,
+    })
+  }
+  return {
+    id: provider.id,
+    name: provider.name,
+    apiKey: decryptApiKey(provider.apiKey),
+    baseUrl: normalizeProviderRuntimeBaseUrl(provider.id, provider.baseUrl),
+  }
+}
+
+/**
+ * Connection diagnostics may verify a stored credential before the user
+ * enables that provider. This is a read-only diagnostic entrance and must not
+ * be used for model execution.
+ */
+export async function getProviderConfigForDiagnostics(
+  userId: string,
+  providerId: string,
+): Promise<ProviderConfig> {
+  return await getStoredProviderConfigWithoutEnabledGate(userId, providerId)
+}
+
+/**
+ * Existing accepted async executions retain their provider identity while a
+ * provider is disabled for new work. This entry is reserved for polling and
+ * cancellation of that frozen execution; it still requires the stored key.
+ */
+export async function getProviderConfigForExistingExecution(
+  userId: string,
+  providerId: string,
+): Promise<ProviderConfig> {
+  return await getStoredProviderConfigWithoutEnabledGate(userId, providerId)
+}
+
+export async function getUserModelsForExistingExecution(userId: string): Promise<CustomModel[]> {
+  if (isPlatformProviderCredentialMode()) return getPlatformModels()
+  return (await readStoredUserConfig(userId)).models
+}
+
 export async function getUserModels(userId: string): Promise<CustomModel[]> {
   return await getRuntimeModels(userId)
 }
@@ -350,5 +422,18 @@ export async function hasApiConfig(userId: string): Promise<boolean> {
   })
 
   const providers = parseCustomProviders(pref?.customProviders)
-  return providers.some((provider) => !!provider.apiKey)
+  assertEnabledProvidersReady(providers)
+  return providers.some(isStoredProviderEffective)
+}
+
+export async function hasEffectiveProviderConfiguration(
+  userId: string,
+  providerId: string,
+): Promise<boolean> {
+  if (isPlatformProviderCredentialMode()) {
+    resolvePlatformProviderEnv(providerId)
+    return true
+  }
+  const { providers } = await readUserConfig(userId)
+  return providers.some((provider) => provider.id === providerId)
 }

@@ -36,6 +36,9 @@ export interface CreateWaoMcpServerParams {
   readonly contextResolver: WaoMcpCallContextResolver
   readonly name?: string
   readonly version?: string
+  readonly operationAvailability?: {
+    resolveUnavailableOperationIds(): Promise<ReadonlySet<string>>
+  }
 }
 
 function isRecord(value: unknown): value is Record<string, unknown> {
@@ -106,9 +109,19 @@ export function createWaoMcpServer(
 
   server.setRequestHandler(
     ListToolsRequestSchema,
-    async (): Promise<ListToolsResult> => ({
-      tools: catalog.map((entry) => entry.tool),
-    }),
+    async (): Promise<ListToolsResult> => {
+      const unavailableOperationIds = params.operationAvailability
+        ? await params.operationAvailability.resolveUnavailableOperationIds()
+        : new Set<string>()
+      return {
+        tools: catalog.flatMap((entry) => (
+          entry.kind === 'user_decision'
+          || !unavailableOperationIds.has(entry.operation.operationId)
+            ? [entry.tool]
+            : []
+        )),
+      }
+    },
   )
 
   server.setRequestHandler(
@@ -121,8 +134,18 @@ export function createWaoMcpServer(
           'This tool is not available through Wao MCP.',
         )
       }
-
       try {
+        if (
+          entry.kind !== 'user_decision'
+          && params.operationAvailability
+          && (await params.operationAvailability.resolveUnavailableOperationIds())
+            .has(entry.operation.operationId)
+        ) {
+          return errorResult(
+            'WAO_MCP_OPERATION_UNAVAILABLE',
+            'This production operation is not enabled by the current project model configuration.',
+          )
+        }
         const context = await params.contextResolver.resolve({
           toolName: entry.name,
           requestId: extra.requestId,

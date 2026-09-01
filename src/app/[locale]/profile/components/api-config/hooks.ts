@@ -44,7 +44,7 @@ interface UseProvidersReturn {
     saveStatus: 'idle' | 'saving' | 'saved' | 'error'
     saveError: ApiConfigSaveError | null
     flushConfig: () => Promise<void>
-    updateProviderHidden: (providerId: string, hidden: boolean) => void
+    updateProviderEnabled: (providerId: string, enabled: boolean) => void
     updateProviderApiKey: (providerId: string, apiKey: string) => void
     updateProviderBaseUrl: (providerId: string, baseUrl: string) => void
     reorderProviders: (activeProviderId: string, overProviderId: string) => void
@@ -112,6 +112,7 @@ export function useProviders(): UseProvidersReturn {
         const serverCatalogProviders = catalogProviders.map((provider) => ({
             ...provider,
             name: resolvePresetProviderName(provider.id, provider.name, locale),
+            enabled: false,
         }))
 
         const savedProviders: Provider[] = data.providers || []
@@ -212,33 +213,63 @@ export function useProviders(): UseProvidersReturn {
 
     // 提供商操作
     const updateProviderApiKey = useCallback((providerId: string, apiKey: string) => {
-        setProviders(prev => {
-            const next = prev.map(p =>
-                p.id === providerId ? { ...p, apiKey, hasApiKey: !!apiKey } : p
-            )
-            latestProvidersRef.current = next
-            void performSave().then((saved) => {
-                if (!saved) return
-                const scrubbed = latestProvidersRef.current.map((provider) => provider.id === providerId
-                    ? { ...provider, apiKey: undefined, hasApiKey: Boolean(apiKey) }
-                    : provider)
-                latestProvidersRef.current = scrubbed
-                setProviders(scrubbed)
+        const previousProvider = latestProvidersRef.current.find((provider) => provider.id === providerId)
+        if (!previousProvider) return
+        const next = latestProvidersRef.current.map((provider) => (
+            provider.id === providerId ? { ...provider, apiKey, hasApiKey: Boolean(apiKey) } : provider
+        ))
+        latestProvidersRef.current = next
+        setProviders(next)
+        void performSave().then((saved) => {
+            const settled = latestProvidersRef.current.map((provider) => {
+                if (provider.id !== providerId) return provider
+                if (!saved) return previousProvider
+                return { ...provider, apiKey: undefined, hasApiKey: Boolean(apiKey) }
             })
-            return next
+            latestProvidersRef.current = settled
+            setProviders(settled)
         })
     }, [performSave])
 
-    const updateProviderHidden = useCallback((providerId: string, hidden: boolean) => {
-        setProviders((previous) => {
-            const next = previous.map((provider) =>
-                provider.id === providerId ? { ...provider, hidden } : provider,
-            )
-            latestProvidersRef.current = next
-            void performSave()
-            return next
+    const updateProviderEnabled = useCallback((providerId: string, enabled: boolean) => {
+        const currentProvider = latestProvidersRef.current.find((provider) => provider.id === providerId)
+        if (!currentProvider) return
+        if (enabled && !currentProvider.hasApiKey && !currentProvider.apiKey) {
+            showToast(t('providerApiKeyRequired'), 'warning')
+            return
+        }
+        if (!enabled) {
+            const usedByDefault = Object.values(latestDefaultModelsRef.current).some((modelKey) => (
+                typeof modelKey === 'string' && modelKey.startsWith(`${providerId}::`)
+            ))
+            if (usedByDefault) {
+                showToast(t('providerInUseByDefaults'), 'warning')
+                return
+            }
+        }
+
+        const previous = latestProvidersRef.current
+        const next = previous.map((provider) => (
+            provider.id === providerId ? { ...provider, enabled } : provider
+        ))
+        latestProvidersRef.current = next
+        setProviders(next)
+        void performSave().then((saved) => {
+            const settled = latestProvidersRef.current.map((provider) => {
+                if (provider.id !== providerId) return provider
+                if (!saved) return { ...provider, enabled: currentProvider.enabled }
+                return {
+                    ...provider,
+                    enabled,
+                    ...(currentProvider.apiKey
+                        ? { apiKey: undefined, hasApiKey: true }
+                        : {}),
+                }
+            })
+            latestProvidersRef.current = settled
+            setProviders(settled)
         })
-    }, [performSave])
+    }, [performSave, showToast, t])
 
     const reorderProviders = useCallback((activeProviderId: string, overProviderId: string) => {
         if (activeProviderId === overProviderId) return
@@ -412,7 +443,7 @@ export function useProviders(): UseProvidersReturn {
         saveStatus,
         saveError,
         flushConfig,
-        updateProviderHidden,
+        updateProviderEnabled,
         updateProviderApiKey,
         updateProviderBaseUrl,
         reorderProviders,

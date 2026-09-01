@@ -1,6 +1,12 @@
 #!/usr/bin/env node
 import { existsSync, readFileSync } from 'node:fs'
+import { execFileSync } from 'node:child_process'
+import { createRequire } from 'node:module'
 import path from 'node:path'
+import { fileURLToPath } from 'node:url'
+
+const require = createRequire(import.meta.url)
+const PROJECT_ROOT = fileURLToPath(new URL('../..', import.meta.url))
 
 const COMMON_REQUIRED_KEYS = [
   'DEPLOYMENT_EDITION',
@@ -87,11 +93,36 @@ const DEFAULT_MODEL_KEYS = [
   'PLATFORM_DEFAULT_MUSIC_MODEL',
 ]
 
-// Single source of truth shared with src/lib/user-api/runtime-config.ts
-// (resolvePlatformProviderEnv). Do not maintain a provider table here.
-const PLATFORM_PROVIDER_ENV = JSON.parse(
-  readFileSync(new URL('../../src/lib/deployment/platform-provider-env.json', import.meta.url), 'utf8'),
-)
+function readPlatformProviderEnv() {
+  const generatedTsconfig = path.join(
+    PROJECT_ROOT,
+    '.generated',
+    'edition',
+    'tsconfig.runtime-scripts.json',
+  )
+  if (!existsSync(generatedTsconfig)) {
+    throw new Error('EDITION_BINDING_NOT_PREPARED:run npm run edition:prepare')
+  }
+  const helperPath = path.join(PROJECT_ROOT, 'scripts', 'edition', 'print-platform-provider-env.ts')
+  const output = execFileSync(
+    process.execPath,
+    [require.resolve('tsx/cli'), '--tsconfig', generatedTsconfig, helperPath],
+    {
+      cwd: PROJECT_ROOT,
+      encoding: 'utf8',
+      env: {
+        ...process.env,
+        DEPLOYMENT_EDITION: 'cloud',
+      },
+      stdio: ['ignore', 'pipe', 'inherit'],
+    },
+  )
+  return JSON.parse(output)
+}
+
+// Generated from the Edition-composed Provider Manifest. Cloud validation and
+// runtime selection therefore consume the same provider credential authority.
+const PLATFORM_PROVIDER_ENV = readPlatformProviderEnv()
 
 function parseEnvLine(line) {
   const trimmed = line.trim()

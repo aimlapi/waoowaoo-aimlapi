@@ -14,7 +14,6 @@ import type {
   ProviderCardProps,
   ProviderCardTranslator,
 } from '../types'
-import { VERIFIABLE_PROVIDER_KEYS } from '../types'
 import type { CustomModel } from '../../types'
 import { apiFetch } from '@/lib/api-fetch'
 import { useToast } from '@/contexts/ToastContext'
@@ -231,7 +230,7 @@ export function useProviderCardState({
   }, [onUpdateApiKey, provider.id, tempKey])
 
   const handleSaveKey = useCallback(async () => {
-    if (!VERIFIABLE_PROVIDER_KEYS.has(providerKey)) {
+    if (!provider.connectionTest) {
       doSaveKey()
       return
     }
@@ -273,7 +272,7 @@ export function useProviderCardState({
       setKeyTestSteps([{ name: 'models', status: 'fail', messageKey: 'connectionTest.networkError' }])
       setKeyTestStatus('failed')
     }
-  }, [defaultModels.analysisModel, defaultModels.assistantModel, doSaveKey, models, provider.baseUrl, provider.id, providerKey, tempKey])
+  }, [defaultModels.analysisModel, defaultModels.assistantModel, doSaveKey, models, provider.baseUrl, provider.connectionTest, provider.id, providerKey, tempKey])
 
   const handleForceSaveKey = useCallback(() => {
     doSaveKey()

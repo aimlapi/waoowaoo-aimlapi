@@ -3,18 +3,16 @@
 import type { ReactNode } from 'react'
 import { createPortal } from 'react-dom'
 import type { ProviderCardProps, ProviderCardTranslator } from './types'
-import { VERIFIABLE_PROVIDER_KEYS } from './types'
 import type { UseProviderCardStateResult } from './hooks/useProviderCardState'
 import { AppIcon } from '@/components/ui/icons'
-import { getProviderKey } from '../types'
 
 interface ProviderCardShellProps {
   provider: ProviderCardProps['provider']
   dragHandle?: ProviderCardProps['dragHandle']
   onDeleteProvider: ProviderCardProps['onDeleteProvider']
-  onToggleProviderHidden?: ProviderCardProps['onToggleProviderHidden']
-  hideProviderLabel?: ProviderCardProps['hideProviderLabel']
-  showProviderLabel?: ProviderCardProps['showProviderLabel']
+  onToggleProviderEnabled?: ProviderCardProps['onToggleProviderEnabled']
+  disableProviderLabel?: ProviderCardProps['disableProviderLabel']
+  enableProviderLabel?: ProviderCardProps['enableProviderLabel']
   t: ProviderCardTranslator
   state: UseProviderCardStateResult
   children: ReactNode
@@ -28,26 +26,22 @@ function StatusIcon({ connected }: { connected: boolean }) {
   return <AppIcon name="unplug" className="h-3.5 w-3.5 text-red-400" />
 }
 
-// 使用统一的 VERIFIABLE_PROVIDER_KEYS（从 types 导入）
-
 export function ProviderCardShell({
   provider,
   dragHandle,
   onDeleteProvider,
-  onToggleProviderHidden,
-  hideProviderLabel,
-  showProviderLabel,
+  onToggleProviderEnabled,
+  disableProviderLabel,
+  enableProviderLabel,
   t,
   state,
   children,
 }: ProviderCardShellProps) {
-  const providerKey = getProviderKey(provider.id)
-  const isVerifiable = VERIFIABLE_PROVIDER_KEYS.has(providerKey)
+  const isVerifiable = provider.connectionTest === true
   const canTest = isVerifiable && !!provider.hasApiKey
-  const isHidden = provider.hidden === true
-  const hiddenToggleLabel = isHidden
-    ? (showProviderLabel || t('showProvider'))
-    : (hideProviderLabel || t('hideProvider'))
+  const enabledToggleLabel = provider.enabled
+    ? (disableProviderLabel || t('disableProvider'))
+    : (enableProviderLabel || t('enableProvider'))
 
   return (
     <div className="glass-surface glass-card-shadow-soft overflow-hidden rounded-2xl">
@@ -56,25 +50,23 @@ export function ProviderCardShell({
       <div className="flex items-center justify-between px-3.5 py-2.5">
         <div className="flex items-center gap-2">
           {dragHandle}
-          {onToggleProviderHidden && (
+          {onToggleProviderEnabled && (
             <button
               type="button"
-              title={hiddenToggleLabel}
-              aria-label={hiddenToggleLabel}
+              title={enabledToggleLabel}
+              aria-label={enabledToggleLabel}
               onClick={() => {
-                if (isHidden) {
-                  // Restoring — no confirmation needed
-                  onToggleProviderHidden(provider.id, false)
-                } else {
-                  // Hiding — confirm first
-                  if (window.confirm(t('hideProviderConfirm'))) {
-                    onToggleProviderHidden(provider.id, true)
+                if (provider.enabled) {
+                  if (window.confirm(t('disableProviderConfirm'))) {
+                    onToggleProviderEnabled(provider.id, false)
                   }
+                } else {
+                  onToggleProviderEnabled(provider.id, true)
                 }
               }}
               className="inline-flex h-6 w-6 items-center justify-center rounded-md text-[var(--glass-text-tertiary)] transition-colors hover:text-[var(--glass-text-secondary)]"
             >
-              <AppIcon name={isHidden ? 'plus' : 'minus'} className="h-3.5 w-3.5" />
+              <AppIcon name={provider.enabled ? 'minus' : 'plus'} className="h-3.5 w-3.5" />
             </button>
           )}
           <h3 className="text-[15px] font-bold text-[var(--glass-text-primary)]">{provider.name}</h3>

@@ -304,6 +304,7 @@ export function buildAssistantRuntimeTurnContext(
     '<wao_project_production_context>',
     formatProjectProductionContext(projectProductionContext),
     '</wao_project_production_context>',
+    'Only call production Operations listed in availableOperations. A missing Operation is unavailable for this Turn; do not guess a provider, model, or fallback.',
     '</wao_turn_context>',
   ].join('\n')
 }

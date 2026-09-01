@@ -1,6 +1,5 @@
 import { z } from 'zod'
 import { prisma } from '@/lib/prisma'
-import { ApiError } from '@/lib/api-errors'
 import { getDeploymentConfig, isPlatformProviderCredentialMode } from '@/lib/deployment/config'
 import { getPlatformDefaultModelCatalog } from '@/lib/platform-models/catalog'
 import {
@@ -8,29 +7,16 @@ import {
   type ModelCapabilities,
   type UnifiedModelType,
 } from '@/lib/ai-registry/types'
-import { composeModelKey, parseModelKeyStrict } from '@/lib/ai-registry/selection'
 import { ensureAiCatalogsRegistered } from '@/lib/ai-exec/catalog-bootstrap'
 import { findBuiltinCapabilities } from '@/lib/ai-registry/capabilities-catalog'
 import { findBuiltinPricingCatalogEntry } from '@/lib/ai-registry/pricing-catalog'
 import { type VideoPricingTier } from '@/lib/ai-registry/video-capabilities'
 import type { ProjectAgentOperationRegistryDraft } from '@/lib/operations/types'
 import { projectEffectiveMediaCapabilities } from '@/lib/ai-exec/media-input-transport'
-
-type StoredModelType = UnifiedModelType | string
-
-interface StoredModel {
-  modelId?: string
-  modelKey?: string
-  name?: string
-  type?: StoredModelType
-  provider?: string
-}
-
-interface StoredProvider {
-  id?: string
-  name?: string
-  apiKey?: string
-}
+import type { StoredModel, StoredProvider } from '@/lib/user-api/api-config-types'
+import { parseStoredModels } from '@/lib/user-api/api-config-model-normalization'
+import { parseStoredProviders } from '@/lib/user-api/api-config-provider-normalization'
+import { filterEffectiveModels, isStoredProviderEffective } from '@/lib/user-api/effective-config'
 
 interface UserModelOption {
   value: string
@@ -60,29 +46,15 @@ function isSelectableUserModelType(type: unknown): type is SelectableUserModelTy
 }
 
 function toModelKey(model: StoredModel): string {
-  const provider = typeof model.provider === 'string' ? model.provider.trim() : ''
-  const modelId = typeof model.modelId === 'string' ? model.modelId.trim() : ''
-
-  if (provider && modelId) {
-    return composeModelKey(provider, modelId)
-  }
-
-  const parsed = parseModelKeyStrict(typeof model.modelKey === 'string' ? model.modelKey : '')
-  return parsed?.modelKey || ''
+  return model.modelKey
 }
 
 function toProvider(model: StoredModel): string | undefined {
-  if (typeof model.provider === 'string' && model.provider.trim()) return model.provider.trim()
-  const parsed = parseModelKeyStrict(typeof model.modelKey === 'string' ? model.modelKey : '')
-  return parsed?.provider || undefined
+  return model.provider
 }
 
 function toModelId(model: StoredModel): string {
-  if (typeof model.modelId === 'string' && model.modelId.trim()) {
-    return model.modelId.trim()
-  }
-  const parsed = parseModelKeyStrict(typeof model.modelKey === 'string' ? model.modelKey : '')
-  return parsed?.modelId || ''
+  return model.modelId
 }
 
 function toDisplayLabel(model: StoredModel, fallbackModelId: string): string {
@@ -105,50 +77,6 @@ function cloneVideoPricingTiers(rawTiers: Array<{ when: Record<string, Capabilit
   }))
 }
 
-function parseStoredModels(rawModels: string | null | undefined): StoredModel[] {
-  if (!rawModels) return []
-  let parsedUnknown: unknown
-  try {
-    parsedUnknown = JSON.parse(rawModels)
-  } catch {
-    throw new ApiError('INVALID_PARAMS', {
-      code: 'MODEL_PAYLOAD_INVALID',
-      field: 'customModels',
-    })
-  }
-  if (!Array.isArray(parsedUnknown)) {
-    throw new ApiError('INVALID_PARAMS', {
-      code: 'MODEL_PAYLOAD_INVALID',
-      field: 'customModels',
-    })
-  }
-  return parsedUnknown as StoredModel[]
-}
-
-function parseStoredProviders(rawProviders: string | null | undefined): StoredProvider[] {
-  if (!rawProviders) return []
-  let parsedUnknown: unknown
-  try {
-    parsedUnknown = JSON.parse(rawProviders)
-  } catch {
-    throw new ApiError('INVALID_PARAMS', {
-      code: 'PROVIDER_PAYLOAD_INVALID',
-      field: 'customProviders',
-    })
-  }
-  if (!Array.isArray(parsedUnknown)) {
-    throw new ApiError('INVALID_PARAMS', {
-      code: 'PROVIDER_PAYLOAD_INVALID',
-      field: 'customProviders',
-    })
-  }
-  return parsedUnknown as StoredProvider[]
-}
-
-function hasStoredProviderApiKey(provider: StoredProvider): boolean {
-  return typeof provider.apiKey === 'string' && provider.apiKey.trim().length > 0
-}
-
 async function resolveModelSource(userId: string): Promise<{
   deploymentMode: 'platform-key' | 'user-key'
   models: StoredModel[]
@@ -168,14 +96,16 @@ async function resolveModelSource(userId: string): Promise<{
     select: { customModels: true, customProviders: true },
   })
 
+  const providers = parseStoredProviders(pref?.customProviders)
   return {
     deploymentMode: 'user-key',
-    models: parseStoredModels(pref?.customModels),
-    providers: parseStoredProviders(pref?.customProviders),
+    models: filterEffectiveModels(parseStoredModels(pref?.customModels), providers),
+    providers: providers.filter(isStoredProviderEffective),
   }
 }
 
 export function createUserModelsOperations(): ProjectAgentOperationRegistryDraft {
+  ensureAiCatalogsRegistered()
   return {
     list_user_models: {
       id: 'list_user_models',
@@ -203,7 +133,7 @@ export function createUserModelsOperations(): ProjectAgentOperationRegistryDraft
           if (provider?.name && typeof provider.name === 'string') {
             providerNameMap.set(providerId, provider.name)
           }
-          if (hasStoredProviderApiKey(provider)) providerIdsWithApiKey.add(providerId)
+          if (isStoredProviderEffective(provider)) providerIdsWithApiKey.add(providerId)
         })
 
         const grouped: UserModelsPayload = {
@@ -262,4 +192,3 @@ export function createUserModelsOperations(): ProjectAgentOperationRegistryDraft
     },
   }
 }
-ensureAiCatalogsRegistered()

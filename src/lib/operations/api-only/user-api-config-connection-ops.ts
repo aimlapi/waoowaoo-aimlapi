@@ -2,7 +2,7 @@ import { z } from 'zod'
 import { testLlmConnection } from '@/lib/ai-exec/llm-test-connection'
 import { testProviderConnection } from '@/lib/ai-exec/provider-test'
 import type { ProjectAgentOperationRegistryDraft } from '@/lib/operations/types'
-import { getProviderConfig } from '@/lib/user-api/runtime-config'
+import { getProviderConfigForDiagnostics } from '@/lib/user-api/runtime-config'
 import { assertUserProviderConfigurationAvailable } from '@/lib/user-api/availability'
 
 const providerDiagnosticInputSchema = z.object({
@@ -64,7 +64,7 @@ export function createUserApiConfigConnectionDiagnosticOperations(): ProjectAgen
         const parsed = providerDiagnosticInputSchema.parse(input)
         const storedProvider = parsed.apiKey
           ? null
-          : await getProviderConfig(ctx.userId, parsed.providerId)
+          : await getProviderConfigForDiagnostics(ctx.userId, parsed.providerId)
         const payload: Parameters<typeof testProviderConnection>[0] = {
           apiType: parsed.apiType,
           apiKey: parsed.apiKey ?? storedProvider?.apiKey ?? '',

@@ -3,7 +3,7 @@
 import { useEffect, useMemo, useState } from 'react'
 import { AppIcon } from '@/components/ui/icons'
 import { SegmentedControl } from '@/components/ui/SegmentedControl'
-import { getProviderKey, isPresetComingSoonModel, type CustomModel } from '../types'
+import { isPresetComingSoonModel, type CustomModel } from '../types'
 import type { UseProviderCardStateResult } from './hooks/useProviderCardState'
 import type {
   ProviderCardModelType,
@@ -64,13 +64,15 @@ type ProviderCardVisibleType = ProviderCardModelType
 
 const MODEL_TYPES: readonly ProviderCardVisibleType[] = ['llm', 'image', 'video', 'music']
 
-export function getAddableModelTypesForProvider(providerId: string): ProviderCardModelType[] {
-  const providerKey = getProviderKey(providerId)
-  if (providerKey === 'openrouter') return ['llm', 'image', 'video']
-  if (providerKey === 'fal') return ['image', 'video']
-  if (providerKey === 'google') return ['llm', 'image', 'video', 'music']
-  if (providerKey === 'ark') return ['llm', 'image', 'video']
-  return []
+export function getAddableModelTypesForProvider(
+  provider: ProviderCardProps['provider'],
+): ProviderCardModelType[] {
+  return (provider.modelTypes ?? []).filter((modelType): modelType is ProviderCardModelType => (
+    modelType === 'llm'
+    || modelType === 'image'
+    || modelType === 'video'
+    || modelType === 'music'
+  ))
 }
 
 export function getVisibleModelTypesForProvider(
@@ -121,8 +123,7 @@ export function ProviderAdvancedFields({
   t,
   state,
 }: ProviderAdvancedFieldsProps) {
-  const providerKey = getProviderKey(provider.id)
-  const addableModelTypes = new Set<ProviderCardModelType>(getAddableModelTypesForProvider(provider.id))
+  const addableModelTypes = new Set<ProviderCardModelType>(getAddableModelTypesForProvider(provider))
   const visibleTypes = useMemo(
     () => getVisibleModelTypesForProvider(provider.id, state.groupedModels),
     [provider.id, state.groupedModels],
@@ -150,7 +151,7 @@ export function ProviderAdvancedFields({
     !!currentAddType
     && addableModelTypes.has(currentAddType)
     && state.showAddForm !== currentAddType
-  const defaultAddType: ProviderCardModelType = providerKey === 'openrouter' ? 'llm' : 'image'
+  const defaultAddType: ProviderCardModelType = getAddableModelTypesForProvider(provider)[0] ?? 'image'
   const useTabbedLayout = state.hasModels
   const segmentedControlOptions = useMemo(
     () =>
