@@ -1,4 +1,4 @@
-import { beforeEach, describe, expect, it, vi } from 'vitest'
+import { vi } from 'vitest'
 
 const fetchMock = vi.hoisted(() => vi.fn<typeof fetch>())
 
@@ -100,7 +100,7 @@ const {
   FAL_SEEDANCE_2_VIDEO_MODEL_ID,
 } = falModels
 
-export { beforeEach, describe, expect, it, vi } from 'vitest'
+export { beforeEach, describe, expect, it } from 'vitest'
 export {
   arkAdapter,
   buildOpenRouterSessionId,
@@ -124,4 +124,5 @@ export {
   supportsAssetReferenceMultiReferenceVideoModel,
   testLlmConnection,
   testProviderConnection,
+  vi,
 }

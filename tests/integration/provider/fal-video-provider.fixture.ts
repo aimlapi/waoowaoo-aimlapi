@@ -1,4 +1,4 @@
-import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
+import { vi } from 'vitest'
 
 const getProviderConfigMock = vi.hoisted(() => vi.fn(async () => ({
   id: 'fal',
@@ -15,5 +15,5 @@ const [{ executeFalVideoGeneration }, { startScenarioServer }] = await Promise.a
   import('../../helpers/fakes/scenario-server'),
 ])
 
-export { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
-export { executeFalVideoGeneration, getProviderConfigMock, startScenarioServer }
+export { afterEach, beforeEach, describe, expect, it } from 'vitest'
+export { executeFalVideoGeneration, getProviderConfigMock, startScenarioServer, vi }
