@@ -1,11 +1,11 @@
-import { toonflowAdapter } from '@/lib/ai-providers/toonflow/adapter'
-import { toonflowAsyncTaskProvider } from '@/lib/ai-providers/toonflow/async-task'
+import { toonflowAdapter } from '@ee/ai-providers/toonflow/adapter'
+import { toonflowAsyncTaskProvider } from '@ee/ai-providers/toonflow/async-task'
 import {
   TOONFLOW_API_CONFIG_CATALOG_MODELS,
   TOONFLOW_BUILTIN_CAPABILITY_CATALOG_ENTRIES,
   TOONFLOW_BUILTIN_PRICING_CATALOG_ENTRIES,
   TOONFLOW_PLATFORM_MODEL_PRESETS,
-} from '@/lib/ai-providers/toonflow/models'
+} from '@ee/ai-providers/toonflow/models'
 import { defineAiProviderManifest } from '@/lib/ai-providers/manifest'
 
 const PUBLIC_HTTPS_ONLY = ['public-https'] as const

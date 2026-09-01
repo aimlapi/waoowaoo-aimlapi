@@ -3,8 +3,9 @@ import {
   executeToonflowVideoGeneration,
   queryToonflowVideoStatus,
   submitToonflowVideoTask,
-} from '@/lib/ai-providers/toonflow/video'
-import { startScenarioServer } from '../../helpers/fakes/scenario-server'
+} from '@ee/ai-providers/toonflow/video'
+import { formatExternalId, parseExternalId } from '@/lib/ai-exec/async-poll'
+import { startScenarioServer } from '../../../../tests/helpers/fakes/scenario-server'
 
 const getProviderConfigMock = vi.hoisted(() => vi.fn())
 
@@ -28,6 +29,18 @@ describe('provider contract - Toonflow video', () => {
   afterEach(async () => {
     await server?.close()
     server = null
+  })
+
+  it('registers the Cloud-only async external id protocol', () => {
+    const externalId = formatExternalId('TOONFLOW', 'VIDEO', 'cgt_task_789')
+    expect(externalId).toBe('TOONFLOW:VIDEO:cgt_task_789')
+
+    const parsed = parseExternalId(externalId)
+    expect(parsed).toMatchObject({
+      provider: 'TOONFLOW',
+      type: 'VIDEO',
+      requestId: 'cgt_task_789',
+    })
   })
 
   it('serializes the documented Seedance request and preserves the accepted task code', async () => {

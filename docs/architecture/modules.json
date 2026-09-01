@@ -185,6 +185,7 @@
       "sourcePaths": [
         "src/lib/ai-exec",
         "src/lib/ai-providers",
+        "ee/src/ai-providers",
         "src/lib/ai-registry",
         "src/lib/config-service.ts",
         "src/lib/model-access/system-model-resolver.ts",

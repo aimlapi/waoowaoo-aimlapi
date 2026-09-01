@@ -90,7 +90,8 @@ Provider 差异只停留在 `ai-providers` 的实现、`ai-exec` 的统一执行
 
 ## 权威入口
 
-- Provider Manifest、adapter 与媒体/LLM 实现：`src/lib/ai-providers/**`
+- Provider Manifest、adapter 与媒体/LLM 实现：Core 位于 `src/lib/ai-providers/**`，Cloud-only
+  实例位于 `ee/src/ai-providers/**`；两者只经 Edition AI contract 合成为一个运行时 registry
 - 自托管 Provider 启用状态与有效模型投影：`src/lib/user-api/effective-config.ts`
 - 执行引擎、结果归一、异步轮询与等待：`src/lib/ai-exec/**`
 - 模型目录、价格、能力与运行时选择：`src/lib/ai-registry/**`、`src/lib/platform-models/**`
@@ -115,18 +116,18 @@ Provider 差异只停留在 `ai-providers` 的实现、`ai-exec` 的统一执行
   平台余额不足 → 用自然语言猜业务语义 → adapter 在协议边界产出 canonical code（PG-19）。
   该不变量随后换形式复发过一次：adapter 已抛 typed 错误，fence 却在用它判断 disposition 后重新
   包装成通用 code → 现在 typed code 与 disposition 写入同一 checkpoint，replay 重建同一错误。
-- Toonflow 视频任务已被 Provider 接受后返回 `failed + failReason`，adapter 却丢弃原因并统一抛成
+- 某视频 Provider 的任务已被接受后返回 `failed + failReason`，adapter 却丢弃原因并统一抛成
   `PROVIDER_SUBMISSION_REJECTED`，既谎报发生阶段又遮住版权限制等真实永久失败 → adapter 直接消费
   结构化 `failReason`，映射稳定 typed code；未知的已接受失败保持 `GENERATION_FAILED`，绝不伪装成
   提交拒绝或自动重提（PG-04/06/19）。
-- Toonflow 曾把整个轮询信封直接当作终态失败 cause；顶层“成功”只表示查询请求成功，却覆盖了 Task
-  的原生失败消息 → 查询信封与业务终态混成一个事实 → adapter 以 `failReason` 构造终态原生证据，
+- 某异步 Provider 曾把整个轮询信封直接当作终态失败 cause；顶层“成功”只表示查询请求成功，
+  却覆盖了 Task 的原生失败消息 → 查询信封与业务终态混成一个事实 → adapter 以 `failReason` 构造终态原生证据，
   查询信封只作为嵌套 cause 保留（PG-04/19）。
 - Provider POST 的 5xx/429 曾被 fence 按 HTTP 状态猜成“明确未受理”，但这些状态不能证明供应商
   没创建任务，存在重复生成和扣费风险 → adapter 明确产出 disposition，普通异常一律
   `outcome_unknown`，fence 不再推断（PG-06）。
-- Toonflow 真实欠费响应使用通用 `code=400`，欠费事实只在稳定 `message` 中；旧 adapter 不读取，
-  Worker 又用默认文案覆盖 → Toonflow adapter 私有严格解析该协议，完整失败事实写穿 checkpoint，
+- 某 Provider 真实欠费响应使用通用 `code=400`，欠费事实只在稳定 `message` 中；旧 adapter 不读取，
+  Worker 又用默认文案覆盖 → 对应 adapter 私有严格解析该协议，完整失败事实写穿 checkpoint，
   共享层不按自然语言分类（PG-19）。
 - LLM adapter 曾把完整响应体、随后又把完整响应头写进例行 INFO 日志 → 把无界 Provider 元数据
   复制进日志，第一轮修复只覆盖 body → 只记录 URL、状态、session identity 与显式允许的诊断字段。

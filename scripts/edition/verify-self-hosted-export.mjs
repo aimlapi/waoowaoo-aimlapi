@@ -61,7 +61,7 @@ const selfHostedEnvironment = {
   PLATFORM_DEFAULT_CHARACTER_MODEL: 'openrouter::openai/gpt-image-2',
   PLATFORM_DEFAULT_LOCATION_MODEL: 'openrouter::openai/gpt-image-2',
   PLATFORM_DEFAULT_EDIT_MODEL: 'openrouter::openai/gpt-image-2',
-  PLATFORM_DEFAULT_VIDEO_MODEL: 'toonflow::seedance-2.0',
+  PLATFORM_DEFAULT_VIDEO_MODEL: 'ark::doubao-seedance-2-0-260128',
   PLATFORM_DEFAULT_MUSIC_MODEL: 'elevenlabs::music_v2',
 }
 

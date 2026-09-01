@@ -1,8 +1,8 @@
 /**
  * Seedance retail prices, in credits per second of output.
  *
- * Seedance is reachable through Ark, FAL, OpenRouter and Toonflow, and what each of them
- * charges us differs. What the user pays must not: the same model at the same
+ * Seedance is reachable through multiple providers, and what each of them charges
+ * us differs. What the user pays must not: the same model at the same
  * resolution is one product with one price, so every registered provider
  * catalog imports these rates instead of deriving retail from its own cost.
  *
