@@ -1,6 +1,6 @@
 export const CREATIVE_SKILL_IDS = [
   'creative-core',
-  'story-development',
+  'script-development',
   'creative-direction',
   'asset-development',
   'video-direction',
@@ -10,7 +10,7 @@ export const CREATIVE_SKILL_IDS = [
 export type CreativeSkillId = (typeof CREATIVE_SKILL_IDS)[number]
 
 export const CREATIVE_DOMAIN_KINDS = [
-  'story',
+  'script',
   'direction',
   'assets',
   'video',

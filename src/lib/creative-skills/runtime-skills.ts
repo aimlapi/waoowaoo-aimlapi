@@ -32,11 +32,11 @@ function defineRuntimeSkill(
 export const CREATIVE_RUNTIME_SKILL_REGISTRY: Readonly<
   Record<CreativeDomainKind, CreativeRuntimeSkillDefinition>
 > = {
-  story: defineRuntimeSkill({
-    kind: 'story',
-    title: '故事与剧本开发',
-    description: '创作或修改故事与剧本，并形成 screenplay 专业结果。',
-    skillIds: ['creative-core', 'story-development'],
+  script: defineRuntimeSkill({
+    kind: 'script',
+    title: '内容与脚本开发',
+    description: '创作或修改项目的源文本——故事剧本、商业广告脚本、品牌或企业宣传脚本、播放量导向的短视频脚本——并形成 screenplay 专业结果（screenplayText 承载任一形态的源文本）。',
+    skillIds: ['creative-core', 'script-development'],
     executionFacts: null,
   }),
   direction: defineRuntimeSkill({
@@ -63,7 +63,7 @@ export const CREATIVE_RUNTIME_SKILL_REGISTRY: Readonly<
   music: defineRuntimeSkill({
     kind: 'music',
     title: '音乐与配乐设计',
-    description: '从剧情与真实时间线规划配乐窗口并创作 Composition Plan，形成 audio_generation_batch 专业结果。',
+    description: '从内容与真实时间线规划配乐窗口并创作 Composition Plan，形成 audio_generation_batch 专业结果。',
     skillIds: ['creative-core', 'music-direction'],
     executionFacts: 'Use only the non-null productionCapabilities.music facts injected by the Wao system. Never guess capability limits.',
   }),
@@ -199,7 +199,11 @@ export async function materializeCreativeRuntimeConfiguration(
 }
 
 export function creativeSkillRoutingInstructions(): readonly string[] {
-  return CREATIVE_RUNTIME_SKILLS.map((skill) => (
-    `${skill.kind} -> native Skill ${skill.skillIds[1]}, outputKind=${skill.outputKind}: ${skill.description}`
-  ))
+  return CREATIVE_RUNTIME_SKILLS.map((skill) => {
+    const mediaOperationId = readCreativeOutputDefinition(skill.outputKind).mediaOperationId
+    const execution = mediaOperationId === null
+      ? 'text result, saved only through save_project_document on explicit request'
+      : `pass exact items to ${mediaOperationId}`
+    return `${skill.kind} -> native Skill ${skill.skillIds[1]}, outputKind=${skill.outputKind}, execution: ${execution}: ${skill.description}`
+  })
 }

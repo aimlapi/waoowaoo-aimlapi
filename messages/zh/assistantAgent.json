@@ -140,7 +140,7 @@
       "userDecision": "用户选择",
       "skillRead": "读取 Skill：{skill}",
       "skillNames": {
-        "story-development": "故事与剧本开发",
+        "script-development": "内容与脚本开发",
         "creative-direction": "创作方向",
         "asset-development": "资产范围与视觉设计",
         "video-direction": "视频导演与生成设计",

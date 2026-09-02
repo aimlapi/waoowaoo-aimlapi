@@ -60,7 +60,7 @@ export const creativeOutputSchema = z.discriminatedUnion('outputKind', [
 export type CreativeOutput = z.infer<typeof creativeOutputSchema>
 
 export const CREATIVE_DOMAIN_OUTPUT_KIND = {
-  story: 'screenplay',
+  script: 'screenplay',
   direction: 'creative_direction',
   assets: 'asset_generation_batch',
   video: 'video_generation_batch',
@@ -85,8 +85,8 @@ function defineOutput(
 export const CREATIVE_OUTPUT_REGISTRY: Readonly<Record<CreativeOutputKind, CreativeOutputDefinition>> = {
   screenplay: defineOutput({
     outputKind: 'screenplay',
-    domainKind: 'story',
-    professionalSkillId: 'story-development',
+    domainKind: 'script',
+    professionalSkillId: 'script-development',
     savedDocumentSchemaId: WORKSPACE_RESOURCE_SCHEMA.SCREENPLAY,
     mediaOperationId: null,
     schema: screenplayOutputSchema,
