@@ -18,7 +18,8 @@ Skill，同一用户目标可顺序产生多个不同领域结果。专业创作
 - **APO-01 — 唯一 Runtime。** 聊天、Plan、Goal、用户输入请求、搜索、Shell、文件与 Skill 均由
   app-server 产生；不恢复第二套 Agent SDK、自研 Worker loop 或专业 child Thread。
 - **APO-02 — 主 Prompt 只声明边界。** 主 Agent 固定指令只说明 scope、所有权、Skill 路由、locale
-  与 MCP 使用原则，不复制专业 Skill 正文。
+  与 MCP 使用原则，不复制专业 Skill 正文，也不复述任何单一品类的检查点实例、时长纪律或资产
+  词汇；这些由所属 Skill 声明（creative-skills CS-13）。
 - **APO-03 — 固定 Skill 上下文。** 每个领域 Skill 的核心正文、专业正文和 outputKind schema 由
   registry 决定并在 Runtime 物化时组装；description、用户措辞和模型输出不能改变其内部 Skill 集。
 - **APO-04 — 结构来自协议。** 所有交互结构只消费原生 JSON-RPC item/event，不从正文解析生命周期。

@@ -11,7 +11,7 @@ description: Plan narrative score windows and author precise Eleven Music v2 Com
 
 ## 事实边界
 
-- 优先读取项目文件夹中最终视频提示词、剧本、创作方向与成片 Resource；剧情理解来自这些锁定文本，精确时间边界来自 `score_timeline` 视频 Resource 的真实 duration。
+- 优先读取项目文件夹中最终视频提示词、源文本（剧本或脚本）、创作方向与成片 Resource；内容理解来自这些锁定文本，精确时间边界来自 `score_timeline` 视频 Resource 的真实 duration。
 - 没有实际提供视频帧或音轨时，不声称观看或听取了它们。可以基于最终视频提示词规划剧情配乐，但必须如实区分文本事实与实际视听观察。
 - 只使用 canonical Resource id + contentVersion。每个音乐 item 必须引用恰好一个 `channel: "context"`、`role: "score_timeline"` 的完整待配乐视频；该视频不会上传给音乐 Provider，只用于 lineage、时间边界与最终确定性合成。
 - Creative Direction 非空时，把与叙事、导演、剪辑、声音和视觉节奏有关的已采纳政策转译为音乐决定；不能只照抄形容词。
@@ -23,6 +23,12 @@ description: Plan narrative score windows and author precise Eleven Music v2 Com
 - cue 是一次独立生成并放到时间线上的完整乐段。一个十分钟成片可以只在 2:00–3:00 和 7:00–8:00 各生成一个 cue；中间没有 cue 的部分由最终 mixer 保持数字静音，不需要生成一条十分钟音乐再裁剪。
 - cue 数量只由剧情与听觉连续性决定，不设置“通常 1–3 个”之类创作上限。避免因镜头切换机械切曲；如果前后需要共享主题、音色、混响和运动惯性，应放在同一个 cue 的多个 chunk 中。
 - 独立 cue 不共享生成状态。跨 cue 的统一感要靠兼容的调性世界、速度范围、配器家族、音色、空间和母题设计，不得假装 Provider 能记住上一段。
+
+## 收尾检查点
+
+本 Skill 声明一个硬对齐检查点：**配乐决定**。时机是一部超过 15 秒的完整作品的视觉单元全部就绪、且用户尚未决定配乐时。做法：由主 Agent 发起一张卡，给出两到三个具体的配乐方向，推荐项在前，外加一个明确的无配乐选项。无论作品是 16 秒、45 秒还是更长都适用。机械收尾——合成、混入已决定的配乐、打包——不再提问。
+
+只有用户明确选择了配乐方向后才应用本 Skill 生成 cue；只有用户明确选择无配乐后才走 `no_music` 分支。绝不从沉默、时长、题材或自己的制作计划推断 `no_music`。
 
 ## Cue 与 Composition Plan chunk 的区别
 
@@ -87,6 +93,7 @@ Eleven Music v2 的真实 Composition Plan 限制必须在创作时主动遵守�
 - 判定不配乐时使用 `decision: "no_music"`、空 `items`，并在 `overview` 或 `warnings` 中说明叙事理由。
 - 需要配乐时，每个 cue 对应一个 `mediaType: "audio"` item，包含一份完整 `compositionPlan`、绝对 `startMs`、淡入淡出、增益，以及恰好一个 `score_timeline` reference。不要输出根 `prompt`、`durationSeconds`、`vocalMode`、`genre`、`mood` 或 `bpm`；这些已由 Composition Plan 取代。
 - 当前 BGM 默认 `schemaId` 为 `project.bgm_audio`。
+- 把确切 items 交给 `create_audio`，并以确切的 ready 完整视频 Resource 作为 `score_timeline`；绝不把该视频上传给音乐 Provider。全部 cue Resource 就绪后，用同一个视频版本和全部确切 cue 版本（`musicCues`）调用一次 `merge_videos`，交付合成后的视频，而不是散装 cue 文件。
 - 唯一专业结果是运行时注入 schema 约束的 `outputKind: "audio_generation_batch"` 严格 JSON。机器 Schema 是字段、必填项和层级的唯一权威；本 Skill 只说明创作方法和 Provider 真实规则，不复制一份可能漂移的 JSON 模板。
 
 ## 边界

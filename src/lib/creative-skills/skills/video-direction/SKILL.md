@@ -1,21 +1,32 @@
 ---
 name: video-direction
-description: Direct screenplay-based video generation with explicit state continuity, physical performance, minimal segment count, structured shot timing, reference identity, sound relationships, and executable final prompts.
+description: Direct source-text-based video generation with explicit state continuity, physical performance, minimal segment count, structured shot timing, reference identity, sound relationships, and executable final prompts.
 ---
 
 # 视频导演与生成设计
 
 ## 作用
 
-把已经成立的剧情事实组织成可执行导演设计，并为每个独立生成分段写一份结构化最终提示词。本 Skill 是 `outputKind=video_generation_batch` 的唯一专业 Skill：镜头、表演、构图、声音、连续性、装段与接缝判断全部内化进每段唯一 `prompt`，最终只返回 strict `video_generation_batch`，不输出平行导演表、时间线或解释文件。
+把已经成立的内容事实（剧情、产品行为、主张顺序）组织成可执行导演设计，并为每个独立生成分段写一份结构化最终提示词。本 Skill 是 `outputKind=video_generation_batch` 的唯一专业 Skill：镜头、表演、构图、声音、连续性、装段与接缝判断全部内化进每段唯一 `prompt`，最终只返回 strict `video_generation_batch`，不输出平行导演表、时间线或解释文件。
 
 ## 事实与时长权威
 
-- 剧本、用户明确要求、已确认资产、入段状态和已采纳 Creative Direction 是唯一事实。不得新增剧本没有的人物、对白、地点、道具、动作、动机、停顿或结局；对白逐字保留。
-- 精确剧本存在时，它独占事件顺序和 `mode=derive` 演出时间线。Creative Direction、题材、画幅、3D/写实风格、镜头数量、声音与转场只决定怎样呈现，不能创造额外剧情时间。
+- 源文本（剧本、商业脚本或其他脚本）、用户明确要求、已确认资产、入段状态和已采纳 Creative Direction 是唯一事实。不得新增源文本没有的人物、对白、地点、道具、动作、动机、停顿、主张、屏幕文字、CTA 或结局；对白、旁白与屏幕文字逐字保留。
+- 精确源文本存在时，它独占事件顺序和 `mode=derive` 演出时间线。Creative Direction、题材、画幅、3D/写实风格、镜头数量、声音与转场只决定怎样呈现，不能创造额外剧情时间。
 - 严格按“整片时间线 → 导演设计 → 生成装段”工作。不要先给每个镜头或节拍分配一段 Provider 时长再相加。
 - `durationIntent.mode=fixed` 时，全部 Segment 时长之和必须准确等于用户总秒数。`mode=derive` 时，只按自然对白、不能并行的来源动作和来源明确要求的停顿估算最短清楚时长；并行动作不重复累加。
 - 禁止用重复动作、无信息空镜、拖慢转头、额外反应、题材留白或装饰性转场填充时长。
+
+## 完整作品的规划纪律
+
+以下纪律只约束计划质量，不改变任何 Operation 的合法输入，也不构成服务端门槛：
+
+- 先识别当前交付物以及与执行相关的总时长、画幅、风格、内容、人物、声音和合成需求，只补真实缺口。
+- 总时长超过 15 秒的完整视频作品：开始视频生产前，先创建或复用一份匹配的文本 Creative Direction，以及最终视频真正会复用的角色、场景、道具资产；这不授权任何视觉风格参考图。该作品还必须通过配乐 Skill 声明的收尾检查点获得明确的配乐决定，除非用户已经决定；绝不静默假设无配乐。
+- 总时长超过 180 秒：按文件夹结构组织为独立生成的单元，并按 creative-core 的续作状态锚定在单元之间显式传递状态；这不是固定分支。
+- 续写已有作品时，先读覆盖续写点的源文本和最近一次交付批次的出口状态，绝不凭资产、印象或摘要重新想象当前状态；可变状态永远覆盖资产的默认外观，资产只锁定身份与设计。
+- 音色一致：同一人物在两个以上独立生成的镜头中说话时，在依赖它的视频提示词之前创建并绑定一个稳定音色；单独一个孤立的说话镜头不需要。生成的稳定音色试听样本必须是语音多样的句子，约 5–8 秒，不能是名字、应答词或其他极短片段。
+- 交付完整作品前逐项检查：跨镜头复用的可见人物、场景、道具都有参考资产；跨镜头复用的说话人物有一个稳定音色；每个生成分段自带对白和必要声音；全部分段使用同一项目画幅；超过 15 秒的成品有明确配乐决定。
 
 ## 内部状态表
 
@@ -47,7 +58,7 @@ description: Direct screenplay-based video generation with explicit state contin
 - 反应有层级。重大信息的反应按“僵住 → 确认（回看、靠近、再读一遍）→ 释放（行动、崩溃或压下去）”推进，每个镜头只承载其中一层；不许一步到位地大哭大叫，除非剧本明确写了。
 - 潜台词用身体与台词的反差呈现：嘴上说“我没事”，手指在袖口里收紧。反差只能建立在剧本已有的情绪事实上，不得借此发明剧情。
 - 一个镜头内最多一次情绪变化，且必须由本镜头内可见事件触发。持续情绪写成持续的身体状态（肩线一直绷着），不逐镜头重新表演一遍。
-- 表演幅度按题材校准并全片保持同一基准：短剧外放但不失真，电影克制，喜剧靠节奏与停顿而非鬼脸。
+- 表演幅度按题材校准并全片保持同一基准：短剧外放但不失真，电影克制，喜剧靠节奏与停顿而非鬼脸，广告与产品内容靠可见的产品动作和受控编舞而非表情夸张。
 
 ## 装段与接缝
 
@@ -108,7 +119,7 @@ description: Direct screenplay-based video generation with explicit state contin
 
 ## 输出前检查
 
-- 剧情、对白和结局是否完全来自来源，固定总时长是否精确？
+- 内容、对白、屏幕文字和结局是否完全来自来源，固定总时长是否精确？
 - 是否先建立整片时间线，再设计镜头，最后装段？
 - 每个镜头是否有新节拍、可见入口和落点，时间是否从不回退？
 - 人物镜头是否写清景别、机位、落位、朝向、视线与一种主要运镜？

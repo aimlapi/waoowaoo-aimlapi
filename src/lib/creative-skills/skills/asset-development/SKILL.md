@@ -1,13 +1,13 @@
 ---
 name: asset-development
-description: Scope reusable production assets and define stable visible designs from an exact screenplay.
+description: Scope reusable production assets and define stable visible designs from an exact source text.
 ---
 
 # 资产范围与视觉设计
 
 ## 作用
 
-从精确剧本、用户要求、参考素材和已采纳的 Creative Direction 中筛选值得制作的可复用角色、场景、道具，完成稳定可见设计，并把每张资产的唯一最终图片 Prompt 与显式生成参数写入最终结构化批次。主 Agent 是该资产专业结果的唯一 writer，并把同一批次直接交给媒体 Operation。
+从精确源文本（剧本、商业脚本或其他脚本）、用户要求、参考素材和已采纳的 Creative Direction 中筛选值得制作的可复用角色、场景、道具，完成稳定可见设计，并把每张资产的唯一最终图片 Prompt 与显式生成参数写入最终结构化批次。主 Agent 是该资产专业结果的唯一 writer，并把同一批次直接交给媒体 Operation。
 
 ## 资产筛选
 
@@ -16,8 +16,10 @@ description: Scope reusable production assets and define stable visible designs 
 - 没有任何实体通过全部门槛时使用 `decision: "no_assets"`、空 `items`，并在 `overview` 解释原因；不得为了让清单非空而虚构或升级多余资产，也不得提交这份无任务清单。
 - 同一实体的机位、景别、构图、光线或短暂动作变化不能成为新资产。只有独立且持久的视觉身份才拆分。
 - 同一叙事地点中视觉结构明显不同、各自真实承载画面动作且后续需要独立参考的空间必须拆分，例如山顶与坠落后的崖底；仅转场一闪而过、没有动作落点或无需独立视觉连续性的空间不拆分。
-- 通过筛选的资产中，主角级且风格空间大的视觉身份——换一种设计方向就会改变整部作品观感的核心角色、标志性生物或核心形象——其设计方向属于可对齐决策，在批次冻结前交由主 Agent 按其对齐契约处理；配角、功能性资产以及方向已由剧本、用户输入或 Creative Direction 确定的资产不触发对齐。
+- 通过筛选的资产中，主角级且风格空间大的视觉身份——换一种设计方向就会改变整部作品观感的核心角色、标志性生物、核心产品或核心形象——其设计方向属于可对齐决策，在批次冻结前交由主 Agent 按其对齐契约处理；配角、功能性资产以及方向已由源文本、用户输入或 Creative Direction 确定的资产不触发对齐。
+- 商业内容中的产品、包装或品牌物按道具处理；用户提供的精确 Logo、包装图是参考来源，只能作为身份与结构参考，不得重绘后冒充权威品牌资产。
 - 同一个专业结果完成筛选、稳定身份设计与最终 Prompt；不输出第二套候选状态或再拼接另一版 Prompt。
+- 可复用视觉资产只有三种：`character`、`location`、`prop`。不得发明 style-board、mood-board、visual-style、预览图或泛化参考图作为可复用资产类型；风格由 Creative Direction 的文本承载，不由图片资产承载。
 - `canonicalName + assetKind` 表达稳定创作身份；不得发明系统 ID、使用数组位置或新增含糊的 `other` 类型。实际媒体身份由输出 WorkspaceResource 路径与 resourceId 拥有。
 - 资产是基础身份设计，不是任意时刻的状态快照。剧情产生持续的新状态（重伤、换装、剃发、损毁）且后续生成需要独立引用时，创建新版本或新资产表达新状态，不改写原资产的既有解释。
 
@@ -96,9 +98,13 @@ description: Scope reusable production assets and define stable visible designs 
 - 唯一专业结果是运行时注入 schema 约束的 `outputKind: "asset_generation_batch"` 严格 JSON。该机器 Schema 是字段、必填项和层级的唯一权威；本 Skill 不另写文件或第二份模板。`references` 只使用精确的 ready Resource 身份与版本。
 - `overview`、`canonicalName`、`aliases`、`stableDescription`、`consumedByShots` 都是同一正式 JSON 的规定字段，不得写进旁边的 Markdown，也不得发明 Schema 之外的设计说明字段。
 
+## 生成后评审检查点
+
+本 Skill 声明一个硬对齐检查点：**生成资产评审**。时机在全部新生成的前置视觉资产就绪之后、任何依赖它们的语音或视频工作开始之前。做法：检查确切的 ready Resource，概述它们的身份与可见质量结果，然后由主 Agent 发起一张卡询问用户是否满意。选项顺序固定：“满意并继续”在前，“先暂停，不进入下游生产”其次，并提供本地化的 otherLabel 邀请用户写出具体修改要求。在用户接受、或所要求的资产修改就绪并再次评审之前，不得提交依赖它们的生产。复用已存在的资产不触发本检查点。
+
 ## 自检
 
-- 正式生成批次是否只包含从输入剧本判断值得复用的生产资产？注入完整 Creative Direction 时，是否使用了所有相关政策且没有把无关领域变成资产事实？
+- 正式生成批次是否只包含从输入源文本判断值得复用的生产资产？注入完整 Creative Direction 时，是否使用了所有相关政策且没有把无关领域变成资产事实？
 - 是否同时保留纯净的稳定设计，并把完整最终 Prompt 与正确版式写入批次，同时把 4:3 画幅唯一交给服务端资产策略？
 - 角色是否稳定、完整、年代一致、鞋履明确，肤色/发色/瞳色等身份锚点是否写清，并排除了动作、背景、不确定词和抽象气质？
 - 非人类角色是否按真实形态处理而非套用人类模板？
